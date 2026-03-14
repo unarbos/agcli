@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Rust CLI + SDK for the Bittensor network — staking, transfers, wallets, weights, subnets, and more"
 license = "MIT"
-repository = "https://github.com/arbos-ai/agcli"
+repository = "https://github.com/unconst/agcli"
 keywords = ["bittensor", "tao", "substrate", "staking", "blockchain"]
 categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 

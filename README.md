@@ -23,7 +23,7 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 ### Install
 
 ```bash
-cargo install --git https://github.com/arbos-ai/agcli
+cargo install --git https://github.com/unconst/agcli
 ```
 
 ### CLI Usage
@@ -59,7 +59,7 @@ agcli view portfolio
 Add to your `Cargo.toml`:
 ```toml
 [dependencies]
-agcli = { git = "https://github.com/arbos-ai/agcli", default-features = false, features = ["sdk-only"] }
+agcli = { git = "https://github.com/unconst/agcli", default-features = false, features = ["sdk-only"] }
 ```
 
 ```rust

@@ -5,7 +5,7 @@ A Rust CLI and SDK for the Bittensor decentralized AI network. It lets you manag
 
 ## Installation
 ```bash
-cargo install --git https://github.com/arbos-ai/agcli
+cargo install --git https://github.com/unconst/agcli
 ```
 
 ## Core Commands

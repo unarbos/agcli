@@ -4,11 +4,11 @@
 
 ```bash
 # From source
-git clone https://github.com/arbos-ai/agcli && cd agcli
+git clone https://github.com/unconst/agcli && cd agcli
 cargo install --path .
 
 # Or directly
-cargo install --git https://github.com/arbos-ai/agcli
+cargo install --git https://github.com/unconst/agcli
 ```
 
 ## 2. Create a Wallet
