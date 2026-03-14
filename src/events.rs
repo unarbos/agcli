@@ -4,6 +4,7 @@
 //! relevant SubtensorModule events (stakes, transfers, registrations, etc.).
 
 use anyhow::Result;
+use subxt::ext::scale_value::{Composite, Primitive, ValueDef};
 use subxt::OnlineClient;
 
 use crate::SubtensorConfig;
@@ -39,20 +40,52 @@ impl std::str::FromStr for EventFilter {
     }
 }
 
+/// Known staking-related event variant names.
+const STAKING_VARIANTS: &[&str] = &[
+    "StakeAdded",
+    "StakeRemoved",
+    "StakeMoved",
+    "StakeSwapped",
+    "AllStakeRemoved",
+];
+
+/// Known registration-related event variant names.
+const REGISTRATION_VARIANTS: &[&str] = &[
+    "NeuronRegistered",
+    "BurnedRegister",
+    "SubnetRegistered",
+    "PowRegistered",
+];
+
+/// Known weight-related event variant names.
+const WEIGHT_VARIANTS: &[&str] = &[
+    "WeightsSet",
+    "WeightsCommitted",
+    "WeightsRevealed",
+    "WeightsBatchRevealed",
+];
+
+/// Known subnet management event variant names.
+const SUBNET_VARIANTS: &[&str] = &[
+    "SubnetHyperparamsSet",
+    "SubnetIdentitySet",
+    "SubnetIdentityRemoved",
+    "NetworkAdded",
+    "NetworkRemoved",
+    "TempoSet",
+];
+
 impl EventFilter {
-    fn matches_pallet(&self, pallet: &str) -> bool {
+    fn matches(&self, pallet: &str, variant: &str) -> bool {
         match self {
             Self::All => true,
-            Self::Staking => {
-                pallet == "SubtensorModule"
-                    && ["StakeAdded", "StakeRemoved", "StakeMoved"]
-                        .iter()
-                        .any(|_| true)
+            Self::Staking => pallet == "SubtensorModule" && STAKING_VARIANTS.contains(&variant),
+            Self::Registration => {
+                pallet == "SubtensorModule" && REGISTRATION_VARIANTS.contains(&variant)
             }
-            Self::Registration => pallet == "SubtensorModule",
             Self::Transfer => pallet == "Balances",
-            Self::Weights => pallet == "SubtensorModule",
-            Self::Subnet => pallet == "SubtensorModule",
+            Self::Weights => pallet == "SubtensorModule" && WEIGHT_VARIANTS.contains(&variant),
+            Self::Subnet => pallet == "SubtensorModule" && SUBNET_VARIANTS.contains(&variant),
         }
     }
 }
@@ -74,6 +107,83 @@ impl std::fmt::Display for ChainEvent {
             "#{} {}::{} {}",
             self.block_number, self.pallet, self.variant, self.fields
         )
+    }
+}
+
+/// Extract a u16 netuid value from a named Composite field.
+fn extract_netuid<T: Clone>(composite: &Composite<T>) -> Option<u16> {
+    if let Composite::Named(fields) = composite {
+        for (name, val) in fields {
+            if name == "netuid" {
+                if let ValueDef::Primitive(Primitive::U128(n)) = &val.value {
+                    return Some(*n as u16);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Convert a Composite to structured JSON for output.
+fn composite_to_json<T: Clone>(composite: &Composite<T>) -> serde_json::Value {
+    match composite {
+        Composite::Named(fields) => {
+            let map: serde_json::Map<String, serde_json::Value> = fields
+                .iter()
+                .map(|(k, v)| (k.clone(), value_to_json(v)))
+                .collect();
+            serde_json::Value::Object(map)
+        }
+        Composite::Unnamed(fields) => {
+            // Check if this looks like raw bytes (AccountId32, etc.)
+            if fields.len() == 32 || fields.len() == 64 {
+                let bytes: Vec<u8> = fields
+                    .iter()
+                    .filter_map(|v| match &v.value {
+                        ValueDef::Primitive(Primitive::U128(n)) => Some(*n as u8),
+                        _ => None,
+                    })
+                    .collect();
+                if bytes.len() == fields.len() {
+                    return serde_json::Value::String(format!("0x{}", hex::encode(&bytes)));
+                }
+            }
+            let arr: Vec<serde_json::Value> = fields.iter().map(value_to_json).collect();
+            serde_json::Value::Array(arr)
+        }
+    }
+}
+
+/// Convert a SCALE Value to a serde_json::Value for structured JSON output.
+fn value_to_json<T: Clone>(val: &subxt::ext::scale_value::Value<T>) -> serde_json::Value {
+    match &val.value {
+        ValueDef::Primitive(p) => match p {
+            Primitive::Bool(b) => serde_json::Value::Bool(*b),
+            Primitive::Char(c) => serde_json::Value::String(c.to_string()),
+            Primitive::U128(n) => {
+                if *n <= u64::MAX as u128 {
+                    serde_json::json!(*n as u64)
+                } else {
+                    serde_json::Value::String(n.to_string())
+                }
+            }
+            Primitive::I128(n) => {
+                if *n >= i64::MIN as i128 && *n <= i64::MAX as i128 {
+                    serde_json::json!(*n as i64)
+                } else {
+                    serde_json::Value::String(n.to_string())
+                }
+            }
+            Primitive::U256(n) => serde_json::Value::String(format!("{:?}", n)),
+            Primitive::I256(n) => serde_json::Value::String(format!("{:?}", n)),
+            Primitive::String(s) => serde_json::Value::String(s.clone()),
+        },
+        ValueDef::Composite(composite) => composite_to_json(composite),
+        ValueDef::Variant(variant) => {
+            let inner = composite_to_json(&variant.values);
+            serde_json::json!({ &variant.name: inner })
+        }
+        ValueDef::BitSequence(bits) => serde_json::Value::String(format!("bits({})", bits.len())),
     }
 }
 
@@ -121,40 +231,39 @@ pub async fn subscribe_events_filtered(
             let pallet = event.pallet_name().to_string();
             let variant = event.variant_name().to_string();
 
-            if !filter.matches_pallet(&pallet) {
+            if !filter.matches(&pallet, &variant) {
                 continue;
             }
 
-            let fields = format!("{:?}", event.field_values()?);
+            let field_values = event.field_values()?;
 
-            // Optional netuid filtering — check if event fields contain the netuid
+            // Structured netuid filtering — try structured extraction first, then debug fallback
             if let Some(target_netuid) = netuid_filter {
-                let netuid_str = format!("{}", target_netuid);
-                // Look for netuid in the fields string (heuristic: works for SubtensorModule events)
-                if !fields.contains(&format!("netuid: Unnamed({})", target_netuid))
-                    && !fields.contains(&format!("\"netuid\": {}", netuid_str))
-                    && !fields.contains(&format!("netuid: {}", netuid_str))
-                {
-                    continue;
+                if let Some(found) = extract_netuid(&field_values) {
+                    if found != target_netuid {
+                        continue;
+                    }
+                } else {
+                    // Fallback: check debug string for netuid references
+                    let debug_str = format!("{:?}", field_values);
+                    if !debug_str.contains(&format!("netuid: {}", target_netuid))
+                        && !debug_str.contains(&format!("Unnamed({})", target_netuid))
+                    {
+                        continue;
+                    }
                 }
             }
 
-            // Optional account filtering
+            // Account filtering via debug string (SS58 addresses are reliably present in debug output)
             if let Some(target_account) = account_filter {
-                if !fields.contains(target_account) {
+                let debug_str = format!("{:?}", field_values);
+                if !debug_str.contains(target_account) {
                     continue;
                 }
             }
-
-            let ce = ChainEvent {
-                block_number,
-                block_hash: block_hash.clone(),
-                pallet: pallet.clone(),
-                variant: variant.clone(),
-                fields: truncate(&fields, 200),
-            };
 
             if json_output {
+                let structured_fields = composite_to_json(&field_values);
                 println!(
                     "{}",
                     serde_json::json!({
@@ -162,10 +271,18 @@ pub async fn subscribe_events_filtered(
                         "hash": block_hash,
                         "pallet": pallet,
                         "event": variant,
-                        "fields": fields,
+                        "fields": structured_fields,
                     })
                 );
             } else {
+                let fields_str = format!("{:?}", field_values);
+                let ce = ChainEvent {
+                    block_number,
+                    block_hash: block_hash.clone(),
+                    pallet: pallet.clone(),
+                    variant: variant.clone(),
+                    fields: truncate(&fields_str, 200),
+                };
                 println!("{}", ce);
             }
         }

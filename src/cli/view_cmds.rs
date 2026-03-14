@@ -107,11 +107,13 @@ async fn handle_portfolio(client: &Client, addr: &str, output: &str) -> Result<(
 }
 
 async fn handle_network(client: &Client, output: &str) -> Result<()> {
-    let block = client.get_block_number().await?;
-    let total_stake = client.get_total_stake().await?;
-    let total_networks = client.get_total_networks().await?;
-    let total_issuance = client.get_total_issuance().await?;
-    let emission = client.get_block_emission().await?;
+    let (block, total_stake, total_networks, total_issuance, emission) = tokio::try_join!(
+        client.get_block_number(),
+        client.get_total_stake(),
+        client.get_total_networks(),
+        client.get_total_issuance(),
+        client.get_block_emission(),
+    )?;
     let staking_ratio = if total_issuance.rao() > 0 {
         total_stake.tao() / total_issuance.tao() * 100.0
     } else {
@@ -427,15 +429,14 @@ async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()>
 }
 
 async fn handle_account_explorer(client: &Client, address: &str, output: &str) -> Result<()> {
-    let (balance, stakes, identity) = tokio::try_join!(
+    let (balance, stakes, identity, dynamic, delegate) = tokio::try_join!(
         client.get_balance_ss58(address),
         client.get_stake_for_coldkey(address),
         client.get_identity(address),
+        async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info().await.unwrap_or_default()) },
+        async { Ok::<_, anyhow::Error>(client.get_delegate(address).await.ok().flatten()) },
     )?;
-
-    let dynamic = client.get_all_dynamic_info().await.unwrap_or_default();
     let dynamic_map = build_dynamic_map(&dynamic);
-    let delegate = client.get_delegate(address).await.ok().flatten();
 
     if output == "json" {
         let total_staked: u64 = stakes.iter().map(|s| s.stake.rao()).sum();
@@ -531,11 +532,13 @@ async fn handle_account_explorer(client: &Client, address: &str, output: &str) -
 
 async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> Result<()> {
     let nuid = NetUid(netuid);
-    let info = client.get_subnet_info(nuid).await?;
-    let dynamic = client.get_dynamic_info(nuid).await.ok().flatten();
-    let neurons = client.get_neurons_lite(nuid).await?;
-    let hyperparams = client.get_subnet_hyperparams(nuid).await.ok().flatten();
-    let subnet_identity = client.get_subnet_identity(nuid).await.ok().flatten();
+    let (info, dynamic, neurons, hyperparams, subnet_identity) = tokio::try_join!(
+        client.get_subnet_info(nuid),
+        async { Ok::<_, anyhow::Error>(client.get_dynamic_info(nuid).await.ok().flatten()) },
+        client.get_neurons_lite(nuid),
+        async { Ok::<_, anyhow::Error>(client.get_subnet_hyperparams(nuid).await.ok().flatten()) },
+        async { Ok::<_, anyhow::Error>(client.get_subnet_identity(nuid).await.ok().flatten()) },
+    )?;
 
     let name = dynamic
         .as_ref()
@@ -720,10 +723,12 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> 
 }
 
 async fn handle_staking_analytics(client: &Client, address: &str, output: &str) -> Result<()> {
-    let stakes = client.get_stake_for_coldkey(address).await?;
-    let dynamic = client.get_all_dynamic_info().await.unwrap_or_default();
+    let (stakes, dynamic, block_emission) = tokio::try_join!(
+        client.get_stake_for_coldkey(address),
+        async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info().await.unwrap_or_default()) },
+        client.get_block_emission(),
+    )?;
     let dynamic_map = build_dynamic_map(&dynamic);
-    let block_emission = client.get_block_emission().await?;
 
     struct PositionAnalytics {
         netuid: u16,

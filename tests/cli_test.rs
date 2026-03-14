@@ -719,3 +719,869 @@ fn parse_wallet_new_hotkey() {
         cli.err()
     );
 }
+
+// ════════════════════════════════════════════════════════════════════
+// Weight commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_weights_set() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:0.5,1:0.3,2:0.2",
+    ]);
+    assert!(cli.is_ok(), "should parse weights set: {:?}", cli.err());
+}
+
+#[test]
+fn parse_weights_commit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "commit",
+        "--netuid",
+        "97",
+        "--weights",
+        "0:0.5,1:0.5",
+    ]);
+    assert!(cli.is_ok(), "should parse weights commit: {:?}", cli.err());
+}
+
+#[test]
+fn parse_weights_commit_with_salt() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "commit",
+        "--netuid",
+        "97",
+        "--weights",
+        "0:1.0",
+        "--salt",
+        "deadbeef",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse weights commit with salt: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_weights_reveal() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "reveal",
+        "--netuid",
+        "97",
+        "--weights",
+        "0:0.5,1:0.5",
+        "--salt",
+        "abc123",
+        "--version-key",
+        "42",
+    ]);
+    assert!(cli.is_ok(), "should parse weights reveal: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Delegate commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_delegate_show() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "delegate",
+        "show",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "should parse delegate show: {:?}", cli.err());
+}
+
+#[test]
+fn parse_delegate_show_default() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "delegate", "show"]);
+    assert!(
+        cli.is_ok(),
+        "should parse delegate show without hotkey: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_delegate_list() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "delegate", "list"]);
+    assert!(cli.is_ok(), "should parse delegate list: {:?}", cli.err());
+}
+
+#[test]
+fn parse_delegate_decrease_take() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "delegate", "decrease-take", "--take", "9.5"]);
+    assert!(
+        cli.is_ok(),
+        "should parse delegate decrease-take: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_delegate_increase_take() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "delegate",
+        "increase-take",
+        "--take",
+        "11.0",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse delegate increase-take: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Identity commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_identity_set() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "identity",
+        "set",
+        "--name",
+        "MyValidator",
+        "--url",
+        "https://example.com",
+        "--github",
+        "myuser",
+    ]);
+    assert!(cli.is_ok(), "should parse identity set: {:?}", cli.err());
+}
+
+#[test]
+fn parse_identity_set_minimal() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "identity", "set", "--name", "ValidatorX"]);
+    assert!(
+        cli.is_ok(),
+        "should parse identity set with name only: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_identity_show() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "identity",
+        "show",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "should parse identity show: {:?}", cli.err());
+}
+
+#[test]
+fn parse_identity_set_subnet() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "identity",
+        "set-subnet",
+        "--netuid",
+        "97",
+        "--name",
+        "MySN",
+        "--github",
+        "org/repo",
+        "--url",
+        "https://sn97.io",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse identity set-subnet: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Serve commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_serve_axon() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "serve",
+        "axon",
+        "--netuid",
+        "1",
+        "--ip",
+        "192.168.1.100",
+        "--port",
+        "8091",
+    ]);
+    assert!(cli.is_ok(), "should parse serve axon: {:?}", cli.err());
+}
+
+#[test]
+fn parse_serve_axon_custom_protocol() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "serve",
+        "axon",
+        "--netuid",
+        "1",
+        "--ip",
+        "10.0.0.1",
+        "--port",
+        "9090",
+        "--protocol",
+        "6",
+        "--version",
+        "42",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse serve axon with protocol/version: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Swap commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_swap_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "swap",
+        "hotkey",
+        "--new-hotkey",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_ok(), "should parse swap hotkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_swap_coldkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "swap",
+        "coldkey",
+        "--new-coldkey",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_ok(), "should parse swap coldkey: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Multisig commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_multisig_address() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "address",
+        "--signatories", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse multisig address: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_multisig_submit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "multisig",
+        "submit",
+        "--others",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold",
+        "2",
+        "--pallet",
+        "Balances",
+        "--call",
+        "transfer_keep_alive",
+        "--args",
+        r#"[{"Id":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"},1000000000]"#,
+    ]);
+    assert!(cli.is_ok(), "should parse multisig submit: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_approve() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "multisig",
+        "approve",
+        "--others",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold",
+        "2",
+        "--call-hash",
+        "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse multisig approve: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Crowdloan commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_crowdloan_contribute() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "crowdloan",
+        "contribute",
+        "--crowdloan-id",
+        "1",
+        "--amount",
+        "10.0",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan contribute: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_crowdloan_withdraw() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "crowdloan", "withdraw", "--crowdloan-id", "1"]);
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan withdraw: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_crowdloan_finalize() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "crowdloan", "finalize", "--crowdloan-id", "1"]);
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan finalize: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Stake commands (untested operations)
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_stake_remove() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "remove",
+        "--amount",
+        "5.0",
+        "--netuid",
+        "1",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "should parse stake remove: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_max_slippage() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "remove",
+        "--amount",
+        "10.0",
+        "--netuid",
+        "3",
+        "--max-slippage",
+        "1.5",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake remove with slippage: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_move() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--amount", "100.0", "--from", "1", "--to", "3",
+    ]);
+    assert!(cli.is_ok(), "should parse stake move: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_swap() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "swap",
+        "--amount",
+        "50.0",
+        "--netuid",
+        "1",
+        "--from-hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--to-hotkey",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_ok(), "should parse stake swap: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_unstake_all() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "unstake-all"]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake unstake-all: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_unstake_all_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "unstake-all",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake unstake-all with hotkey: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_claim_root() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "claim-root", "--netuid", "0"]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake claim-root: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_add_limit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "add-limit",
+        "--amount",
+        "10.0",
+        "--netuid",
+        "1",
+        "--price",
+        "0.05",
+        "--partial",
+    ]);
+    assert!(cli.is_ok(), "should parse stake add-limit: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_limit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "remove-limit",
+        "--amount",
+        "100.0",
+        "--netuid",
+        "1",
+        "--price",
+        "0.05",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake remove-limit: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_childkey_take() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "childkey-take",
+        "--take",
+        "12.5",
+        "--netuid",
+        "1",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake childkey-take: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_set_children() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-children", "--netuid", "1",
+        "--children", "0.5:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,0.5:5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake set-children: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_recycle_alpha() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "recycle-alpha",
+        "--amount",
+        "500.0",
+        "--netuid",
+        "3",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake recycle-alpha: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_unstake_all_alpha() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "unstake-all-alpha"]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake unstake-all-alpha: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_burn_alpha() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "burn-alpha",
+        "--amount",
+        "100.0",
+        "--netuid",
+        "1",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake burn-alpha: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_swap_limit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "swap-limit",
+        "--amount",
+        "100.0",
+        "--from",
+        "1",
+        "--to",
+        "3",
+        "--price",
+        "0.1",
+        "--partial",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake swap-limit: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Proxy add/remove commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_proxy_add() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "add",
+        "--delegate",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--proxy-type",
+        "staking",
+    ]);
+    assert!(cli.is_ok(), "should parse proxy add: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_remove() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "remove",
+        "--delegate",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "should parse proxy remove: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// View analytics commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_view_subnet_analytics() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "view", "subnet-analytics", "--netuid", "1"]);
+    assert!(
+        cli.is_ok(),
+        "should parse view subnet-analytics: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_view_swap_sim_reverse() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "view", "swap-sim", "--netuid", "1", "--alpha", "100.0",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse view swap-sim alpha→tao: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_view_nominations() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "nominations",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse view nominations: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_view_neuron() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "view", "neuron", "--netuid", "1", "--uid", "0"]);
+    assert!(cli.is_ok(), "should parse view neuron: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_history() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "history",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--limit",
+        "50",
+    ]);
+    assert!(cli.is_ok(), "should parse view history: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Subnet commands (untested)
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_subnet_show() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "show", "--netuid", "1"]);
+    assert!(cli.is_ok(), "should parse subnet show: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_hyperparams() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "hyperparams", "--netuid", "1"]);
+    assert!(
+        cli.is_ok(),
+        "should parse subnet hyperparams: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_subnet_register() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "register"]);
+    assert!(cli.is_ok(), "should parse subnet register: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_register_neuron() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "subnet", "register-neuron", "--netuid", "1"]);
+    assert!(
+        cli.is_ok(),
+        "should parse subnet register-neuron: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_subnet_pow() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "subnet",
+        "pow",
+        "--netuid",
+        "1",
+        "--threads",
+        "8",
+    ]);
+    assert!(cli.is_ok(), "should parse subnet pow: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Config commands (untested set/unset/path)
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_config_set() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "config", "set", "--key", "network", "--value", "test",
+    ]);
+    assert!(cli.is_ok(), "should parse config set: {:?}", cli.err());
+}
+
+#[test]
+fn parse_config_unset() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "config", "unset", "--key", "network"]);
+    assert!(cli.is_ok(), "should parse config unset: {:?}", cli.err());
+}
+
+#[test]
+fn parse_config_path() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "config", "path"]);
+    assert!(cli.is_ok(), "should parse config path: {:?}", cli.err());
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Root, TransferAll, Update, Subscribe blocks
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_root_register() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "root", "register"]);
+    assert!(cli.is_ok(), "should parse root register: {:?}", cli.err());
+}
+
+#[test]
+fn parse_transfer_all() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "transfer-all",
+        "--dest",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--keep-alive",
+    ]);
+    assert!(cli.is_ok(), "should parse transfer-all: {:?}", cli.err());
+}
+
+#[test]
+fn parse_update() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "update"]);
+    assert!(cli.is_ok(), "should parse update: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subscribe_blocks() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subscribe", "blocks"]);
+    assert!(
+        cli.is_ok(),
+        "should parse subscribe blocks: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_subscribe_events_with_filters() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "subscribe",
+        "events",
+        "--filter",
+        "staking",
+        "--netuid",
+        "1",
+        "--account",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse subscribe events with filters: {:?}",
+        cli.err()
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Wallet regen commands
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_wallet_regen_coldkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-coldkey",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "--password", "secret",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse wallet regen-coldkey: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_wallet_regen_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-hotkey", "--name", "hk1",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse wallet regen-hotkey: {:?}",
+        cli.err()
+    );
+}

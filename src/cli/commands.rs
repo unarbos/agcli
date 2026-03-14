@@ -356,8 +356,10 @@ async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::Show { netuid } => {
-            let info = client.get_subnet_info(NetUid(netuid)).await?;
-            let dynamic = client.get_dynamic_info(NetUid(netuid)).await.ok().flatten();
+            let nuid = NetUid(netuid);
+            let (info, dynamic) = tokio::try_join!(client.get_subnet_info(nuid), async {
+                Ok::<_, anyhow::Error>(client.get_dynamic_info(nuid).await.ok().flatten())
+            },)?;
             match info {
                 Some(mut s) => {
                     if let Some(ref di) = dynamic {
@@ -668,9 +670,11 @@ async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Res
     );
 
     loop {
-        let block = client.get_block_number().await?;
-        let hyperparams = client.get_subnet_hyperparams(nuid).await?;
-        let dynamic = client.get_dynamic_info(nuid).await.ok().flatten();
+        let (block, hyperparams, dynamic) = tokio::try_join!(
+            client.get_block_number(),
+            client.get_subnet_hyperparams(nuid),
+            async { Ok::<_, anyhow::Error>(client.get_dynamic_info(nuid).await.ok().flatten()) },
+        )?;
 
         let name = dynamic.as_ref().map(|d| d.name.as_str()).unwrap_or("?");
 
@@ -1135,12 +1139,12 @@ async fn handle_subnet_monitor(
 
 async fn handle_subnet_health(client: &Client, netuid: u16, output: &str) -> Result<()> {
     let nuid = NetUid(netuid);
-    let (neurons, dynamic, hyperparams) = tokio::try_join!(
+    let (neurons, dynamic, hyperparams, block) = tokio::try_join!(
         client.get_neurons_lite(nuid),
         async { client.get_dynamic_info(nuid).await },
         async { client.get_subnet_hyperparams(nuid).await },
+        client.get_block_number(),
     )?;
-    let block = client.get_block_number().await?;
 
     let n = neurons.len();
     let active_count = neurons.iter().filter(|n| n.active).count();
@@ -1248,8 +1252,9 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: &str) -> Res
 
 async fn handle_subnet_emissions(client: &Client, netuid: u16, output: &str) -> Result<()> {
     let nuid = NetUid(netuid);
-    let neurons = client.get_neurons_lite(nuid).await?;
-    let dynamic = client.get_dynamic_info(nuid).await.ok().flatten();
+    let (neurons, dynamic) = tokio::try_join!(client.get_neurons_lite(nuid), async {
+        Ok::<_, anyhow::Error>(client.get_dynamic_info(nuid).await.ok().flatten())
+    },)?;
 
     let total_emission: f64 = neurons.iter().map(|n| n.emission).sum();
     let emission_per_block = dynamic
@@ -1333,9 +1338,11 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: &str) -> 
 
 async fn handle_subnet_cost(client: &Client, netuid: u16, output: &str) -> Result<()> {
     let nuid = NetUid(netuid);
-    let info = client.get_subnet_info(nuid).await?;
-    let hyperparams = client.get_subnet_hyperparams(nuid).await.ok().flatten();
-    let dynamic = client.get_dynamic_info(nuid).await.ok().flatten();
+    let (info, hyperparams, dynamic) = tokio::try_join!(
+        client.get_subnet_info(nuid),
+        async { Ok::<_, anyhow::Error>(client.get_subnet_hyperparams(nuid).await.ok().flatten()) },
+        async { Ok::<_, anyhow::Error>(client.get_dynamic_info(nuid).await.ok().flatten()) },
+    )?;
 
     let burn = info.as_ref().map(|i| i.burn).unwrap_or(Balance::ZERO);
     let difficulty = info.as_ref().map(|i| i.difficulty).unwrap_or(0);

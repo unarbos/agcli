@@ -38,7 +38,7 @@ dialoguer = "0.11"
 colored = "2"
 
 # Async
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-util", "net", "time", "sync", "signal"] }
 futures = "0.3"
 
 # Serialization
