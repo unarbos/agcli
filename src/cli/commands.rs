@@ -23,7 +23,14 @@ pub async fn execute(cli: Cli) -> Result<()> {
 
     match cli.command {
         Commands::Wallet(cmd) => {
-            wallet_cmds::handle_wallet(cmd, &cli.wallet_dir, &cli.wallet, password.as_deref()).await
+            wallet_cmds::handle_wallet(
+                cmd,
+                &cli.wallet_dir,
+                &cli.wallet,
+                password.as_deref(),
+                output,
+            )
+            .await
         }
         Commands::Balance {
             address,
@@ -280,7 +287,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Update => handle_update().await,
         Commands::Explain { topic } => {
-            handle_explain(topic.as_deref());
+            handle_explain(topic.as_deref(), output);
             Ok(())
         }
         Commands::Batch { file, no_atomic } => {
@@ -2443,24 +2450,53 @@ fn cfg_value_display(key: &str, cfg: &crate::config::Config) -> String {
 
 // ──────── Explain ────────
 
-fn handle_explain(topic: Option<&str>) {
+fn handle_explain(topic: Option<&str>, output: &str) {
     match topic {
         Some(t) => match crate::utils::explain::explain(t) {
-            Some(text) => println!("{}", text),
-            None => {
-                eprintln!("Unknown topic '{}'. Available topics:\n", t);
-                for (key, desc) in crate::utils::explain::list_topics() {
-                    eprintln!("  {:<16} {}", key, desc);
+            Some(text) => {
+                if output == "json" {
+                    print_json(&serde_json::json!({
+                        "topic": t,
+                        "content": text,
+                    }));
+                } else {
+                    println!("{}", text);
                 }
-                eprintln!("\nUsage: agcli explain <topic>");
+            }
+            None => {
+                let topics: Vec<serde_json::Value> = crate::utils::explain::list_topics()
+                    .iter()
+                    .map(|(k, d)| serde_json::json!({"topic": k, "description": d}))
+                    .collect();
+                if output == "json" {
+                    eprint_json(&serde_json::json!({
+                        "error": true,
+                        "message": format!("Unknown topic '{}'", t),
+                        "available_topics": topics,
+                    }));
+                } else {
+                    eprintln!("Unknown topic '{}'. Available topics:\n", t);
+                    for (key, desc) in crate::utils::explain::list_topics() {
+                        eprintln!("  {:<16} {}", key, desc);
+                    }
+                    eprintln!("\nUsage: agcli explain --topic <topic>");
+                }
             }
         },
         None => {
-            println!("Available topics:\n");
-            for (key, desc) in crate::utils::explain::list_topics() {
-                println!("  {:<16} {}", key, desc);
+            let topics: Vec<serde_json::Value> = crate::utils::explain::list_topics()
+                .iter()
+                .map(|(k, d)| serde_json::json!({"topic": k, "description": d}))
+                .collect();
+            if output == "json" {
+                print_json(&serde_json::json!(topics));
+            } else {
+                println!("Available topics:\n");
+                for (key, desc) in crate::utils::explain::list_topics() {
+                    println!("  {:<16} {}", key, desc);
+                }
+                println!("\nUsage: agcli explain --topic <topic>");
             }
-            println!("\nUsage: agcli explain <topic>");
         }
     }
 }

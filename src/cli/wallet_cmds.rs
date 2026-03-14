@@ -10,6 +10,7 @@ pub async fn handle_wallet(
     wallet_dir: &str,
     wallet_name: &str,
     global_password: Option<&str>,
+    output: &str,
 ) -> Result<()> {
     match cmd {
         WalletCommands::Create {
@@ -30,18 +31,39 @@ pub async fn handle_wallet(
                         .map_err(anyhow::Error::from)
                 })?;
             let wallet = Wallet::create(wallet_dir, &name, &password, "default")?;
-            println!("Wallet '{}' created.", name);
-            if let Some(addr) = wallet.coldkey_ss58() {
-                println!("Coldkey: {}", addr);
-            }
-            if let Some(addr) = wallet.hotkey_ss58() {
-                println!("Hotkey:  {}", addr);
+            if output == "json" {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "name": name,
+                    "coldkey": wallet.coldkey_ss58().unwrap_or(""),
+                    "hotkey": wallet.hotkey_ss58().unwrap_or(""),
+                }));
+            } else {
+                println!("Wallet '{}' created.", name);
+                if let Some(addr) = wallet.coldkey_ss58() {
+                    println!("Coldkey: {}", addr);
+                }
+                if let Some(addr) = wallet.hotkey_ss58() {
+                    println!("Hotkey:  {}", addr);
+                }
             }
             Ok(())
         }
         WalletCommands::List => {
             let wallets = Wallet::list_wallets(wallet_dir)?;
-            if wallets.is_empty() {
+            if output == "json" {
+                let items: Vec<serde_json::Value> = wallets
+                    .iter()
+                    .map(|name| {
+                        let w = Wallet::open(format!("{}/{}", wallet_dir, name)).ok();
+                        let addr = w
+                            .as_ref()
+                            .and_then(|w| w.coldkey_ss58().map(|s| s.to_string()))
+                            .unwrap_or_default();
+                        serde_json::json!({"name": name, "coldkey": addr})
+                    })
+                    .collect();
+                crate::cli::helpers::print_json(&serde_json::json!(items));
+            } else if wallets.is_empty() {
                 println!("No wallets found in {}", wallet_dir);
             } else {
                 println!("Wallets in {}:", wallet_dir);
@@ -68,21 +90,54 @@ pub async fn handle_wallet(
             } else {
                 all_wallets
             };
-            for name in &wallets {
-                let w = Wallet::open(format!("{}/{}", wallet_dir, name));
-                if let Ok(w) = w {
-                    println!("Wallet: {}", name);
-                    if let Some(addr) = w.coldkey_ss58() {
-                        println!("  Coldkey: {}", addr);
+            if output == "json" {
+                let mut items: Vec<serde_json::Value> = Vec::new();
+                for name in &wallets {
+                    let w = Wallet::open(format!("{}/{}", wallet_dir, name));
+                    if let Ok(w) = w {
+                        let coldkey = w.coldkey_ss58().map(|s| s.to_string()).unwrap_or_default();
+                        let mut hotkeys_arr: Vec<serde_json::Value> = Vec::new();
+                        if all {
+                            if let Ok(hk_names) = w.list_hotkeys() {
+                                for hk_name in &hk_names {
+                                    let mut w2 =
+                                        Wallet::open(format!("{}/{}", wallet_dir, name)).unwrap();
+                                    if w2.load_hotkey(hk_name).is_ok() {
+                                        if let Some(hk_addr) = w2.hotkey_ss58() {
+                                            hotkeys_arr.push(serde_json::json!({
+                                                "name": hk_name,
+                                                "address": hk_addr.to_string(),
+                                            }));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        let mut obj = serde_json::json!({"name": name, "coldkey": coldkey});
+                        if all {
+                            obj["hotkeys"] = serde_json::json!(hotkeys_arr);
+                        }
+                        items.push(obj);
                     }
-                    if all {
-                        if let Ok(hotkeys) = w.list_hotkeys() {
-                            for hk_name in &hotkeys {
-                                let mut w2 =
-                                    Wallet::open(format!("{}/{}", wallet_dir, name)).unwrap();
-                                if w2.load_hotkey(hk_name).is_ok() {
-                                    if let Some(hk_addr) = w2.hotkey_ss58() {
-                                        println!("  Hotkey '{}': {}", hk_name, hk_addr);
+                }
+                crate::cli::helpers::print_json(&serde_json::json!(items));
+            } else {
+                for name in &wallets {
+                    let w = Wallet::open(format!("{}/{}", wallet_dir, name));
+                    if let Ok(w) = w {
+                        println!("Wallet: {}", name);
+                        if let Some(addr) = w.coldkey_ss58() {
+                            println!("  Coldkey: {}", addr);
+                        }
+                        if all {
+                            if let Ok(hotkeys) = w.list_hotkeys() {
+                                for hk_name in &hotkeys {
+                                    let mut w2 =
+                                        Wallet::open(format!("{}/{}", wallet_dir, name)).unwrap();
+                                    if w2.load_hotkey(hk_name).is_ok() {
+                                        if let Some(hk_addr) = w2.hotkey_ss58() {
+                                            println!("  Hotkey '{}': {}", hk_name, hk_addr);
+                                        }
                                     }
                                 }
                             }
@@ -122,9 +177,16 @@ pub async fn handle_wallet(
                         .map_err(anyhow::Error::from)
                 })?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, &name, &mnemonic, &password)?;
-            println!("Wallet '{}' imported.", name);
-            if let Some(addr) = wallet.coldkey_ss58() {
-                println!("Coldkey: {}", addr);
+            if output == "json" {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "name": name,
+                    "coldkey": wallet.coldkey_ss58().unwrap_or(""),
+                }));
+            } else {
+                println!("Wallet '{}' imported.", name);
+                if let Some(addr) = wallet.coldkey_ss58() {
+                    println!("Coldkey: {}", addr);
+                }
             }
             Ok(())
         }
@@ -158,9 +220,15 @@ pub async fn handle_wallet(
                         .map_err(anyhow::Error::from)
                 })?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, "default", &mnemonic, &password)?;
-            println!("Coldkey regenerated.");
-            if let Some(addr) = wallet.coldkey_ss58() {
-                println!("Coldkey: {}", addr);
+            if output == "json" {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "coldkey": wallet.coldkey_ss58().unwrap_or(""),
+                }));
+            } else {
+                println!("Coldkey regenerated.");
+                if let Some(addr) = wallet.coldkey_ss58() {
+                    println!("Coldkey: {}", addr);
+                }
             }
             Ok(())
         }
@@ -188,7 +256,14 @@ pub async fn handle_wallet(
                 .join(&name);
             std::fs::create_dir_all(hotkey_path.parent().unwrap())?;
             crate::wallet::keyfile::write_keyfile(&hotkey_path, &mnemonic)?;
-            println!("Hotkey '{}' regenerated: {}", name, ss58);
+            if output == "json" {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "name": name,
+                    "hotkey": ss58,
+                }));
+            } else {
+                println!("Hotkey '{}' regenerated: {}", name, ss58);
+            }
             Ok(())
         }
         WalletCommands::NewHotkey { name } => {
@@ -200,7 +275,14 @@ pub async fn handle_wallet(
                 .join(&name);
             std::fs::create_dir_all(hotkey_path.parent().unwrap())?;
             crate::wallet::keyfile::write_keyfile(&hotkey_path, &mnemonic)?;
-            println!("New hotkey '{}' created: {}", name, ss58);
+            if output == "json" {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "name": name,
+                    "hotkey": ss58,
+                }));
+            } else {
+                println!("New hotkey '{}' created: {}", name, ss58);
+            }
             Ok(())
         }
         WalletCommands::Sign { message } => {

@@ -9,9 +9,9 @@ How to use agcli from AI agents, scripts, and automation pipelines with zero int
 cargo install --git https://github.com/unconst/agcli
 
 # Set persistent defaults (optional)
-agcli config set batch true          # Never prompt for missing args
-agcli config set output json         # Always output JSON
-agcli config set network finney      # Default to mainnet
+agcli config set --key batch --value true          # Never prompt for missing args
+agcli config set --key output --value json         # Always output JSON
+agcli config set --key network --value finney      # Default to mainnet
 ```
 
 ## Core Principles
@@ -40,10 +40,10 @@ agcli --output json wallet list
 agcli --output json wallet derive 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
 
 # Sign a message
-agcli --output json wallet sign "my message" --password "$WALLET_PASS" -w agent_wallet
+agcli --output json wallet sign --message "my message" --password "$WALLET_PASS" -w agent_wallet
 
 # Verify a signature
-agcli --output json wallet verify "my message" --signature 0xABCDEF... --signer 5Gx...
+agcli --output json wallet verify --message "my message" --signature 0xABCDEF... --signer 5Gx...
 # Exit code 0 = valid, 1 = invalid
 ```
 
@@ -57,13 +57,13 @@ agcli --output json balance --address 5Gx...
 agcli --output json subnet list
 
 # Single subnet details
-agcli --output json subnet show 1
+agcli --output json subnet show --netuid 1
 
 # Metagraph (all neurons)
-agcli --output json subnet metagraph 1
+agcli --output json subnet metagraph --netuid 1
 
 # Single neuron
-agcli --output json subnet metagraph 1 --uid 42
+agcli --output json subnet metagraph --netuid 1 --uid 42
 
 # Portfolio
 agcli --output json view portfolio --address 5Gx...
@@ -85,14 +85,14 @@ agcli --output json view swap-sim --netuid 1 --tao 10.0
 
 ```bash
 # Set spending limits FIRST
-agcli config set spending_limit.97 100.0    # Max 100 TAO on SN97
-agcli config set spending_limit.* 500.0     # Global max
+agcli config set --key spending_limit.97 --value 100.0    # Max 100 TAO on SN97
+agcli config set --key spending_limit.* --value 500.0     # Global max
 
 # Stake with slippage protection
-agcli stake add 10.0 --netuid 1 --password "$WALLET_PASS" --yes --max-slippage 2.0
+agcli stake add --amount 10.0 --netuid 1 --password "$WALLET_PASS" --yes --max-slippage 2.0
 
 # Unstake
-agcli stake remove 5.0 --netuid 1 --password "$WALLET_PASS" --yes --max-slippage 2.0
+agcli stake remove --amount 5.0 --netuid 1 --password "$WALLET_PASS" --yes --max-slippage 2.0
 
 # Check liquidity before staking
 agcli --output json subnet liquidity --netuid 1
@@ -102,14 +102,14 @@ agcli --output json subnet liquidity --netuid 1
 
 ```bash
 # Dry-run first (check pre-conditions without submitting)
-agcli --output json weights set --netuid 97 "0:100,1:200,2:50" --dry-run --password "$WALLET_PASS"
+agcli --output json weights set --netuid 97 --weights "0:100,1:200,2:50" --dry-run --password "$WALLET_PASS"
 # Returns: stake_sufficient, rate_limit_ok, commit_reveal_required, blocks_until_eligible
 
 # Set weights
-agcli weights set --netuid 97 "0:100,1:200,2:50" --password "$WALLET_PASS" --yes
+agcli weights set --netuid 97 --weights "0:100,1:200,2:50" --password "$WALLET_PASS" --yes
 
 # Atomic commit-reveal (one command, no babysitting)
-agcli weights commit-reveal --netuid 97 "0:100,1:200,2:50" --wait --password "$WALLET_PASS" --yes
+agcli weights commit-reveal --netuid 97 --weights "0:100,1:200,2:50" --wait --password "$WALLET_PASS" --yes
 # Commits, waits for reveal window, auto-reveals, returns result
 ```
 
@@ -126,10 +126,10 @@ agcli subnet monitor --netuid 97 --json &
 agcli --output json subscribe events staking --netuid 97 --account 5Gx... &
 
 # Subnet health check
-agcli --output json subnet health 97
+agcli --output json subnet health --netuid 97
 
 # Registration cost
-agcli --output json subnet cost 97
+agcli --output json subnet cost --netuid 97
 ```
 
 ## Error Handling Pattern
@@ -177,7 +177,7 @@ export AGCLI_BATCH=1
 
 # Now all commands run fully non-interactive
 agcli --output json balance
-agcli stake add 10.0 --netuid 1
+agcli stake add --amount 10.0 --netuid 1
 ```
 
 ## Built-in Reference

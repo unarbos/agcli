@@ -10,7 +10,7 @@ cargo install --git https://github.com/unconst/agcli
 
 ## Agent / Non-Interactive Mode
 
-Every command is fully scriptable with zero stdin blocking when all required args are provided.
+Every command is fully scriptable with zero stdin blocking when all required args are provided. Every argument uses `--flag` syntax (no positional args).
 
 ### Global Flags
 | Flag | Env Var | Description |
@@ -39,11 +39,11 @@ Every command is fully scriptable with zero stdin blocking when all required arg
 agcli --batch --output json wallet create --name w1 --password mypass --yes
 
 # Persistent batch mode via config
-agcli config set batch true
+agcli config set --key batch --value true
 
 # Combine with spending limits for safety
-agcli config set spending_limit.97 100.0    # Max 100 TAO on SN97
-agcli config set spending_limit.* 500.0     # Global max across all subnets
+agcli config set --key spending_limit.97 --value 100.0    # Max 100 TAO on SN97
+agcli config set --key spending_limit.* --value 500.0     # Global max across all subnets
 ```
 
 ### Agent Examples
@@ -54,8 +54,14 @@ agcli wallet create --name mywallet --password mypass --yes
 # Import from mnemonic
 agcli wallet import --name mywallet --mnemonic "word1 word2 ... word12" --password mypass
 
+# List wallets as JSON
+agcli --output json wallet list
+
+# Show wallet details as JSON (with all hotkeys)
+agcli --output json wallet show --all -w mywallet
+
 # Stake with slippage protection
-agcli stake add 10.0 --netuid 1 --password mypass --yes --max-slippage 2.0
+agcli stake add --amount 10.0 --netuid 1 --password mypass --yes --max-slippage 2.0
 
 # Stake wizard fully scripted
 agcli stake wizard --netuid 1 --amount 5.0 --password mypass --yes
@@ -70,20 +76,23 @@ agcli --output json balance --watch 60 --threshold 10.0 --address 5Gx...
 agcli --output json subnet list
 
 # Dry-run weight set (check pre-conditions without submitting)
-agcli --output json weights set --netuid 97 "0:100,1:200" --dry-run
+agcli --output json weights set --netuid 97 --weights "0:100,1:200" --dry-run
 
 # Atomic commit-reveal (commit, wait, auto-reveal)
-agcli weights commit-reveal --netuid 97 "0:100,1:200" --wait
+agcli weights commit-reveal --netuid 97 --weights "0:100,1:200" --wait
 
 # Sign and verify messages
-agcli wallet sign "hello world" --password mypass
-agcli wallet verify "hello world" --signature 0xabcdef... --signer 5Gx...
+agcli wallet sign --message "hello world" --password mypass
+agcli wallet verify --message "hello world" --signature 0xabcdef... --signer 5Gx...
 
 # Derive SS58 from public key
-agcli wallet derive 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+agcli wallet derive --input 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
 
 # Transfer TAO
-agcli transfer 5Dest... 10.0 --password mypass --yes
+agcli transfer --dest 5Dest... --amount 10.0 --password mypass --yes
+
+# Transfer entire balance
+agcli transfer-all --dest 5Dest... --password mypass --yes
 
 # Simulate swap
 agcli --output json view swap-sim --netuid 1 --tao 10.0
@@ -92,157 +101,163 @@ agcli --output json view swap-sim --netuid 1 --tao 10.0
 agcli subnet monitor --netuid 97 --json
 
 # Subscribe to staking events on SN97
-agcli subscribe events staking --netuid 97 --account 5Gx...
+agcli subscribe events --filter staking --netuid 97 --account 5Gx...
 
 # Built-in concept reference
-agcli explain tempo
-agcli explain commit-reveal
+agcli explain --topic tempo
+agcli explain --topic commit-reveal
+
+# Explain topics as JSON
+agcli --output json explain
+agcli --output json explain --topic tempo
 ```
 
 ## Core Commands
 
+All commands use `--flag` syntax. No positional arguments.
+
 ### Wallet
-- `agcli wallet create --name NAME [--password PW]` — create new wallet (coldkey + hotkey)
-- `agcli wallet list` — list wallets
-- `agcli wallet show [--all]` — show wallet details, use `-w NAME` to filter
-- `agcli wallet import --name NAME [--mnemonic "..."] [--password PW]` — import from mnemonic
-- `agcli wallet regen-coldkey [--mnemonic "..."] [--password PW]` — regenerate coldkey
-- `agcli wallet regen-hotkey --name NAME [--mnemonic "..."]` — regenerate hotkey
-- `agcli wallet new-hotkey NAME` — create new hotkey
-- `agcli wallet sign MESSAGE [--password PW]` — sign message with coldkey (returns JSON: signer, message, signature)
-- `agcli wallet verify MESSAGE --signature 0x... [--signer SS58]` — verify signature (exit 0=valid, 1=invalid)
-- `agcli wallet derive INPUT` — derive SS58 from public key hex or mnemonic (no secrets printed)
+- `agcli wallet create --name NAME [--password PW]` — create new wallet (coldkey + hotkey). JSON: `{"name","coldkey","hotkey"}`
+- `agcli wallet list` — list wallets. JSON: `[{"name","coldkey"}]`
+- `agcli wallet show [--all]` — show wallet details, use `-w NAME` to filter. JSON: `[{"name","coldkey","hotkeys":[...]}]`
+- `agcli wallet import --name NAME [--mnemonic "..."] [--password PW]` — import from mnemonic. JSON: `{"name","coldkey"}`
+- `agcli wallet regen-coldkey [--mnemonic "..."] [--password PW]` — regenerate coldkey. JSON: `{"coldkey"}`
+- `agcli wallet regen-hotkey --name NAME [--mnemonic "..."]` — regenerate hotkey. JSON: `{"name","hotkey"}`
+- `agcli wallet new-hotkey --name NAME` — create new hotkey. JSON: `{"name","hotkey"}`
+- `agcli wallet sign --message MESSAGE [--password PW]` — sign message with coldkey (returns JSON: signer, message, signature)
+- `agcli wallet verify --message MSG --signature 0x... [--signer SS58]` — verify signature (exit 0=valid, 1=invalid)
+- `agcli wallet derive --input INPUT` — derive SS58 from public key hex or mnemonic (no secrets printed)
 - Note: reads Python bittensor-wallet keyfiles (NaCl SecretBox + JSON)
 
 ### Balance & Transfer
 - `agcli balance [--address SS58]` — show balance
 - `agcli balance [--address SS58] --watch [N] --threshold T` — monitor balance every N seconds (default 60), alert when below T TAO
-- `agcli transfer DEST_SS58 AMOUNT_TAO` — send TAO
-- `agcli transfer-all DEST_SS58 [--keep-alive]` — send entire balance
+- `agcli transfer --dest SS58 --amount TAO` — send TAO
+- `agcli transfer-all --dest SS58 [--keep-alive]` — send entire balance
 
 ### Staking
-- `agcli stake add AMOUNT --netuid N [--hotkey SS58] [--max-slippage PCT]` — stake TAO on subnet (aborts if slippage > PCT%)
-- `agcli stake remove AMOUNT --netuid N [--hotkey SS58] [--max-slippage PCT]` — unstake (with slippage protection)
+- `agcli stake add --amount AMT --netuid N [--hotkey SS58] [--max-slippage PCT]` — stake TAO (aborts if slippage > PCT%)
+- `agcli stake remove --amount AMT --netuid N [--hotkey SS58] [--max-slippage PCT]` — unstake
 - `agcli stake list [--address SS58]` — show all stakes
-- `agcli stake move AMOUNT --from SRC --to DST [--hotkey SS58]` — move between subnets
-- `agcli stake swap AMOUNT --netuid N --from-hotkey HK1 --to-hotkey HK2` — swap between hotkeys
+- `agcli stake move --amount AMT --from SRC --to DST [--hotkey SS58]` — move between subnets
+- `agcli stake swap --amount AMT --netuid N --from-hotkey HK1 --to-hotkey HK2` — swap between hotkeys
 - `agcli stake unstake-all [--hotkey SS58]` — unstake all from hotkey
-- `agcli stake claim-root --netuid N` — claim root dividends
-- `agcli stake add-limit AMOUNT --netuid N --price P [--partial] [--hotkey SS58]` — limit order stake
-- `agcli stake remove-limit AMOUNT --netuid N --price P [--partial] [--hotkey SS58]` — limit unstake
-- `agcli stake childkey-take PCT --netuid N [--hotkey SS58]` — set childkey take
+- `agcli stake claim-root --netuid N [--hotkey SS58]` — claim root dividends
+- `agcli stake add-limit --amount AMT --netuid N --price P [--partial] [--hotkey SS58]` — limit order stake
+- `agcli stake remove-limit --amount AMT --netuid N --price P [--partial] [--hotkey SS58]` — limit unstake
+- `agcli stake childkey-take --take PCT --netuid N [--hotkey SS58]` — set childkey take
 - `agcli stake set-children --netuid N --children "proportion:hotkey,..."` — set children
-- `agcli stake recycle-alpha AMOUNT --netuid N [--hotkey SS58]` — recycle alpha to TAO
+- `agcli stake recycle-alpha --amount AMT --netuid N [--hotkey SS58]` — recycle alpha to TAO
 - `agcli stake unstake-all-alpha [--hotkey SS58]` — unstake all alpha across all subnets
-- `agcli stake burn-alpha AMOUNT --netuid N [--hotkey SS58]` — permanently burn alpha
-- `agcli stake swap-limit AMOUNT --from SRC --to DST --price P [--partial] [--hotkey SS58]` — limit swap
+- `agcli stake burn-alpha --amount AMT --netuid N [--hotkey SS58]` — permanently burn alpha
+- `agcli stake swap-limit --amount AMT --from SRC --to DST --price P [--partial] [--hotkey SS58]` — limit swap
 - `agcli stake wizard [--netuid N] [--amount X] [--hotkey SS58]` — guided staking
 
 ### Subnets
 - `agcli subnet list` — list subnets with names, emissions, burn
-- `agcli subnet show N` — subnet details with Dynamic TAO pricing
-- `agcli subnet metagraph N [--uid UID]` — view metagraph (all neurons or single UID as JSON object)
-- `agcli subnet hyperparams N` — show all hyperparameters
+- `agcli subnet show --netuid N` — subnet details with Dynamic TAO pricing
+- `agcli subnet metagraph --netuid N [--uid UID]` — view metagraph (all or single UID JSON)
+- `agcli subnet hyperparams --netuid N` — show all hyperparameters
 - `agcli subnet register` — create new subnet
-- `agcli subnet register-neuron N` — register on subnet N (burn)
-- `agcli subnet pow N [--threads 8]` — POW registration (multi-threaded)
-- `agcli subnet dissolve N` — dissolve a subnet (owner only)
-- `agcli subnet watch --netuid N [--interval 12]` — live tempo countdown, rate limits, commit-reveal status, price/emissions
+- `agcli subnet register-neuron --netuid N` — register on subnet (burn)
+- `agcli subnet pow --netuid N [--threads 8]` — POW registration (multi-threaded)
+- `agcli subnet dissolve --netuid N` — dissolve a subnet (owner only)
+- `agcli subnet watch --netuid N [--interval 12]` — live tempo countdown, rate limits, commit-reveal status
 - `agcli subnet liquidity [--netuid N]` — AMM depth dashboard: tao_in, alpha_in, slippage at 0.1/1/10/100 TAO
-- `agcli subnet monitor --netuid N [--interval 24] [--json]` — live UID tracker: registrations, deregistrations, emission shifts, anomalies. JSON streaming for alerting.
-- `agcli subnet health N` — health dashboard: miner/validator status, staleness, zero-emission UIDs
-- `agcli subnet emissions N` — per-UID emission breakdown with daily estimates
-- `agcli subnet cost N` — registration cost, difficulty, burn range, capacity
+- `agcli subnet monitor --netuid N [--interval 24] [--json]` — live UID tracker: registrations, emissions, anomalies. JSON streaming.
+- `agcli subnet health --netuid N` — health dashboard: miner/validator status, staleness
+- `agcli subnet emissions --netuid N` — per-UID emission breakdown
+- `agcli subnet cost --netuid N` — registration cost, difficulty, burn range
 
 ### Weights
-- `agcli weights set --netuid N "uid:weight,..." [--version-key K] [--dry-run]` — set weights (--dry-run checks stake, rate limits, commit-reveal without submitting)
-- `agcli weights commit --netuid N "uid:weight,..." [--salt S]` — commit-reveal
-- `agcli weights reveal --netuid N "uid:weight,..." SALT [--version-key K]` — reveal committed weights
-- `agcli weights commit-reveal --netuid N "uid:weight,..." [--version-key K] [--wait]` — atomic: commit, wait for reveal window, auto-reveal. --wait blocks until on-chain confirmation.
+- `agcli weights set --netuid N --weights "uid:weight,..." [--version-key K] [--dry-run]` — set weights
+- `agcli weights commit --netuid N --weights "uid:weight,..." [--salt S]` — commit weights
+- `agcli weights reveal --netuid N --weights "uid:weight,..." --salt S [--version-key K]` — reveal
+- `agcli weights commit-reveal --netuid N --weights "uid:weight,..." [--version-key K] [--wait]` — atomic commit-reveal
 
 ### Delegates
 - `agcli delegate list` — list all delegates
 - `agcli delegate show [--hotkey SS58]` — show delegate info
-- `agcli delegate decrease-take PCT [--hotkey SS58]` — decrease validator take
-- `agcli delegate increase-take PCT [--hotkey SS58]` — increase validator take
+- `agcli delegate decrease-take --take PCT [--hotkey SS58]` — decrease validator take
+- `agcli delegate increase-take --take PCT [--hotkey SS58]` — increase validator take
 
 ### View / Query
 - `agcli view portfolio [--address SS58]` — full stake portfolio
 - `agcli view dynamic` — Dynamic TAO info (prices, pools, volumes, emissions)
 - `agcli view network` — network overview (block, issuance, stake, emission)
-- `agcli view neuron --netuid N UID` — full neuron detail
+- `agcli view neuron --netuid N --uid UID` — full neuron detail
 - `agcli view validators [--netuid N] [--limit 50]` — top validators
 - `agcli view history [--address SS58] [--limit 20]` — recent extrinsics (Subscan)
 - `agcli view account [--address SS58]` — full account explorer
-- `agcli view subnet-analytics N` — detailed subnet analysis
+- `agcli view subnet-analytics --netuid N` — detailed subnet analysis
 - `agcli view staking-analytics [--address SS58]` — APY and yield estimates
 - `agcli view swap-sim --netuid N [--tao X | --alpha X]` — swap simulation
-- `agcli view nominations HOTKEY_SS58` — who delegates to a validator
+- `agcli view nominations --hotkey SS58` — who delegates to a validator
 
 ### Identity
-- `agcli identity show SS58` — query on-chain identity
-- `agcli identity set --name "..." [--url "..."] [--github "..."]` — set identity
-- `agcli identity set-subnet N --name "..." [--github "..."] [--url "..."]` — set subnet identity
+- `agcli identity show --address SS58` — query on-chain identity
+- `agcli identity set --name "..." [--url "..."] [--github "..."] [--description "..."]` — set identity
+- `agcli identity set-subnet --netuid N --name "..." [--github "..."] [--url "..."]` — set subnet identity
 
 ### Swap
-- `agcli swap hotkey NEW_SS58` — swap hotkey
-- `agcli swap coldkey NEW_SS58` — schedule coldkey swap
+- `agcli swap hotkey --new-hotkey SS58` — swap hotkey
+- `agcli swap coldkey --new-coldkey SS58` — schedule coldkey swap
 
 ### Root
 - `agcli root register` — register on root network
-- `agcli root weights "netuid:weight,..."` — set root weights
+- `agcli root weights --weights "netuid:weight,..."` — set root weights
 
 ### Serve (Miners)
 - `agcli serve axon --netuid N --ip IP --port PORT [--protocol 4] [--version 0]`
 
 ### Proxy
-- `agcli proxy add DELEGATE_SS58 [--proxy-type TYPE] [--delay 0]`
-- `agcli proxy remove DELEGATE_SS58 [--proxy-type TYPE] [--delay 0]`
+- `agcli proxy add --delegate SS58 [--proxy-type TYPE] [--delay 0]`
+- `agcli proxy remove --delegate SS58 [--proxy-type TYPE] [--delay 0]`
 - `agcli proxy list [--address SS58]`
 - Types: any, owner, staking, non_transfer, non_critical, governance, senate
 
 ### Multisig
-- `agcli multisig address "SS58_1,SS58_2,..." --threshold N` — derive multisig address
+- `agcli multisig address --signatories "SS58_1,SS58_2,..." --threshold N` — derive multisig address
 - `agcli multisig submit --others "..." --threshold N --pallet P --call C [--args JSON]`
 - `agcli multisig approve --others "..." --threshold N --call-hash 0x...`
 
 ### Crowdloan
-- `agcli crowdloan contribute ID AMOUNT_TAO`
-- `agcli crowdloan withdraw ID`
-- `agcli crowdloan finalize ID`
+- `agcli crowdloan contribute --crowdloan-id ID --amount TAO`
+- `agcli crowdloan withdraw --crowdloan-id ID`
+- `agcli crowdloan finalize --crowdloan-id ID`
 
 ### Subscribe (Real-time)
 - `agcli subscribe blocks` — watch finalized blocks
-- `agcli subscribe events [FILTER] [--netuid N] [--account SS58]` — stream chain events, optionally filtered by subnet and/or account
+- `agcli subscribe events [--filter FILTER] [--netuid N] [--account SS58]` — stream chain events
 - Filters: all, staking, registration, transfer, weights, subnet
 
 ### Live Mode
 - `agcli --live view dynamic` — poll Dynamic TAO prices with delta tracking
-- `agcli --live 30 subnet metagraph 1` — track neuron changes every 30s
+- `agcli --live 30 subnet metagraph --netuid 1` — track neuron changes every 30s
 - `agcli --live view portfolio` — watch portfolio in real-time
 
 ### Explain (Built-in Reference)
-- `agcli explain` — list all available topics
-- `agcli explain <topic>` — explain a Bittensor concept
-- Topics: tempo, commit-reveal, amm, yuma, rate-limits, stake-weight, bootstrap, dynamic-tao, registration, emission, validators, miners, root-network, delegation, identity, proxy, multisig, crowdloan
+- `agcli explain` — list all available topics (JSON: `[{"topic","description"}]`)
+- `agcli explain --topic TOPIC` — explain a Bittensor concept (JSON: `{"topic","content"}`)
+- Topics: tempo, commit-reveal, amm, yuma, rate-limits, stake-weight, bootstrap, alpha, emission, registration, subnets, validators, miners, immunity, delegation, childkeys, root, proxy
 
 ### Configuration
 - `agcli config show` — show current config
-- `agcli config set KEY VALUE` — set persistent config
-- `agcli config unset KEY` — remove config value
+- `agcli config set --key KEY --value VALUE` — set persistent config
+- `agcli config unset --key KEY` — remove config value
 - `agcli config path` — show config file path (~/.agcli/config.toml)
 - Keys: network, endpoint, wallet_dir, wallet, hotkey, output, proxy, live_interval, batch, spending_limit.N, spending_limit.*
 - Priority: CLI flags > env vars > config file > defaults
 
 ### Batch Extrinsics
-- `agcli batch calls.json` — submit multiple extrinsics atomically via Utility.batch_all
-- `agcli batch calls.json --no-atomic` — non-atomic batch (continues on error)
+- `agcli batch --file calls.json` — submit multiple extrinsics atomically via Utility.batch_all
+- `agcli batch --file calls.json --no-atomic` — non-atomic batch (continues on error)
 - JSON format: `[{"pallet": "SubtensorModule", "call": "add_stake", "args": ["5Hotkey...", 1, 1000000000]}, ...]`
 - Hex strings in args (`"0xdead..."`) are decoded as bytes automatically
 - Requires wallet unlock (--password or interactive)
 
 ### Utility
-- `agcli completions bash|zsh|fish|powershell` — generate shell completions
+- `agcli completions --shell bash|zsh|fish|powershell` — generate shell completions
 - `agcli update` — self-update from GitHub
 
 ## Output Formats
@@ -251,9 +266,13 @@ agcli --output json subnet list            # JSON array of all subnets
 agcli --output json --pretty subnet list   # Pretty-printed JSON
 agcli --output csv view dynamic            # CSV with all dynamic TAO data
 agcli --output json view portfolio         # JSON portfolio with positions
-agcli --output csv subnet metagraph 1      # CSV metagraph data
+agcli --output csv subnet metagraph --netuid 1  # CSV metagraph data
 agcli --output json stake list             # JSON stake positions
-agcli --output json weights set --netuid 1 "0:1" --dry-run  # Pre-flight JSON
+agcli --output json wallet list            # JSON array of wallets
+agcli --output json wallet show --all      # JSON wallets with hotkeys
+agcli --output json explain                # JSON list of topics
+agcli --output json explain --topic tempo  # JSON explanation
+agcli --output json weights set --netuid 1 --weights "0:1" --dry-run  # Pre-flight JSON
 ```
 
 ## Error Handling (for agents)
@@ -266,10 +285,10 @@ Exit code 1 for errors. Parse stderr for error JSON, stdout for data.
 ## Spending Limits (safety for agents)
 ```bash
 # Per-subnet limit
-agcli config set spending_limit.97 100.0   # Refuse to stake >100 TAO on SN97
+agcli config set --key spending_limit.97 --value 100.0   # Refuse to stake >100 TAO on SN97
 
 # Global limit
-agcli config set spending_limit.* 500.0    # Refuse to stake >500 TAO on any subnet
+agcli config set --key spending_limit.* --value 500.0    # Refuse to stake >500 TAO on any subnet
 
 # Pre-flight check runs before every stake add
 ```

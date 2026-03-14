@@ -48,10 +48,10 @@ agcli stake wizard --netuid 1 --amount 10.0 --password mypass --yes
 
 ```bash
 # Stake 100 TAO on subnet 1 (uses default hotkey)
-agcli stake add 100.0 --netuid 1
+agcli stake add --amount 100.0 --netuid 1
 
 # Stake with a specific hotkey
-agcli stake add 50.0 --netuid 1 --hotkey 5HotkeyAddress...
+agcli stake add --amount 50.0 --netuid 1 --hotkey 5HotkeyAddress...
 
 # View all your positions
 agcli stake list
@@ -64,7 +64,7 @@ agcli view staking-analytics
 
 ```bash
 # Remove 25 TAO worth of alpha from subnet 1
-agcli stake remove 25.0 --netuid 1
+agcli stake remove --amount 25.0 --netuid 1
 
 # Unstake everything from a specific hotkey
 agcli stake unstake-all --hotkey 5HotkeyAddress...
@@ -77,10 +77,10 @@ agcli stake unstake-all-alpha --hotkey 5HotkeyAddress...
 
 ```bash
 # Move alpha between subnets (same coldkey, same hotkey)
-agcli stake move 10.0 --from 1 --to 3
+agcli stake move --amount 10.0 --from 1 --to 3
 
 # Swap stake between hotkeys on the same subnet
-agcli stake swap 5.0 --netuid 1 --from-hotkey 5A... --to-hotkey 5B...
+agcli stake swap --amount 5.0 --netuid 1 --from-hotkey 5A... --to-hotkey 5B...
 ```
 
 ## Limit Orders (Price-Conditional Staking)
@@ -89,26 +89,26 @@ Limit orders let you stake/unstake only if the alpha price meets your conditions
 
 ```bash
 # Add stake only if alpha price <= 0.5 TAO/α
-agcli stake add-limit 100.0 --netuid 1 --price 0.5
+agcli stake add-limit --amount 100.0 --netuid 1 --price 0.5
 
 # Allow partial fills (get as much as possible at or below the price)
-agcli stake add-limit 100.0 --netuid 1 --price 0.5 --partial
+agcli stake add-limit --amount 100.0 --netuid 1 --price 0.5 --partial
 
 # Remove stake only if price >= 0.8 TAO/α
-agcli stake remove-limit 50.0 --netuid 1 --price 0.8
+agcli stake remove-limit --amount 50.0 --netuid 1 --price 0.8
 
 # Swap between subnets with a price limit
-agcli stake swap-limit 10.0 --from 1 --to 3 --price 0.6 --partial
+agcli stake swap-limit --amount 10.0 --from 1 --to 3 --price 0.6 --partial
 ```
 
 ## Alpha Operations
 
 ```bash
 # Burn alpha tokens (permanently removes from supply, increases price for others)
-agcli stake burn-alpha 100.0 --netuid 1
+agcli stake burn-alpha --amount 100.0 --netuid 1
 
 # Recycle alpha back to TAO (goes through the AMM)
-agcli stake recycle-alpha 100.0 --netuid 1
+agcli stake recycle-alpha --amount 100.0 --netuid 1
 ```
 
 ## Claiming Root Dividends
@@ -128,10 +128,10 @@ If you run a validator, nominators delegate to your hotkey and you earn a take p
 agcli delegate show
 
 # Decrease take (immediate effect — signals trust to nominators)
-agcli delegate decrease-take 10.0
+agcli delegate decrease-take --take 10.0
 
 # Increase take (rate-limited to prevent abuse)
-agcli delegate increase-take 12.0
+agcli delegate increase-take --take 12.0
 
 # View who delegates to a hotkey
 agcli view nominations --hotkey 5Hotkey...
@@ -143,7 +143,7 @@ Validators can delegate to child validators and set a take percentage:
 
 ```bash
 # Set your childkey take to 5%
-agcli stake childkey-take 5.0 --netuid 1
+agcli stake childkey-take --take 5.0 --netuid 1
 
 # Delegate to children (proportion:hotkey format, proportions are relative weights)
 agcli stake set-children --netuid 1 --children "50:5Child1...,50:5Child2..."
@@ -162,7 +162,7 @@ agcli stake set-children --netuid 1 --children "50:5Child1...,50:5Child2..."
 
 **"Insufficient balance"** — you don't have enough free TAO. Check with `agcli balance`.
 
-**"HotKeyNotRegisteredInSubNet"** — the hotkey isn't registered on that subnet. Register first with `agcli subnet register-neuron`.
+**"HotKeyNotRegisteredInSubNet"** — the hotkey isn't registered on that subnet. Register first with `agcli subnet register-neuron --netuid N`.
 
 **"StakeRateLimitExceeded"** — too many stake operations too quickly. Wait a few blocks (~12 seconds each) and retry.
 

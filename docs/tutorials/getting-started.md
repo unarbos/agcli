@@ -42,14 +42,18 @@ agcli wallet create --name my_wallet --password mypass123
 Create a hotkey for mining or validating:
 
 ```bash
-agcli wallet create-hotkey --name my_wallet --hotkey default
+agcli wallet new-hotkey --name my_hotkey
 ```
 
 List all wallets and check details:
 
 ```bash
 agcli wallet list
-agcli wallet show -w my_wallet --password mypass123
+agcli wallet show -w my_wallet --all
+
+# JSON output for scripts:
+agcli --output json wallet list
+agcli --output json wallet show --all
 ```
 
 ## Check Your Balance
@@ -60,7 +64,7 @@ agcli balance
 agcli balance --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 
 # JSON output for scripts:
-agcli balance --output json
+agcli --output json balance
 ```
 
 ## View the Network
@@ -73,13 +77,13 @@ agcli view network
 agcli subnet list
 
 # Detailed subnet info
-agcli subnet show 1
+agcli subnet show --netuid 1
 
 # Subnet hyperparameters
-agcli subnet hyperparams 1
+agcli subnet hyperparams --netuid 1
 
 # Metagraph (all neurons on a subnet)
-agcli subnet metagraph 1
+agcli subnet metagraph --netuid 1
 
 # Dynamic TAO info (prices, pools, emissions)
 agcli view dynamic
@@ -92,7 +96,7 @@ agcli view dynamic
 agcli stake wizard
 
 # Direct staking
-agcli stake add 10.0 --netuid 1
+agcli stake add --amount 10.0 --netuid 1
 
 # View your stakes
 agcli stake list
@@ -104,7 +108,7 @@ agcli view staking-analytics
 ## Transfer TAO
 
 ```bash
-agcli transfer 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY 1.5
+agcli transfer --dest 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY --amount 1.5
 ```
 
 ## Configuration
@@ -114,12 +118,12 @@ Settings are resolved in priority order: CLI flags > env vars > config file > de
 ### Config file (persisted to `~/.agcli/config.toml`)
 
 ```bash
-agcli config set network finney
-agcli config set wallet my_wallet
-agcli config set output json     # table, json, or csv
+agcli config set --key network --value finney
+agcli config set --key wallet --value my_wallet
+agcli config set --key output --value json     # table, json, or csv
 
 agcli config show                # view all settings
-agcli config unset output        # remove a setting
+agcli config unset --key output  # remove a setting
 agcli config path                # show config file location
 ```
 
@@ -137,15 +141,15 @@ export AGCLI_YES=1               # skip confirmation prompts
 
 ```bash
 agcli --network test --wallet my_wallet --output json subnet list
-agcli --yes --password mypass stake add 10.0 --netuid 1
+agcli --yes --password mypass stake add --amount 10.0 --netuid 1
 ```
 
 ## Shell Completions
 
 ```bash
-agcli completions bash > /etc/bash_completion.d/agcli    # Bash
-agcli completions zsh > ~/.zfunc/_agcli                   # Zsh
-agcli completions fish > ~/.config/fish/completions/agcli.fish  # Fish
+agcli completions --shell bash > /etc/bash_completion.d/agcli    # Bash
+agcli completions --shell zsh > ~/.zfunc/_agcli                  # Zsh
+agcli completions --shell fish > ~/.config/fish/completions/agcli.fish  # Fish
 ```
 
 ## Networks
