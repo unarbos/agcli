@@ -45,7 +45,7 @@ pub async fn handle_stake(
             }
             Ok(())
         }
-        StakeCommands::Add { amount, netuid, hotkey } => {
+        StakeCommands::Add { amount, netuid, hotkey, max_slippage } => {
             let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
             // Pre-flight balance check
@@ -54,10 +54,18 @@ pub async fn handle_stake(
                 anyhow::bail!("Insufficient balance: you have {} but trying to stake {}.\n  Check: agcli balance",
                     current.display_tao(), bal.display_tao());
             }
+            // Slippage check
+            if let Some(max_slip) = max_slippage {
+                check_slippage(client, netuid, amount, max_slip, true).await?;
+            }
             stake_op("Adding", "added", &hk, client.add_stake(&pair, &hk, NetUid(netuid), bal).await)
         }
-        StakeCommands::Remove { amount, netuid, hotkey } => {
+        StakeCommands::Remove { amount, netuid, hotkey, max_slippage } => {
             let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            // Slippage check
+            if let Some(max_slip) = max_slippage {
+                check_slippage(client, netuid, amount, max_slip, false).await?;
+            }
             stake_op("Removing", "removed", &hk, client.remove_stake(&pair, &hk, NetUid(netuid), Balance::from_tao(amount)).await)
         }
         StakeCommands::Move { amount, from, to, hotkey } => {
@@ -150,6 +158,39 @@ fn stake_op(action: &str, past: &str, hotkey: &str, result: Result<String>) -> R
     println!("{} {}", action, crate::utils::short_ss58(hotkey));
     let hash = result?;
     println!("Stake {}. Tx: {}", past, hash);
+    Ok(())
+}
+
+/// Check AMM slippage before a stake/unstake operation. Aborts if slippage exceeds max.
+async fn check_slippage(client: &Client, netuid: u16, amount: f64, max_slip_pct: f64, is_buy: bool) -> Result<()> {
+    let nuid = NetUid(netuid);
+    let rao = (amount * 1e9) as u64;
+    let slippage = if is_buy {
+        // Staking: TAO → Alpha
+        let price_raw = client.current_alpha_price(nuid).await?;
+        let price = price_raw as f64 / 1e9;
+        let (out, _tf, _af) = client.sim_swap_tao_for_alpha(nuid, rao).await?;
+        let out_f = out as f64 / 1e9;
+        let eff_price = if out_f > 0.0 { amount / out_f } else { 0.0 };
+        if price > 0.0 { ((eff_price - price) / price).abs() * 100.0 } else { 0.0 }
+    } else {
+        // Unstaking: Alpha → TAO
+        let price_raw = client.current_alpha_price(nuid).await?;
+        let price = price_raw as f64 / 1e9;
+        let (out, _tf, _af) = client.sim_swap_alpha_for_tao(nuid, rao).await?;
+        let out_f = out as f64 / 1e9;
+        let eff_price = if amount > 0.0 { out_f / amount } else { 0.0 };
+        if price > 0.0 { ((eff_price - price) / price).abs() * 100.0 } else { 0.0 }
+    };
+    if slippage > max_slip_pct {
+        anyhow::bail!(
+            "Slippage {:.2}% exceeds maximum allowed {:.2}% on SN{}.\n  Reduce trade size or use a limit order: agcli stake add-limit / remove-limit",
+            slippage, max_slip_pct, netuid
+        );
+    }
+    if slippage > 2.0 {
+        eprintln!("Warning: estimated slippage is {:.2}% on SN{}", slippage, netuid);
+    }
     Ok(())
 }
 

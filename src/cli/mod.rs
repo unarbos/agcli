@@ -171,6 +171,14 @@ pub enum Commands {
     // ──── Update ────
     /// Self-update agcli to the latest version from GitHub
     Update,
+
+    // ──── Explain ────
+    /// Built-in Bittensor concept reference (tempo, commit-reveal, AMM, etc.)
+    Explain {
+        /// Topic to explain (e.g., tempo, commit-reveal, amm, bootstrap)
+        /// Omit to list all available topics.
+        topic: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -253,6 +261,9 @@ pub enum StakeCommands {
         /// Hotkey SS58 (defaults to wallet hotkey)
         #[arg(long)]
         hotkey: Option<String>,
+        /// Maximum allowed slippage percentage (e.g., 2.0 for 2%). Aborts if exceeded.
+        #[arg(long)]
+        max_slippage: Option<f64>,
     },
     /// Remove stake from a hotkey on a subnet
     Remove {
@@ -264,6 +275,9 @@ pub enum StakeCommands {
         /// Hotkey SS58
         #[arg(long)]
         hotkey: Option<String>,
+        /// Maximum allowed slippage percentage (e.g., 2.0 for 2%). Aborts if exceeded.
+        #[arg(long)]
+        max_slippage: Option<f64>,
     },
     /// Show all stakes for current wallet
     List {
@@ -468,6 +482,21 @@ pub enum SubnetCommands {
     Dissolve {
         /// Subnet UID
         netuid: u16,
+    },
+    /// Live watch: tempo countdown, rate limits, commit-reveal status
+    Watch {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Polling interval in seconds (default 12)
+        #[arg(long, default_value = "12")]
+        interval: u64,
+    },
+    /// AMM liquidity dashboard: pool depth, slippage at common trade sizes
+    Liquidity {
+        /// Subnet UID (omit for all subnets)
+        #[arg(long)]
+        netuid: Option<u16>,
     },
 }
 

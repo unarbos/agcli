@@ -123,6 +123,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Update => {
             handle_update().await
         }
+        Commands::Explain { topic } => {
+            handle_explain(topic.as_deref());
+            Ok(())
+        }
     }
 }
 
@@ -333,6 +337,210 @@ async fn handle_subnet(
             println!("Subnet dissolved. Tx: {}", hash);
             Ok(())
         }
+        SubnetCommands::Watch { netuid, interval } => {
+            handle_subnet_watch(client, netuid, interval).await
+        }
+        SubnetCommands::Liquidity { netuid } => {
+            handle_subnet_liquidity(client, output, netuid).await
+        }
+    }
+}
+
+// ──────── Subnet Watch ────────
+
+async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Result<()> {
+    use std::io::Write;
+    let nuid = NetUid(netuid);
+    println!("Watching SN{} (Ctrl+C to stop, poll every {}s)\n", netuid, interval);
+
+    loop {
+        let block = client.get_block_number().await?;
+        let hyperparams = client.get_subnet_hyperparams(nuid).await?;
+        let dynamic = client.get_dynamic_info(nuid).await.ok().flatten();
+
+        let name = dynamic.as_ref().map(|d| d.name.as_str()).unwrap_or("?");
+
+        match hyperparams {
+            Some(h) => {
+                let tempo = h.tempo as u64;
+                let blocks_into_tempo = block % tempo;
+                let blocks_until_tempo = tempo - blocks_into_tempo;
+                let secs_until = blocks_until_tempo * 12;
+
+                print!("\x1B[2J\x1B[H"); // clear screen
+                println!("=== SN{} ({}) — Block #{} ===\n", netuid, name, block);
+
+                // Tempo countdown
+                println!("  Tempo:             {} blocks", tempo);
+                println!("  Blocks into tempo: {}/{}", blocks_into_tempo, tempo);
+                println!("  Blocks until next: {} (~{}m {}s)", blocks_until_tempo, secs_until / 60, secs_until % 60);
+
+                // Progress bar
+                let progress = blocks_into_tempo as f64 / tempo as f64;
+                let bar_width = 40;
+                let filled = (progress * bar_width as f64) as usize;
+                let bar: String = "█".repeat(filled) + &"░".repeat(bar_width - filled);
+                println!("  Progress:          [{}] {:.0}%", bar, progress * 100.0);
+
+                // Weights rate limit
+                println!("\n  Weights rate limit: {} blocks (~{}m)", h.weights_rate_limit, h.weights_rate_limit * 12 / 60);
+
+                // Commit-reveal status
+                if h.commit_reveal_weights_enabled {
+                    println!("  Commit-reveal:     ENABLED (interval={} tempos)", h.commit_reveal_weights_interval);
+                } else {
+                    println!("  Commit-reveal:     disabled (direct set_weights)");
+                }
+
+                // Activity cutoff
+                println!("  Activity cutoff:   {} blocks", h.activity_cutoff);
+                println!("  Max validators:    {}", h.max_validators);
+                println!("  Min allowed wts:   {}", h.min_allowed_weights);
+
+                // Dynamic info
+                if let Some(ref d) = dynamic {
+                    println!("\n  Price:             {:.6} τ/α", d.price);
+                    println!("  TAO in pool:       {}", d.tao_in.display_tao());
+                    let emission_tao = d.total_emission() as f64 / 1e9;
+                    println!("  Emission/tempo:    {:.4} τ", emission_tao);
+                    println!("  Daily emission:    {:.2} τ", emission_tao * 7200.0 / tempo as f64);
+                }
+
+                println!("\n  Last refresh: {}", chrono::Local::now().format("%H:%M:%S"));
+            }
+            None => {
+                println!("Subnet SN{} not found or hyperparams unavailable.", netuid);
+                return Ok(());
+            }
+        }
+
+        std::io::stdout().flush().ok();
+        tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
+    }
+}
+
+// ──────── Subnet Liquidity ────────
+
+async fn handle_subnet_liquidity(client: &Client, output: &str, netuid: Option<u16>) -> Result<()> {
+    let dynamic = match netuid {
+        Some(n) => {
+            match client.get_dynamic_info(NetUid(n)).await? {
+                Some(d) => vec![d],
+                None => anyhow::bail!("Subnet SN{} not found", n),
+            }
+        }
+        None => client.get_all_dynamic_info().await?,
+    };
+
+    // Common trade sizes for slippage estimation
+    let trade_sizes_tao: &[f64] = &[0.1, 1.0, 10.0, 100.0];
+
+    if output == "json" {
+        let mut results = Vec::new();
+        for d in &dynamic {
+            if d.tao_in.rao() == 0 { continue; }
+            let tao_in = d.tao_in.tao();
+            let alpha_in_raw = d.alpha_in.raw() as f64 / 1e9;
+            let price = d.price;
+
+            let mut slippage_entries = Vec::new();
+            for &size in trade_sizes_tao {
+                let slippage = estimate_slippage(tao_in, alpha_in_raw, size);
+                slippage_entries.push(serde_json::json!({
+                    "trade_tao": size,
+                    "slippage_pct": slippage,
+                }));
+            }
+            results.push(serde_json::json!({
+                "netuid": d.netuid.0,
+                "name": d.name,
+                "price": price,
+                "tao_in": tao_in,
+                "alpha_in": alpha_in_raw,
+                "liquidity_depth_tao": tao_in * 2.0,
+                "slippage_estimates": slippage_entries,
+            }));
+        }
+        println!("{}", serde_json::to_string_pretty(&results)?);
+        return Ok(());
+    }
+
+    println!("AMM Liquidity Dashboard\n");
+    let mut table = comfy_table::Table::new();
+    table.set_header(vec![
+        "Subnet", "Name", "Price (τ/α)", "TAO Pool", "Alpha Pool",
+        "0.1τ slip", "1τ slip", "10τ slip", "100τ slip",
+    ]);
+
+    let mut sorted: Vec<_> = dynamic.iter().filter(|d| d.tao_in.rao() > 0).collect();
+    sorted.sort_by(|a, b| b.tao_in.rao().cmp(&a.tao_in.rao()));
+
+    for d in &sorted {
+        let tao_in = d.tao_in.tao();
+        let alpha_in_raw = d.alpha_in.raw() as f64 / 1e9;
+
+        let slippages: Vec<String> = trade_sizes_tao
+            .iter()
+            .map(|&size| {
+                let slip = estimate_slippage(tao_in, alpha_in_raw, size);
+                format_slippage(slip)
+            })
+            .collect();
+
+        table.add_row(vec![
+            format!("SN{}", d.netuid.0),
+            d.name.chars().take(12).collect::<String>(),
+            format!("{:.6}", d.price),
+            format!("{:.1}τ", tao_in),
+            format!("{:.1}", alpha_in_raw),
+            slippages[0].clone(),
+            slippages[1].clone(),
+            slippages[2].clone(),
+            slippages[3].clone(),
+        ]);
+    }
+    println!("{table}");
+    println!("\nSlippage = price impact from AMM constant-product formula.");
+    println!("Higher pool depth = lower slippage. Consider limit orders for large trades on shallow pools.");
+    Ok(())
+}
+
+/// Estimate slippage % for a constant-product AMM trade of `trade_tao` TAO.
+fn estimate_slippage(tao_in_pool: f64, alpha_in_pool: f64, trade_tao: f64) -> f64 {
+    if tao_in_pool <= 0.0 || alpha_in_pool <= 0.0 {
+        return 0.0;
+    }
+    // Constant product: k = tao_in * alpha_in
+    // After trade: new_tao = tao_in + trade_tao, new_alpha = k / new_tao
+    // Alpha received = alpha_in - new_alpha
+    let k = tao_in_pool * alpha_in_pool;
+    let new_tao = tao_in_pool + trade_tao;
+    let new_alpha = k / new_tao;
+    let alpha_received = alpha_in_pool - new_alpha;
+
+    // Spot price = tao_in / alpha_in
+    let spot_price = tao_in_pool / alpha_in_pool;
+    // Ideal alpha = trade_tao / spot_price
+    let ideal_alpha = trade_tao / spot_price;
+
+    if ideal_alpha <= 0.0 {
+        return 0.0;
+    }
+    // Slippage % = ((ideal - actual) / ideal) * 100
+    ((ideal_alpha - alpha_received) / ideal_alpha * 100.0).max(0.0)
+}
+
+fn format_slippage(pct: f64) -> String {
+    if pct < 0.01 {
+        "<0.01%".to_string()
+    } else if pct > 50.0 {
+        format!("{:.0}% ⚠", pct)
+    } else if pct > 5.0 {
+        format!("{:.1}% ⚠", pct)
+    } else if pct > 2.0 {
+        format!("{:.2}%!", pct)
+    } else {
+        format!("{:.2}%", pct)
     }
 }
 
@@ -352,6 +560,26 @@ async fn handle_weights(
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
             let (uids, wts) = parse_weight_pairs(&weights)?;
+
+            // Pre-flight: check if hotkey has enough stake-weight
+            if let Some(hk_ss58) = wallet.hotkey_ss58().map(|s| s.to_string()) {
+                let alpha = client.get_total_hotkey_alpha(&hk_ss58, NetUid(netuid)).await.unwrap_or(Balance::ZERO);
+                if alpha.tao() < 1000.0 {
+                    eprintln!("Warning: hotkey {} has {:.2}τ stake-weight on SN{} (minimum ~1000τ required).",
+                        crate::utils::short_ss58(&hk_ss58), alpha.tao(), netuid);
+                    eprintln!("  set_weights may fail. Consider getting more stake or using commit-reveal.");
+                    eprintln!("  Check: agcli subnet hyperparams {} | grep commit_reveal", netuid);
+                }
+            }
+
+            // Pre-flight: check rate limit
+            if let Ok(Some(h)) = client.get_subnet_hyperparams(NetUid(netuid)).await {
+                if h.commit_reveal_weights_enabled {
+                    eprintln!("Warning: SN{} has commit-reveal enabled. Use `agcli weights commit` instead.", netuid);
+                    eprintln!("  Direct set_weights will likely fail with CommitRevealEnabled error.");
+                }
+            }
+
             println!("Setting {} weights on SN{} (version_key={})", uids.len(), netuid, version_key);
             let hash = client.set_weights(wallet.hotkey()?, NetUid(netuid), &uids, &wts, version_key).await?;
             println!("Weights set. Tx: {}", hash);
@@ -944,6 +1172,32 @@ fn cfg_value_display(key: &str, cfg: &crate::config::Config) -> String {
         "proxy" => cfg.proxy.clone().unwrap_or_default(),
         "live_interval" => cfg.live_interval.map(|v| v.to_string()).unwrap_or_default(),
         _ => String::new(),
+    }
+}
+
+// ──────── Explain ────────
+
+fn handle_explain(topic: Option<&str>) {
+    match topic {
+        Some(t) => {
+            match crate::utils::explain::explain(t) {
+                Some(text) => println!("{}", text),
+                None => {
+                    eprintln!("Unknown topic '{}'. Available topics:\n", t);
+                    for (key, desc) in crate::utils::explain::list_topics() {
+                        eprintln!("  {:<16} {}", key, desc);
+                    }
+                    eprintln!("\nUsage: agcli explain <topic>");
+                }
+            }
+        }
+        None => {
+            println!("Available topics:\n");
+            for (key, desc) in crate::utils::explain::list_topics() {
+                println!("  {:<16} {}", key, desc);
+            }
+            println!("\nUsage: agcli explain <topic>");
+        }
     }
 }
 

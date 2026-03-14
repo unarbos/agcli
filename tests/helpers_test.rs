@@ -2,6 +2,7 @@
 //! Run with: cargo test --test helpers_test
 
 use agcli::cli::helpers::{parse_weight_pairs, parse_children};
+use agcli::utils::explain;
 
 #[test]
 fn parse_weight_pairs_basic() {
@@ -77,4 +78,60 @@ fn parse_children_bad_proportion() {
     assert!(result.is_err());
     let msg = result.unwrap_err().to_string();
     assert!(msg.contains("Invalid proportion"), "Expected helpful proportion error, got: {}", msg);
+}
+
+// ──── Explain tests ────
+
+#[test]
+fn explain_known_topics() {
+    assert!(explain::explain("tempo").is_some());
+    assert!(explain::explain("commit-reveal").is_some());
+    assert!(explain::explain("commitreveal").is_some());
+    assert!(explain::explain("yuma").is_some());
+    assert!(explain::explain("amm").is_some());
+    assert!(explain::explain("bootstrap").is_some());
+    assert!(explain::explain("rate-limits").is_some());
+    assert!(explain::explain("stake-weight").is_some());
+    assert!(explain::explain("alpha").is_some());
+    assert!(explain::explain("emission").is_some());
+}
+
+#[test]
+fn explain_case_insensitive() {
+    assert!(explain::explain("TEMPO").is_some());
+    assert!(explain::explain("Commit-Reveal").is_some());
+    assert!(explain::explain("AMM").is_some());
+}
+
+#[test]
+fn explain_unknown_topic() {
+    assert!(explain::explain("nonexistent_topic_xyz").is_none());
+}
+
+#[test]
+fn explain_list_topics_not_empty() {
+    let topics = explain::list_topics();
+    assert!(topics.len() >= 10, "Expected at least 10 topics, got {}", topics.len());
+    for (key, desc) in &topics {
+        assert!(!key.is_empty());
+        assert!(!desc.is_empty());
+    }
+}
+
+#[test]
+fn explain_content_has_substance() {
+    // Each explanation should be non-trivial
+    let text = explain::explain("tempo").unwrap();
+    assert!(text.len() > 100, "Explanation too short: {} chars", text.len());
+    assert!(text.contains("blocks"), "Tempo explanation should mention blocks");
+}
+
+#[test]
+fn explain_aliases_work() {
+    // "cr" should resolve to commit-reveal
+    assert!(explain::explain("cr").is_some());
+    // "dtao" should resolve to AMM
+    assert!(explain::explain("dtao").is_some());
+    // "1000" should resolve to stake-weight
+    assert!(explain::explain("1000").is_some());
 }
