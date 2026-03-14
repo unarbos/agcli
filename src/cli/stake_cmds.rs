@@ -132,6 +132,30 @@ pub async fn handle_stake(
             println!("Alpha recycled. Tx: {}", hash);
             Ok(())
         }
+        StakeCommands::UnstakeAllAlpha { hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            println!("Unstaking all alpha from {}", crate::utils::short_ss58(&hk));
+            let hash = client.unstake_all_alpha(&pair, &hk).await?;
+            println!("All alpha unstaked. Tx: {}", hash);
+            Ok(())
+        }
+        StakeCommands::BurnAlpha { amount, netuid, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let amt = (amount * 1_000_000_000.0) as u64;
+            println!("Burning {:.4} alpha on SN{} via {}", amount, netuid, crate::utils::short_ss58(&hk));
+            let hash = client.burn_alpha(&pair, &hk, amt, NetUid(netuid)).await?;
+            println!("Alpha burned. Tx: {}", hash);
+            Ok(())
+        }
+        StakeCommands::SwapLimit { amount, from, to, price, partial, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let amt = (amount * 1_000_000_000.0) as u64;
+            let lp = (price * 1_000_000_000.0) as u64;
+            println!("Swap-limit {:.4} from SN{} to SN{} at price {:.4} (partial={})", amount, from, to, price, partial);
+            let hash = client.swap_stake_limit(&pair, &hk, NetUid(from), NetUid(to), amt, lp, partial).await?;
+            println!("Swap limit submitted. Tx: {}", hash);
+            Ok(())
+        }
         StakeCommands::Wizard => {
             staking_wizard(client, wallet_dir, wallet_name, hotkey_name).await
         }
@@ -147,10 +171,17 @@ async fn staking_wizard(
     println!("=== Staking Wizard ===\n");
 
     let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-    let coldkey_ss58 = wallet
-        .coldkey_ss58()
-        .map(|s| s.to_string())
-        .unwrap_or_default();
+    let coldkey_ss58 = match wallet.coldkey_ss58() {
+        Some(s) => s.to_string(),
+        None => {
+            // Public key not on disk; unlock to derive it
+            unlock_coldkey(&mut wallet)?;
+            wallet
+                .coldkey_ss58()
+                .map(|s| s.to_string())
+                .ok_or_else(|| anyhow::anyhow!("Could not resolve coldkey address"))?
+        }
+    };
     println!("Wallet: {} ({})", wallet_name, crate::utils::short_ss58(&coldkey_ss58));
 
     let balance = client.get_balance_ss58(&coldkey_ss58).await?;

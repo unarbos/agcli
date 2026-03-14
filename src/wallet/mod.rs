@@ -55,7 +55,7 @@ impl Wallet {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "default".to_string());
 
-        let coldkey_ss58 = keyfile::read_public_key(&path.join("coldkey"))
+        let coldkey_ss58 = keyfile::read_public_key(&path.join("coldkeypub.txt"))
             .ok()
             .map(|pk| keypair::to_ss58(&pk, 42));
         let hotkey_ss58 = keyfile::read_public_key(&path.join("hotkeys").join("default"))
