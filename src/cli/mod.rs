@@ -73,6 +73,15 @@ pub enum Commands {
         amount: f64,
     },
 
+    /// Transfer entire balance to another account (minus fees)
+    TransferAll {
+        /// Destination SS58 address
+        dest: String,
+        /// Keep sender account alive (leave existential deposit)
+        #[arg(long)]
+        keep_alive: bool,
+    },
+
     // ──── Staking ────
     /// Staking operations
     #[command(subcommand)]
@@ -107,6 +116,16 @@ pub enum Commands {
     /// On-chain identity operations
     #[command(subcommand)]
     Identity(IdentityCommands),
+
+    // ──── Serve ────
+    /// Serve axon endpoint (for miners)
+    #[command(subcommand)]
+    Serve(ServeCommands),
+
+    // ──── Proxy ────
+    /// Proxy account management (add/remove)
+    #[command(subcommand)]
+    Proxy(ProxyCommands),
 
     // ──── Swap ────
     /// Key swap operations
@@ -317,6 +336,17 @@ pub enum StakeCommands {
         #[arg(long)]
         children: String,
     },
+    /// Recycle alpha tokens back to TAO
+    RecycleAlpha {
+        /// Amount of alpha to recycle
+        amount: f64,
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Hotkey SS58
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
     /// Full staking wizard (interactive)
     Wizard,
 }
@@ -354,6 +384,11 @@ pub enum SubnetCommands {
         /// Number of threads
         #[arg(long, default_value = "4")]
         threads: u32,
+    },
+    /// Dissolve a subnet (owner only)
+    Dissolve {
+        /// Subnet UID
+        netuid: u16,
     },
 }
 
@@ -527,6 +562,54 @@ pub enum IdentityCommands {
         /// URL
         #[arg(long)]
         url: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ServeCommands {
+    /// Set axon endpoint (IP, port, protocol) for a subnet
+    Axon {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// IP address (IPv4)
+        #[arg(long)]
+        ip: String,
+        /// Port number
+        #[arg(long)]
+        port: u16,
+        /// Protocol version (default 4)
+        #[arg(long, default_value = "4")]
+        protocol: u8,
+        /// Axon version
+        #[arg(long, default_value = "0")]
+        version: u32,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProxyCommands {
+    /// Add a proxy account
+    Add {
+        /// Proxy delegate SS58 address
+        delegate: String,
+        /// Proxy type (any, owner, staking, non_transfer, non_critical, governance, senate)
+        #[arg(long, default_value = "any")]
+        proxy_type: String,
+        /// Delay in blocks before proxy can execute (0 = immediate)
+        #[arg(long, default_value = "0")]
+        delay: u32,
+    },
+    /// Remove a proxy account
+    Remove {
+        /// Proxy delegate SS58 address
+        delegate: String,
+        /// Proxy type (must match what was set)
+        #[arg(long, default_value = "any")]
+        proxy_type: String,
+        /// Delay (must match what was set)
+        #[arg(long, default_value = "0")]
+        delay: u32,
     },
 }
 

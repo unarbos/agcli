@@ -8,9 +8,9 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | Category | Capabilities |
 |---|---|
 | **Wallet** | Create, import (mnemonic/seed), encrypt/decrypt coldkeys, manage multiple hotkeys, **Python wallet compat** (NaCl SecretBox keyfiles) |
-| **Staking** | Add/remove stake, move between subnets, swap between hotkeys, limit orders, claim root dividends |
-| **Transfers** | Send TAO between accounts |
-| **Subnets** | List subnets with real names, view metagraph, register neurons (burn/POW), create subnets, hyperparameters |
+| **Staking** | Add/remove stake, move between subnets, swap between hotkeys, limit orders, claim root dividends, recycle alpha |
+| **Transfers** | Send TAO, transfer-all (full balance minus fees) |
+| **Subnets** | List subnets with real names, view metagraph, register neurons (burn/POW), create/dissolve subnets, hyperparameters |
 | **Dynamic TAO** | Real-time subnet pricing, TAO/Alpha pool balances, emission breakdown, subnet volume |
 | **Weights** | Set weights, commit-reveal with blake2 hashing, reveal operations, **batch set/commit/reveal** |
 | **Delegates** | View delegates, manage take rates, childkey delegation |
@@ -22,7 +22,8 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Root** | Root registration, root weights |
 | **Raw Calls** | Submit to any pallet via dynamic dispatch (EVM, MEV Shield, Contracts) |
 | **Config** | Persistent settings (`~/.agcli/config.toml`), set/unset/show config values |
-| **Proxy** | Wrap any extrinsic through Proxy.proxy for delegated signing |
+| **Proxy** | Wrap any extrinsic through Proxy.proxy, add/remove proxy accounts |
+| **Serve** | Set axon endpoint (IP/port/protocol) for miners on subnets |
 | **Multisig** | Derive multisig address, submit/approve multisig calls |
 | **Validators** | Top validators overview by stake (per-subnet or global) |
 | **History** | Transaction history via Subscan API |
@@ -152,6 +153,24 @@ agcli view subnet-analytics 1
 
 # Staking analytics (APY estimates, emission projections)
 agcli view staking-analytics --address 5Gx...
+
+# Transfer entire balance (minus fees)
+agcli transfer-all 5Dest... --keep-alive
+
+# Serve axon endpoint (miners)
+agcli serve axon --netuid 1 --ip 1.2.3.4 --port 8091
+
+# Recycle alpha back to TAO
+agcli stake recycle-alpha 100.0 --netuid 1
+
+# Dissolve a subnet (owner only)
+agcli subnet dissolve 42
+
+# Add a proxy account
+agcli proxy add 5DelegateAddr... --proxy-type staking --delay 0
+
+# Remove a proxy account
+agcli proxy remove 5DelegateAddr... --proxy-type staking
 
 # Self-update to latest version
 agcli update

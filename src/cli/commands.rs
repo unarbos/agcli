@@ -41,6 +41,19 @@ pub async fn execute(cli: Cli) -> Result<()> {
             }
             Ok(())
         }
+        Commands::TransferAll { dest, keep_alive } => {
+            let client = Client::connect(network.ws_url()).await?;
+            let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Transferring all balance to {} (keep_alive={})", dest, keep_alive);
+            let hash = client.transfer_all(wallet.coldkey()?, &dest, keep_alive).await?;
+            if output == "json" {
+                println!("{}", serde_json::json!({"tx_hash": hash}));
+            } else {
+                println!("All balance transferred. Tx: {}", hash);
+            }
+            Ok(())
+        }
         Commands::Stake(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
             stake_cmds::handle_stake(cmd, &client, &cli.wallet_dir, &cli.wallet, &cli.hotkey, output).await
@@ -68,6 +81,14 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Identity(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
             handle_identity(cmd, &client, &cli.wallet_dir, &cli.wallet).await
+        }
+        Commands::Serve(cmd) => {
+            let client = Client::connect(network.ws_url()).await?;
+            handle_serve(cmd, &client, &cli.wallet_dir, &cli.wallet, &cli.hotkey).await
+        }
+        Commands::Proxy(cmd) => {
+            let client = Client::connect(network.ws_url()).await?;
+            handle_proxy(cmd, &client, &cli.wallet_dir, &cli.wallet).await
         }
         Commands::Swap(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
@@ -285,6 +306,14 @@ async fn handle_subnet(
                 }
                 None => println!("POW not found after {} attempts/thread. Try burn registration.", attempts_per_thread),
             }
+            Ok(())
+        }
+        SubnetCommands::Dissolve { netuid } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Dissolving subnet SN{} (owner only)", netuid);
+            let hash = client.dissolve_network(wallet.coldkey()?, NetUid(netuid)).await?;
+            println!("Subnet dissolved. Tx: {}", hash);
             Ok(())
         }
     }
@@ -737,6 +766,71 @@ async fn handle_multisig(
                 wallet.coldkey()?, &other_ids, threshold, hash_bytes,
             ).await?;
             println!("Multisig approval submitted. Tx: {}", tx_hash);
+            Ok(())
+        }
+    }
+}
+
+// ──────── Serve ────────
+
+async fn handle_serve(
+    cmd: ServeCommands,
+    client: &Client,
+    wallet_dir: &str,
+    wallet_name: &str,
+    hotkey_name: &str,
+) -> Result<()> {
+    match cmd {
+        ServeCommands::Axon { netuid, ip, port, protocol, version } => {
+            let (pair, _hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
+            let ip_u128: u128 = {
+                let parts: Vec<u8> = ip.split('.').filter_map(|p| p.parse().ok()).collect();
+                if parts.len() == 4 {
+                    ((parts[0] as u128) << 24) | ((parts[1] as u128) << 16)
+                        | ((parts[2] as u128) << 8) | (parts[3] as u128)
+                } else {
+                    anyhow::bail!("Invalid IPv4 address: {}", ip);
+                }
+            };
+            let axon = crate::types::chain_data::AxonInfo {
+                block: 0,
+                version,
+                ip: ip_u128.to_string(),
+                port,
+                ip_type: 4,
+                protocol,
+            };
+            println!("Serving axon on SN{}: {}:{} (proto={}, ver={})", netuid, ip, port, protocol, version);
+            let hash = client.serve_axon(&pair, NetUid(netuid), &axon).await?;
+            println!("Axon served. Tx: {}", hash);
+            Ok(())
+        }
+    }
+}
+
+// ──────── Proxy ────────
+
+async fn handle_proxy(
+    cmd: ProxyCommands,
+    client: &Client,
+    wallet_dir: &str,
+    wallet_name: &str,
+) -> Result<()> {
+    match cmd {
+        ProxyCommands::Add { delegate, proxy_type, delay } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Adding proxy: {} (type={}, delay={})", crate::utils::short_ss58(&delegate), proxy_type, delay);
+            let hash = client.add_proxy(wallet.coldkey()?, &delegate, &proxy_type, delay).await?;
+            println!("Proxy added. Tx: {}", hash);
+            Ok(())
+        }
+        ProxyCommands::Remove { delegate, proxy_type, delay } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Removing proxy: {} (type={}, delay={})", crate::utils::short_ss58(&delegate), proxy_type, delay);
+            let hash = client.remove_proxy(wallet.coldkey()?, &delegate, &proxy_type, delay).await?;
+            println!("Proxy removed. Tx: {}", hash);
             Ok(())
         }
     }

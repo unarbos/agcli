@@ -580,6 +580,68 @@ impl Client {
         self.sign_submit(&tx, pair).await
     }
 
+    // ──────── Transfer All ────────
+
+    /// Transfer entire free balance to destination (minus fees).
+    pub async fn transfer_all(&self, pair: &sr25519::Pair, dest_ss58: &str, keep_alive: bool) -> Result<String> {
+        let dest = subxt::utils::MultiAddress::Id(Self::ss58_to_account_id(dest_ss58)?);
+        self.sign_submit(&api::tx().balances().transfer_all(dest, keep_alive), pair).await
+    }
+
+    // ──────── Proxy Management ────────
+
+    /// Add a proxy account.
+    pub async fn add_proxy(&self, pair: &sr25519::Pair, delegate_ss58: &str, proxy_type: &str, delay: u32) -> Result<String> {
+        use subxt::dynamic::Value;
+        let delegate = Self::ss58_to_account_id(delegate_ss58)?;
+        let proxy_variant = match proxy_type {
+            "any" | "Any" => "Any",
+            "owner" | "Owner" => "Owner",
+            "non_transfer" | "NonTransfer" => "NonTransfer",
+            "staking" | "Staking" => "Staking",
+            "non_critical" | "NonCritical" => "NonCritical",
+            "triumvirate" | "Triumvirate" => "Triumvirate",
+            "governance" | "Governance" => "Governance",
+            "senate" | "Senate" => "Senate",
+            _ => "Any",
+        };
+        let tx = subxt::dynamic::tx(
+            "Proxy", "add_proxy",
+            vec![
+                Value::unnamed_variant("Id", [Value::from_bytes(delegate.0)]),
+                Value::unnamed_variant(proxy_variant, []),
+                Value::u128(delay as u128),
+            ],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    /// Remove a proxy account.
+    pub async fn remove_proxy(&self, pair: &sr25519::Pair, delegate_ss58: &str, proxy_type: &str, delay: u32) -> Result<String> {
+        use subxt::dynamic::Value;
+        let delegate = Self::ss58_to_account_id(delegate_ss58)?;
+        let proxy_variant = match proxy_type {
+            "any" | "Any" => "Any",
+            "owner" | "Owner" => "Owner",
+            "non_transfer" | "NonTransfer" => "NonTransfer",
+            "staking" | "Staking" => "Staking",
+            "non_critical" | "NonCritical" => "NonCritical",
+            "triumvirate" | "Triumvirate" => "Triumvirate",
+            "governance" | "Governance" => "Governance",
+            "senate" | "Senate" => "Senate",
+            _ => "Any",
+        };
+        let tx = subxt::dynamic::tx(
+            "Proxy", "remove_proxy",
+            vec![
+                Value::unnamed_variant("Id", [Value::from_bytes(delegate.0)]),
+                Value::unnamed_variant(proxy_variant, []),
+                Value::u128(delay as u128),
+            ],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
     // ──────── Batch Extrinsics ────────
 
     /// Batch set weights across multiple subnets.

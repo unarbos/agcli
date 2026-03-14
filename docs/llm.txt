@@ -23,6 +23,8 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli balance` — show your balance
 - `agcli balance --address SS58` — show someone's balance
 - `agcli transfer DEST_SS58 AMOUNT_TAO` — send TAO
+- `agcli transfer-all DEST_SS58` — send entire balance (minus fees)
+- `agcli transfer-all DEST_SS58 --keep-alive` — send all but keep account alive
 
 ### Staking
 - `agcli stake add AMOUNT --netuid N` — stake TAO on subnet
@@ -35,6 +37,7 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli stake add-limit AMOUNT --netuid N --price P` — limit order stake
 - `agcli stake childkey-take PCT --netuid N` — set childkey take
 - `agcli stake set-children --netuid N --children "proportion:hotkey,..."` — set children
+- `agcli stake recycle-alpha AMOUNT --netuid N` — recycle alpha back to TAO
 
 ### Subnets
 - `agcli subnet list` — list subnets with real names from DynamicInfo
@@ -44,6 +47,7 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli subnet register` — create new subnet
 - `agcli subnet register-neuron N` — register on subnet N (burn)
 - `agcli subnet pow N --threads 8` — POW registration (multi-threaded)
+- `agcli subnet dissolve N` — dissolve a subnet (owner only)
 
 ### Weights
 - `agcli weights set --netuid N "uid:weight,..."` — set weights
@@ -97,7 +101,15 @@ cargo install --git https://github.com/unconst/agcli
 
 ### Proxy
 - `agcli --proxy SS58 <command>` — wrap any extrinsic through Proxy.proxy for delegated signing
+- `agcli proxy add DELEGATE_SS58 --proxy-type staking --delay 0` — add a proxy account
+- `agcli proxy remove DELEGATE_SS58 --proxy-type staking` — remove a proxy account
+- Types: any, owner, staking, non_transfer, non_critical, governance, senate
 - SDK: `client.proxy_call(&pair, "real_ss58", "Pallet", "call", fields).await?`
+
+### Serve (Miners)
+- `agcli serve axon --netuid N --ip IP --port PORT` — set axon endpoint
+- `agcli serve axon --netuid N --ip 1.2.3.4 --port 8091 --protocol 4 --version 0`
+- SDK: `client.serve_axon(&pair, netuid, &axon_info).await?`
 
 ### Staking Wizard
 - `agcli stake wizard` — interactive guided staking flow

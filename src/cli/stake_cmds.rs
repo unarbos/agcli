@@ -124,6 +124,14 @@ pub async fn handle_stake(
             println!("Children set. Tx: {}", hash);
             Ok(())
         }
+        StakeCommands::RecycleAlpha { amount, netuid, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let amt = (amount * 1_000_000_000.0) as u64;
+            println!("Recycling {:.4} alpha on SN{} for TAO via {}", amount, netuid, crate::utils::short_ss58(&hk));
+            let hash = client.recycle_alpha(&pair, &hk, NetUid(netuid), amt).await?;
+            println!("Alpha recycled. Tx: {}", hash);
+            Ok(())
+        }
         StakeCommands::Wizard => {
             staking_wizard(client, wallet_dir, wallet_name, hotkey_name).await
         }
