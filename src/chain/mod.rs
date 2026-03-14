@@ -592,54 +592,128 @@ impl Client {
 
     /// Add a proxy account.
     pub async fn add_proxy(&self, pair: &sr25519::Pair, delegate_ss58: &str, proxy_type: &str, delay: u32) -> Result<String> {
-        use subxt::dynamic::Value;
-        let delegate = Self::ss58_to_account_id(delegate_ss58)?;
-        let proxy_variant = match proxy_type {
-            "any" | "Any" => "Any",
-            "owner" | "Owner" => "Owner",
-            "non_transfer" | "NonTransfer" => "NonTransfer",
-            "staking" | "Staking" => "Staking",
-            "non_critical" | "NonCritical" => "NonCritical",
-            "triumvirate" | "Triumvirate" => "Triumvirate",
-            "governance" | "Governance" => "Governance",
-            "senate" | "Senate" => "Senate",
-            _ => "Any",
-        };
-        let tx = subxt::dynamic::tx(
-            "Proxy", "add_proxy",
-            vec![
-                Value::unnamed_variant("Id", [Value::from_bytes(delegate.0)]),
-                Value::unnamed_variant(proxy_variant, []),
-                Value::u128(delay as u128),
-            ],
-        );
-        self.sign_submit(&tx, pair).await
+        self.proxy_op("add_proxy", pair, delegate_ss58, proxy_type, delay).await
     }
 
     /// Remove a proxy account.
     pub async fn remove_proxy(&self, pair: &sr25519::Pair, delegate_ss58: &str, proxy_type: &str, delay: u32) -> Result<String> {
+        self.proxy_op("remove_proxy", pair, delegate_ss58, proxy_type, delay).await
+    }
+
+    async fn proxy_op(&self, call: &str, pair: &sr25519::Pair, delegate_ss58: &str, proxy_type: &str, delay: u32) -> Result<String> {
         use subxt::dynamic::Value;
         let delegate = Self::ss58_to_account_id(delegate_ss58)?;
-        let proxy_variant = match proxy_type {
-            "any" | "Any" => "Any",
-            "owner" | "Owner" => "Owner",
-            "non_transfer" | "NonTransfer" => "NonTransfer",
-            "staking" | "Staking" => "Staking",
-            "non_critical" | "NonCritical" => "NonCritical",
-            "triumvirate" | "Triumvirate" => "Triumvirate",
-            "governance" | "Governance" => "Governance",
-            "senate" | "Senate" => "Senate",
-            _ => "Any",
-        };
-        let tx = subxt::dynamic::tx(
-            "Proxy", "remove_proxy",
-            vec![
-                Value::unnamed_variant("Id", [Value::from_bytes(delegate.0)]),
-                Value::unnamed_variant(proxy_variant, []),
-                Value::u128(delay as u128),
-            ],
-        );
+        let variant = parse_proxy_type(proxy_type);
+        let tx = subxt::dynamic::tx("Proxy", call, vec![
+            Value::unnamed_variant("Id", [Value::from_bytes(delegate.0)]),
+            Value::unnamed_variant(variant, []),
+            Value::u128(delay as u128),
+        ]);
         self.sign_submit(&tx, pair).await
+    }
+
+    // ──────── Unstake All Alpha ────────
+
+    /// Unstake all alpha across all subnets for a hotkey.
+    pub async fn unstake_all_alpha(&self, pair: &sr25519::Pair, hotkey_ss58: &str) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().unstake_all_alpha(hk), pair).await
+    }
+
+    /// Burn alpha tokens (permanently remove from supply).
+    pub async fn burn_alpha(&self, pair: &sr25519::Pair, hotkey_ss58: &str, amount: u64, netuid: NetUid) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().burn_alpha(hk, amount, netuid.0), pair).await
+    }
+
+    /// Swap stake between subnets with a limit price.
+    pub async fn swap_stake_limit(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        from: NetUid,
+        to: NetUid,
+        amount: u64,
+        limit_price: u64,
+        allow_partial: bool,
+    ) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(
+            &api::tx().subtensor_module().swap_stake_limit(hk, from.0, to.0, amount, limit_price, allow_partial),
+            pair,
+        ).await
+    }
+
+    // ──────── Swap Simulation (Runtime APIs) ────────
+
+    /// Get current alpha price for a subnet.
+    pub async fn current_alpha_price(&self, netuid: NetUid) -> Result<u64> {
+        let payload = api::apis().swap_runtime_api().current_alpha_price(netuid.0);
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok(result)
+    }
+
+    /// Simulate swapping TAO for alpha on a subnet.
+    /// Returns (alpha_amount, tao_fee, alpha_fee).
+    pub async fn sim_swap_tao_for_alpha(&self, netuid: NetUid, tao_rao: u64) -> Result<(u64, u64, u64)> {
+        let payload = api::apis().swap_runtime_api().sim_swap_tao_for_alpha(netuid.0, tao_rao);
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok((result.alpha_amount, result.tao_fee, result.alpha_fee))
+    }
+
+    /// Simulate swapping alpha for TAO on a subnet.
+    /// Returns (tao_amount, tao_fee, alpha_fee).
+    pub async fn sim_swap_alpha_for_tao(&self, netuid: NetUid, alpha: u64) -> Result<(u64, u64, u64)> {
+        let payload = api::apis().swap_runtime_api().sim_swap_alpha_for_tao(netuid.0, alpha);
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok((result.tao_amount, result.tao_fee, result.alpha_fee))
+    }
+
+    // ──────── Delegation / Nomination Queries ────────
+
+    /// Get who has delegated/nominated to a specific hotkey (delegatee).
+    /// Returns list of delegate info via DelegateInfoRuntimeApi.
+    pub async fn get_delegated(&self, hotkey_ss58: &str) -> Result<Vec<DelegateInfo>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let payload = api::apis().delegate_info_runtime_api().get_delegated(account_id);
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok(result.into_iter().map(|(di, _extra)| DelegateInfo::from(di)).collect())
+    }
+
+    // ──────── Proxy List ────────
+
+    /// List proxy accounts for a given address (reads Proxy.Proxies storage).
+    pub async fn list_proxies(&self, ss58: &str) -> Result<Vec<(String, String, u32)>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage().proxy().proxies(&account_id);
+        let result = self.inner.storage().at_latest().await?.fetch(&addr).await?;
+        match result {
+            Some((proxies, _deposit)) => {
+                Ok(proxies.0.into_iter().map(|p| {
+                    let delegate_ss58 = sp_core::crypto::AccountId32::from(p.delegate.0).to_string();
+                    let proxy_type = format!("{:?}", p.proxy_type);
+                    (delegate_ss58, proxy_type, p.delay)
+                }).collect())
+            }
+            None => Ok(vec![]),
+        }
+    }
+
+    // ──────── Crowdloan ────────
+
+    /// Contribute to a crowdloan.
+    pub async fn crowdloan_contribute(&self, pair: &sr25519::Pair, crowdloan_id: u32, amount: Balance) -> Result<String> {
+        self.sign_submit(&api::tx().crowdloan().contribute(crowdloan_id, amount.rao()), pair).await
+    }
+
+    /// Withdraw from a crowdloan.
+    pub async fn crowdloan_withdraw(&self, pair: &sr25519::Pair, crowdloan_id: u32) -> Result<String> {
+        self.sign_submit(&api::tx().crowdloan().withdraw(crowdloan_id), pair).await
+    }
+
+    /// Finalize a crowdloan.
+    pub async fn crowdloan_finalize(&self, pair: &sr25519::Pair, crowdloan_id: u32) -> Result<String> {
+        self.sign_submit(&api::tx().crowdloan().finalize(crowdloan_id), pair).await
     }
 
     // ──────── Batch Extrinsics ────────
@@ -666,6 +740,21 @@ impl Client {
     pub async fn batch_reveal_weights(&self, pair: &sr25519::Pair, netuid: NetUid, uids_list: &[Vec<u16>], values_list: &[Vec<u16>], salts_list: &[Vec<u16>], version_keys: &[u64]) -> Result<String> {
         let tx = api::tx().subtensor_module().batch_reveal_weights(netuid.0, uids_list.to_vec(), values_list.to_vec(), salts_list.to_vec(), version_keys.to_vec());
         self.sign_submit(&tx, pair).await
+    }
+}
+
+/// Parse a proxy type string to the on-chain variant name.
+fn parse_proxy_type(s: &str) -> &'static str {
+    match s {
+        "any" | "Any" => "Any",
+        "owner" | "Owner" => "Owner",
+        "non_transfer" | "NonTransfer" => "NonTransfer",
+        "staking" | "Staking" => "Staking",
+        "non_critical" | "NonCritical" => "NonCritical",
+        "triumvirate" | "Triumvirate" => "Triumvirate",
+        "governance" | "Governance" => "Governance",
+        "senate" | "Senate" => "Senate",
+        _ => "Any",
     }
 }
 

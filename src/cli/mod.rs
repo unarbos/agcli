@@ -142,6 +142,11 @@ pub enum Commands {
     #[command(subcommand)]
     Multisig(MultisigCommands),
 
+    // ──── Crowdloan ────
+    /// Crowdloan operations (create, contribute, withdraw, finalize)
+    #[command(subcommand)]
+    Crowdloan(CrowdloanCommands),
+
     // ──── Config ────
     /// Manage persistent configuration (~/.agcli/config.toml)
     #[command(subcommand)]
@@ -347,6 +352,43 @@ pub enum StakeCommands {
         #[arg(long)]
         hotkey: Option<String>,
     },
+    /// Unstake all alpha across all subnets for a hotkey
+    UnstakeAllAlpha {
+        /// Hotkey SS58
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
+    /// Burn alpha tokens permanently (reduce supply)
+    BurnAlpha {
+        /// Amount of alpha to burn
+        amount: f64,
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Hotkey SS58
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
+    /// Swap stake between subnets with a limit price
+    SwapLimit {
+        /// Amount of alpha to swap
+        amount: f64,
+        /// Source subnet
+        #[arg(long)]
+        from: u16,
+        /// Destination subnet
+        #[arg(long)]
+        to: u16,
+        /// Limit price
+        #[arg(long)]
+        price: f64,
+        /// Allow partial fill
+        #[arg(long)]
+        partial: bool,
+        /// Hotkey SS58
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
     /// Full staking wizard (interactive)
     Wizard,
 }
@@ -525,6 +567,23 @@ pub enum ViewCommands {
         #[arg(long)]
         address: Option<String>,
     },
+    /// Simulate a TAO→Alpha swap (see how much alpha you'd get)
+    SwapSim {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Amount of TAO to swap
+        #[arg(long)]
+        tao: Option<f64>,
+        /// Amount of Alpha to swap (for reverse direction)
+        #[arg(long)]
+        alpha: Option<f64>,
+    },
+    /// Show who has nominated/delegated to a hotkey
+    Nominations {
+        /// Hotkey SS58 address
+        hotkey: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -611,6 +670,12 @@ pub enum ProxyCommands {
         #[arg(long, default_value = "0")]
         delay: u32,
     },
+    /// List proxy accounts for an address
+    List {
+        /// SS58 address (defaults to wallet coldkey)
+        #[arg(long)]
+        address: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -666,6 +731,27 @@ pub enum MultisigCommands {
         /// Call hash (0x-prefixed hex)
         #[arg(long)]
         call_hash: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CrowdloanCommands {
+    /// Contribute TAO to a crowdloan
+    Contribute {
+        /// Crowdloan ID
+        crowdloan_id: u32,
+        /// Amount of TAO to contribute
+        amount: f64,
+    },
+    /// Withdraw contribution from an active crowdloan
+    Withdraw {
+        /// Crowdloan ID
+        crowdloan_id: u32,
+    },
+    /// Finalize a crowdloan that has reached its cap
+    Finalize {
+        /// Crowdloan ID
+        crowdloan_id: u32,
     },
 }
 

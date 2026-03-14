@@ -88,7 +88,11 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Proxy(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
-            handle_proxy(cmd, &client, &cli.wallet_dir, &cli.wallet).await
+            handle_proxy(cmd, &client, &cli.wallet_dir, &cli.wallet, output).await
+        }
+        Commands::Crowdloan(cmd) => {
+            let client = Client::connect(network.ws_url()).await?;
+            handle_crowdloan(cmd, &client, &cli.wallet_dir, &cli.wallet, output).await
         }
         Commands::Swap(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
@@ -815,6 +819,7 @@ async fn handle_proxy(
     client: &Client,
     wallet_dir: &str,
     wallet_name: &str,
+    output: &str,
 ) -> Result<()> {
     match cmd {
         ProxyCommands::Add { delegate, proxy_type, delay } => {
@@ -831,6 +836,70 @@ async fn handle_proxy(
             println!("Removing proxy: {} (type={}, delay={})", crate::utils::short_ss58(&delegate), proxy_type, delay);
             let hash = client.remove_proxy(wallet.coldkey()?, &delegate, &proxy_type, delay).await?;
             println!("Proxy removed. Tx: {}", hash);
+            Ok(())
+        }
+        ProxyCommands::List { address } => {
+            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let proxies = client.list_proxies(&addr).await?;
+            if output == "json" {
+                let json: Vec<serde_json::Value> = proxies.iter().map(|(d, t, delay)| {
+                    serde_json::json!({"delegate": d, "proxy_type": t, "delay": delay})
+                }).collect();
+                println!("{}", serde_json::to_string_pretty(&json)?);
+            } else if proxies.is_empty() {
+                println!("No proxy accounts found for {}", crate::utils::short_ss58(&addr));
+            } else {
+                println!("Proxy accounts for {}:", crate::utils::short_ss58(&addr));
+                let mut table = comfy_table::Table::new();
+                table.set_header(vec!["Delegate", "Type", "Delay"]);
+                for (delegate, proxy_type, delay) in &proxies {
+                    table.add_row(vec![
+                        crate::utils::short_ss58(delegate),
+                        proxy_type.clone(),
+                        format!("{}", delay),
+                    ]);
+                }
+                println!("{table}");
+            }
+            Ok(())
+        }
+    }
+}
+
+// ──────── Crowdloan ────────
+
+async fn handle_crowdloan(
+    cmd: CrowdloanCommands,
+    client: &Client,
+    wallet_dir: &str,
+    wallet_name: &str,
+    output: &str,
+) -> Result<()> {
+    let _ = output;
+    match cmd {
+        CrowdloanCommands::Contribute { crowdloan_id, amount } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            let bal = Balance::from_tao(amount);
+            println!("Contributing {} to crowdloan #{}", bal.display_tao(), crowdloan_id);
+            let hash = client.crowdloan_contribute(wallet.coldkey()?, crowdloan_id, bal).await?;
+            println!("Contribution submitted. Tx: {}", hash);
+            Ok(())
+        }
+        CrowdloanCommands::Withdraw { crowdloan_id } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Withdrawing from crowdloan #{}", crowdloan_id);
+            let hash = client.crowdloan_withdraw(wallet.coldkey()?, crowdloan_id).await?;
+            println!("Withdrawal submitted. Tx: {}", hash);
+            Ok(())
+        }
+        CrowdloanCommands::Finalize { crowdloan_id } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+            println!("Finalizing crowdloan #{}", crowdloan_id);
+            let hash = client.crowdloan_finalize(wallet.coldkey()?, crowdloan_id).await?;
+            println!("Crowdloan finalized. Tx: {}", hash);
             Ok(())
         }
     }

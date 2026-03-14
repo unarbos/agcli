@@ -8,7 +8,7 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | Category | Capabilities |
 |---|---|
 | **Wallet** | Create, import (mnemonic/seed), encrypt/decrypt coldkeys, manage multiple hotkeys, **Python wallet compat** (NaCl SecretBox keyfiles) |
-| **Staking** | Add/remove stake, move between subnets, swap between hotkeys, limit orders, claim root dividends, recycle alpha |
+| **Staking** | Add/remove stake, move between subnets, swap between hotkeys, limit orders, swap-limit, claim root dividends, recycle alpha, unstake-all-alpha, burn alpha |
 | **Transfers** | Send TAO, transfer-all (full balance minus fees) |
 | **Subnets** | List subnets with real names, view metagraph, register neurons (burn/POW), create/dissolve subnets, hyperparameters |
 | **Dynamic TAO** | Real-time subnet pricing, TAO/Alpha pool balances, emission breakdown, subnet volume |
@@ -22,7 +22,7 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Root** | Root registration, root weights |
 | **Raw Calls** | Submit to any pallet via dynamic dispatch (EVM, MEV Shield, Contracts) |
 | **Config** | Persistent settings (`~/.agcli/config.toml`), set/unset/show config values |
-| **Proxy** | Wrap any extrinsic through Proxy.proxy, add/remove proxy accounts |
+| **Proxy** | Wrap any extrinsic through Proxy.proxy, add/remove/list proxy accounts |
 | **Serve** | Set axon endpoint (IP/port/protocol) for miners on subnets |
 | **Multisig** | Derive multisig address, submit/approve multisig calls |
 | **Validators** | Top validators overview by stake (per-subnet or global) |
@@ -31,6 +31,9 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Analytics** | Subnet analytics (miner/validator stats, economics) + staking analytics (APY, projections) |
 | **Wizard** | Interactive staking wizard — shows top subnets, guided flow |
 | **Completions** | Shell completions for bash, zsh, fish, powershell |
+| **Swap Sim** | Simulate TAO↔Alpha swaps with slippage/fee estimates, current alpha price |
+| **Nominations** | View who nominates/delegates to a hotkey |
+| **Crowdloan** | Contribute, withdraw, finalize crowdloans |
 | **Update** | Self-update via `agcli update` (cargo install from GitHub) |
 | **Output** | Table (default), JSON (`--output json`), CSV (`--output csv`) |
 
@@ -172,6 +175,36 @@ agcli proxy add 5DelegateAddr... --proxy-type staking --delay 0
 # Remove a proxy account
 agcli proxy remove 5DelegateAddr... --proxy-type staking
 
+# Simulate TAO→Alpha swap (with slippage + fees)
+agcli view swap-sim --netuid 1 --tao 10.0
+
+# Simulate Alpha→TAO swap
+agcli view swap-sim --netuid 1 --alpha 500.0
+
+# View who nominates to a validator
+agcli view nominations 5HotkeyAddr...
+
+# Unstake all alpha across all subnets
+agcli stake unstake-all-alpha
+
+# Burn alpha tokens permanently
+agcli stake burn-alpha 100.0 --netuid 1
+
+# Swap stake between subnets with limit price
+agcli stake swap-limit 100.0 --from 1 --to 2 --price 0.5 --partial
+
+# List proxy accounts
+agcli proxy list --address 5Gx...
+
+# Crowdloan — contribute
+agcli crowdloan contribute 1 10.0
+
+# Crowdloan — withdraw contribution
+agcli crowdloan withdraw 1
+
+# Crowdloan — finalize
+agcli crowdloan finalize 1
+
 # Self-update to latest version
 agcli update
 
@@ -235,7 +268,7 @@ agcli/
 │   ├── lib.rs           # Library root, re-exports Client/Wallet/Balance/Config
 │   ├── main.rs          # CLI entry point
 │   ├── chain/           # Substrate client (subxt-based)
-│   │   ├── mod.rs         # Client: 35+ queries + 30+ extrinsics + multisig + sign_submit
+│   │   ├── mod.rs         # Client: 40+ queries + 40+ extrinsics + multisig + sign_submit
 │   │   ├── rpc_types.rs   # Type conversions (NeuronInfo, DynamicInfo, DelegateInfo, etc.)
 │   │   ├── connection.rs  # Legacy JSON-RPC transport
 │   │   └── storage.rs     # Raw storage queries
@@ -259,7 +292,7 @@ agcli/
 │   │   ├── format.rs      # SS58 truncation, weight conversion
 │   │   └── pow.rs         # POW solver (multi-threaded)
 │   └── cli/             # CLI definitions
-│       ├── mod.rs         # Clap parser: 15 command groups, 65+ subcommands
+│       ├── mod.rs         # Clap parser: 18 command groups, 80+ subcommands
 │       ├── commands.rs    # Main dispatcher + subnet/weights/delegate/identity/swap/config/multisig
 │       ├── helpers.rs     # Shared helpers (wallet open/unlock, hotkey resolve, parsers)
 │       ├── wallet_cmds.rs # Wallet command handlers

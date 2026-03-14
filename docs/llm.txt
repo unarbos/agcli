@@ -38,6 +38,9 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli stake childkey-take PCT --netuid N` — set childkey take
 - `agcli stake set-children --netuid N --children "proportion:hotkey,..."` — set children
 - `agcli stake recycle-alpha AMOUNT --netuid N` — recycle alpha back to TAO
+- `agcli stake unstake-all-alpha` — unstake all alpha across all subnets for hotkey
+- `agcli stake burn-alpha AMOUNT --netuid N` — permanently burn alpha tokens
+- `agcli stake swap-limit AMOUNT --from SRC --to DST --price P` — swap between subnets with limit price
 
 ### Subnets
 - `agcli subnet list` — list subnets with real names from DynamicInfo
@@ -103,8 +106,11 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli --proxy SS58 <command>` — wrap any extrinsic through Proxy.proxy for delegated signing
 - `agcli proxy add DELEGATE_SS58 --proxy-type staking --delay 0` — add a proxy account
 - `agcli proxy remove DELEGATE_SS58 --proxy-type staking` — remove a proxy account
+- `agcli proxy list` — list all proxy accounts for your wallet
+- `agcli proxy list --address SS58` — list proxies for any address
 - Types: any, owner, staking, non_transfer, non_critical, governance, senate
 - SDK: `client.proxy_call(&pair, "real_ss58", "Pallet", "call", fields).await?`
+- SDK: `client.list_proxies("SS58").await?` — returns Vec of (delegate, type, delay)
 
 ### Serve (Miners)
 - `agcli serve axon --netuid N --ip IP --port PORT` — set axon endpoint
@@ -143,6 +149,26 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli view staking-analytics` — APY and yield estimates for your stakes
 - `agcli view staking-analytics --address SS58` — for any address
 - Shows: estimated daily/monthly/yearly yield, weighted APY, per-position breakdown
+
+### Swap Simulation
+- `agcli view swap-sim --netuid N --tao 10.0` — simulate TAO→Alpha swap with slippage + fees
+- `agcli view swap-sim --netuid N --alpha 500.0` — simulate Alpha→TAO swap
+- `agcli view swap-sim --netuid N` — just show current alpha price
+- SDK: `client.sim_swap_tao_for_alpha(netuid, tao_rao).await?` — returns (alpha_out, tao_fee, alpha_fee)
+- SDK: `client.sim_swap_alpha_for_tao(netuid, alpha).await?` — returns (tao_out, tao_fee, alpha_fee)
+- SDK: `client.current_alpha_price(netuid).await?` — returns u64 price
+
+### Nominations
+- `agcli view nominations HOTKEY_SS58` — view who has delegated/nominated to a hotkey
+- SDK: `client.get_delegated("SS58").await?` — returns Vec<DelegateInfo>
+
+### Crowdloan
+- `agcli crowdloan contribute ID AMOUNT_TAO` — contribute TAO to a crowdloan
+- `agcli crowdloan withdraw ID` — withdraw contribution from active crowdloan
+- `agcli crowdloan finalize ID` — finalize a crowdloan that reached its cap
+- SDK: `client.crowdloan_contribute(&pair, id, amount).await?`
+- SDK: `client.crowdloan_withdraw(&pair, id).await?`
+- SDK: `client.crowdloan_finalize(&pair, id).await?`
 
 ### Self-Update
 - `agcli update` — self-update to latest version from GitHub
@@ -191,6 +217,22 @@ client.proxy_call(&pair, "5RealAccount...", "SubtensorModule", "add_stake", vec!
 // Multisig operations
 client.submit_multisig_call(&pair, &other_ids, 2, "Balances", "transfer_allow_death", vec![...]).await?;
 client.approve_multisig(&pair, &other_ids, 2, call_hash).await?;
+// Swap simulation
+let (alpha_out, tao_fee, alpha_fee) = client.sim_swap_tao_for_alpha(1.into(), 10_000_000_000).await?;
+let (tao_out, _, _) = client.sim_swap_alpha_for_tao(1.into(), alpha_amount).await?;
+let price = client.current_alpha_price(1.into()).await?;
+// Crowdloan
+client.crowdloan_contribute(&pair, 1, Balance::from_tao(10.0)).await?;
+client.crowdloan_withdraw(&pair, 1).await?;
+// Unstake all alpha / Burn alpha
+client.unstake_all_alpha(&pair, "5Hotkey...").await?;
+client.burn_alpha(&pair, "5Hotkey...", amount_raw, netuid).await?;
+// Swap stake with limit
+client.swap_stake_limit(&pair, "5Hotkey...", from_net, to_net, amount, price, allow_partial).await?;
+// List proxies
+let proxies = client.list_proxies("5Gx...").await?;
+// Nominations
+let delegates = client.get_delegated("5Hotkey...").await?;
 // Load persistent config
 let cfg = Config::load();
 println!("Network: {:?}", cfg.network);

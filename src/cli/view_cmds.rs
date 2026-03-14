@@ -48,6 +48,12 @@ pub async fn handle_view(
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
             handle_staking_analytics(client, &addr, output).await
         }
+        ViewCommands::SwapSim { netuid, tao, alpha } => {
+            handle_swap_sim(client, netuid, tao, alpha, output).await
+        }
+        ViewCommands::Nominations { hotkey } => {
+            handle_nominations(client, &hotkey, output).await
+        }
     }
 }
 
@@ -480,7 +486,7 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> 
 
     println!("\n  Economics:");
     println!("    Total stake:         {:.4} τ", total_stake);
-    println!("    Total emission/blk:  {:.0}", total_emission);
+    println!("    Total emission/blk:  {:.4} τ", total_emission / 1e9);
     println!("    Avg trust:           {:.4}", avg_trust);
     println!("    Avg miner incentive: {:.4}", avg_incentive);
     println!("    Avg val dividends:   {:.4}", avg_dividends);
@@ -506,7 +512,7 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> 
                 crate::utils::short_ss58(&m.hotkey),
                 format!("{:.4}", m.incentive),
                 format!("{:.4}", m.trust),
-                format!("{:.0}", m.emission),
+                format!("{:.4} τ", m.emission / 1e9),
             ]);
         }
         println!("{table}");
@@ -520,10 +526,10 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> 
             table.add_row(vec![
                 format!("{}", v.uid),
                 crate::utils::short_ss58(&v.hotkey),
-                format!("{:.4}τ", v.stake.tao()),
+                format!("{:.4} τ", v.stake.tao()),
                 format!("{:.4}", v.validator_trust),
                 format!("{:.4}", v.dividends),
-                format!("{:.0}", v.emission),
+                format!("{:.4} τ", v.emission / 1e9),
             ]);
         }
         println!("{table}");
@@ -627,5 +633,116 @@ async fn handle_staking_analytics(client: &Client, address: &str, output: &str) 
     println!("\n  Note: APY estimates are based on current emission rates and pool sizes.");
     println!("  Actual returns depend on validator performance, weight setting, and network changes.");
 
+    Ok(())
+}
+
+async fn handle_swap_sim(client: &Client, netuid: u16, tao: Option<f64>, alpha: Option<f64>, output: &str) -> Result<()> {
+    use crate::types::NetUid;
+
+    let price_raw = client.current_alpha_price(NetUid(netuid)).await?;
+    let price = price_raw as f64 / 1_000_000_000.0;
+
+    if let Some(tao_amount) = tao {
+        let tao_rao = (tao_amount * 1_000_000_000.0) as u64;
+        let (alpha_out, tao_fee, alpha_fee) = client.sim_swap_tao_for_alpha(NetUid(netuid), tao_rao).await?;
+        let alpha_display = alpha_out as f64 / 1_000_000_000.0;
+        let tao_fee_display = tao_fee as f64 / 1_000_000_000.0;
+        let alpha_fee_display = alpha_fee as f64 / 1_000_000_000.0;
+        if output == "json" {
+            println!("{}", serde_json::json!({
+                "direction": "tao_to_alpha",
+                "netuid": netuid,
+                "tao_in": tao_amount,
+                "alpha_out": alpha_display,
+                "tao_fee": tao_fee_display,
+                "alpha_fee": alpha_fee_display,
+                "effective_price": if alpha_display > 0.0 { tao_amount / alpha_display } else { 0.0 },
+                "current_price": price,
+            }));
+        } else {
+            println!("Swap Simulation — SN{}", netuid);
+            println!("  Direction:       TAO → Alpha");
+            println!("  TAO in:          {:.4} τ", tao_amount);
+            println!("  Alpha out:       {:.4} α", alpha_display);
+            println!("  TAO fee:         {:.6} τ", tao_fee_display);
+            println!("  Alpha fee:       {:.6} α", alpha_fee_display);
+            let eff_price = if alpha_display > 0.0 { tao_amount / alpha_display } else { 0.0 };
+            println!("  Effective price: {:.6} τ/α", eff_price);
+            println!("  Current price:   {:.6} τ/α", price);
+            let slippage = if price > 0.0 { ((eff_price - price) / price).abs() * 100.0 } else { 0.0 };
+            println!("  Slippage:        {:.2}%", slippage);
+        }
+    } else if let Some(alpha_amount) = alpha {
+        let alpha_raw = (alpha_amount * 1_000_000_000.0) as u64;
+        let (tao_out, tao_fee, alpha_fee) = client.sim_swap_alpha_for_tao(NetUid(netuid), alpha_raw).await?;
+        let tao_display = tao_out as f64 / 1_000_000_000.0;
+        let tao_fee_display = tao_fee as f64 / 1_000_000_000.0;
+        let alpha_fee_display = alpha_fee as f64 / 1_000_000_000.0;
+        if output == "json" {
+            println!("{}", serde_json::json!({
+                "direction": "alpha_to_tao",
+                "netuid": netuid,
+                "alpha_in": alpha_amount,
+                "tao_out": tao_display,
+                "tao_fee": tao_fee_display,
+                "alpha_fee": alpha_fee_display,
+                "effective_price": if alpha_amount > 0.0 { tao_display / alpha_amount } else { 0.0 },
+                "current_price": price,
+            }));
+        } else {
+            println!("Swap Simulation — SN{}", netuid);
+            println!("  Direction:       Alpha → TAO");
+            println!("  Alpha in:        {:.4} α", alpha_amount);
+            println!("  TAO out:         {:.4} τ", tao_display);
+            println!("  TAO fee:         {:.6} τ", tao_fee_display);
+            println!("  Alpha fee:       {:.6} α", alpha_fee_display);
+            let eff_price = if alpha_amount > 0.0 { tao_display / alpha_amount } else { 0.0 };
+            println!("  Effective price: {:.6} τ/α", eff_price);
+            println!("  Current price:   {:.6} τ/α", price);
+            let slippage = if price > 0.0 { ((eff_price - price) / price).abs() * 100.0 } else { 0.0 };
+            println!("  Slippage:        {:.2}%", slippage);
+        }
+    } else {
+        if output == "json" {
+            println!("{}", serde_json::json!({
+                "netuid": netuid,
+                "current_price": price,
+            }));
+        } else {
+            println!("SN{} current alpha price: {:.6} τ/α", netuid, price);
+            println!("Use --tao <amount> to simulate TAO→Alpha, or --alpha <amount> for Alpha→TAO");
+        }
+    }
+    Ok(())
+}
+
+async fn handle_nominations(client: &Client, hotkey: &str, output: &str) -> Result<()> {
+    let delegates = client.get_delegated(hotkey).await?;
+    if output == "json" {
+        println!("{}", serde_json::to_string_pretty(&delegates)?);
+        return Ok(());
+    }
+
+    if delegates.is_empty() {
+        println!("No delegation info found for {}", crate::utils::short_ss58(hotkey));
+        return Ok(());
+    }
+
+    println!("Nominations for hotkey {}", crate::utils::short_ss58(hotkey));
+    for d in &delegates {
+        println!("\n  Delegate: {}", crate::utils::short_ss58(&d.hotkey));
+        println!("    Owner:       {}", crate::utils::short_ss58(&d.owner));
+        println!("    Take:        {:.2}%", d.take * 100.0);
+        println!("    Total Stake: {}", d.total_stake.display_tao());
+        println!("    Nominators:  {}", d.nominators.len());
+        if !d.nominators.is_empty() {
+            let mut sorted = d.nominators.clone();
+            sorted.sort_by(|a, b| b.1.rao().cmp(&a.1.rao()));
+            println!("    Top nominators:");
+            for (addr, stake) in sorted.iter().take(10) {
+                println!("      {} — {}", crate::utils::short_ss58(addr), stake.display_tao());
+            }
+        }
+    }
     Ok(())
 }
