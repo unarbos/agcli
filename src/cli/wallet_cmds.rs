@@ -191,7 +191,7 @@ pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, wallet_name: &
                 message.as_bytes().to_vec()
             };
             let signature = pair.sign(&msg_bytes);
-            println!("{}", serde_json::json!({
+            crate::cli::helpers::print_json(&serde_json::json!({
                 "signer": wallet.coldkey_ss58().unwrap_or(""),
                 "message": message,
                 "signature": format!("0x{}", hex::encode(signature.0)),
@@ -222,7 +222,7 @@ pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, wallet_name: &
             let public = crate::wallet::keypair::from_ss58(&signer_ss58)?;
             let sig = sp_core::sr25519::Signature::from_raw(sig_bytes.try_into().unwrap());
             let valid = sp_core::sr25519::Pair::verify(&sig, &msg_bytes, &public);
-            println!("{}", serde_json::json!({
+            crate::cli::helpers::print_json(&serde_json::json!({
                 "signer": signer_ss58,
                 "valid": valid,
             }));
@@ -241,7 +241,7 @@ pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, wallet_name: &
                 }
                 let public = sp_core::sr25519::Public::from_raw(bytes.try_into().unwrap());
                 let ss58 = crate::wallet::keypair::to_ss58(&public, 42);
-                println!("{}", serde_json::json!({
+                crate::cli::helpers::print_json(&serde_json::json!({
                     "public_key": format!("0x{}", hex::encode(public.0)),
                     "ss58": ss58,
                 }));
@@ -249,7 +249,7 @@ pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, wallet_name: &
                 // Mnemonic phrase — derive public key only (never print secret)
                 let pair = crate::wallet::keypair::pair_from_mnemonic(&input)?;
                 let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
-                println!("{}", serde_json::json!({
+                crate::cli::helpers::print_json(&serde_json::json!({
                     "public_key": format!("0x{}", hex::encode(pair.public().0)),
                     "ss58": ss58,
                 }));

@@ -136,6 +136,58 @@ fn explain_aliases_work() {
     assert!(explain::explain("1000").is_some());
 }
 
+// ──── json_to_subxt_value tests ────
+
+#[test]
+fn json_to_subxt_value_number() {
+    use agcli::cli::helpers::json_to_subxt_value;
+    let val = json_to_subxt_value(&serde_json::json!(42));
+    // Should produce a u128 value
+    assert_eq!(format!("{:?}", val), format!("{:?}", subxt::dynamic::Value::u128(42)));
+}
+
+#[test]
+fn json_to_subxt_value_string() {
+    use agcli::cli::helpers::json_to_subxt_value;
+    let val = json_to_subxt_value(&serde_json::json!("hello"));
+    assert_eq!(format!("{:?}", val), format!("{:?}", subxt::dynamic::Value::string("hello".to_string())));
+}
+
+#[test]
+fn json_to_subxt_value_bool() {
+    use agcli::cli::helpers::json_to_subxt_value;
+    let val = json_to_subxt_value(&serde_json::json!(true));
+    assert_eq!(format!("{:?}", val), format!("{:?}", subxt::dynamic::Value::bool(true)));
+}
+
+#[test]
+fn json_to_subxt_value_hex_bytes() {
+    use agcli::cli::helpers::json_to_subxt_value;
+    let val = json_to_subxt_value(&serde_json::json!("0xdeadbeef"));
+    // Should decode as bytes
+    let expected = subxt::dynamic::Value::from_bytes(vec![0xde, 0xad, 0xbe, 0xef]);
+    assert_eq!(format!("{:?}", val), format!("{:?}", expected));
+}
+
+#[test]
+fn json_to_subxt_value_array() {
+    use agcli::cli::helpers::json_to_subxt_value;
+    let val = json_to_subxt_value(&serde_json::json!([1, 2, 3]));
+    // Should produce an unnamed composite
+    let _formatted = format!("{:?}", val); // Just check it doesn't panic
+}
+
+// ──── Pretty mode tests ────
+
+#[test]
+fn pretty_mode_flag_toggles() {
+    use agcli::cli::helpers::{set_pretty_mode, is_pretty_mode};
+    set_pretty_mode(true);
+    assert!(is_pretty_mode());
+    set_pretty_mode(false);
+    assert!(!is_pretty_mode());
+}
+
 // ──── Step 18: Batch mode & spending limits tests ────
 
 #[test]

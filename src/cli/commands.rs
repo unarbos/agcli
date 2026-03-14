@@ -39,7 +39,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                     let balance = client.get_balance_ss58(&addr).await?;
                     let below = threshold_rao.as_ref().map(|t| balance.rao() < t.rao()).unwrap_or(false);
                     if output == "json" {
-                        println!("{}", serde_json::json!({
+                        print_json(&serde_json::json!({
                             "address": addr,
                             "balance_rao": balance.rao(),
                             "balance_tao": balance.tao(),
@@ -57,7 +57,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
 
             let balance = client.get_balance_ss58(&addr).await?;
             if output == "json" {
-                println!("{}", serde_json::json!({"address": addr, "balance_rao": balance.rao(), "balance_tao": balance.tao()}));
+                print_json(&serde_json::json!({"address": addr, "balance_rao": balance.rao(), "balance_tao": balance.tao()}));
             } else {
                 println!("Address: {}", addr);
                 println!("Balance: {}", balance.display_tao());
@@ -153,6 +153,12 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Explain { topic } => {
             handle_explain(topic.as_deref());
             Ok(())
+        }
+        Commands::Batch { file, no_atomic } => {
+            let client = Client::connect(network.ws_url()).await?;
+            let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
+            unlock_coldkey(&mut wallet, password.as_deref())?;
+            handle_batch(&client, wallet.coldkey()?, &file, no_atomic, output).await
         }
     }
 }
@@ -309,7 +315,7 @@ async fn handle_subnet(
                     }
                     None => {
                         if output == "json" {
-                            println!("{}", serde_json::json!({"error": format!("UID {} not found on SN{}", target_uid, netuid)}));
+                            print_json(&serde_json::json!({"error": format!("UID {} not found on SN{}", target_uid, netuid)}));
                         } else {
                             println!("UID {} not found on SN{}", target_uid, netuid);
                         }
@@ -843,7 +849,7 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: &str) -> Res
                 "blocks_since_update": block.saturating_sub(n.last_update),
             })
         }).collect();
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "netuid": netuid, "block": block, "total_neurons": n,
             "active": active_count, "validators": validators.len(),
             "miners": miners.len(), "zero_emission": zero_emission,
@@ -921,7 +927,7 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: &str) -> 
                 "is_validator": n.validator_permit,
             })
         }).collect();
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "netuid": netuid,
             "total_emission_per_block_tao": emission_per_block,
             "daily_emission_tao": daily_emission,
@@ -969,7 +975,7 @@ async fn handle_subnet_cost(client: &Client, netuid: u16, output: &str) -> Resul
     let max_n = info.as_ref().map(|i| i.max_n).unwrap_or(0);
 
     if output == "json" {
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "netuid": netuid,
             "burn_rao": burn.rao(),
             "burn_tao": burn.tao(),
@@ -1049,7 +1055,7 @@ async fn handle_weights(
             let rate_limit = hyperparams.as_ref().map(|h| h.weights_rate_limit).unwrap_or(0);
 
             if dry_run {
-                println!("{}", serde_json::json!({
+                print_json(&serde_json::json!({
                     "dry_run": true,
                     "netuid": netuid,
                     "num_weights": uids.len(),
@@ -1206,7 +1212,7 @@ async fn handle_weights(
                 // Verify reveal was included
                 let final_block = client.get_block_number().await?;
                 println!("\n  Confirmed at block {}. Commit-reveal complete.", final_block);
-                println!("{}", serde_json::json!({
+                print_json(&serde_json::json!({
                     "status": "complete",
                     "netuid": netuid,
                     "commit_tx": commit_tx,
@@ -1828,4 +1834,61 @@ async fn handle_update() -> Result<()> {
         Ok(s) => anyhow::bail!("Update failed with exit code: {}", s),
         Err(e) => anyhow::bail!("Failed to run cargo install: {}. Make sure cargo is installed.", e),
     }
+}
+
+// ──────── Batch Extrinsics ────────
+
+async fn handle_batch(
+    client: &Client,
+    pair: &sp_core::sr25519::Pair,
+    file_path: &str,
+    no_atomic: bool,
+    output: &str,
+) -> Result<()> {
+    let content = std::fs::read_to_string(file_path)
+        .map_err(|e| anyhow::anyhow!("Failed to read batch file '{}': {}", file_path, e))?;
+    let calls: Vec<serde_json::Value> = serde_json::from_str(&content)
+        .map_err(|e| anyhow::anyhow!("Invalid JSON in '{}': {}\n  Expected: [{{\n    \"pallet\": \"SubtensorModule\",\n    \"call\": \"add_stake\",\n    \"args\": [\"hotkey_ss58\", 1, 1000000000]\n  }}, ...]", file_path, e))?;
+
+    if calls.is_empty() {
+        anyhow::bail!("Batch file is empty (no calls to submit).");
+    }
+
+    eprintln!("Batch: {} calls, mode={}", calls.len(), if no_atomic { "batch (non-atomic)" } else { "batch_all (atomic)" });
+
+    let mut encoded_calls: Vec<Vec<u8>> = Vec::with_capacity(calls.len());
+    for (i, call_json) in calls.iter().enumerate() {
+        let pallet = call_json.get("pallet").and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Call #{}: missing \"pallet\" field", i))?;
+        let call_name = call_json.get("call").and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Call #{}: missing \"call\" field", i))?;
+        let args = call_json.get("args").and_then(|v| v.as_array())
+            .ok_or_else(|| anyhow::anyhow!("Call #{}: missing \"args\" array", i))?;
+
+        let fields: Vec<subxt::dynamic::Value> = args.iter()
+            .map(json_to_subxt_value)
+            .collect();
+
+        let tx = subxt::dynamic::tx(pallet, call_name, fields);
+        let encoded = client.inner_client().tx().call_data(&tx)
+            .map_err(|e| anyhow::anyhow!("Call #{} ({}.{}): encoding failed: {}", i, pallet, call_name, e))?;
+        eprintln!("  #{}: {}.{} ({} bytes)", i, pallet, call_name, encoded.len());
+        encoded_calls.push(encoded);
+    }
+
+    // Build Utility.batch_all or Utility.batch
+    let batch_call_name = if no_atomic { "batch" } else { "batch_all" };
+    let call_values: Vec<subxt::dynamic::Value> = encoded_calls.iter()
+        .map(|c| subxt::dynamic::Value::from_bytes(c.clone()))
+        .collect();
+
+    let batch_tx = subxt::dynamic::tx(
+        "Utility",
+        batch_call_name,
+        vec![subxt::dynamic::Value::unnamed_composite(call_values)],
+    );
+
+    let hash = client.sign_submit_dyn(&batch_tx, pair).await?;
+    print_tx_result(output, &hash, &format!("Batch ({} calls) submitted.", calls.len()));
+    Ok(())
 }

@@ -528,6 +528,11 @@ impl Client {
         self.sign_submit(&tx, pair).await
     }
 
+    /// Sign and submit any Payload (public, for batch/dynamic calls from outside the chain module).
+    pub async fn sign_submit_dyn<T: subxt::tx::Payload>(&self, tx: &T, pair: &sr25519::Pair) -> Result<String> {
+        self.sign_submit(tx, pair).await
+    }
+
     // ──────── Multisig ────────
 
     /// Submit a multisig call (Multisig::as_multi) wrapping a dynamic inner call.

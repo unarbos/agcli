@@ -392,3 +392,23 @@ fn parse_batch_and_yes_combined() {
     assert!(cli.batch);
     assert!(cli.yes);
 }
+
+// ──── Step 20: Batch extrinsics command ────
+
+/// Verify batch command parses with file argument.
+#[test]
+fn parse_batch_command() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "batch", "calls.json",
+    ]);
+    assert!(cli.is_ok(), "should parse batch command: {:?}", cli.err());
+}
+
+/// Verify batch --no-atomic flag parses.
+#[test]
+fn parse_batch_no_atomic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "batch", "calls.json", "--no-atomic",
+    ]);
+    assert!(cli.is_ok(), "should parse batch --no-atomic: {:?}", cli.err());
+}

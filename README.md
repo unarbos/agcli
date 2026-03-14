@@ -1,5 +1,7 @@
 # agcli — Agent optimized Rust CLI + SDK for Bittensor
 
+[![CI](https://github.com/unconst/agcli/actions/workflows/ci.yml/badge.svg)](https://github.com/unconst/agcli/actions/workflows/ci.yml)
+
 A fast, safe Rust toolkit for interacting with the [Bittensor](https://bittensor.com) network.
 Covers everything: wallet management, staking, transfers, subnet operations, weight setting, registration, metagraph queries, and more.
 
@@ -37,6 +39,7 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Swap Sim** | Simulate TAO↔Alpha swaps with slippage/fee estimates, current alpha price |
 | **Nominations** | View who nominates/delegates to a hotkey |
 | **Crowdloan** | Contribute, withdraw, finalize crowdloans |
+| **Batch** | Submit multiple extrinsics atomically from a JSON file (`agcli batch calls.json`) |
 | **Update** | Self-update via `agcli update` (cargo install from GitHub) |
 | **Agent Mode** | `--batch` (hard errors, no stdin), `--pretty` (pretty JSON), structured error JSON, spending limits, fully non-interactive |
 | **Output** | Table (default), JSON (`--output json`), CSV (`--output csv`), `--pretty` for formatted JSON |

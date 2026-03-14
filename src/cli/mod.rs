@@ -193,6 +193,17 @@ pub enum Commands {
         /// Omit to list all available topics.
         topic: Option<String>,
     },
+
+    // ──── Batch ────
+    /// Submit multiple extrinsics from a JSON file via Utility.batch_all
+    Batch {
+        /// Path to JSON file containing an array of calls.
+        /// Each call: {"pallet": "SubtensorModule", "call": "add_stake", "args": [...]}
+        file: String,
+        /// Use batch (fail-safe, continues on error) instead of batch_all (atomic)
+        #[arg(long)]
+        no_atomic: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]

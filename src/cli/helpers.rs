@@ -84,6 +84,15 @@ pub fn print_json_ser<T: serde::Serialize>(value: &T) {
     }
 }
 
+/// Print a JSON value to stderr. Respects the global pretty-print flag.
+pub fn eprint_json(value: &serde_json::Value) {
+    if is_pretty_mode() {
+        eprintln!("{}", serde_json::to_string_pretty(value).unwrap_or_default());
+    } else {
+        eprintln!("{}", value);
+    }
+}
+
 /// Print transaction result in both json and table modes.
 pub fn print_tx_result(output: &str, hash: &str, label: &str) {
     if output == "json" {

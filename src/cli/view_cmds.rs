@@ -105,7 +105,7 @@ async fn handle_network(client: &Client, output: &str) -> Result<()> {
         0.0
     };
     if output == "json" {
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "block": block,
             "subnets": total_networks,
             "total_issuance_rao": total_issuance.rao(),
@@ -358,7 +358,7 @@ async fn handle_account_explorer(client: &Client, address: &str, output: &str) -
                 "price": di.map(|d| d.price).unwrap_or(0.0),
             })
         }).collect();
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "address": address,
             "balance_rao": balance.rao(),
             "balance_tao": balance.tao(),
@@ -448,7 +448,7 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: &str) -> 
     let unique_coldkeys: std::collections::HashSet<&String> = neurons.iter().map(|n| &n.coldkey).collect();
 
     if output == "json" {
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "netuid": netuid,
             "name": name,
             "total_neurons": n,
@@ -594,7 +594,7 @@ async fn handle_staking_analytics(client: &Client, address: &str, output: &str) 
             "estimated_daily_tao": p.estimated_daily_emission_tao,
             "estimated_apy_pct": p.estimated_apy,
         })).collect();
-        println!("{}", serde_json::json!({
+        print_json(&serde_json::json!({
             "address": address,
             "total_staked_tao": total_staked,
             "total_daily_emission_tao": total_daily,
@@ -663,7 +663,7 @@ async fn handle_swap_sim(client: &Client, netuid: u16, tao: Option<f64>, alpha: 
     match sim {
         Some((dir, dir_label, amt_in, sym_in, amt_out, sym_out, tao_fee, alpha_fee, eff_price)) => {
             if output == "json" {
-                println!("{}", serde_json::json!({
+                print_json(&serde_json::json!({
                     "direction": dir, "netuid": netuid,
                     "amount_in": amt_in, "amount_out": amt_out,
                     "tao_fee": tao_fee, "alpha_fee": alpha_fee,
@@ -684,7 +684,7 @@ async fn handle_swap_sim(client: &Client, netuid: u16, tao: Option<f64>, alpha: 
         }
         None => {
             if output == "json" {
-                println!("{}", serde_json::json!({"netuid": netuid, "current_price": price}));
+                print_json(&serde_json::json!({"netuid": netuid, "current_price": price}));
             } else {
                 println!("SN{} current alpha price: {:.6} τ/α", netuid, price);
                 println!("Use --tao <amount> to simulate TAO→Alpha, or --alpha <amount> for Alpha→TAO");

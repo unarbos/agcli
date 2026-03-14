@@ -23,7 +23,7 @@ async fn main() {
         Err(e) => {
             if json_errors {
                 // Structured error JSON on stderr for agents
-                eprintln!("{}", serde_json::json!({
+                agcli::cli::helpers::eprint_json(&serde_json::json!({
                     "error": true,
                     "message": format!("{:#}", e),
                 }));

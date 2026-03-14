@@ -234,6 +234,13 @@ agcli explain commit-reveal
 - Keys: network, endpoint, wallet_dir, wallet, hotkey, output, proxy, live_interval, batch, spending_limit.N, spending_limit.*
 - Priority: CLI flags > env vars > config file > defaults
 
+### Batch Extrinsics
+- `agcli batch calls.json` — submit multiple extrinsics atomically via Utility.batch_all
+- `agcli batch calls.json --no-atomic` — non-atomic batch (continues on error)
+- JSON format: `[{"pallet": "SubtensorModule", "call": "add_stake", "args": ["5Hotkey...", 1, 1000000000]}, ...]`
+- Hex strings in args (`"0xdead..."`) are decoded as bytes automatically
+- Requires wallet unlock (--password or interactive)
+
 ### Utility
 - `agcli completions bash|zsh|fish|powershell` — generate shell completions
 - `agcli update` — self-update from GitHub
