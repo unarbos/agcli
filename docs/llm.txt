@@ -103,6 +103,25 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli stake wizard` — interactive guided staking flow
 - Shows balance, top subnets by pool, lets you pick subnet/amount, confirms before submitting
 
+### Validators
+- `agcli view validators` — top validators by total stake (delegates)
+- `agcli view validators --netuid 1` — validators on a specific subnet
+- `agcli view validators --limit 20` — limit results
+
+### Transaction History
+- `agcli view history` — recent extrinsics for your wallet (via Subscan API)
+- `agcli view history --address SS58 --limit 10` — specific address
+
+### Multisig
+- `agcli multisig address "SS58_1,SS58_2,SS58_3" --threshold 2` — derive multisig address
+- `agcli multisig submit --others "SS58_2,SS58_3" --threshold 2 --pallet Balances --call transfer_allow_death --args '[...]'` — submit call
+- `agcli multisig approve --others "SS58_2,SS58_3" --threshold 2 --call-hash 0xabc...` — approve pending call
+
+### Shell Completions
+- `agcli completions bash` — generate bash completions
+- `agcli completions zsh` — generate zsh completions
+- `agcli completions fish` — generate fish completions
+
 ### Raw Calls (Advanced)
 - SDK method: `client.submit_raw_call(&pair, "PalletName", "call_name", fields)`
 - Enables calling any pallet (EVM, MEVShield, Contracts) without compile-time bindings
@@ -139,6 +158,9 @@ use subxt::dynamic::Value;
 client.submit_raw_call(&pair, "EVM", "associate_evm_key", vec![...]).await?;
 // Proxy call (delegate signing through proxy account)
 client.proxy_call(&pair, "5RealAccount...", "SubtensorModule", "add_stake", vec![...]).await?;
+// Multisig operations
+client.submit_multisig_call(&pair, &other_ids, 2, "Balances", "transfer_allow_death", vec![...]).await?;
+client.approve_multisig(&pair, &other_ids, 2, call_hash).await?;
 // Load persistent config
 let cfg = Config::load();
 println!("Network: {:?}", cfg.network);

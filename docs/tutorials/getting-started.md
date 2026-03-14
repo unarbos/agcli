@@ -89,3 +89,29 @@ agcli --network test --wallet my_wallet subnet list
 ```
 
 Priority: CLI flags > environment variables > config file > defaults
+
+## Shell Completions
+
+```bash
+# Bash
+agcli completions bash > /etc/bash_completion.d/agcli
+
+# Zsh
+agcli completions zsh > ~/.zfunc/_agcli
+
+# Fish
+agcli completions fish > ~/.config/fish/completions/agcli.fish
+```
+
+## Advanced: Validators & History
+
+```bash
+# View top validators across the network
+agcli view validators --limit 20
+
+# Validators on a specific subnet
+agcli view validators --netuid 1
+
+# Transaction history
+agcli view history --limit 10
+```

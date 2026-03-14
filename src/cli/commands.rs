@@ -6,6 +6,7 @@ use crate::wallet::Wallet;
 use crate::types::Balance;
 use crate::types::NetUid;
 use anyhow::Result;
+use clap::CommandFactory;
 use sp_core::Pair as _;
 
 /// Execute the parsed CLI command.
@@ -78,7 +79,14 @@ pub async fn execute(cli: Cli) -> Result<()> {
             let client = Client::connect(network.ws_url()).await?;
             handle_subscribe(cmd, &client, output).await
         }
+        Commands::Multisig(cmd) => {
+            handle_multisig(cmd, &cli.wallet_dir, &cli.wallet, network.ws_url()).await
+        }
         Commands::Config(cmd) => handle_config(cmd).await,
+        Commands::Completions { shell } => {
+            generate_completions(&shell);
+            Ok(())
+        }
     }
 }
 
@@ -117,6 +125,20 @@ fn resolve_hotkey_ss58(
         .hotkey_ss58()
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("Could not resolve hotkey SS58 address"))
+}
+
+/// Shortcut: open wallet, unlock, resolve hotkey, return (pair, hotkey_ss58).
+fn unlock_and_resolve(
+    wallet_dir: &str,
+    wallet_name: &str,
+    hotkey_name: &str,
+    hotkey_arg: Option<String>,
+) -> Result<(sp_core::sr25519::Pair, String)> {
+    let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+    unlock_coldkey(&mut wallet)?;
+    let hotkey_ss58 = resolve_hotkey_ss58(hotkey_arg, &mut wallet, hotkey_name)?;
+    let pair = wallet.coldkey()?.clone();
+    Ok((pair, hotkey_ss58))
 }
 
 fn parse_weight_pairs(weights_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
@@ -311,232 +333,84 @@ async fn handle_stake(
             }
             Ok(())
         }
-        StakeCommands::Add {
-            amount,
-            netuid,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            let balance = Balance::from_tao(amount);
-            println!(
-                "Adding stake: {} to {} on SN{}",
-                balance.display_tao(),
-                crate::utils::short_ss58(&hotkey_ss58),
-                netuid
-            );
-            let hash = client
-                .add_stake(wallet.coldkey()?, &hotkey_ss58, NetUid(netuid), balance)
-                .await?;
+        StakeCommands::Add { amount, netuid, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let bal = Balance::from_tao(amount);
+            println!("Adding stake: {} to {} on SN{}", bal.display_tao(), crate::utils::short_ss58(&hk), netuid);
+            let hash = client.add_stake(&pair, &hk, NetUid(netuid), bal).await?;
             println!("Stake added. Tx: {}", hash);
             Ok(())
         }
-        StakeCommands::Remove {
-            amount,
-            netuid,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            let balance = Balance::from_tao(amount);
-            println!(
-                "Removing stake: {} from {} on SN{}",
-                balance.display_tao(),
-                crate::utils::short_ss58(&hotkey_ss58),
-                netuid
-            );
-            let hash = client
-                .remove_stake(wallet.coldkey()?, &hotkey_ss58, NetUid(netuid), balance)
-                .await?;
+        StakeCommands::Remove { amount, netuid, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let bal = Balance::from_tao(amount);
+            println!("Removing stake: {} from {} on SN{}", bal.display_tao(), crate::utils::short_ss58(&hk), netuid);
+            let hash = client.remove_stake(&pair, &hk, NetUid(netuid), bal).await?;
             println!("Stake removed. Tx: {}", hash);
             Ok(())
         }
-        StakeCommands::Move {
-            amount,
-            from,
-            to,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            let balance = Balance::from_tao(amount);
-            println!(
-                "Moving stake: {} from SN{} to SN{} on {}",
-                balance.display_tao(),
-                from,
-                to,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .move_stake(
-                    wallet.coldkey()?,
-                    &hotkey_ss58,
-                    NetUid(from),
-                    NetUid(to),
-                    balance,
-                )
-                .await?;
+        StakeCommands::Move { amount, from, to, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let bal = Balance::from_tao(amount);
+            println!("Moving stake: {} from SN{} to SN{} on {}", bal.display_tao(), from, to, crate::utils::short_ss58(&hk));
+            let hash = client.move_stake(&pair, &hk, NetUid(from), NetUid(to), bal).await?;
             println!("Stake moved. Tx: {}", hash);
             Ok(())
         }
-        StakeCommands::Swap {
-            amount,
-            netuid,
-            from_hotkey,
-            to_hotkey,
-        } => {
+        StakeCommands::Swap { amount, netuid, from_hotkey, to_hotkey } => {
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet)?;
-            let balance = Balance::from_tao(amount);
-            println!(
-                "Swapping stake: {} on SN{} from {} to {}",
-                balance.display_tao(),
-                netuid,
-                crate::utils::short_ss58(&from_hotkey),
-                crate::utils::short_ss58(&to_hotkey)
-            );
-            let hash = client
-                .swap_stake(
-                    wallet.coldkey()?,
-                    &from_hotkey,
-                    NetUid(netuid),
-                    NetUid(netuid),
-                    balance,
-                )
-                .await?;
+            let bal = Balance::from_tao(amount);
+            println!("Swapping stake: {} on SN{} from {} to {}", bal.display_tao(), netuid, crate::utils::short_ss58(&from_hotkey), crate::utils::short_ss58(&to_hotkey));
+            let hash = client.swap_stake(wallet.coldkey()?, &from_hotkey, NetUid(netuid), NetUid(netuid), bal).await?;
             println!("Stake swapped. Tx: {}", hash);
             Ok(())
         }
         StakeCommands::UnstakeAll { hotkey } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            println!(
-                "Unstaking all from {}",
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client.unstake_all(wallet.coldkey()?, &hotkey_ss58).await?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            println!("Unstaking all from {}", crate::utils::short_ss58(&hk));
+            let hash = client.unstake_all(&pair, &hk).await?;
             println!("All stake removed. Tx: {}", hash);
             Ok(())
         }
         StakeCommands::ClaimRoot { hotkey: _, netuid } => {
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet)?;
-            println!("Claiming root dividends for SN{}", netuid);
             let hash = client.claim_root(wallet.coldkey()?, &[netuid]).await?;
-            println!("Root claimed. Tx: {}", hash);
+            println!("Root claimed for SN{}. Tx: {}", netuid, hash);
             Ok(())
         }
-        StakeCommands::AddLimit {
-            amount,
-            netuid,
-            price,
-            partial,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            let balance = Balance::from_tao(amount);
-            let limit_price = (price * 1_000_000_000.0) as u64;
-            println!(
-                "Adding stake with limit: {} at price {:.4} on SN{} (partial={})",
-                balance.display_tao(),
-                price,
-                netuid,
-                partial
-            );
-            let hash = client
-                .add_stake_limit(
-                    wallet.coldkey()?,
-                    &hotkey_ss58,
-                    NetUid(netuid),
-                    balance,
-                    limit_price,
-                    partial,
-                )
-                .await?;
+        StakeCommands::AddLimit { amount, netuid, price, partial, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let bal = Balance::from_tao(amount);
+            let lp = (price * 1_000_000_000.0) as u64;
+            println!("Adding stake limit: {} at {:.4} on SN{} (partial={})", bal.display_tao(), price, netuid, partial);
+            let hash = client.add_stake_limit(&pair, &hk, NetUid(netuid), bal, lp, partial).await?;
             println!("Limit stake added. Tx: {}", hash);
             Ok(())
         }
-        StakeCommands::RemoveLimit {
-            amount,
-            netuid,
-            price,
-            partial,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
-            let amount_raw = (amount * 1_000_000_000.0) as u64;
-            let limit_price = (price * 1_000_000_000.0) as u64;
-            println!(
-                "Removing stake with limit: {:.4} at price {:.4} on SN{} (partial={})",
-                amount, price, netuid, partial
-            );
-            let hash = client
-                .remove_stake_limit(
-                    wallet.coldkey()?,
-                    &hotkey_ss58,
-                    NetUid(netuid),
-                    amount_raw,
-                    limit_price,
-                    partial,
-                )
-                .await?;
+        StakeCommands::RemoveLimit { amount, netuid, price, partial, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
+            let lp = (price * 1_000_000_000.0) as u64;
+            let amt = (amount * 1_000_000_000.0) as u64;
+            println!("Removing stake limit: {:.4} at {:.4} on SN{} (partial={})", amount, price, netuid, partial);
+            let hash = client.remove_stake_limit(&pair, &hk, NetUid(netuid), amt, lp, partial).await?;
             println!("Limit stake removed. Tx: {}", hash);
             Ok(())
         }
-        StakeCommands::ChildkeyTake {
-            take,
-            netuid,
-            hotkey,
-        } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
+        StakeCommands::ChildkeyTake { take, netuid, hotkey } => {
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
             let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
-            println!(
-                "Setting childkey take to {:.2}% on SN{} for {}",
-                take,
-                netuid,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .set_childkey_take(wallet.coldkey()?, &hotkey_ss58, NetUid(netuid), take_u16)
-                .await?;
+            println!("Setting childkey take to {:.2}% on SN{} for {}", take, netuid, crate::utils::short_ss58(&hk));
+            let hash = client.set_childkey_take(&pair, &hk, NetUid(netuid), take_u16).await?;
             println!("Childkey take set. Tx: {}", hash);
             Ok(())
         }
         StakeCommands::SetChildren { netuid, children } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = {
-                wallet.load_hotkey(hotkey_name)?;
-                wallet
-                    .hotkey_ss58()
-                    .map(|s| s.to_string())
-                    .ok_or_else(|| anyhow::anyhow!("Could not resolve hotkey"))?
-            };
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
             let children_parsed = parse_children(&children)?;
-            println!(
-                "Setting {} children on SN{} for {}",
-                children_parsed.len(),
-                netuid,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .set_children(
-                    wallet.coldkey()?,
-                    &hotkey_ss58,
-                    NetUid(netuid),
-                    &children_parsed,
-                )
-                .await?;
+            println!("Setting {} children on SN{} for {}", children_parsed.len(), netuid, crate::utils::short_ss58(&hk));
+            let hash = client.set_children(&pair, &hk, NetUid(netuid), &children_parsed).await?;
             println!("Children set. Tx: {}", hash);
             Ok(())
         }
@@ -706,85 +580,45 @@ async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::Register => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(None, &mut wallet, hotkey_name)?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
             println!("Registering new subnet...");
-            let hash = client
-                .register_network(wallet.coldkey()?, &hotkey_ss58)
-                .await?;
+            let hash = client.register_network(&pair, &hk).await?;
             println!("Subnet registered. Tx: {}", hash);
             Ok(())
         }
         SubnetCommands::RegisterNeuron { netuid } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(None, &mut wallet, hotkey_name)?;
-            println!(
-                "Burn-registering on SN{} with hotkey {}",
-                netuid,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .burned_register(wallet.coldkey()?, NetUid(netuid), &hotkey_ss58)
-                .await?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
+            println!("Burn-registering on SN{} with hotkey {}", netuid, crate::utils::short_ss58(&hk));
+            let hash = client.burned_register(&pair, NetUid(netuid), &hk).await?;
             println!("Neuron registered. Tx: {}", hash);
             Ok(())
         }
         SubnetCommands::Pow { netuid, threads } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(None, &mut wallet, hotkey_name)?;
-            let hotkey_pk = crate::wallet::keypair::from_ss58(&hotkey_ss58)?;
-
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
+            let hotkey_pk = crate::wallet::keypair::from_ss58(&hk)?;
             println!("POW registration on SN{} with {} threads", netuid, threads);
-            println!("Fetching block info and difficulty...");
-
             let (block_number, block_hash) = client.get_block_info_for_pow().await?;
             let difficulty = client.get_difficulty(NetUid(netuid)).await?;
-            println!("Difficulty: {}, Block: #{} (0x{})", difficulty, block_number, hex::encode(block_hash));
+            println!("Difficulty: {}, Block: #{}", difficulty, block_number);
 
             let attempts_per_thread = 10_000_000u64;
             let mut handles = Vec::new();
             for t in 0..threads {
-                let bh = block_hash;
-                let hk = hotkey_pk.0;
-                let diff = difficulty;
+                let (bh, hk_bytes, diff) = (block_hash, hotkey_pk.0, difficulty);
                 let offset = t as u64 * attempts_per_thread;
                 handles.push(std::thread::spawn(move || {
-                    crate::utils::pow::solve_pow_range(&bh, &hk, diff, offset, attempts_per_thread)
+                    crate::utils::pow::solve_pow_range(&bh, &hk_bytes, diff, offset, attempts_per_thread)
                 }));
             }
-
-            let mut result = None;
-            for handle in handles {
-                if let Some(found) = handle.join().map_err(|_| anyhow::anyhow!("thread panic"))? {
-                    result = Some(found);
-                    break;
-                }
-            }
-
+            let result = handles.into_iter()
+                .find_map(|h| h.join().ok().flatten());
             match result {
                 Some((nonce, work)) => {
                     println!("POW solved! Nonce: {}", nonce);
-                    let hash = client
-                        .pow_register(
-                            wallet.coldkey()?,
-                            NetUid(netuid),
-                            &hotkey_ss58,
-                            block_number,
-                            nonce,
-                            work,
-                        )
-                        .await?;
+                    let hash = client.pow_register(&pair, NetUid(netuid), &hk, block_number, nonce, work).await?;
                     println!("POW registered. Tx: {}", hash);
                 }
-                None => {
-                    println!(
-                        "POW not found after {} attempts per thread. Try again or use burn registration.",
-                        attempts_per_thread
-                    );
-                }
+                None => println!("POW not found after {} attempts/thread. Try burn registration.", attempts_per_thread),
             }
             Ok(())
         }
@@ -917,16 +751,9 @@ async fn handle_root(
 ) -> Result<()> {
     match cmd {
         RootCommands::Register => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(None, &mut wallet, hotkey_name)?;
-            println!(
-                "Registering on root network with hotkey {}",
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .root_register(wallet.coldkey()?, &hotkey_ss58)
-                .await?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None)?;
+            println!("Registering on root network with hotkey {}", crate::utils::short_ss58(&hk));
+            let hash = client.root_register(&pair, &hk).await?;
             println!("Root registered. Tx: {}", hash);
             Ok(())
         }
@@ -936,9 +763,7 @@ async fn handle_root(
             wallet.load_hotkey(hotkey_name)?;
             let (uids, wts) = parse_weight_pairs(&weights)?;
             println!("Setting {} root weights", uids.len());
-            let hash = client
-                .set_weights(wallet.hotkey()?, NetUid::ROOT, &uids, &wts, 0)
-                .await?;
+            let hash = client.set_weights(wallet.hotkey()?, NetUid::ROOT, &uids, &wts, 0).await?;
             println!("Root weights set. Tx: {}", hash);
             Ok(())
         }
@@ -1024,34 +849,18 @@ async fn handle_delegate(
             Ok(())
         }
         DelegateCommands::DecreaseTake { take, hotkey } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
             let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
-            println!(
-                "Decreasing take to {:.2}% for {}",
-                take,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .decrease_take(wallet.coldkey()?, &hotkey_ss58, take_u16)
-                .await?;
+            println!("Decreasing take to {:.2}% for {}", take, crate::utils::short_ss58(&hk));
+            let hash = client.decrease_take(&pair, &hk, take_u16).await?;
             println!("Take decreased. Tx: {}", hash);
             Ok(())
         }
         DelegateCommands::IncreaseTake { take, hotkey } => {
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet)?;
-            let hotkey_ss58 = resolve_hotkey_ss58(hotkey, &mut wallet, hotkey_name)?;
+            let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey)?;
             let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
-            println!(
-                "Increasing take to {:.2}% for {}",
-                take,
-                crate::utils::short_ss58(&hotkey_ss58)
-            );
-            let hash = client
-                .increase_take(wallet.coldkey()?, &hotkey_ss58, take_u16)
-                .await?;
+            println!("Increasing take to {:.2}% for {}", take, crate::utils::short_ss58(&hk));
+            let hash = client.increase_take(&pair, &hk, take_u16).await?;
             println!("Take increased. Tx: {}", hash);
             Ok(())
         }
@@ -1208,7 +1017,90 @@ async fn handle_view(
             }
             Ok(())
         }
+        ViewCommands::Validators { netuid, limit } => {
+            handle_validators(client, output, netuid, limit).await
+        }
+        ViewCommands::History { address, limit } => {
+            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            handle_history(&addr, output, limit).await
+        }
     }
+}
+
+// ──────── Validators ────────
+
+async fn handle_validators(
+    client: &Client,
+    output: &str,
+    netuid: Option<u16>,
+    limit: usize,
+) -> Result<()> {
+    // Collect validators: either from a specific subnet or top delegates
+    if let Some(nuid) = netuid {
+        // Show validators on a specific subnet
+        let neurons = client.get_neurons_lite(NetUid(nuid)).await?;
+        let mut validators: Vec<_> = neurons.into_iter()
+            .filter(|n| n.validator_permit)
+            .collect();
+        validators.sort_by(|a, b| b.stake.rao().cmp(&a.stake.rao()));
+        validators.truncate(limit);
+
+        if output == "json" {
+            println!("{}", serde_json::to_string_pretty(&validators)?);
+        } else if output == "csv" {
+            println!("uid,hotkey,coldkey,stake_rao,trust,vtrust,dividends,emission");
+            for v in &validators {
+                println!("{},{},{},{},{:.6},{:.6},{:.6},{:.0}", v.uid, v.hotkey, v.coldkey, v.stake.rao(), v.trust, v.validator_trust, v.dividends, v.emission);
+            }
+        } else {
+            println!("Validators on SN{} ({} with permits)", nuid, validators.len());
+            let mut table = comfy_table::Table::new();
+            table.set_header(vec!["UID", "Hotkey", "Stake", "VTrust", "Dividends", "Emission"]);
+            for v in &validators {
+                table.add_row(vec![
+                    format!("{}", v.uid),
+                    crate::utils::short_ss58(&v.hotkey),
+                    format!("{:.4}τ", v.stake.tao()),
+                    format!("{:.4}", v.validator_trust),
+                    format!("{:.4}", v.dividends),
+                    format!("{:.0}", v.emission),
+                ]);
+            }
+            println!("{table}");
+        }
+    } else {
+        // Show top delegates (global validators overview)
+        let delegates = client.get_delegates().await?;
+        let mut sorted = delegates;
+        sorted.sort_by(|a, b| b.total_stake.rao().cmp(&a.total_stake.rao()));
+        sorted.truncate(limit);
+
+        if output == "json" {
+            println!("{}", serde_json::to_string_pretty(&sorted)?);
+        } else if output == "csv" {
+            println!("hotkey,owner,take_pct,total_stake_rao,nominators,registrations");
+            for d in &sorted {
+                println!("{},{},{:.2},{},{},{:?}", d.hotkey, d.owner, d.take * 100.0, d.total_stake.rao(), d.nominators.len(), d.registrations);
+            }
+        } else {
+            println!("Top {} validators by total stake", sorted.len());
+            let mut table = comfy_table::Table::new();
+            table.set_header(vec!["#", "Hotkey", "Owner", "Take", "Total Stake", "Nominators", "Subnets"]);
+            for (i, d) in sorted.iter().enumerate() {
+                table.add_row(vec![
+                    format!("{}", i + 1),
+                    crate::utils::short_ss58(&d.hotkey),
+                    crate::utils::short_ss58(&d.owner),
+                    format!("{:.2}%", d.take * 100.0),
+                    d.total_stake.display_tao(),
+                    format!("{}", d.nominators.len()),
+                    format!("{}", d.registrations.len()),
+                ]);
+            }
+            println!("{table}");
+        }
+    }
+    Ok(())
 }
 
 // ──────── Identity ────────
@@ -1408,6 +1300,227 @@ async fn handle_config(cmd: ConfigCommands) -> Result<()> {
             Ok(())
         }
     }
+}
+
+// ──────── Multisig ────────
+
+async fn handle_multisig(
+    cmd: MultisigCommands,
+    wallet_dir: &str,
+    wallet_name: &str,
+    ws_url: &str,
+) -> Result<()> {
+    match cmd {
+        MultisigCommands::Address { signatories, threshold } => {
+            let addrs: Vec<&str> = signatories.split(',').map(|s| s.trim()).collect();
+            if addrs.len() < 2 {
+                anyhow::bail!("Need at least 2 signatories for a multisig");
+            }
+            // Sort account IDs lexicographically (Substrate requirement)
+            let mut account_ids: Vec<crate::AccountId> = addrs.iter()
+                .map(|s| Client::ss58_to_account_id_pub(s))
+                .collect::<Result<_>>()?;
+            account_ids.sort();
+
+            // Derive multisig address: blake2_256(b"modlpy/teleport" ++ threshold ++ sorted_accounts)
+            use blake2::digest::{Update, VariableOutput};
+            let mut hasher = blake2::Blake2bVar::new(32)
+                .map_err(|e| anyhow::anyhow!("blake2 error: {:?}", e))?;
+            hasher.update(b"modlpy/teleport");
+            hasher.update(&(threshold as u16).to_le_bytes());
+            for id in &account_ids {
+                hasher.update(id.as_ref());
+            }
+            let mut hash = [0u8; 32];
+            hasher.finalize_variable(&mut hash)
+                .map_err(|e| anyhow::anyhow!("blake2 finalize error: {:?}", e))?;
+
+            let multisig_account = sp_core::crypto::AccountId32::from(hash);
+            let ms_ss58 = multisig_account.to_string();
+            println!("Multisig address: {}", ms_ss58);
+            println!("  Threshold: {}/{}", threshold, addrs.len());
+            println!("  Signatories:");
+            for addr in &addrs {
+                println!("    {}", addr);
+            }
+            Ok(())
+        }
+        MultisigCommands::Submit { others, threshold, pallet, call, args } => {
+            let client = Client::connect(ws_url).await?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+
+            let other_addrs: Vec<&str> = others.split(',').map(|s| s.trim()).collect();
+            let mut other_ids: Vec<crate::AccountId> = other_addrs.iter()
+                .map(|s| Client::ss58_to_account_id_pub(s))
+                .collect::<Result<_>>()?;
+            other_ids.sort();
+
+            // Build the inner call dynamically
+            let fields: Vec<subxt::dynamic::Value> = if let Some(ref args_json) = args {
+                let parsed: Vec<serde_json::Value> = serde_json::from_str(args_json)
+                    .map_err(|e| anyhow::anyhow!("Invalid JSON args: {}", e))?;
+                parsed.iter().map(json_to_subxt_value).collect()
+            } else {
+                vec![]
+            };
+
+            println!("Submitting multisig call: {}.{} (threshold {}/{})",
+                pallet, call, threshold, other_ids.len() + 1);
+            let hash = client.submit_multisig_call(
+                wallet.coldkey()?,
+                &other_ids,
+                threshold,
+                &pallet,
+                &call,
+                fields,
+            ).await?;
+            println!("Multisig call submitted. Tx: {}", hash);
+            Ok(())
+        }
+        MultisigCommands::Approve { others, threshold, call_hash } => {
+            let client = Client::connect(ws_url).await?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet)?;
+
+            let other_addrs: Vec<&str> = others.split(',').map(|s| s.trim()).collect();
+            let mut other_ids: Vec<crate::AccountId> = other_addrs.iter()
+                .map(|s| Client::ss58_to_account_id_pub(s))
+                .collect::<Result<_>>()?;
+            other_ids.sort();
+
+            let hash_hex = call_hash.strip_prefix("0x").unwrap_or(&call_hash);
+            let hash_bytes: [u8; 32] = hex::decode(hash_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Call hash must be 32 bytes"))?;
+
+            println!("Approving multisig call (threshold {}/{})", threshold, other_ids.len() + 1);
+            let tx_hash = client.approve_multisig(
+                wallet.coldkey()?,
+                &other_ids,
+                threshold,
+                hash_bytes,
+            ).await?;
+            println!("Multisig approval submitted. Tx: {}", tx_hash);
+            Ok(())
+        }
+    }
+}
+
+/// Convert a serde_json::Value to a subxt dynamic Value for multisig call args.
+fn json_to_subxt_value(v: &serde_json::Value) -> subxt::dynamic::Value {
+    use subxt::dynamic::Value;
+    match v {
+        serde_json::Value::Number(n) => {
+            if let Some(u) = n.as_u64() {
+                Value::u128(u as u128)
+            } else if let Some(i) = n.as_i64() {
+                Value::i128(i as i128)
+            } else {
+                Value::string(n.to_string())
+            }
+        }
+        serde_json::Value::String(s) => {
+            if s.starts_with("0x") {
+                if let Ok(bytes) = hex::decode(s.strip_prefix("0x").unwrap()) {
+                    return Value::from_bytes(bytes);
+                }
+            }
+            Value::string(s.clone())
+        }
+        serde_json::Value::Bool(b) => Value::bool(*b),
+        serde_json::Value::Array(arr) => {
+            Value::unnamed_composite(arr.iter().map(json_to_subxt_value))
+        }
+        _ => Value::string(v.to_string()),
+    }
+}
+
+// ──────── Transaction History ────────
+
+async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()> {
+    println!("Fetching transaction history for {}...", crate::utils::short_ss58(address));
+    let url = "https://bittensor.api.subscan.io/api/v2/scan/extrinsics";
+    let body = serde_json::json!({
+        "address": address,
+        "row": limit.min(100),
+        "page": 0,
+    });
+    let client = reqwest::Client::new();
+    let resp = client.post(url)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let json: serde_json::Value = resp.json().await?;
+    let extrinsics = json
+        .get("data")
+        .and_then(|d| d.get("extrinsics"))
+        .and_then(|e| e.as_array());
+
+    match extrinsics {
+        Some(txs) if !txs.is_empty() => {
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&txs)?);
+            } else if output == "csv" {
+                println!("block,hash,module,call,success,timestamp");
+                for tx in txs {
+                    println!("{},{},{},{},{},{}",
+                        tx.get("block_num").and_then(|v| v.as_u64()).unwrap_or(0),
+                        tx.get("extrinsic_hash").and_then(|v| v.as_str()).unwrap_or(""),
+                        tx.get("call_module").and_then(|v| v.as_str()).unwrap_or(""),
+                        tx.get("call_module_function").and_then(|v| v.as_str()).unwrap_or(""),
+                        tx.get("success").and_then(|v| v.as_bool()).unwrap_or(false),
+                        tx.get("block_timestamp").and_then(|v| v.as_u64()).unwrap_or(0),
+                    );
+                }
+            } else {
+                println!("Recent transactions ({}):", txs.len());
+                let mut table = comfy_table::Table::new();
+                table.set_header(vec!["Block", "Module", "Call", "Success", "Hash"]);
+                for tx in txs {
+                    let block = tx.get("block_num").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let module = tx.get("call_module").and_then(|v| v.as_str()).unwrap_or("?");
+                    let call = tx.get("call_module_function").and_then(|v| v.as_str()).unwrap_or("?");
+                    let success = tx.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let hash = tx.get("extrinsic_hash").and_then(|v| v.as_str()).unwrap_or("?");
+                    let hash_short = if hash.len() > 18 { &hash[..18] } else { hash };
+                    table.add_row(vec![
+                        format!("{}", block),
+                        module.to_string(),
+                        call.to_string(),
+                        if success { "OK" } else { "FAIL" }.to_string(),
+                        format!("{}...", hash_short),
+                    ]);
+                }
+                println!("{table}");
+            }
+        }
+        _ => {
+            println!("No transactions found for {}", crate::utils::short_ss58(address));
+            println!("Note: Subscan API may have rate limits or the address may have no activity.");
+        }
+    }
+    Ok(())
+}
+
+// ──────── Shell Completions ────────
+
+fn generate_completions(shell: &str) {
+    use clap_complete::{generate, Shell};
+    let mut cmd = Cli::command();
+    let shell_enum = match shell {
+        "bash" => Shell::Bash,
+        "zsh" => Shell::Zsh,
+        "fish" => Shell::Fish,
+        "powershell" => Shell::PowerShell,
+        _ => {
+            eprintln!("Unsupported shell: {}. Use: bash, zsh, fish, powershell", shell);
+            return;
+        }
+    };
+    generate(shell_enum, &mut cmd, "agcli", &mut std::io::stdout());
 }
 
 fn cfg_value_display(key: &str, cfg: &crate::config::Config) -> String {

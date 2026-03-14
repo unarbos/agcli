@@ -30,6 +30,7 @@ bs58 = "0.5"
 
 # CLI
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+clap_complete = "4"
 comfy-table = "7"
 indicatif = "0.17"
 console = "0.15"

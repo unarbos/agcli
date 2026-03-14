@@ -186,7 +186,6 @@ pub fn read_any_encrypted_keyfile(path: &Path, password: &str) -> Result<String>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn encrypt_decrypt_roundtrip() {

@@ -114,10 +114,23 @@ pub enum Commands {
     #[command(subcommand)]
     Subscribe(SubscribeCommands),
 
+    // ──── Multisig ────
+    /// Multi-signature account operations
+    #[command(subcommand)]
+    Multisig(MultisigCommands),
+
     // ──── Config ────
     /// Manage persistent configuration (~/.agcli/config.toml)
     #[command(subcommand)]
     Config(ConfigCommands),
+
+    // ──── Completions ────
+    /// Generate shell completions (bash, zsh, fish, powershell)
+    Completions {
+        /// Shell to generate completions for
+        #[arg(value_parser = ["bash", "zsh", "fish", "powershell"])]
+        shell: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -434,6 +447,24 @@ pub enum ViewCommands {
     Network,
     /// Show Dynamic TAO info for all subnets (prices, pools, volumes)
     Dynamic,
+    /// Show top validators by stake across subnets
+    Validators {
+        /// Subnet UID (omit for all subnets)
+        #[arg(long)]
+        netuid: Option<u16>,
+        /// Max number of validators to show
+        #[arg(long, default_value = "50")]
+        limit: usize,
+    },
+    /// Show recent extrinsics for an account (via Subscan)
+    History {
+        /// SS58 address (defaults to wallet coldkey)
+        #[arg(long)]
+        address: Option<String>,
+        /// Number of transactions to show
+        #[arg(long, default_value = "20")]
+        limit: usize,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -485,6 +516,48 @@ pub enum SwapCommands {
     Coldkey {
         /// New coldkey SS58
         new_coldkey: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum MultisigCommands {
+    /// Derive a multisig account address from signatories
+    Address {
+        /// Signatories as comma-separated SS58 addresses
+        signatories: String,
+        /// Approval threshold
+        #[arg(long)]
+        threshold: u16,
+    },
+    /// Submit a multisig call (as_multi)
+    Submit {
+        /// Other signatories (comma-separated SS58, excluding yourself)
+        #[arg(long)]
+        others: String,
+        /// Approval threshold
+        #[arg(long)]
+        threshold: u16,
+        /// Pallet name for the inner call
+        #[arg(long)]
+        pallet: String,
+        /// Call name
+        #[arg(long)]
+        call: String,
+        /// Call args as JSON (string values in the format expected by subxt dynamic)
+        #[arg(long)]
+        args: Option<String>,
+    },
+    /// Approve a pending multisig call (approve_as_multi)
+    Approve {
+        /// Other signatories (comma-separated SS58, excluding yourself)
+        #[arg(long)]
+        others: String,
+        /// Approval threshold
+        #[arg(long)]
+        threshold: u16,
+        /// Call hash (0x-prefixed hex)
+        #[arg(long)]
+        call_hash: String,
     },
 }
 

@@ -23,7 +23,11 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Raw Calls** | Submit to any pallet via dynamic dispatch (EVM, MEV Shield, Contracts) |
 | **Config** | Persistent settings (`~/.agcli/config.toml`), set/unset/show config values |
 | **Proxy** | Wrap any extrinsic through Proxy.proxy for delegated signing |
+| **Multisig** | Derive multisig address, submit/approve multisig calls |
+| **Validators** | Top validators overview by stake (per-subnet or global) |
+| **History** | Transaction history via Subscan API |
 | **Wizard** | Interactive staking wizard — shows top subnets, guided flow |
+| **Completions** | Shell completions for bash, zsh, fish, powershell |
 | **Output** | Table (default), JSON (`--output json`), CSV (`--output csv`) |
 
 ## Quick Start
@@ -116,6 +120,31 @@ agcli config path
 
 # Proxy — execute through a proxy account
 agcli --proxy 5ProxyAccount... stake add 10 --netuid 1
+
+# View top validators (global)
+agcli view validators --limit 20
+
+# View validators on a specific subnet
+agcli view validators --netuid 1
+
+# Transaction history (via Subscan)
+agcli view history --address 5Gx... --limit 10
+
+# Multisig — derive address
+agcli multisig address "5Addr1...,5Addr2...,5Addr3..." --threshold 2
+
+# Multisig — submit a call
+agcli multisig submit --others "5Addr2...,5Addr3..." --threshold 2 \
+  --pallet Balances --call transfer_allow_death --args '[...]'
+
+# Multisig — approve a pending call
+agcli multisig approve --others "5Addr2...,5Addr3..." --threshold 2 \
+  --call-hash 0xabcdef...
+
+# Shell completions
+agcli completions bash > /etc/bash_completion.d/agcli
+agcli completions zsh > ~/.zfunc/_agcli
+agcli completions fish > ~/.config/fish/completions/agcli.fish
 ```
 
 ### SDK Usage (as library)
@@ -172,7 +201,7 @@ agcli/
 │   ├── lib.rs           # Library root, re-exports Client/Wallet/Balance/Config
 │   ├── main.rs          # CLI entry point
 │   ├── chain/           # Substrate client (subxt-based)
-│   │   ├── mod.rs         # Client: 35+ queries + 30+ extrinsics + sign_submit helper
+│   │   ├── mod.rs         # Client: 35+ queries + 30+ extrinsics + multisig + sign_submit
 │   │   ├── rpc_types.rs   # Type conversions (NeuronInfo, DynamicInfo, DelegateInfo, etc.)
 │   │   ├── connection.rs  # Legacy JSON-RPC transport
 │   │   └── storage.rs     # Raw storage queries
@@ -196,7 +225,7 @@ agcli/
 │   │   ├── format.rs      # SS58 truncation, weight conversion
 │   │   └── pow.rs         # POW solver (multi-threaded)
 │   └── cli/             # CLI definitions
-│       ├── mod.rs         # Clap parser: 11 command groups, 50+ subcommands
+│       ├── mod.rs         # Clap parser: 14 command groups, 60+ subcommands
 │       └── commands.rs    # Command handlers with JSON/CSV/live support
 ├── docs/
 │   ├── llm.txt          # Agent-friendly docs

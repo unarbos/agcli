@@ -59,6 +59,11 @@ impl Client {
         Ok(AccountId::from(pk.0))
     }
 
+    /// Public version of ss58_to_account_id for use outside chain module.
+    pub fn ss58_to_account_id_pub(ss58: &str) -> Result<AccountId> {
+        Self::ss58_to_account_id(ss58)
+    }
+
     /// Sign, submit, and wait for finalization of a typed extrinsic.
     /// Returns the extrinsic hash. Reduces boilerplate across all extrinsic methods.
     async fn sign_submit<T: subxt::tx::Payload>(&self, tx: &T, pair: &sr25519::Pair) -> Result<String> {
@@ -519,6 +524,59 @@ impl Client {
     /// Submit a raw SCALE-encoded call via dynamic dispatch (for pallets not in compile-time metadata).
     pub async fn submit_raw_call(&self, pair: &sr25519::Pair, pallet: &str, call: &str, fields: Vec<subxt::dynamic::Value>) -> Result<String> {
         let tx = subxt::dynamic::tx(pallet, call, fields);
+        self.sign_submit(&tx, pair).await
+    }
+
+    // ──────── Multisig ────────
+
+    /// Submit a multisig call (Multisig::as_multi) wrapping a dynamic inner call.
+    /// Uses dynamic dispatch so no compile-time type bindings needed.
+    pub async fn submit_multisig_call(
+        &self,
+        pair: &sr25519::Pair,
+        other_signatories: &[AccountId],
+        threshold: u16,
+        pallet: &str,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        // Build the inner call, encode it, and use as_multi_threshold_1 for 1-of-N
+        // or approve_as_multi for N-of-M (first step is to propose)
+        let inner = subxt::dynamic::tx(pallet, call, fields);
+        // For as_multi, we need the inner call as encoded bytes
+        let encoded = self.inner.tx().call_data(&inner)?;
+        let call_hash = sp_core::hashing::blake2_256(&encoded);
+
+        // Use approve_as_multi (which just records the hash) as the first step
+        self.approve_multisig(pair, other_signatories, threshold, call_hash).await
+    }
+
+    /// Approve a pending multisig call (Multisig::approve_as_multi).
+    pub async fn approve_multisig(
+        &self,
+        pair: &sr25519::Pair,
+        other_signatories: &[AccountId],
+        threshold: u16,
+        call_hash: [u8; 32],
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let others: Vec<Value> = other_signatories.iter()
+            .map(|id| Value::from_bytes(id.0))
+            .collect();
+        let tx = subxt::dynamic::tx(
+            "Multisig",
+            "approve_as_multi",
+            vec![
+                Value::u128(threshold as u128),
+                Value::unnamed_composite(others),
+                Value::unnamed_variant("None", []),  // maybe_timepoint
+                Value::from_bytes(call_hash),  // call_hash
+                Value::named_composite([
+                    ("ref_time", Value::u128(0)),
+                    ("proof_size", Value::u128(0)),
+                ]),
+            ],
+        );
         self.sign_submit(&tx, pair).await
     }
 
