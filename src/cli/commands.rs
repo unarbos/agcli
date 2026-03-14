@@ -316,6 +316,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
             let client = Client::connect(network.ws_url()).await?;
             handle_block(cmd, &client, output).await
         }
+        Commands::Diff(cmd) => {
+            let client = Client::connect(network.ws_url()).await?;
+            handle_diff(cmd, &client, output, &cli.wallet_dir, &cli.wallet).await
+        }
         Commands::Batch { file, no_atomic } => {
             let client = Client::connect(network.ws_url()).await?;
             let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
@@ -1035,6 +1039,63 @@ async fn handle_block(cmd: BlockCommands, client: &Client, output: &str) -> Resu
             }
             Ok(())
         }
+        BlockCommands::Range { from, to } => {
+            if from > to {
+                anyhow::bail!("--from ({}) must be <= --to ({})", from, to);
+            }
+            let count = (to - from + 1) as usize;
+            if count > 1000 {
+                anyhow::bail!(
+                    "Range too large ({} blocks). Maximum 1000 blocks per query.",
+                    count
+                );
+            }
+
+            #[derive(serde::Serialize)]
+            struct BlockRow {
+                block: u32,
+                hash: String,
+                timestamp: String,
+                extrinsics: usize,
+            }
+
+            let mut rows: Vec<BlockRow> = Vec::with_capacity(count);
+            for block_num in from..=to {
+                let block_hash = client.get_block_hash(block_num).await?;
+                let ext_count = client.get_block_extrinsic_count(block_hash).await?;
+                let timestamp = client.get_block_timestamp(block_hash).await?;
+
+                let ts_str = timestamp
+                    .and_then(|ts| chrono::DateTime::from_timestamp_millis(ts as i64))
+                    .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                    .unwrap_or_default();
+
+                rows.push(BlockRow {
+                    block: block_num,
+                    hash: format!("{:?}", block_hash),
+                    timestamp: ts_str,
+                    extrinsics: ext_count,
+                });
+            }
+
+            render_rows(
+                output,
+                &rows,
+                "block,hash,timestamp,extrinsics",
+                |r| format!("{},{},{},{}", r.block, r.hash, r.timestamp, r.extrinsics),
+                &["Block", "Hash", "Timestamp", "Exts"],
+                |r| {
+                    vec![
+                        format!("#{}", r.block),
+                        r.hash.chars().take(18).collect::<String>() + "…",
+                        r.timestamp.clone(),
+                        r.extrinsics.to_string(),
+                    ]
+                },
+                Some(&format!("Blocks {} → {} ({} blocks)", from, to, count)),
+            );
+            Ok(())
+        }
         BlockCommands::Latest => {
             let block_num = client.get_block_number().await?;
             let block_hash = client.get_block_hash(block_num as u32).await?;
@@ -1065,6 +1126,299 @@ async fn handle_block(cmd: BlockCommands, client: &Client, output: &str) -> Resu
                         println!("  Timestamp:   {} ms", ts);
                     }
                 }
+            }
+            Ok(())
+        }
+    }
+}
+
+// ──────── Historical Diff ────────
+
+async fn handle_diff(
+    cmd: DiffCommands,
+    client: &Client,
+    output: &str,
+    wallet_dir: &str,
+    wallet_name: &str,
+) -> Result<()> {
+    match cmd {
+        DiffCommands::Portfolio {
+            address,
+            block1,
+            block2,
+        } => {
+            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            if addr.is_empty() {
+                anyhow::bail!("No address provided and no wallet found. Use --address <SS58>.");
+            }
+
+            let hash1 = client.get_block_hash(block1).await?;
+            let hash2 = client.get_block_hash(block2).await?;
+
+            let (bal1, stakes1, bal2, stakes2) = tokio::try_join!(
+                client.get_balance_at_block(&addr, hash1),
+                client.get_stake_for_coldkey_at_block(&addr, hash1),
+                client.get_balance_at_block(&addr, hash2),
+                client.get_stake_for_coldkey_at_block(&addr, hash2),
+            )?;
+
+            let total_stake1: u64 = stakes1.iter().map(|s| s.stake.rao()).sum();
+            let total_stake2: u64 = stakes2.iter().map(|s| s.stake.rao()).sum();
+            let total1 = bal1.rao() + total_stake1;
+            let total2 = bal2.rao() + total_stake2;
+
+            if output == "json" {
+                print_json(&serde_json::json!({
+                    "address": addr,
+                    "block1": block1,
+                    "block2": block2,
+                    "balance_tao": [bal1.tao(), bal2.tao()],
+                    "balance_diff_tao": bal2.tao() - bal1.tao(),
+                    "total_stake_tao": [Balance::from_rao(total_stake1).tao(), Balance::from_rao(total_stake2).tao()],
+                    "stake_diff_tao": Balance::from_rao(total_stake2).tao() - Balance::from_rao(total_stake1).tao(),
+                    "total_tao": [Balance::from_rao(total1).tao(), Balance::from_rao(total2).tao()],
+                    "total_diff_tao": Balance::from_rao(total2).tao() - Balance::from_rao(total1).tao(),
+                    "stakes_block1": stakes1.len(),
+                    "stakes_block2": stakes2.len(),
+                }));
+            } else {
+                println!("Portfolio Diff: {} (block {} → {})\n", addr, block1, block2);
+                let diff_sym = |a: f64, b: f64| -> String {
+                    let d = b - a;
+                    if d > 0.0 {
+                        format!("+{:.4}", d)
+                    } else if d < 0.0 {
+                        format!("{:.4}", d)
+                    } else {
+                        "0".to_string()
+                    }
+                };
+                println!(
+                    "  {:>20}  {:>14}  {:>14}  {:>14}",
+                    "",
+                    format!("Block {}", block1),
+                    format!("Block {}", block2),
+                    "Change"
+                );
+                println!(
+                    "  {:>20}  {:>14.4}  {:>14.4}  {:>14}",
+                    "Free balance (τ)",
+                    bal1.tao(),
+                    bal2.tao(),
+                    diff_sym(bal1.tao(), bal2.tao())
+                );
+                println!(
+                    "  {:>20}  {:>14.4}  {:>14.4}  {:>14}",
+                    "Total stake (τ)",
+                    Balance::from_rao(total_stake1).tao(),
+                    Balance::from_rao(total_stake2).tao(),
+                    diff_sym(
+                        Balance::from_rao(total_stake1).tao(),
+                        Balance::from_rao(total_stake2).tao()
+                    )
+                );
+                println!(
+                    "  {:>20}  {:>14.4}  {:>14.4}  {:>14}",
+                    "Total (τ)",
+                    Balance::from_rao(total1).tao(),
+                    Balance::from_rao(total2).tao(),
+                    diff_sym(
+                        Balance::from_rao(total1).tao(),
+                        Balance::from_rao(total2).tao()
+                    )
+                );
+                println!(
+                    "  {:>20}  {:>14}  {:>14}",
+                    "Stake positions",
+                    stakes1.len(),
+                    stakes2.len()
+                );
+            }
+            Ok(())
+        }
+        DiffCommands::Subnet {
+            netuid,
+            block1,
+            block2,
+        } => {
+            let hash1 = client.get_block_hash(block1).await?;
+            let hash2 = client.get_block_hash(block2).await?;
+            let nuid = NetUid(netuid);
+
+            let (dyn1, dyn2) = tokio::try_join!(
+                client.get_dynamic_info_at_block(nuid, hash1),
+                client.get_dynamic_info_at_block(nuid, hash2),
+            )?;
+
+            let d1 = dyn1.ok_or_else(|| {
+                anyhow::anyhow!("Subnet {} not found at block {}", netuid, block1)
+            })?;
+            let d2 = dyn2.ok_or_else(|| {
+                anyhow::anyhow!("Subnet {} not found at block {}", netuid, block2)
+            })?;
+
+            if output == "json" {
+                print_json(&serde_json::json!({
+                    "netuid": netuid,
+                    "name": d2.name,
+                    "block1": block1,
+                    "block2": block2,
+                    "tao_in": [d1.tao_in.tao(), d2.tao_in.tao()],
+                    "tao_in_diff": d2.tao_in.tao() - d1.tao_in.tao(),
+                    "price": [d1.price, d2.price],
+                    "price_diff": d2.price - d1.price,
+                    "emission": [d1.emission, d2.emission],
+                    "emission_diff": d2.emission as i64 - d1.emission as i64,
+                }));
+            } else {
+                println!(
+                    "Subnet {} ({}) Diff: block {} → {}\n",
+                    netuid, d2.name, block1, block2
+                );
+                let diff_f = |a: f64, b: f64| -> String {
+                    let d = b - a;
+                    if d > 0.0 {
+                        format!("+{:.4}", d)
+                    } else if d < 0.0 {
+                        format!("{:.4}", d)
+                    } else {
+                        "0".to_string()
+                    }
+                };
+                let diff_pct = |a: f64, b: f64| -> String {
+                    if a == 0.0 {
+                        return "N/A".to_string();
+                    }
+                    let pct = (b - a) / a * 100.0;
+                    if pct > 0.0 {
+                        format!("+{:.1}%", pct)
+                    } else if pct < 0.0 {
+                        format!("{:.1}%", pct)
+                    } else {
+                        "0%".to_string()
+                    }
+                };
+                println!(
+                    "  {:>18}  {:>14}  {:>14}  {:>12}  {:>8}",
+                    "",
+                    format!("Block {}", block1),
+                    format!("Block {}", block2),
+                    "Change",
+                    "%"
+                );
+                println!(
+                    "  {:>18}  {:>14.4}  {:>14.4}  {:>12}  {:>8}",
+                    "TAO in (τ)",
+                    d1.tao_in.tao(),
+                    d2.tao_in.tao(),
+                    diff_f(d1.tao_in.tao(), d2.tao_in.tao()),
+                    diff_pct(d1.tao_in.tao(), d2.tao_in.tao())
+                );
+                println!(
+                    "  {:>18}  {:>14.6}  {:>14.6}  {:>12}  {:>8}",
+                    "Price",
+                    d1.price,
+                    d2.price,
+                    diff_f(d1.price, d2.price),
+                    diff_pct(d1.price, d2.price)
+                );
+                println!(
+                    "  {:>18}  {:>14}  {:>14}  {:>12}",
+                    "Emission",
+                    d1.emission,
+                    d2.emission,
+                    format!("{:+}", d2.emission as i64 - d1.emission as i64)
+                );
+                println!("  {:>18}  {:>14}  {:>14}", "Tempo", d1.tempo, d2.tempo);
+                println!(
+                    "  {:>18}  {:>14}  {:>14}",
+                    "Owner HK",
+                    crate::utils::short_ss58(&d1.owner_hotkey),
+                    crate::utils::short_ss58(&d2.owner_hotkey)
+                );
+            }
+            Ok(())
+        }
+        DiffCommands::Network { block1, block2 } => {
+            let hash1 = client.get_block_hash(block1).await?;
+            let hash2 = client.get_block_hash(block2).await?;
+
+            let (issuance1, stake1, subnets1, issuance2, stake2, subnets2) = tokio::try_join!(
+                client.get_total_issuance_at_block(hash1),
+                client.get_total_stake_at_block(hash1),
+                client.get_all_subnets_at_block(hash1),
+                client.get_total_issuance_at_block(hash2),
+                client.get_total_stake_at_block(hash2),
+                client.get_all_subnets_at_block(hash2),
+            )?;
+
+            let ratio1 = if issuance1.rao() > 0 {
+                stake1.tao() / issuance1.tao() * 100.0
+            } else {
+                0.0
+            };
+            let ratio2 = if issuance2.rao() > 0 {
+                stake2.tao() / issuance2.tao() * 100.0
+            } else {
+                0.0
+            };
+
+            if output == "json" {
+                print_json(&serde_json::json!({
+                    "block1": block1,
+                    "block2": block2,
+                    "total_issuance_tao": [issuance1.tao(), issuance2.tao()],
+                    "total_stake_tao": [stake1.tao(), stake2.tao()],
+                    "staking_ratio_pct": [ratio1, ratio2],
+                    "subnet_count": [subnets1.len(), subnets2.len()],
+                }));
+            } else {
+                println!("Network Diff: block {} → {}\n", block1, block2);
+                let diff_f = |a: f64, b: f64| -> String {
+                    let d = b - a;
+                    if d > 0.0 {
+                        format!("+{:.4}", d)
+                    } else if d < 0.0 {
+                        format!("{:.4}", d)
+                    } else {
+                        "0".to_string()
+                    }
+                };
+                println!(
+                    "  {:>20}  {:>16}  {:>16}  {:>14}",
+                    "",
+                    format!("Block {}", block1),
+                    format!("Block {}", block2),
+                    "Change"
+                );
+                println!(
+                    "  {:>20}  {:>16.4}  {:>16.4}  {:>14}",
+                    "Issuance (τ)",
+                    issuance1.tao(),
+                    issuance2.tao(),
+                    diff_f(issuance1.tao(), issuance2.tao())
+                );
+                println!(
+                    "  {:>20}  {:>16.4}  {:>16.4}  {:>14}",
+                    "Total stake (τ)",
+                    stake1.tao(),
+                    stake2.tao(),
+                    diff_f(stake1.tao(), stake2.tao())
+                );
+                println!(
+                    "  {:>20}  {:>15.1}%  {:>15.1}%  {:>14}",
+                    "Staking ratio",
+                    ratio1,
+                    ratio2,
+                    diff_f(ratio1, ratio2)
+                );
+                println!(
+                    "  {:>20}  {:>16}  {:>16}  {:>14}",
+                    "Subnets",
+                    subnets1.len(),
+                    subnets2.len(),
+                    format!("{:+}", subnets2.len() as i64 - subnets1.len() as i64)
+                );
             }
             Ok(())
         }

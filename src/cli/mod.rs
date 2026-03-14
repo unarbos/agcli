@@ -210,9 +210,14 @@ pub enum Commands {
     },
 
     // ──── Block ────
-    /// Block explorer (info, latest)
+    /// Block explorer (info, latest, range)
     #[command(subcommand)]
     Block(BlockCommands),
+
+    // ──── Diff ────
+    /// Compare chain state between two blocks (portfolio, subnet, network)
+    #[command(subcommand)]
+    Diff(DiffCommands),
 
     // ──── Batch ────
     /// Submit multiple extrinsics from a JSON file via Utility.batch_all
@@ -1029,6 +1034,52 @@ pub enum BlockCommands {
     },
     /// Show the latest finalized block
     Latest,
+    /// Summarize a range of blocks (hash, timestamp, extrinsic count)
+    Range {
+        /// Start block number (inclusive)
+        #[arg(long)]
+        from: u32,
+        /// End block number (inclusive)
+        #[arg(long)]
+        to: u32,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DiffCommands {
+    /// Compare portfolio (balance + stakes) between two blocks
+    Portfolio {
+        /// SS58 address (defaults to wallet coldkey)
+        #[arg(long)]
+        address: Option<String>,
+        /// First block number
+        #[arg(long)]
+        block1: u32,
+        /// Second block number
+        #[arg(long)]
+        block2: u32,
+    },
+    /// Compare subnet state between two blocks
+    Subnet {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// First block number
+        #[arg(long)]
+        block1: u32,
+        /// Second block number
+        #[arg(long)]
+        block2: u32,
+    },
+    /// Compare network-wide stats between two blocks
+    Network {
+        /// First block number
+        #[arg(long)]
+        block1: u32,
+        /// Second block number
+        #[arg(long)]
+        block2: u32,
+    },
 }
 
 #[derive(Subcommand, Debug)]

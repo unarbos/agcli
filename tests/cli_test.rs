@@ -2033,3 +2033,145 @@ fn resolve_network_archive() {
     assert!(network.is_archive());
     assert!(network.ws_url().starts_with("wss://"));
 }
+
+// ──────── Block Range Tests ────────
+
+#[test]
+fn parse_block_range() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "block", "range", "--from", "100", "--to", "110",
+    ]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_block_range_missing_from() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "block", "range", "--to", "110"]);
+    assert!(cli.is_err());
+}
+
+#[test]
+fn parse_block_range_missing_to() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "block", "range", "--from", "100"]);
+    assert!(cli.is_err());
+}
+
+// ──────── Diff Tests ────────
+
+#[test]
+fn parse_diff_portfolio() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "diff",
+        "portfolio",
+        "--address",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--block1",
+        "4000000",
+        "--block2",
+        "5000000",
+    ]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_diff_portfolio_no_address() {
+    // Should parse OK — address is optional, will fall back to wallet
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "diff",
+        "portfolio",
+        "--block1",
+        "4000000",
+        "--block2",
+        "5000000",
+    ]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_diff_subnet() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "subnet", "--netuid", "1", "--block1", "4000000", "--block2", "5000000",
+    ]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_diff_subnet_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "subnet", "--block1", "4000000", "--block2", "5000000",
+    ]);
+    assert!(cli.is_err());
+}
+
+#[test]
+fn parse_diff_network() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "network", "--block1", "4000000", "--block2", "5000000",
+    ]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_diff_network_missing_blocks() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "diff", "network", "--block1", "4000000"]);
+    assert!(cli.is_err());
+}
+
+#[test]
+fn parse_diff_with_archive_network() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--network",
+        "archive",
+        "diff",
+        "network",
+        "--block1",
+        "1000000",
+        "--block2",
+        "2000000",
+    ]);
+    assert!(cli.is_ok());
+    let cli = cli.unwrap();
+    assert!(cli.resolve_network().is_archive());
+}
+
+#[test]
+fn parse_diff_with_json_output() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--output",
+        "json",
+        "diff",
+        "portfolio",
+        "--address",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--block1",
+        "4000000",
+        "--block2",
+        "5000000",
+    ]);
+    assert!(cli.is_ok());
+    let cli = cli.unwrap();
+    assert_eq!(cli.output, "json");
+}
+
+#[test]
+fn parse_explain_diff() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "explain", "--topic", "diff"]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn explain_diff_topic_exists() {
+    let text = agcli::utils::explain::explain("diff");
+    assert!(text.is_some());
+    assert!(text.unwrap().contains("HISTORICAL DIFF"));
+}
+
+#[test]
+fn explain_diff_via_compare_alias() {
+    let text = agcli::utils::explain::explain("compare");
+    assert!(text.is_some());
+}

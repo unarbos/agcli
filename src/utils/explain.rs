@@ -32,6 +32,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
         "recycle" | "recyclealpha" | "burn" | "burnalpha" => Some(RECYCLE),
         "pow" | "powregistration" | "proofofwork" => Some(POW_REGISTRATION),
         "archive" | "archivenode" | "historical" | "wayback" => Some(ARCHIVE),
+        "diff" | "compare" | "historicaldiff" => Some(DIFF),
         topics => {
             // Fuzzy: check if the topic is a substring of any key
             let all = list_topics();
@@ -77,6 +78,7 @@ pub fn list_topics() -> Vec<(&'static str, &'static str)> {
         ("recycle", "Recycling and burning alpha tokens"),
         ("pow", "Proof-of-work registration mechanics"),
         ("archive", "Archive nodes and historical data queries"),
+        ("diff", "Compare chain state between two blocks"),
     ]
 }
 
@@ -870,8 +872,14 @@ Commands that support --at-block (historical wayback):
   agcli view account --at-block N
 
 Block explorer:
-  agcli block latest        # Current block info
-  agcli block info --number N   # Details for a specific block
+  agcli block latest               # Current block info
+  agcli block info --number N      # Details for a specific block
+  agcli block range --from A --to B  # Summarize a range of blocks
+
+Historical diff (compare state between two blocks):
+  agcli diff portfolio --block1 A --block2 B [--address SS58]
+  agcli diff subnet --netuid X --block1 A --block2 B
+  agcli diff network --block1 A --block2 B
 
 Known archive providers:
 - OnFinality:  wss://bittensor-finney.api.onfinality.io/public-ws (built-in)
@@ -882,3 +890,34 @@ Tips:
 - The --network archive flag automatically uses a public archive endpoint.
 - For heavy historical analysis, consider running your own archive node.
 - Auto-detection: if --at-block hits pruned state, agcli suggests using --network archive.";
+
+const DIFF: &str = "\
+HISTORICAL DIFF
+===============
+Compare chain state between two blocks to see what changed over time.
+
+The `agcli diff` command fetches state snapshots at two block heights and shows
+a side-by-side comparison with deltas. Requires an archive node for older blocks.
+
+Sub-commands:
+
+  agcli diff portfolio --block1 4000000 --block2 5000000 [--address SS58]
+    Compare an account's free balance and total stake between two blocks.
+    If no --address is given, the default wallet coldkey is used.
+    Shows: free balance, total stake, total value, and stake position count.
+
+  agcli diff subnet --netuid 1 --block1 4000000 --block2 5000000
+    Compare a subnet's economic state between two blocks.
+    Shows: TAO in pool, alpha price, emission, tempo, and owner.
+
+  agcli diff network --block1 4000000 --block2 5000000
+    Compare network-wide stats between two blocks.
+    Shows: total issuance, total stake, staking ratio, and subnet count.
+
+Tips:
+- Use --network archive for blocks older than the pruning window (~256 blocks).
+- All diff commands support --output json for machine-readable output.
+- Use `agcli block range --from A --to B` to scan block metadata first,
+  then drill into specific blocks with diff commands.
+- Queries run in parallel (block1 and block2 fetched concurrently).
+- See also: `agcli explain archive` for archive node setup.";
