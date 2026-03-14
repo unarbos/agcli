@@ -1215,6 +1215,117 @@ impl Client {
         }
     }
 
+    // ──────── Coldkey Swap Detection ────────
+
+    /// Check if a coldkey has a scheduled swap. Returns (execution_block, new_coldkey_ss58) if scheduled.
+    pub async fn get_coldkey_swap_scheduled(&self, ss58: &str) -> Result<Option<(u32, String)>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage()
+            .subtensor_module()
+            .coldkey_swap_scheduled(&account_id);
+        let result = self.inner.storage().at_latest().await?.fetch(&addr).await?;
+        Ok(result.map(|(block, new_coldkey)| {
+            let new_ss58 = sp_core::crypto::AccountId32::from(new_coldkey.0).to_string();
+            (block, new_ss58)
+        }))
+    }
+
+    // ──────── Child Keys Query ────────
+
+    /// Get child keys for a hotkey on a specific subnet. Returns Vec<(proportion, child_ss58)>.
+    pub async fn get_child_keys(
+        &self,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+    ) -> Result<Vec<(u64, String)>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let addr = api::storage()
+            .subtensor_module()
+            .child_keys(&account_id, netuid.0);
+        let result = self.inner.storage().at_latest().await?.fetch(&addr).await?;
+        Ok(result
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(proportion, child)| {
+                let child_ss58 = sp_core::crypto::AccountId32::from(child.0).to_string();
+                (proportion, child_ss58)
+            })
+            .collect())
+    }
+
+    /// Get parent keys for a hotkey on a specific subnet. Returns Vec<(proportion, parent_ss58)>.
+    pub async fn get_parent_keys(
+        &self,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+    ) -> Result<Vec<(u64, String)>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let addr = api::storage()
+            .subtensor_module()
+            .parent_keys(&account_id, netuid.0);
+        let result = self.inner.storage().at_latest().await?.fetch(&addr).await?;
+        Ok(result
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(proportion, parent)| {
+                let parent_ss58 = sp_core::crypto::AccountId32::from(parent.0).to_string();
+                (proportion, parent_ss58)
+            })
+            .collect())
+    }
+
+    // ──────── Historical Queries ────────
+
+    /// Get stake info for a coldkey at a specific block hash (via runtime API at block).
+    pub async fn get_stake_for_coldkey_at_block(
+        &self,
+        coldkey_ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Vec<StakeInfo>> {
+        let account_id = Self::ss58_to_account_id(coldkey_ss58)?;
+        let payload = api::apis()
+            .stake_info_runtime_api()
+            .get_stake_info_for_coldkey(account_id);
+        let result = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await?;
+        Ok(result.into_iter().map(StakeInfo::from).collect())
+    }
+
+    /// Get identity at a specific block hash.
+    pub async fn get_identity_at_block(
+        &self,
+        ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<ChainIdentity>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage().registry().identity_of(&account_id);
+        let result = self.inner.storage().at(block_hash).fetch(&addr).await?;
+        Ok(result.map(|reg| {
+            let info = reg.info;
+            ChainIdentity {
+                name: decode_identity_data(&info.display),
+                url: decode_identity_data(&info.web),
+                github: String::new(),
+                image: decode_identity_data(&info.image),
+                discord: decode_identity_data(&info.riot),
+                description: String::new(),
+                additional: info
+                    .additional
+                    .0
+                    .iter()
+                    .map(|(k, v)| {
+                        format!("{}={}", decode_identity_data(k), decode_identity_data(v))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            }
+        }))
+    }
+
     // ──────── Crowdloan ────────
 
     /// Contribute to a crowdloan.

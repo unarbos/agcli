@@ -18,8 +18,54 @@ pub async fn handle_stake(
     yes: bool,
 ) -> Result<()> {
     match cmd {
-        StakeCommands::List { address } => {
+        StakeCommands::List { address, at_block } => {
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+
+            // Historical wayback mode
+            if let Some(block_num) = at_block {
+                let block_hash = client.get_block_hash(block_num).await?;
+                let stakes = client
+                    .get_stake_for_coldkey_at_block(&addr, block_hash)
+                    .await?;
+                if output == "json" {
+                    print_json(&serde_json::json!({
+                        "address": addr,
+                        "block": block_num,
+                        "block_hash": format!("{:?}", block_hash),
+                        "stakes": stakes.iter().map(|s| serde_json::json!({
+                            "netuid": s.netuid.0,
+                            "hotkey": s.hotkey,
+                            "stake_rao": s.stake.rao(),
+                            "alpha_raw": s.alpha_stake.raw(),
+                        })).collect::<Vec<_>>(),
+                    }));
+                } else if stakes.is_empty() {
+                    println!(
+                        "No stakes found for {} at block {}",
+                        crate::utils::short_ss58(&addr),
+                        block_num
+                    );
+                } else {
+                    println!(
+                        "Stakes for {} (at block {}):",
+                        crate::utils::short_ss58(&addr),
+                        block_num
+                    );
+                    let mut table = comfy_table::Table::new();
+                    table.set_header(vec!["Subnet", "Hotkey", "Stake (τ)", "Alpha"]);
+                    for s in &stakes {
+                        table.add_row(vec![
+                            format!("SN{}", s.netuid),
+                            crate::utils::short_ss58(&s.hotkey),
+                            s.stake.display_tao(),
+                            format!("{}", s.alpha_stake),
+                        ]);
+                    }
+                    println!("{table}");
+                }
+                return Ok(());
+            }
+
             let stakes = client.get_stake_for_coldkey(&addr).await?;
             if output == "json" {
                 print_json_ser(&stakes);

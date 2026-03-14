@@ -37,9 +37,9 @@ pub async fn handle_view(
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
             handle_history(&addr, output, limit).await
         }
-        ViewCommands::Account { address } => {
+        ViewCommands::Account { address, at_block } => {
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
-            handle_account_explorer(client, &addr, output).await
+            handle_account_explorer(client, &addr, output, at_block).await
         }
         ViewCommands::SubnetAnalytics { netuid } => {
             handle_subnet_analytics(client, netuid, output).await
@@ -463,7 +463,81 @@ async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()>
     Ok(())
 }
 
-async fn handle_account_explorer(client: &Client, address: &str, output: &str) -> Result<()> {
+async fn handle_account_explorer(
+    client: &Client,
+    address: &str,
+    output: &str,
+    at_block: Option<u32>,
+) -> Result<()> {
+    // Historical wayback mode
+    if let Some(block_num) = at_block {
+        let block_hash = client.get_block_hash(block_num).await?;
+        let (balance, stakes, identity) = tokio::try_join!(
+            client.get_balance_at_block(address, block_hash),
+            client.get_stake_for_coldkey_at_block(address, block_hash),
+            client.get_identity_at_block(address, block_hash),
+        )?;
+        let total_staked: f64 = stakes.iter().map(|s| s.stake.tao()).sum();
+        let total_value = balance.tao() + total_staked;
+
+        if output == "json" {
+            let positions: Vec<serde_json::Value> = stakes
+                .iter()
+                .map(|s| {
+                    serde_json::json!({
+                        "netuid": s.netuid.0,
+                        "hotkey": s.hotkey,
+                        "stake_rao": s.stake.rao(),
+                        "alpha_raw": s.alpha_stake.raw(),
+                    })
+                })
+                .collect();
+            print_json(&serde_json::json!({
+                "address": address,
+                "block": block_num,
+                "block_hash": format!("{:?}", block_hash),
+                "balance_rao": balance.rao(),
+                "balance_tao": balance.tao(),
+                "total_staked_tao": total_staked,
+                "total_value_tao": total_value,
+                "stakes": positions,
+                "identity": identity.as_ref().map(|id| serde_json::json!({
+                    "name": id.name, "url": id.url, "discord": id.discord,
+                })),
+            }));
+            return Ok(());
+        }
+
+        println!("Account: {} (at block {})\n", address, block_num);
+        println!("  Block hash:    {:?}", block_hash);
+        println!("  Free balance:  {}", balance.display_tao());
+        println!("  Total staked:  {:.4} τ", total_staked);
+        println!("  Total value:   {:.4} τ", total_value);
+
+        if let Some(id) = &identity {
+            if !id.name.is_empty() {
+                println!("\n  Identity:");
+                println!("    Name:    {}", id.name);
+            }
+        }
+
+        if !stakes.is_empty() {
+            println!("\n  Stake Positions ({}):", stakes.len());
+            let mut table = comfy_table::Table::new();
+            table.set_header(vec!["Subnet", "Hotkey", "Stake (τ)", "Alpha"]);
+            for s in &stakes {
+                table.add_row(vec![
+                    format!("SN{}", s.netuid),
+                    crate::utils::short_ss58(&s.hotkey),
+                    s.stake.display_tao(),
+                    format!("{}", s.alpha_stake),
+                ]);
+            }
+            println!("{table}");
+        }
+        return Ok(());
+    }
+
     let (balance, stakes, identity, dynamic, delegate) = tokio::try_join!(
         client.get_balance_ss58(address),
         client.get_stake_for_coldkey(address),
@@ -1029,18 +1103,53 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: &str) -> Resu
 
 /// Full security audit of an account: proxies, delegates, stake exposure, permissions.
 pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Result<()> {
-    let (balance, stakes, identity, proxies, delegate, dynamic) = tokio::try_join!(
+    let (balance, stakes, identity, proxies, delegate, dynamic, coldkey_swap) = tokio::try_join!(
         client.get_balance_ss58(address),
         client.get_stake_for_coldkey(address),
         client.get_identity(address),
         client.list_proxies(address),
         async { Ok::<_, anyhow::Error>(client.get_delegate(address).await.ok().flatten()) },
         async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info().await.unwrap_or_default()) },
+        async {
+            Ok::<_, anyhow::Error>(
+                client
+                    .get_coldkey_swap_scheduled(address)
+                    .await
+                    .ok()
+                    .flatten(),
+            )
+        },
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
 
+    // Query childkey delegations for each stake position (parallel)
+    let child_key_futures: Vec<_> = stakes
+        .iter()
+        .map(|s| {
+            let hotkey = s.hotkey.clone();
+            let netuid = s.netuid;
+            async move {
+                let children = client
+                    .get_child_keys(&hotkey, netuid)
+                    .await
+                    .unwrap_or_default();
+                (hotkey, netuid.0, children)
+            }
+        })
+        .collect();
+    let child_key_results = futures::future::join_all(child_key_futures).await;
+
     // Compute risk findings
     let mut findings: Vec<serde_json::Value> = Vec::new();
+
+    // Check scheduled coldkey swap
+    if let Some((exec_block, new_coldkey)) = &coldkey_swap {
+        findings.push(serde_json::json!({
+            "category": "coldkey_swap",
+            "severity": "high",
+            "message": format!("Coldkey swap scheduled! New coldkey: {} at block {}. If unauthorized, cancel immediately.", crate::utils::short_ss58(new_coldkey), exec_block),
+        }));
+    }
 
     // Check proxies
     let has_any_proxy = proxies.iter().any(|(_, pt, _)| pt == "Any");
@@ -1102,6 +1211,22 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
         }
     }
 
+    // Check childkey delegations
+    for (hotkey, netuid, children) in &child_key_results {
+        if !children.is_empty() {
+            let total_proportion: f64 = children
+                .iter()
+                .map(|(p, _)| *p as f64 / u64::MAX as f64 * 100.0)
+                .sum();
+            findings.push(serde_json::json!({
+                "category": "childkey",
+                "severity": "info",
+                "message": format!("SN{}: hotkey {} has {} childkey delegation(s) ({:.1}% delegated)",
+                    netuid, crate::utils::short_ss58(hotkey), children.len(), total_proportion),
+            }));
+        }
+    }
+
     // Check if delegate with high take
     if let Some(ref d) = delegate {
         if d.take > 0.10 {
@@ -1150,6 +1275,21 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
             .iter()
             .map(|(d, pt, delay)| serde_json::json!({"delegate": d, "proxy_type": pt, "delay": delay}))
             .collect();
+        let childkey_json: Vec<serde_json::Value> = child_key_results
+            .iter()
+            .filter(|(_, _, c)| !c.is_empty())
+            .map(|(hk, nuid, children)| {
+                serde_json::json!({
+                    "hotkey": hk,
+                    "netuid": nuid,
+                    "children": children.iter().map(|(p, c)| serde_json::json!({
+                        "proportion_raw": p,
+                        "proportion_pct": *p as f64 / u64::MAX as f64 * 100.0,
+                        "child": c,
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect();
         print_json(&serde_json::json!({
             "address": address,
             "balance_tao": balance.tao(),
@@ -1159,6 +1299,11 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
             "num_proxies": proxies.len(),
             "is_delegate": delegate.is_some(),
             "has_identity": identity.is_some(),
+            "coldkey_swap_scheduled": coldkey_swap.as_ref().map(|(block, new_ck)| serde_json::json!({
+                "execution_block": block,
+                "new_coldkey": new_ck,
+            })),
+            "childkey_delegations": childkey_json,
             "proxies": proxy_json,
             "stakes": positions,
             "findings": findings,
@@ -1181,6 +1326,13 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
         "  Has identity:  {}",
         if identity.is_some() { "yes" } else { "no" }
     );
+    if let Some((exec_block, ref new_ck)) = coldkey_swap {
+        println!(
+            "  CK Swap:       SCHEDULED → {} at block {}",
+            crate::utils::short_ss58(new_ck),
+            exec_block
+        );
+    }
 
     if !proxies.is_empty() {
         println!("\n  Proxy Accounts:");
@@ -1233,6 +1385,26 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
         println!("    Take:        {:.2}%", d.take * 100.0);
         println!("    Nominators:  {}", d.nominators.len());
         println!("    Subnets:     {:?}", d.registrations);
+    }
+
+    // Show childkey delegations
+    let has_children = child_key_results.iter().any(|(_, _, c)| !c.is_empty());
+    if has_children {
+        println!("\n  Childkey Delegations:");
+        let mut table = comfy_table::Table::new();
+        table.set_header(vec!["Subnet", "Parent Hotkey", "Child", "Proportion"]);
+        for (hk, nuid, children) in &child_key_results {
+            for (proportion, child) in children {
+                let pct = *proportion as f64 / u64::MAX as f64 * 100.0;
+                table.add_row(vec![
+                    format!("SN{}", nuid),
+                    crate::utils::short_ss58(hk),
+                    crate::utils::short_ss58(child),
+                    format!("{:.1}%", pct),
+                ]);
+            }
+        }
+        println!("{table}");
     }
 
     if !findings.is_empty() {

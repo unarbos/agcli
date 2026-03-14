@@ -358,6 +358,9 @@ pub enum StakeCommands {
         /// Coldkey SS58 address
         #[arg(long)]
         address: Option<String>,
+        /// Query stakes at a specific block number (historical wayback)
+        #[arg(long)]
+        at_block: Option<u32>,
     },
     /// Move stake between subnets
     Move {
@@ -772,6 +775,9 @@ pub enum ViewCommands {
         /// SS58 address (defaults to wallet coldkey)
         #[arg(long)]
         address: Option<String>,
+        /// Query account info at a specific block number (historical wayback)
+        #[arg(long)]
+        at_block: Option<u32>,
     },
     /// Subnet analytics (emission rates, top miners/validators, stats)
     SubnetAnalytics {

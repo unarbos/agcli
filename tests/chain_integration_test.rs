@@ -251,3 +251,130 @@ async fn test_hyperparams_nonexistent_subnet() {
         .expect("hyperparams");
     assert!(params.is_none(), "netuid 65535 should not have hyperparams");
 }
+
+// ──── Step 29: Coldkey swap, child keys, historical queries ────
+
+/// Test coldkey swap scheduled query — most accounts have no swap scheduled.
+#[tokio::test]
+async fn test_coldkey_swap_scheduled_none() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let swap = client
+        .get_coldkey_swap_scheduled(KNOWN_ADDRESS)
+        .await
+        .expect("coldkey swap query");
+    // Alice (known test address) almost certainly has no pending swap
+    assert!(
+        swap.is_none(),
+        "known address should not have a pending coldkey swap"
+    );
+}
+
+/// Test child keys query on SN1 for the top delegate.
+#[tokio::test]
+async fn test_child_keys_query() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    // Query child keys for a well-known validator on SN1
+    // This should return either empty or a valid list
+    let children = client
+        .get_child_keys(KNOWN_ADDRESS, NetUid(1))
+        .await
+        .expect("child keys query");
+    println!(
+        "Child keys for {} on SN1: {} entries",
+        KNOWN_ADDRESS,
+        children.len()
+    );
+    // Just verify the query works — we don't know the exact state
+    for (proportion, child_ss58) in &children {
+        assert!(
+            child_ss58.starts_with('5'),
+            "child ss58 should be valid: {}",
+            child_ss58
+        );
+        assert!(*proportion > 0, "proportion should be positive");
+    }
+}
+
+/// Test parent keys query.
+#[tokio::test]
+async fn test_parent_keys_query() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let parents = client
+        .get_parent_keys(KNOWN_ADDRESS, NetUid(1))
+        .await
+        .expect("parent keys query");
+    println!(
+        "Parent keys for {} on SN1: {} entries",
+        KNOWN_ADDRESS,
+        parents.len()
+    );
+    for (proportion, parent_ss58) in &parents {
+        assert!(
+            parent_ss58.starts_with('5'),
+            "parent ss58 should be valid: {}",
+            parent_ss58
+        );
+        assert!(*proportion > 0, "proportion should be positive");
+    }
+}
+
+/// Test historical stake query (recent block should work).
+#[tokio::test]
+async fn test_stake_at_recent_block() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let current_block = client.get_block_number().await.expect("block number");
+    // Try a block a few back (within pruning window)
+    let recent = (current_block - 10) as u32;
+    let hash = client.get_block_hash(recent).await.expect("block hash");
+    let stakes = client
+        .get_stake_for_coldkey_at_block(KNOWN_ADDRESS, hash)
+        .await
+        .expect("stake at block");
+    println!(
+        "Stakes for {} at block {}: {} positions",
+        KNOWN_ADDRESS,
+        recent,
+        stakes.len()
+    );
+    // Query succeeds — that's the main validation
+}
+
+/// Test historical balance + stake at same block are consistent.
+#[tokio::test]
+async fn test_historical_account_consistency() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let current_block = client.get_block_number().await.expect("block number");
+    let recent = (current_block - 5) as u32;
+    let hash = client.get_block_hash(recent).await.expect("block hash");
+    let (balance, stakes) = tokio::try_join!(
+        client.get_balance_at_block(KNOWN_ADDRESS, hash),
+        client.get_stake_for_coldkey_at_block(KNOWN_ADDRESS, hash),
+    )
+    .expect("parallel historical queries");
+    println!(
+        "Block {}: balance={}, stakes={}",
+        recent,
+        balance.display_tao(),
+        stakes.len()
+    );
+    // Both queries should succeed at the same block
+}
+
+/// Test identity at recent block.
+#[tokio::test]
+async fn test_identity_at_block() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let current_block = client.get_block_number().await.expect("block number");
+    let recent = (current_block - 5) as u32;
+    let hash = client.get_block_hash(recent).await.expect("block hash");
+    let identity = client
+        .get_identity_at_block(KNOWN_ADDRESS, hash)
+        .await
+        .expect("identity at block");
+    println!(
+        "Identity at block {}: {:?}",
+        recent,
+        identity.as_ref().map(|i| &i.name)
+    );
+    // Query succeeds — main validation
+}

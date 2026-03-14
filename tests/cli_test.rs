@@ -1690,3 +1690,156 @@ fn parse_view_network_at_block_json() {
         cli.err()
     );
 }
+
+// ──── View Account --at-block (Step 29) ────
+
+#[test]
+fn parse_view_account_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "account",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--at-block",
+        "7000000",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse view account --at-block: {:?}",
+        cli.err()
+    );
+    if let agcli::cli::Commands::View(agcli::cli::ViewCommands::Account {
+        at_block, address, ..
+    }) = &cli.unwrap().command
+    {
+        assert_eq!(*at_block, Some(7000000));
+        assert!(address.is_some());
+    } else {
+        panic!("wrong command variant");
+    }
+}
+
+#[test]
+fn parse_view_account_at_block_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--output",
+        "json",
+        "view",
+        "account",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--at-block",
+        "100",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse view account --at-block json: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_view_account_without_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "account",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok());
+    if let agcli::cli::Commands::View(agcli::cli::ViewCommands::Account { at_block, .. }) =
+        &cli.unwrap().command
+    {
+        assert_eq!(*at_block, None);
+    } else {
+        panic!("wrong command variant");
+    }
+}
+
+// ──── Stake List --at-block (Step 29) ────
+
+#[test]
+fn parse_stake_list_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "list",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--at-block",
+        "7000000",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake list --at-block: {:?}",
+        cli.err()
+    );
+    if let agcli::cli::Commands::Stake(agcli::cli::StakeCommands::List { at_block, address }) =
+        &cli.unwrap().command
+    {
+        assert_eq!(*at_block, Some(7000000));
+        assert!(address.is_some());
+    } else {
+        panic!("wrong command variant");
+    }
+}
+
+#[test]
+fn parse_stake_list_at_block_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--output",
+        "json",
+        "stake",
+        "list",
+        "--at-block",
+        "500",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake list --at-block json: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_stake_list_without_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "list"]);
+    assert!(cli.is_ok());
+    if let agcli::cli::Commands::Stake(agcli::cli::StakeCommands::List { at_block, .. }) =
+        &cli.unwrap().command
+    {
+        assert_eq!(*at_block, None);
+    } else {
+        panic!("wrong command variant");
+    }
+}
+
+// ──── Audit enhancements (Step 29 — coldkey swap + childkey) ────
+
+#[test]
+fn parse_audit_with_json_output_checks_fields() {
+    // Ensure the audit command still parses with --output json
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--output",
+        "json",
+        "audit",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok());
+    let parsed = cli.unwrap();
+    assert_eq!(parsed.output, "json");
+    if let agcli::cli::Commands::Audit { address } = &parsed.command {
+        assert_eq!(
+            address.as_deref(),
+            Some("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY")
+        );
+    } else {
+        panic!("wrong command variant");
+    }
+}
