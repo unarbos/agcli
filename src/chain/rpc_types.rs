@@ -229,12 +229,15 @@ impl From<GenDynamicInfo> for DynamicInfo {
         let price = fixed_i128_to_f64(d.moving_price.bits);
         let name = compact_u8_vec_to_string(&d.subnet_name);
         let symbol = compact_u8_vec_to_string(&d.token_symbol);
+        let total_emission = d.alpha_out_emission
+            .saturating_add(d.alpha_in_emission)
+            .saturating_add(d.tao_in_emission);
         DynamicInfo {
             netuid: NetUid(d.netuid),
             name,
             symbol,
             tempo: d.tempo,
-            emission: d.emission,
+            emission: total_emission,
             tao_in: Balance::from_rao(d.tao_in),
             alpha_in: AlphaBalance::from_raw(d.alpha_in),
             alpha_out: AlphaBalance::from_raw(d.alpha_out),

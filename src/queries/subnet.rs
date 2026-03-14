@@ -10,14 +10,17 @@ pub async fn list_subnets(client: &Client) -> Result<Vec<SubnetInfo>> {
     // Enrich subnet list with real names from DynamicInfo (one call vs N identity queries)
     let mut subnets = client.get_all_subnets().await?;
     if let Ok(dynamic) = client.get_all_dynamic_info().await {
-        let name_map: std::collections::HashMap<u16, String> = dynamic
+        let name_map: std::collections::HashMap<u16, (String, u64)> = dynamic
             .iter()
             .filter(|d| !d.name.is_empty())
-            .map(|d| (d.netuid.0, d.name.clone()))
+            .map(|d| (d.netuid.0, (d.name.clone(), d.total_emission())))
             .collect();
         for s in &mut subnets {
-            if let Some(name) = name_map.get(&s.netuid.0) {
+            if let Some((name, emission)) = name_map.get(&s.netuid.0) {
                 s.name = name.clone();
+                if s.emission_value == 0 {
+                    s.emission_value = *emission;
+                }
             }
         }
     }

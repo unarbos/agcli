@@ -322,6 +322,31 @@ agcli/
 - **Commit-Reveal**: Weight privacy scheme. Commit a blake2 hash, reveal later.
 - **Take**: Percentage of delegated emissions that a validator keeps.
 
+## Agent / Non-Interactive Mode
+
+Every command is fully scriptable for AI agents and automation pipelines:
+
+```bash
+# Global flags for non-interactive operation
+--yes / -y           # Skip all confirmation prompts
+--password PASS      # Provide wallet password (avoids interactive prompt)
+--output json/csv    # Machine-readable output
+
+# Environment variables (alternative to flags)
+AGCLI_YES=1          # Same as --yes
+AGCLI_PASSWORD=pass  # Same as --password
+
+# Examples — zero stdin blocking when all args provided:
+agcli wallet create --name mywallet --password mypass --yes
+agcli wallet import --name w --mnemonic "abandon ... about" --password p
+agcli stake wizard --netuid 1 --amount 0.5 --password p --yes
+agcli stake add 10.0 --netuid 1 --password mypass --yes
+AGCLI_PASSWORD=mypass agcli transfer 5Dest... 1.0 --yes
+
+# Exit codes: 0=success, 1=error, 2=usage error
+# Errors → stderr, data → stdout
+```
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -331,6 +356,8 @@ agcli/
 | `AGCLI_WALLET_DIR` | `~/.bittensor/wallets` | Wallet directory |
 | `AGCLI_WALLET` | `default` | Active wallet name |
 | `AGCLI_HOTKEY` | `default` | Active hotkey name |
+| `AGCLI_PASSWORD` | — | Wallet password (non-interactive unlock) |
+| `AGCLI_YES` | — | Skip all confirmation prompts |
 | `METADATA_CHAIN_ENDPOINT` | finney | Chain endpoint for build-time metadata fetch |
 
 ## Building

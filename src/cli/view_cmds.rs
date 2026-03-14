@@ -134,7 +134,7 @@ async fn handle_dynamic(client: &Client, output: &str) -> Result<()> {
     } else if output == "csv" {
         println!("netuid,name,symbol,tempo,price,tao_in_rao,alpha_in,alpha_out,emission,volume");
         for d in &dynamic {
-            println!("{},{},{},{},{:.6},{},{},{},{},{}", d.netuid, d.name, d.symbol, d.tempo, d.price, d.tao_in.rao(), d.alpha_in.raw(), d.alpha_out.raw(), d.emission, d.subnet_volume);
+            println!("{},{},{},{},{:.6},{},{},{},{},{}", d.netuid, d.name, d.symbol, d.tempo, d.price, d.tao_in.rao(), d.alpha_in.raw(), d.alpha_out.raw(), d.total_emission(), d.subnet_volume);
         }
     } else {
         println!("Dynamic TAO — {} subnets", dynamic.len());
@@ -151,7 +151,7 @@ async fn handle_dynamic(client: &Client, output: &str) -> Result<()> {
                 d.tao_in.display_tao(),
                 format!("{}", d.alpha_in),
                 format!("{}", d.alpha_out),
-                format!("{:.4} τ", d.emission as f64 / 1e9),
+                format!("{:.4} τ", d.total_emission() as f64 / 1e9),
                 format!("{}", d.tempo),
             ]);
         }
@@ -174,7 +174,7 @@ async fn handle_neuron(client: &Client, netuid: u16, uid: u16) -> Result<()> {
             println!("  Consensus:       {:.6}", n.consensus);
             println!("  Incentive:       {:.6}", n.incentive);
             println!("  Dividends:       {:.6}", n.dividends);
-            println!("  Emission:        {:.0}", n.emission);
+            println!("  Emission:        {:.4} τ", n.emission / 1e9);
             println!("  Val. Trust:      {:.6}", n.validator_trust);
             println!("  Val. Permit:     {}", n.validator_permit);
             println!("  Pruning Score:   {:.6}", n.pruning_score);
@@ -560,7 +560,7 @@ async fn handle_staking_analytics(client: &Client, address: &str, output: &str) 
         let di = dynamic_map.get(&s.netuid.0);
         let staked_tao = s.stake.tao();
         let price = di.map(|d| d.price).unwrap_or(0.0);
-        let subnet_emission = di.map(|d| d.emission).unwrap_or(0);
+        let subnet_emission = di.map(|d| d.total_emission()).unwrap_or(0);
         let tao_in = di.map(|d| d.tao_in.tao()).unwrap_or(0.0);
         let name = di.map(|d| d.name.clone()).unwrap_or_default();
 

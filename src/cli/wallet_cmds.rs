@@ -5,7 +5,7 @@ use crate::wallet::Wallet;
 use anyhow::Result;
 use sp_core::Pair as _;
 
-pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, global_password: Option<&str>) -> Result<()> {
+pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, wallet_name: &str, global_password: Option<&str>) -> Result<()> {
     match cmd {
         WalletCommands::Create { name, password: cmd_password } => {
             let password = cmd_password
@@ -46,7 +46,15 @@ pub async fn handle_wallet(cmd: WalletCommands, wallet_dir: &str, global_passwor
             Ok(())
         }
         WalletCommands::Show { all } => {
-            let wallets = Wallet::list_wallets(wallet_dir)?;
+            let all_wallets = Wallet::list_wallets(wallet_dir)?;
+            // If a specific wallet was requested via -w/--wallet, filter to it
+            let wallets: Vec<String> = if wallet_name != "default" && all_wallets.contains(&wallet_name.to_string()) {
+                vec![wallet_name.to_string()]
+            } else if wallet_name != "default" && !all_wallets.contains(&wallet_name.to_string()) {
+                anyhow::bail!("Wallet '{}' not found in {}", wallet_name, wallet_dir);
+            } else {
+                all_wallets
+            };
             for name in &wallets {
                 let w = Wallet::open(&format!("{}/{}", wallet_dir, name));
                 if let Ok(w) = w {

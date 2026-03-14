@@ -16,7 +16,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
     let yes = cli.yes;
 
     match cli.command {
-        Commands::Wallet(cmd) => wallet_cmds::handle_wallet(cmd, &cli.wallet_dir, password.as_deref()).await,
+        Commands::Wallet(cmd) => wallet_cmds::handle_wallet(cmd, &cli.wallet_dir, &cli.wallet, password.as_deref()).await,
         Commands::Balance { address } => {
             let client = Client::connect(network.ws_url()).await?;
             let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
@@ -171,6 +171,8 @@ async fn handle_subnet(
                     if let Some(ref di) = dynamic {
                         if !di.name.is_empty() { s.name = di.name.clone(); }
                     }
+                    let emission_rao = dynamic.as_ref().map(|d| d.total_emission()).unwrap_or(s.emission_value);
+                    s.emission_value = emission_rao;
                     if output == "json" {
                         println!("{}", serde_json::to_string_pretty(&s)?);
                     } else {
@@ -178,7 +180,7 @@ async fn handle_subnet(
                         println!("  Symbol:        {}", s.symbol);
                         println!("  Neurons:       {}/{}", s.n, s.max_n);
                         println!("  Tempo:         {}", s.tempo);
-                        println!("  Emission:      {}", s.emission_value);
+                        println!("  Emission:      {:.4} τ/tempo", emission_rao as f64 / 1e9);
                         println!("  Burn:          {}", s.burn.display_tao());
                         println!("  Difficulty:    {}", s.difficulty);
                         println!("  Immunity:      {} blocks", s.immunity_period);
@@ -189,7 +191,7 @@ async fn handle_subnet(
                             println!("  TAO in pool:   {}", di.tao_in.display_tao());
                             println!("  Alpha in:      {}", di.alpha_in);
                             println!("  Alpha out:     {}", di.alpha_out);
-                            println!("  Volume:        {}", di.subnet_volume);
+                            println!("  Volume:        {:.4} τ", di.subnet_volume as f64 / 1e9);
                         }
                     }
                 }

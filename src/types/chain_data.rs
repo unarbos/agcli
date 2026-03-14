@@ -111,6 +111,17 @@ pub struct DynamicInfo {
     pub network_registered_at: u64,
 }
 
+impl DynamicInfo {
+    /// Compute total emission per tempo from component fields.
+    /// The `emission` field on-chain is deprecated/zero; use the sum of
+    /// alpha_out_emission + alpha_in_emission + tao_in_emission instead.
+    pub fn total_emission(&self) -> u64 {
+        self.alpha_out_emission
+            .saturating_add(self.alpha_in_emission)
+            .saturating_add(self.tao_in_emission)
+    }
+}
+
 /// Subnet hyperparameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubnetHyperparameters {
