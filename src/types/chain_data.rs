@@ -90,16 +90,25 @@ pub struct SubnetInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DynamicInfo {
     pub netuid: NetUid,
+    pub name: String,
     pub symbol: String,
     pub tempo: u16,
-    pub n: u16,
-    pub max_n: u16,
-    pub emission_value: u64,
+    pub emission: u64,
     pub tao_in: Balance,
     pub alpha_in: AlphaBalance,
     pub alpha_out: AlphaBalance,
     pub price: f64,
-    pub owner: String,
+    pub owner_hotkey: String,
+    pub owner_coldkey: String,
+    pub last_step: u64,
+    pub blocks_since_last_step: u64,
+    pub alpha_out_emission: u64,
+    pub alpha_in_emission: u64,
+    pub tao_in_emission: u64,
+    pub pending_alpha_emission: u64,
+    pub pending_root_emission: u64,
+    pub subnet_volume: u128,
+    pub network_registered_at: u64,
 }
 
 /// Subnet hyperparameters.

@@ -7,17 +7,18 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 
 | Category | Capabilities |
 |---|---|
-| **Wallet** | Create, import (mnemonic/seed), encrypt/decrypt coldkeys, manage multiple hotkeys |
+| **Wallet** | Create, import (mnemonic/seed), encrypt/decrypt coldkeys, manage multiple hotkeys, **Python wallet compat** (NaCl SecretBox keyfiles) |
 | **Staking** | Add/remove stake, move between subnets, swap between hotkeys, limit orders, claim root dividends |
 | **Transfers** | Send TAO between accounts |
 | **Subnets** | List subnets with real names, view metagraph, register neurons (burn/POW), create subnets, hyperparameters |
-| **Weights** | Set weights, commit-reveal with blake2 hashing, reveal operations |
+| **Dynamic TAO** | Real-time subnet pricing, TAO/Alpha pool balances, emission breakdown, subnet volume |
+| **Weights** | Set weights, commit-reveal with blake2 hashing, reveal operations, **batch set/commit/reveal** |
 | **Delegates** | View delegates, manage take rates, childkey delegation |
 | **Identity** | Query on-chain identity (Registry pallet), set/view subnet identity (SubnetIdentitiesV3) |
-| **Queries** | Portfolio view, neuron info, network overview, delegate info |
+| **Queries** | Portfolio view (with prices), neuron info, network overview, dynamic info |
 | **Key Swaps** | Hotkey swap, coldkey swap (scheduled) |
 | **Root** | Root registration, root weights |
-| **Output** | Table (default), JSON (`--output json`), CSV support |
+| **Output** | Table (default), JSON (`--output json`), CSV (`--output csv`) |
 
 ## Quick Start
 
@@ -57,8 +58,14 @@ agcli weights set --netuid 1 "0:100,1:200,2:300"
 # Commit-reveal weights
 agcli weights commit --netuid 1 "0:100,1:200"
 
-# View portfolio
+# View portfolio (with real prices and subnet names)
 agcli view portfolio
+
+# View Dynamic TAO (prices, pools, volumes)
+agcli view dynamic
+
+# View Dynamic TAO as CSV
+agcli --output csv view dynamic
 
 # View network info as JSON
 agcli --output json view network
@@ -126,14 +133,14 @@ agcli/
 │   ├── lib.rs           # Library root, re-exports Client/Wallet/Balance
 │   ├── main.rs          # CLI entry point
 │   ├── chain/           # Substrate client (subxt-based)
-│   │   ├── mod.rs         # Client: 30+ queries + 20+ extrinsics
-│   │   ├── rpc_types.rs   # Type conversions from generated runtime types
+│   │   ├── mod.rs         # Client: 35+ queries + 25+ extrinsics (incl. batch ops)
+│   │   ├── rpc_types.rs   # Type conversions (NeuronInfo, DynamicInfo, DelegateInfo, etc.)
 │   │   ├── connection.rs  # Legacy JSON-RPC transport
 │   │   └── storage.rs     # Raw storage queries
 │   ├── wallet/          # Wallet management
 │   │   ├── keypair.rs     # SR25519 key generation, SS58 encoding
-│   │   ├── keyfile.rs     # AES-256-GCM encrypted coldkey files
-│   │   └── mod.rs         # Wallet abstraction (open/create/unlock)
+│   │   ├── keyfile.rs     # Encryption: AES-256-GCM (agcli) + NaCl SecretBox (Python compat)
+│   │   └── mod.rs         # Wallet abstraction (auto-detects keyfile format)
 │   ├── types/           # Core data types (Serialize/Deserialize)
 │   │   ├── balance.rs     # TAO/Alpha balances with arithmetic
 │   │   ├── network.rs     # Network presets (finney/test/local)
@@ -165,8 +172,8 @@ agcli/
 
 - **TAO**: Native token. 1 TAO = 1,000,000,000 RAO.
 - **Subnets**: Independent networks (netuid 0-N) each running their own incentive mechanism.
-- **Coldkey**: Offline signing key for high-value ops (staking, transfers). Encrypted on disk with AES-256-GCM + Argon2id.
-- **Hotkey**: Online key for automated ops (weights, serving). Stored plaintext.
+- **Coldkey**: Offline signing key for high-value ops (staking, transfers). Encrypted on disk with AES-256-GCM + Argon2id (agcli) or NaCl SecretBox + Argon2i (Python bittensor-wallet compat — auto-detected).
+- **Hotkey**: Online key for automated ops (weights, serving). Stored plaintext (mnemonic or JSON).
 - **Neurons**: Registered entities on a subnet (miners and validators).
 - **Weights**: Validators set weights to score miners, determining emission distribution.
 - **Dynamic TAO**: Each subnet has its own alpha token. Staking buys alpha; emission is in alpha.

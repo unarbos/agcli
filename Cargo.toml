@@ -22,6 +22,7 @@ blake2 = "0.10"
 sha2 = "0.10"
 aes-gcm = "0.10"
 argon2 = "0.5"
+crypto_secretbox = "0.1"
 rand = "0.8"
 zeroize = { version = "1", features = ["derive"] }
 ss58-registry = "1"

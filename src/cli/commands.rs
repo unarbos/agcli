@@ -282,6 +282,11 @@ async fn handle_stake(
             let stakes = client.get_stake_for_coldkey(&addr).await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&stakes)?);
+            } else if output == "csv" {
+                println!("netuid,hotkey,stake_rao,alpha_raw");
+                for s in &stakes {
+                    println!("{},{},{},{}", s.netuid, s.hotkey, s.stake.rao(), s.alpha_stake.raw());
+                }
             } else if stakes.is_empty() {
                 println!("No stakes found for {}", crate::utils::short_ss58(&addr));
             } else {
@@ -549,26 +554,22 @@ async fn handle_subnet(
 ) -> Result<()> {
     match cmd {
         SubnetCommands::List => {
-            let subnets = client.get_all_subnets().await?;
-            // Resolve subnet names from SubnetIdentitiesV3
-            let mut named_subnets = subnets;
-            for s in &mut named_subnets {
-                if let Ok(Some(id)) = client.get_subnet_identity(s.netuid).await {
-                    if !id.subnet_name.is_empty() {
-                        s.name = id.subnet_name;
-                    }
-                }
-            }
+            let subnets = crate::queries::subnet::list_subnets(client).await?;
             if output == "json" {
-                println!("{}", serde_json::to_string_pretty(&named_subnets)?);
-            } else if named_subnets.is_empty() {
+                println!("{}", serde_json::to_string_pretty(&subnets)?);
+            } else if output == "csv" {
+                println!("netuid,name,n,max_n,tempo,emission,burn_rao,owner");
+                for s in &subnets {
+                    println!("{},{},{},{},{},{},{},{}", s.netuid, s.name, s.n, s.max_n, s.tempo, s.emission_value, s.burn.rao(), s.owner);
+                }
+            } else if subnets.is_empty() {
                 println!("No subnets found.");
             } else {
                 let mut table = comfy_table::Table::new();
                 table.set_header(vec![
                     "NetUID", "Name", "N", "Max", "Tempo", "Emission", "Burn", "Owner",
                 ]);
-                for s in &named_subnets {
+                for s in &subnets {
                     table.add_row(vec![
                         format!("{}", s.netuid),
                         s.name.clone(),
@@ -586,12 +587,13 @@ async fn handle_subnet(
         }
         SubnetCommands::Show { netuid } => {
             let info = client.get_subnet_info(NetUid(netuid)).await?;
+            let dynamic = client.get_dynamic_info(NetUid(netuid)).await.ok().flatten();
             match info {
                 Some(mut s) => {
-                    // Resolve real name
-                    if let Ok(Some(id)) = client.get_subnet_identity(s.netuid).await {
-                        if !id.subnet_name.is_empty() {
-                            s.name = id.subnet_name;
+                    // Resolve real name from DynamicInfo
+                    if let Some(ref di) = dynamic {
+                        if !di.name.is_empty() {
+                            s.name = di.name.clone();
                         }
                     }
                     if output == "json" {
@@ -607,6 +609,13 @@ async fn handle_subnet(
                         println!("  Immunity:      {} blocks", s.immunity_period);
                         println!("  Owner:         {}", s.owner);
                         println!("  Registration:  {}", if s.registration_allowed { "open" } else { "closed" });
+                        if let Some(ref di) = dynamic {
+                            println!("  Price:         {:.6} τ/α", di.price);
+                            println!("  TAO in pool:   {}", di.tao_in.display_tao());
+                            println!("  Alpha in:      {}", di.alpha_in);
+                            println!("  Alpha out:     {}", di.alpha_out);
+                            println!("  Volume:        {}", di.subnet_volume);
+                        }
                     }
                 }
                 None => println!("Subnet {} not found.", netuid),
@@ -694,6 +703,11 @@ async fn handle_subnet(
             let mg = crate::queries::fetch_metagraph(client, netuid.into()).await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&mg)?);
+            } else if output == "csv" {
+                println!("uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit");
+                for n in &mg.neurons {
+                    println!("{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{}", n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust, n.consensus, n.incentive, n.dividends, n.emission, n.validator_permit);
+                }
             } else {
                 println!(
                     "Metagraph SN{} — {} neurons, block {}",
@@ -974,6 +988,11 @@ async fn handle_delegate(
             let delegates = client.get_delegates().await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&delegates)?);
+            } else if output == "csv" {
+                println!("hotkey,owner,take_pct,total_stake_rao,nominators");
+                for d in &delegates {
+                    println!("{},{},{:.4},{},{}", d.hotkey, d.owner, d.take * 100.0, d.total_stake.rao(), d.nominators.len());
+                }
             } else {
                 println!("{} delegates", delegates.len());
                 let mut table = comfy_table::Table::new();
@@ -1082,6 +1101,11 @@ async fn handle_view(
             let portfolio = crate::queries::portfolio::fetch_portfolio(client, &addr).await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&portfolio)?);
+            } else if output == "csv" {
+                println!("netuid,subnet_name,hotkey,alpha_stake,tao_equiv_rao,price");
+                for p in &portfolio.positions {
+                    println!("{},{},{},{},{},{:.6}", p.netuid, p.subnet_name, p.hotkey_ss58, p.alpha_stake, p.tao_equivalent.rao(), p.price);
+                }
             } else {
                 println!("Portfolio for {}", crate::utils::short_ss58(&addr));
                 println!("  Free:   {}", portfolio.free_balance.display_tao());
@@ -1092,13 +1116,15 @@ async fn handle_view(
                 );
                 if !portfolio.positions.is_empty() {
                     let mut table = comfy_table::Table::new();
-                    table.set_header(vec!["Subnet", "Hotkey", "Alpha", "TAO Equiv"]);
+                    table.set_header(vec!["Subnet", "Name", "Hotkey", "Alpha", "TAO Equiv", "Price"]);
                     for p in &portfolio.positions {
                         table.add_row(vec![
                             format!("SN{}", p.netuid),
+                            p.subnet_name.clone(),
                             crate::utils::short_ss58(&p.hotkey_ss58),
                             format!("{}", p.alpha_stake),
                             format!("{}", p.tao_equivalent),
+                            format!("{:.4}", p.price),
                         ]);
                     }
                     println!("{table}");
@@ -1136,6 +1162,38 @@ async fn handle_view(
                 println!("  Total staked: {}", total_stake.display_tao());
                 println!("  Emission/blk: {}", emission.display_tao());
                 println!("  Staking ratio: {:.1}%", staking_ratio);
+            }
+            Ok(())
+        }
+        ViewCommands::Dynamic => {
+            let dynamic = client.get_all_dynamic_info().await?;
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&dynamic)?);
+            } else if output == "csv" {
+                println!("netuid,name,symbol,tempo,price,tao_in_rao,alpha_in,alpha_out,emission,volume");
+                for d in &dynamic {
+                    println!("{},{},{},{},{:.6},{},{},{},{},{}", d.netuid, d.name, d.symbol, d.tempo, d.price, d.tao_in.rao(), d.alpha_in.raw(), d.alpha_out.raw(), d.emission, d.subnet_volume);
+                }
+            } else {
+                println!("Dynamic TAO — {} subnets", dynamic.len());
+                let mut table = comfy_table::Table::new();
+                table.set_header(vec![
+                    "NetUID", "Name", "Symbol", "Price (τ/α)", "TAO In", "Alpha In", "Alpha Out", "Emission", "Tempo",
+                ]);
+                for d in &dynamic {
+                    table.add_row(vec![
+                        format!("{}", d.netuid),
+                        d.name.clone(),
+                        d.symbol.clone(),
+                        format!("{:.6}", d.price),
+                        d.tao_in.display_tao(),
+                        format!("{}", d.alpha_in),
+                        format!("{}", d.alpha_out),
+                        format!("{}", d.emission),
+                        format!("{}", d.tempo),
+                    ]);
+                }
+                println!("{table}");
             }
             Ok(())
         }

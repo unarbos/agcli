@@ -148,25 +148,18 @@ impl Client {
         Ok(result.map(|h| SubnetHyperparameters::from_gen(h, netuid)))
     }
 
-    /// Get dynamic info for all subnets.
+    /// Get dynamic info for all subnets (real DynamicInfo runtime API).
     pub async fn get_all_dynamic_info(&self) -> Result<Vec<DynamicInfo>> {
-        let subnets = self.get_all_subnets().await?;
-        Ok(subnets
-            .into_iter()
-            .map(|si| DynamicInfo {
-                netuid: si.netuid,
-                symbol: si.symbol.clone(),
-                tempo: si.tempo,
-                n: si.n,
-                max_n: si.max_n,
-                emission_value: si.emission_value,
-                tao_in: Balance::ZERO,
-                alpha_in: crate::types::balance::AlphaBalance::from_raw(0),
-                alpha_out: crate::types::balance::AlphaBalance::from_raw(0),
-                price: 0.0,
-                owner: si.owner,
-            })
-            .collect())
+        let payload = api::apis().subnet_info_runtime_api().get_all_dynamic_info();
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok(result.into_iter().flatten().map(DynamicInfo::from).collect())
+    }
+
+    /// Get dynamic info for a specific subnet.
+    pub async fn get_dynamic_info(&self, netuid: NetUid) -> Result<Option<DynamicInfo>> {
+        let payload = api::apis().subnet_info_runtime_api().get_dynamic_info(netuid.0);
+        let result = self.inner.runtime_api().at_latest().await?.call(payload).await?;
+        Ok(result.map(DynamicInfo::from))
     }
 
     // ──────── Neuron / Metagraph Queries ────────
@@ -764,46 +757,96 @@ impl Client {
         let val = self.inner.storage().at_latest().await?.fetch(&addr).await?;
         Ok(val.unwrap_or(10_000_000))
     }
+
+    // ──────── Batch Extrinsics ────────
+
+    /// Batch set weights across multiple subnets in a single extrinsic.
+    pub async fn batch_set_weights(
+        &self,
+        signer_pair: &sr25519::Pair,
+        netuids: &[u16],
+        weights: &[Vec<(u16, u16)>],
+        version_keys: &[u64],
+    ) -> Result<String> {
+        use parity_scale_codec::Compact;
+        let netuids_compact: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
+        let weights_compact: Vec<Vec<(Compact<u16>, Compact<u16>)>> = weights
+            .iter()
+            .map(|w| w.iter().map(|(u, v)| (Compact(*u), Compact(*v))).collect())
+            .collect();
+        let vkeys_compact: Vec<Compact<u64>> = version_keys.iter().map(|k| Compact(*k)).collect();
+        let tx = api::tx()
+            .subtensor_module()
+            .batch_set_weights(netuids_compact, weights_compact, vkeys_compact);
+        let signer = Self::signer(signer_pair);
+        let result = self.inner.tx()
+            .sign_and_submit_then_watch_default(&tx, &signer).await?
+            .wait_for_finalized_success().await?;
+        Ok(format!("{:?}", result.extrinsic_hash()))
+    }
+
+    /// Batch commit weights across multiple subnets.
+    pub async fn batch_commit_weights(
+        &self,
+        signer_pair: &sr25519::Pair,
+        netuids: &[u16],
+        commit_hashes: &[[u8; 32]],
+    ) -> Result<String> {
+        use parity_scale_codec::Compact;
+        let netuids_compact: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
+        let hashes: Vec<subxt::utils::H256> = commit_hashes.iter().map(|h| subxt::utils::H256::from(*h)).collect();
+        let tx = api::tx()
+            .subtensor_module()
+            .batch_commit_weights(netuids_compact, hashes);
+        let signer = Self::signer(signer_pair);
+        let result = self.inner.tx()
+            .sign_and_submit_then_watch_default(&tx, &signer).await?
+            .wait_for_finalized_success().await?;
+        Ok(format!("{:?}", result.extrinsic_hash()))
+    }
+
+    /// Batch reveal weights for a single subnet with multiple sets of values.
+    pub async fn batch_reveal_weights(
+        &self,
+        signer_pair: &sr25519::Pair,
+        netuid: NetUid,
+        uids_list: &[Vec<u16>],
+        values_list: &[Vec<u16>],
+        salts_list: &[Vec<u16>],
+        version_keys: &[u64],
+    ) -> Result<String> {
+        let tx = api::tx().subtensor_module().batch_reveal_weights(
+            netuid.0,
+            uids_list.to_vec(),
+            values_list.to_vec(),
+            salts_list.to_vec(),
+            version_keys.to_vec(),
+        );
+        let signer = Self::signer(signer_pair);
+        let result = self.inner.tx()
+            .sign_and_submit_then_watch_default(&tx, &signer).await?
+            .wait_for_finalized_success().await?;
+        Ok(format!("{:?}", result.extrinsic_hash()))
+    }
 }
 
 /// Decode the Registry pallet `Data` enum to a string.
+/// Uses a macro to collapse the 33 Raw variants into a single pattern.
 fn decode_identity_data(data: &api::runtime_types::pallet_registry::types::Data) -> String {
     use api::runtime_types::pallet_registry::types::Data;
-    match data {
-        Data::None => String::new(),
-        Data::Raw0(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw1(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw2(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw3(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw4(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw5(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw6(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw7(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw8(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw9(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw10(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw11(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw12(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw13(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw14(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw15(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw16(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw17(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw18(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw19(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw20(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw21(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw22(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw23(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw24(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw25(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw26(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw27(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw28(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw29(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw30(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw31(b) => String::from_utf8_lossy(b).to_string(),
-        Data::Raw32(b) => String::from_utf8_lossy(b).to_string(),
-        _ => format!("<hash:{:?}>", data),
+    macro_rules! raw_to_string {
+        ($($variant:ident),+) => {
+            match data {
+                Data::None => String::new(),
+                $(Data::$variant(b) => String::from_utf8_lossy(b).to_string(),)+
+                _ => format!("<hash:{:?}>", data),
+            }
+        }
     }
+    raw_to_string!(
+        Raw0, Raw1, Raw2, Raw3, Raw4, Raw5, Raw6, Raw7, Raw8, Raw9,
+        Raw10, Raw11, Raw12, Raw13, Raw14, Raw15, Raw16, Raw17, Raw18, Raw19,
+        Raw20, Raw21, Raw22, Raw23, Raw24, Raw25, Raw26, Raw27, Raw28, Raw29,
+        Raw30, Raw31, Raw32
+    )
 }

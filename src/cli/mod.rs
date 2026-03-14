@@ -402,6 +402,8 @@ pub enum ViewCommands {
     },
     /// Show network overview
     Network,
+    /// Show Dynamic TAO info for all subnets (prices, pools, volumes)
+    Dynamic,
 }
 
 #[derive(Subcommand, Debug)]

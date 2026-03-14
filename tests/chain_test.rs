@@ -79,3 +79,25 @@ async fn test_get_stake_for_coldkey() {
         .expect("stakes");
     println!("Stakes for Alice: {}", stakes.len());
 }
+
+#[tokio::test]
+async fn test_get_all_dynamic_info() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let dynamic = client.get_all_dynamic_info().await.expect("dynamic info");
+    println!("Got {} dynamic subnet infos", dynamic.len());
+    assert!(!dynamic.is_empty(), "should have dynamic info");
+    for d in dynamic.iter().take(5) {
+        println!("  SN{} \"{}\" price={:.6} tao_in={} alpha_in={} alpha_out={}",
+            d.netuid, d.name, d.price, d.tao_in, d.alpha_in, d.alpha_out);
+    }
+}
+
+#[tokio::test]
+async fn test_get_dynamic_info_single() {
+    let client = Client::connect(FINNEY).await.expect("connect");
+    let dynamic = client.get_dynamic_info(NetUid(1)).await.expect("dynamic info");
+    assert!(dynamic.is_some(), "SN1 should have dynamic info");
+    let d = dynamic.unwrap();
+    println!("SN1: \"{}\" symbol={} price={:.6}", d.name, d.symbol, d.price);
+    assert!(d.price > 0.0, "SN1 price should be positive");
+}

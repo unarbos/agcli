@@ -25,20 +25,28 @@ pub struct SubnetPosition {
     pub price: f64,
 }
 
-/// Fetch the full portfolio for a coldkey.
+/// Fetch the full portfolio for a coldkey (resolves subnet names and prices from DynamicInfo).
 pub async fn fetch_portfolio(client: &Client, coldkey_ss58: &str) -> Result<Portfolio> {
     let balance = client.get_balance_ss58(coldkey_ss58).await?;
     let stakes = client.get_stake_for_coldkey(coldkey_ss58).await?;
 
+    // Fetch dynamic info to resolve names and prices
+    let dynamic = client.get_all_dynamic_info().await.unwrap_or_default();
+    let dynamic_map: std::collections::HashMap<u16, &crate::types::chain_data::DynamicInfo> =
+        dynamic.iter().map(|d| (d.netuid.0, d)).collect();
+
     let positions: Vec<SubnetPosition> = stakes
         .iter()
-        .map(|s| SubnetPosition {
-            netuid: s.netuid.0,
-            subnet_name: String::new(), // TODO: resolve
-            hotkey_ss58: s.hotkey.clone(),
-            alpha_stake: s.alpha_stake.raw(),
-            tao_equivalent: s.stake,
-            price: 0.0, // TODO: fetch dynamic price
+        .map(|s| {
+            let di = dynamic_map.get(&s.netuid.0);
+            SubnetPosition {
+                netuid: s.netuid.0,
+                subnet_name: di.map(|d| d.name.clone()).unwrap_or_default(),
+                hotkey_ss58: s.hotkey.clone(),
+                alpha_stake: s.alpha_stake.raw(),
+                tao_equivalent: s.stake,
+                price: di.map(|d| d.price).unwrap_or(0.0),
+            }
         })
         .collect();
 

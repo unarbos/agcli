@@ -1,7 +1,7 @@
 # agcli — LLM/Agent Reference
 
 ## What is agcli?
-A Rust CLI and SDK for the Bittensor decentralized AI network. It lets you manage wallets, stake TAO, transfer tokens, register on subnets, set weights, query chain state, and view identities. All data commands support `--output json` for machine-readable output.
+A Rust CLI and SDK for the Bittensor decentralized AI network. It lets you manage wallets, stake TAO, transfer tokens, register on subnets, set weights, query chain state, view Dynamic TAO pricing, and manage identities. All data commands support `--output json` and `--output csv` for machine-readable output. Compatible with Python bittensor-wallet keyfiles.
 
 ## Installation
 ```bash
@@ -17,6 +17,7 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli wallet import --name NAME` — import from mnemonic
 - `agcli wallet regen-coldkey` — regenerate coldkey from mnemonic
 - `agcli wallet new-hotkey NAME` — create new hotkey
+- Note: automatically reads Python bittensor-wallet keyfiles (NaCl SecretBox + JSON format)
 
 ### Balance & Transfer
 - `agcli balance` — show your balance
@@ -26,7 +27,7 @@ cargo install --git https://github.com/unconst/agcli
 ### Staking
 - `agcli stake add AMOUNT --netuid N` — stake TAO on subnet
 - `agcli stake remove AMOUNT --netuid N` — unstake
-- `agcli stake list` — show all stakes (supports --output json)
+- `agcli stake list` — show all stakes
 - `agcli stake move AMOUNT --from SRC --to DST` — move between subnets
 - `agcli stake swap AMOUNT --netuid N --from-hotkey HK1 --to-hotkey HK2` — swap between hotkeys
 - `agcli stake unstake-all` — unstake all from hotkey
@@ -36,10 +37,10 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli stake set-children --netuid N --children "proportion:hotkey,..."` — set children
 
 ### Subnets
-- `agcli subnet list` — list all subnets with real names (supports --output json)
-- `agcli subnet show N` — show subnet N details
-- `agcli subnet metagraph N` — view subnet N's metagraph (supports --output json)
-- `agcli subnet hyperparams N` — show subnet hyperparameters
+- `agcli subnet list` — list subnets with real names from DynamicInfo
+- `agcli subnet show N` — show subnet details with Dynamic TAO pricing
+- `agcli subnet metagraph N` — view metagraph
+- `agcli subnet hyperparams N` — show hyperparameters
 - `agcli subnet register` — create new subnet
 - `agcli subnet register-neuron N` — register on subnet N (burn)
 - `agcli subnet pow N --threads 8` — POW registration (multi-threaded)
@@ -50,13 +51,14 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli weights reveal --netuid N "uid:weight,..." SALT` — reveal committed weights
 
 ### Delegates
-- `agcli delegate list` — list all delegates (supports --output json)
+- `agcli delegate list` — list all delegates
 - `agcli delegate show --hotkey SS58` — show delegate info
 - `agcli delegate decrease-take PCT` — decrease validator take
 - `agcli delegate increase-take PCT` — increase validator take
 
 ### View
-- `agcli view portfolio` — full stake portfolio (supports --output json)
+- `agcli view portfolio` — full stake portfolio with subnet names and prices
+- `agcli view dynamic` — Dynamic TAO info (prices, pools, volumes, emissions)
 - `agcli view network` — network overview (block, issuance, stake, emission)
 - `agcli view neuron --netuid N UID` — full neuron detail
 
@@ -72,15 +74,14 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli root register` — register on root network
 - `agcli root weights "netuid:weight,..."` — set root weights
 
-## JSON Output
-Add `--output json` to any data query:
+## Output Formats
+Add `--output json` or `--output csv` to data queries:
 ```bash
 agcli --output json subnet list
+agcli --output csv view dynamic
 agcli --output json view portfolio
-agcli --output json view network
+agcli --output csv subnet metagraph 1
 agcli --output json stake list
-agcli --output json delegate list
-agcli --output json subnet metagraph 1
 ```
 
 ## SDK Usage
@@ -92,16 +93,25 @@ let balance = client.get_balance_ss58("5Gx...").await?;
 let subnets = client.get_all_subnets().await?;
 let stakes = client.get_stake_for_coldkey("5Gx...").await?;
 let metagraph = client.get_metagraph(1.into()).await?;
-let identity = client.get_subnet_identity(1.into()).await?;
+// Dynamic TAO pricing
+let dynamic = client.get_all_dynamic_info().await?;
+let sn1 = client.get_dynamic_info(1.into()).await?;
+// Batch weight operations
+client.batch_set_weights(&pair, &[1,2], &[weights1, weights2], &[0,0]).await?;
+client.batch_commit_weights(&pair, &[1,2], &[hash1, hash2]).await?;
 ```
 
 ## Key Concepts
 - TAO = native token, 1 TAO = 1e9 RAO
 - Subnet = independent network with netuid (u16)
-- Coldkey = main signing key (AES-256-GCM encrypted), Hotkey = automated key (plaintext)
+- Coldkey = main signing key (encrypted), Hotkey = automated key (plaintext)
 - Weights = validators score miners, u16 values normalized to [0,1]
-- Dynamic TAO = each subnet has alpha token, price determined by AMM
+- Dynamic TAO = each subnet has alpha token, price determined by AMM pool
+  - `tao_in` = TAO locked in subnet pool
+  - `alpha_in` / `alpha_out` = alpha token balances
+  - `price` = moving average price in TAO per alpha unit
 - Root (SN0) = governs cross-subnet emissions
+- Batch ops = set/commit/reveal weights across multiple subnets atomically
 
 ## Networks
 - finney: wss://entrypoint-finney.opentensor.ai:443 (mainnet)

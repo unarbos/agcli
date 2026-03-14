@@ -138,21 +138,48 @@ impl Wallet {
     }
 
     /// Unlock the coldkey with a password.
+    /// Auto-detects keyfile format (agcli AES-256-GCM or Python NaCl SecretBox).
     pub fn unlock_coldkey(&mut self, password: &str) -> Result<()> {
-        let mnemonic =
-            keyfile::read_encrypted_keyfile(&self.path.join("coldkey"), password)
-                .context("Failed to decrypt coldkey")?;
-        let pair = keypair::pair_from_mnemonic(&mnemonic)?;
+        let data = keyfile::read_any_encrypted_keyfile(&self.path.join("coldkey"), password)
+            .context("Failed to decrypt coldkey")?;
+        // The decrypted data may be a mnemonic or a JSON keypair (Python format)
+        let pair = if data.trim().starts_with('{') {
+            // Python bittensor-wallet stores JSON: {"secretSeed": "0x...", ...} or
+            // {"ss58Address": "...", "secretPhrase": "...", ...}
+            let v: serde_json::Value = serde_json::from_str(data.trim())
+                .context("Failed to parse Python keyfile JSON")?;
+            if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
+                keypair::pair_from_seed_hex(seed)?
+            } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
+                keypair::pair_from_mnemonic(phrase)?
+            } else {
+                anyhow::bail!("Python keyfile JSON has no secretSeed or secretPhrase");
+            }
+        } else {
+            keypair::pair_from_mnemonic(data.trim())?
+        };
         self.coldkey_ss58 = Some(keypair::to_ss58(&pair.public(), 42));
         self.coldkey = Some(pair);
         Ok(())
     }
 
     /// Load the hotkey (unencrypted).
+    /// Supports both mnemonic plaintext and Python JSON keypair format.
     pub fn load_hotkey(&mut self, hotkey_name: &str) -> Result<()> {
-        let mnemonic =
-            keyfile::read_keyfile(&self.path.join("hotkeys").join(hotkey_name))?;
-        let pair = keypair::pair_from_mnemonic(&mnemonic)?;
+        let data = keyfile::read_keyfile(&self.path.join("hotkeys").join(hotkey_name))?;
+        let pair = if data.trim().starts_with('{') {
+            let v: serde_json::Value = serde_json::from_str(data.trim())
+                .context("Failed to parse hotkey JSON")?;
+            if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
+                keypair::pair_from_seed_hex(seed)?
+            } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
+                keypair::pair_from_mnemonic(phrase)?
+            } else {
+                anyhow::bail!("Hotkey JSON has no secretSeed or secretPhrase");
+            }
+        } else {
+            keypair::pair_from_mnemonic(data.trim())?
+        };
         self.hotkey_ss58 = Some(keypair::to_ss58(&pair.public(), 42));
         self.hotkey = Some(pair);
         Ok(())

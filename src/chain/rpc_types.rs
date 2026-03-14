@@ -20,6 +20,8 @@ pub(crate) type GenStakeInfo =
     crate::api::runtime_types::pallet_subtensor::rpc_info::stake_info::StakeInfo<AccountId32>;
 pub(crate) type GenDelegateInfo =
     crate::api::runtime_types::pallet_subtensor::rpc_info::delegate_info::DelegateInfo<AccountId32>;
+pub(crate) type GenDynamicInfo =
+    crate::api::runtime_types::pallet_subtensor::rpc_info::dynamic_info::DynamicInfo<AccountId32>;
 
 fn account_to_ss58(a: &AccountId32) -> String {
     to_ss58(&sp_core::sr25519::Public::from_raw(a.0), 42)
@@ -203,6 +205,51 @@ impl From<GenStakeInfo> for StakeInfo {
             netuid,
             stake: Balance::from_rao(s.stake),
             alpha_stake: AlphaBalance::from_raw(s.stake),
+        }
+    }
+}
+
+// ──────── DynamicInfo ────────
+
+/// Convert FixedI128 bits (32 fractional bits, per typenum encoding) to f64.
+fn fixed_i128_to_f64(bits: i128) -> f64 {
+    bits as f64 / 4_294_967_296.0 // 2^32
+}
+
+/// Decode Compact<u8> vec to a UTF-8 string.
+fn compact_u8_vec_to_string(
+    v: &[parity_scale_codec::Compact<u8>],
+) -> String {
+    let bytes: Vec<u8> = v.iter().map(|c| c.0).collect();
+    String::from_utf8_lossy(&bytes).to_string()
+}
+
+impl From<GenDynamicInfo> for DynamicInfo {
+    fn from(d: GenDynamicInfo) -> Self {
+        let price = fixed_i128_to_f64(d.moving_price.bits);
+        let name = compact_u8_vec_to_string(&d.subnet_name);
+        let symbol = compact_u8_vec_to_string(&d.token_symbol);
+        DynamicInfo {
+            netuid: NetUid(d.netuid),
+            name,
+            symbol,
+            tempo: d.tempo,
+            emission: d.emission,
+            tao_in: Balance::from_rao(d.tao_in),
+            alpha_in: AlphaBalance::from_raw(d.alpha_in),
+            alpha_out: AlphaBalance::from_raw(d.alpha_out),
+            price,
+            owner_hotkey: account_to_ss58(&d.owner_hotkey),
+            owner_coldkey: account_to_ss58(&d.owner_coldkey),
+            last_step: d.last_step,
+            blocks_since_last_step: d.blocks_since_last_step,
+            alpha_out_emission: d.alpha_out_emission,
+            alpha_in_emission: d.alpha_in_emission,
+            tao_in_emission: d.tao_in_emission,
+            pending_alpha_emission: d.pending_alpha_emission,
+            pending_root_emission: d.pending_root_emission,
+            subnet_volume: d.subnet_volume,
+            network_registered_at: d.network_registered_at,
         }
     }
 }
