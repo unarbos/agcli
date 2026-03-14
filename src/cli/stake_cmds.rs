@@ -46,55 +46,58 @@ pub async fn handle_stake(
                         block_num
                     );
                 } else {
-                    println!(
-                        "Stakes for {} (at block {}):",
-                        crate::utils::short_ss58(&addr),
-                        block_num
+                    render_rows(
+                        "table",
+                        &stakes,
+                        "",
+                        |_| String::new(),
+                        &["Subnet", "Hotkey", "Stake (τ)", "Alpha"],
+                        |s| {
+                            vec![
+                                format!("SN{}", s.netuid),
+                                crate::utils::short_ss58(&s.hotkey),
+                                s.stake.display_tao(),
+                                format!("{}", s.alpha_stake),
+                            ]
+                        },
+                        Some(&format!(
+                            "Stakes for {} (at block {}):",
+                            crate::utils::short_ss58(&addr),
+                            block_num
+                        )),
                     );
-                    let mut table = comfy_table::Table::new();
-                    table.set_header(vec!["Subnet", "Hotkey", "Stake (τ)", "Alpha"]);
-                    for s in &stakes {
-                        table.add_row(vec![
-                            format!("SN{}", s.netuid),
-                            crate::utils::short_ss58(&s.hotkey),
-                            s.stake.display_tao(),
-                            format!("{}", s.alpha_stake),
-                        ]);
-                    }
-                    println!("{table}");
                 }
                 return Ok(());
             }
 
             let stakes = client.get_stake_for_coldkey(&addr).await?;
-            if output == "json" {
-                print_json_ser(&stakes);
-            } else if output == "csv" {
-                println!("netuid,hotkey,stake_rao,alpha_raw");
-                for s in &stakes {
-                    println!(
-                        "{},{},{},{}",
-                        s.netuid,
-                        s.hotkey,
-                        s.stake.rao(),
-                        s.alpha_stake.raw()
-                    );
-                }
-            } else if stakes.is_empty() {
+            if stakes.is_empty() && output != "json" && output != "csv" {
                 println!("No stakes found for {}", crate::utils::short_ss58(&addr));
             } else {
-                println!("Stakes for {}:", crate::utils::short_ss58(&addr));
-                let mut table = comfy_table::Table::new();
-                table.set_header(vec!["Subnet", "Hotkey", "Stake (τ)", "Alpha"]);
-                for s in &stakes {
-                    table.add_row(vec![
-                        format!("SN{}", s.netuid),
-                        crate::utils::short_ss58(&s.hotkey),
-                        s.stake.display_tao(),
-                        format!("{}", s.alpha_stake),
-                    ]);
-                }
-                println!("{table}");
+                render_rows(
+                    output,
+                    &stakes,
+                    "netuid,hotkey,stake_rao,alpha_raw",
+                    |s| {
+                        format!(
+                            "{},{},{},{}",
+                            s.netuid,
+                            s.hotkey,
+                            s.stake.rao(),
+                            s.alpha_stake.raw()
+                        )
+                    },
+                    &["Subnet", "Hotkey", "Stake (τ)", "Alpha"],
+                    |s| {
+                        vec![
+                            format!("SN{}", s.netuid),
+                            crate::utils::short_ss58(&s.hotkey),
+                            s.stake.display_tao(),
+                            format!("{}", s.alpha_stake),
+                        ]
+                    },
+                    Some(&format!("Stakes for {}:", crate::utils::short_ss58(&addr))),
+                );
             }
             Ok(())
         }

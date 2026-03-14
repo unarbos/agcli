@@ -482,8 +482,57 @@ fn explain_topic_count_includes_coldkey_swap() {
     let has_ck = topics.iter().any(|(k, _)| *k == "coldkey-swap");
     assert!(has_ck, "coldkey-swap should be in list_topics()");
     assert!(
-        topics.len() >= 19,
-        "Expected at least 19 topics (was 18, now +coldkey-swap), got {}",
+        topics.len() >= 22,
+        "Expected at least 22 topics (19 + governance, senate, mev-shield), got {}",
         topics.len()
     );
+}
+
+// ──── Step 32: governance, senate, mev-shield explain topics ────
+
+#[test]
+fn explain_governance_topic() {
+    let content = explain::explain("governance");
+    assert!(content.is_some(), "governance topic should exist");
+    let text = content.unwrap();
+    assert!(text.contains("GOVERNANCE"), "should have title");
+    assert!(text.contains("proposal"), "should mention proposals");
+}
+
+#[test]
+fn explain_governance_aliases() {
+    assert!(explain::explain("gov").is_some());
+    assert!(explain::explain("proposals").is_some());
+    assert!(explain::explain("GOV").is_some());
+}
+
+#[test]
+fn explain_senate_topic() {
+    let content = explain::explain("senate");
+    assert!(content.is_some(), "senate topic should exist");
+    let text = content.unwrap();
+    assert!(text.contains("SENATE"), "should have title");
+    assert!(text.contains("triumvirate") || text.contains("Triumvirate"));
+}
+
+#[test]
+fn explain_senate_aliases() {
+    assert!(explain::explain("triumvirate").is_some());
+    assert!(explain::explain("SENATE").is_some());
+}
+
+#[test]
+fn explain_mev_shield_topic() {
+    let content = explain::explain("mev-shield");
+    assert!(content.is_some(), "mev-shield topic should exist");
+    let text = content.unwrap();
+    assert!(text.contains("MEV"), "should contain MEV");
+    assert!(text.contains("protection") || text.contains("shield") || text.contains("Shield"));
+}
+
+#[test]
+fn explain_mev_aliases() {
+    assert!(explain::explain("mev").is_some());
+    assert!(explain::explain("mevshield").is_some());
+    assert!(explain::explain("mevprotection").is_some());
 }

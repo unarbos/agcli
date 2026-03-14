@@ -59,48 +59,45 @@ async fn handle_portfolio(client: &Client, addr: &str, output: &str) -> Result<(
     let portfolio = crate::queries::portfolio::fetch_portfolio(client, addr).await?;
     if output == "json" {
         print_json_ser(&portfolio);
-    } else if output == "csv" {
-        println!("netuid,subnet_name,hotkey,alpha_stake,tao_equiv_rao,price");
-        for p in &portfolio.positions {
+    } else {
+        if output != "csv" {
+            println!("Portfolio for {}", crate::utils::short_ss58(addr));
+            println!("  Free:   {}", portfolio.free_balance.display_tao());
+            println!("  Staked: {}", portfolio.total_staked.display_tao());
             println!(
-                "{},{},{},{},{},{:.6}",
-                p.netuid,
-                p.subnet_name,
-                p.hotkey_ss58,
-                p.alpha_stake,
-                p.tao_equivalent.rao(),
-                p.price
+                "  Total:  {}",
+                (portfolio.free_balance + portfolio.total_staked).display_tao()
             );
         }
-    } else {
-        println!("Portfolio for {}", crate::utils::short_ss58(addr));
-        println!("  Free:   {}", portfolio.free_balance.display_tao());
-        println!("  Staked: {}", portfolio.total_staked.display_tao());
-        println!(
-            "  Total:  {}",
-            (portfolio.free_balance + portfolio.total_staked).display_tao()
-        );
         if !portfolio.positions.is_empty() {
-            let mut table = comfy_table::Table::new();
-            table.set_header(vec![
-                "Subnet",
-                "Name",
-                "Hotkey",
-                "Alpha",
-                "TAO Equiv",
-                "Price",
-            ]);
-            for p in &portfolio.positions {
-                table.add_row(vec![
-                    format!("SN{}", p.netuid),
-                    p.subnet_name.clone(),
-                    crate::utils::short_ss58(&p.hotkey_ss58),
-                    format!("{}", p.alpha_stake),
-                    format!("{}", p.tao_equivalent),
-                    format!("{:.4}", p.price),
-                ]);
-            }
-            println!("{table}");
+            render_rows(
+                output,
+                &portfolio.positions,
+                "netuid,subnet_name,hotkey,alpha_stake,tao_equiv_rao,price",
+                |p| {
+                    format!(
+                        "{},{},{},{},{},{:.6}",
+                        p.netuid,
+                        p.subnet_name,
+                        p.hotkey_ss58,
+                        p.alpha_stake,
+                        p.tao_equivalent.rao(),
+                        p.price
+                    )
+                },
+                &["Subnet", "Name", "Hotkey", "Alpha", "TAO Equiv", "Price"],
+                |p| {
+                    vec![
+                        format!("SN{}", p.netuid),
+                        p.subnet_name.clone(),
+                        crate::utils::short_ss58(&p.hotkey_ss58),
+                        format!("{}", p.alpha_stake),
+                        format!("{}", p.tao_equivalent),
+                        format!("{:.4}", p.price),
+                    ]
+                },
+                None,
+            );
         }
     }
     Ok(())
@@ -276,12 +273,12 @@ async fn handle_validators(
         validators.sort_by(|a, b| b.stake.rao().cmp(&a.stake.rao()));
         validators.truncate(limit);
 
-        if output == "json" {
-            print_json_ser(&validators);
-        } else if output == "csv" {
-            println!("uid,hotkey,coldkey,stake_rao,trust,vtrust,dividends,emission");
-            for v in &validators {
-                println!(
+        render_rows(
+            output,
+            &validators,
+            "uid,hotkey,coldkey,stake_rao,trust,vtrust,dividends,emission",
+            |v| {
+                format!(
                     "{},{},{},{},{:.6},{:.6},{:.6},{:.0}",
                     v.uid,
                     v.hotkey,
@@ -291,47 +288,39 @@ async fn handle_validators(
                     v.validator_trust,
                     v.dividends,
                     v.emission
-                );
-            }
-        } else {
-            println!(
-                "Validators on SN{} ({} with permits)",
-                nuid,
-                validators.len()
-            );
-            let mut table = comfy_table::Table::new();
-            table.set_header(vec![
-                "UID",
-                "Hotkey",
-                "Stake",
-                "VTrust",
-                "Dividends",
-                "Emission",
-            ]);
-            for v in &validators {
-                table.add_row(vec![
+                )
+            },
+            &["UID", "Hotkey", "Stake", "VTrust", "Dividends", "Emission"],
+            |v| {
+                vec![
                     format!("{}", v.uid),
                     crate::utils::short_ss58(&v.hotkey),
                     format!("{:.4}τ", v.stake.tao()),
                     format!("{:.4}", v.validator_trust),
                     format!("{:.4}", v.dividends),
                     format!("{:.4} τ", v.emission / 1e9),
-                ]);
-            }
-            println!("{table}");
-        }
+                ]
+            },
+            Some(&format!(
+                "Validators on SN{} ({} with permits)",
+                nuid,
+                validators.len()
+            )),
+        );
     } else {
         let delegates = client.get_delegates().await?;
         let mut sorted = delegates;
         sorted.sort_by(|a, b| b.total_stake.rao().cmp(&a.total_stake.rao()));
         sorted.truncate(limit);
 
-        if output == "json" {
-            print_json_ser(&sorted);
-        } else if output == "csv" {
-            println!("hotkey,owner,take_pct,total_stake_rao,nominators,registrations");
-            for d in &sorted {
-                println!(
+        // Add rank index for table display
+        let ranked: Vec<(usize, _)> = sorted.into_iter().enumerate().collect();
+        render_rows(
+            output,
+            &ranked,
+            "rank,hotkey,owner,take_pct,total_stake_rao,nominators,registrations",
+            |(_, d)| {
+                format!(
                     "{},{},{:.2},{},{},{:?}",
                     d.hotkey,
                     d.owner,
@@ -339,12 +328,9 @@ async fn handle_validators(
                     d.total_stake.rao(),
                     d.nominators.len(),
                     d.registrations
-                );
-            }
-        } else {
-            println!("Top {} validators by total stake", sorted.len());
-            let mut table = comfy_table::Table::new();
-            table.set_header(vec![
+                )
+            },
+            &[
                 "#",
                 "Hotkey",
                 "Owner",
@@ -352,9 +338,9 @@ async fn handle_validators(
                 "Total Stake",
                 "Nominators",
                 "Subnets",
-            ]);
-            for (i, d) in sorted.iter().enumerate() {
-                table.add_row(vec![
+            ],
+            |(i, d)| {
+                vec![
                     format!("{}", i + 1),
                     crate::utils::short_ss58(&d.hotkey),
                     crate::utils::short_ss58(&d.owner),
@@ -362,10 +348,10 @@ async fn handle_validators(
                     d.total_stake.display_tao(),
                     format!("{}", d.nominators.len()),
                     format!("{}", d.registrations.len()),
-                ]);
-            }
-            println!("{table}");
-        }
+                ]
+            },
+            Some(&format!("Top {} validators by total stake", ranked.len())),
+        );
     }
     Ok(())
 }
@@ -397,12 +383,12 @@ async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()>
 
     match extrinsics {
         Some(txs) if !txs.is_empty() => {
-            if output == "json" {
-                print_json_ser(&txs);
-            } else if output == "csv" {
-                println!("block,hash,module,call,success,timestamp");
-                for tx in txs {
-                    println!(
+            render_rows(
+                output,
+                txs,
+                "block,hash,module,call,success,timestamp",
+                |tx| {
+                    format!(
                         "{},{},{},{},{},{}",
                         tx.get("block_num").and_then(|v| v.as_u64()).unwrap_or(0),
                         tx.get("extrinsic_hash")
@@ -416,13 +402,10 @@ async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()>
                         tx.get("block_timestamp")
                             .and_then(|v| v.as_u64())
                             .unwrap_or(0),
-                    );
-                }
-            } else {
-                println!("Recent transactions ({}):", txs.len());
-                let mut table = comfy_table::Table::new();
-                table.set_header(vec!["Block", "Module", "Call", "Success", "Hash"]);
-                for tx in txs {
+                    )
+                },
+                &["Block", "Module", "Call", "Success", "Hash"],
+                |tx| {
                     let block = tx.get("block_num").and_then(|v| v.as_u64()).unwrap_or(0);
                     let module = tx
                         .get("call_module")
@@ -438,16 +421,16 @@ async fn handle_history(address: &str, output: &str, limit: usize) -> Result<()>
                         .and_then(|v| v.as_str())
                         .unwrap_or("?");
                     let hash_short = if hash.len() > 18 { &hash[..18] } else { hash };
-                    table.add_row(vec![
+                    vec![
                         format!("{}", block),
                         module.to_string(),
                         call.to_string(),
                         if success { "OK" } else { "FAIL" }.to_string(),
                         format!("{}...", hash_short),
-                    ]);
-                }
-                println!("{table}");
-            }
+                    ]
+                },
+                Some(&format!("Recent transactions ({}):", txs.len())),
+            );
         }
         _ => {
             println!(
@@ -836,6 +819,7 @@ async fn handle_staking_analytics(client: &Client, address: &str, output: &str) 
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
 
+    #[derive(serde::Serialize)]
     struct PositionAnalytics {
         netuid: u16,
         name: String,
@@ -932,27 +916,24 @@ async fn handle_staking_analytics(client: &Client, address: &str, output: &str) 
     println!("  Block emission:     {}", block_emission.display_tao());
 
     if !positions.is_empty() {
-        println!("\n  Position Breakdown:");
-        let mut table = comfy_table::Table::new();
-        table.set_header(vec![
-            "Subnet",
-            "Name",
-            "Staked (τ)",
-            "Price",
-            "Daily (τ)",
-            "APY",
-        ]);
-        for p in &positions {
-            table.add_row(vec![
-                format!("SN{}", p.netuid),
-                p.name.clone(),
-                format!("{:.4}", p.staked_tao),
-                format!("{:.6}", p.price),
-                format!("{:.6}", p.estimated_daily_emission_tao),
-                format!("{:.2}%", p.estimated_apy),
-            ]);
-        }
-        println!("{table}");
+        render_rows(
+            "table",
+            &positions,
+            "",
+            |_| String::new(),
+            &["Subnet", "Name", "Staked (τ)", "Price", "Daily (τ)", "APY"],
+            |p| {
+                vec![
+                    format!("SN{}", p.netuid),
+                    p.name.clone(),
+                    format!("{:.4}", p.staked_tao),
+                    format!("{:.6}", p.price),
+                    format!("{:.6}", p.estimated_daily_emission_tao),
+                    format!("{:.2}%", p.estimated_apy),
+                ]
+            },
+            Some("\n  Position Breakdown:"),
+        );
     }
 
     println!("\n  Note: APY estimates are based on current emission rates and pool sizes.");

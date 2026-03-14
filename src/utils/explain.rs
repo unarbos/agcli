@@ -22,6 +22,9 @@ pub fn explain(topic: &str) -> Option<&'static str> {
         "root" | "rootnetwork" => Some(ROOT_NETWORK),
         "proxy" => Some(PROXY),
         "coldkeyswap" | "coldkey" | "ckswap" => Some(COLDKEY_SWAP),
+        "governance" | "gov" | "proposals" => Some(GOVERNANCE),
+        "senate" | "triumvirate" => Some(SENATE),
+        "mevshield" | "mev" | "mevprotection" => Some(MEV_SHIELD),
         topics => {
             // Fuzzy: check if the topic is a substring of any key
             let all = list_topics();
@@ -57,6 +60,9 @@ pub fn list_topics() -> Vec<(&'static str, &'static str)> {
         ("root", "Root network (SN0) and root weights"),
         ("proxy", "Proxy accounts for delegated signing"),
         ("coldkey-swap", "Coldkey swap scheduling and security"),
+        ("governance", "On-chain governance and proposals"),
+        ("senate", "Senate / triumvirate governance body"),
+        ("mev-shield", "MEV protection on Bittensor"),
     ]
 }
 
@@ -530,3 +536,87 @@ Prevention:
 Note: The chain does NOT currently expose a cancel-swap extrinsic. Once scheduled,
 a coldkey swap will execute at the scheduled block unless chain governance intervenes.
 If you detect an unauthorized swap, contact the Bittensor community immediately.";
+
+const GOVERNANCE: &str = "\
+GOVERNANCE
+==========
+Bittensor uses on-chain governance for protocol upgrades, parameter changes,
+and treasury disbursements. Proposals go through a democratic process.
+
+Governance flow:
+1. PROPOSAL: A member of the senate (triumvirate) or a council member submits a proposal.
+2. VOTING: Token-weighted voting — stake counts as voting power.
+3. ENACTMENT: If the proposal passes the vote threshold and any required
+   senate approval, it is enacted after a delay period.
+
+Proposal types:
+- Runtime upgrades (code changes to the chain)
+- Parameter changes (emission schedule, registration costs, hyperparams)
+- Treasury proposals (fund allocation from the treasury)
+
+How to participate:
+- Vote on proposals using your staked TAO weight.
+- Delegate your vote to a trusted validator.
+- Monitor active proposals through chain governance tools.
+
+Key parameters:
+- Proposals require supermajority or simple majority depending on type.
+- Enactment delays give the community time to respond.
+- Emergency proposals can bypass some delays with senate approval.";
+
+const SENATE: &str = "\
+SENATE (TRIUMVIRATE)
+====================
+The Senate (also called the Triumvirate) is a small governance body on Bittensor
+with elevated permissions for critical chain decisions.
+
+Composition:
+- Members are the top validators by total delegated stake.
+- Senate size is limited (typically 12 seats).
+- Membership is dynamic — it updates as validator stake rankings change.
+
+Powers:
+- Can submit governance proposals directly.
+- Some proposal types require senate approval to pass.
+- Acts as a safety check on governance actions.
+- Can fast-track emergency proposals.
+
+How it works:
+- Senate membership is automatic for top validators by delegation.
+- No explicit application — rack up enough delegated stake and you qualify.
+- Losing stake below the threshold means losing your senate seat.
+
+Practical implications:
+- Delegating to a validator also grants them governance influence.
+- Consider a validator's governance track record when choosing who to delegate to.
+- Senate votes are on-chain and transparent.";
+
+const MEV_SHIELD: &str = "\
+MEV SHIELD
+==========
+MEV (Maximal Extractable Value) Shield is a Bittensor-specific pallet that
+protects users from transaction ordering manipulation by block producers.
+
+What is MEV?
+- Block producers can reorder, insert, or censor transactions within a block.
+- On DeFi chains this enables front-running, sandwich attacks, and arbitrage.
+- On Bittensor, MEV could affect staking, weight-setting, and AMM trades.
+
+How MevShield works:
+- The MevShield pallet adds protection against transaction ordering attacks.
+- It uses commit-reveal patterns and timing constraints to make ordering
+  manipulation unprofitable or impossible.
+- Transactions within a protected window are processed fairly regardless of
+  ordering within the block.
+
+Protected operations:
+- Stake/unstake operations through the AMM (prevents sandwich attacks).
+- Weight commits/reveals (prevents front-running weight updates).
+- Swap operations that interact with dynamic TAO pools.
+
+For users:
+- MEV protection is automatic — no extra flags needed.
+- The protection is built into the chain runtime.
+- Large AMM trades still face slippage from the constant-product formula,
+  but won't face additional losses from block producer manipulation.
+- Use limit orders (`agcli stake add-limit`) for additional price protection.";

@@ -1867,3 +1867,23 @@ fn parse_explain_coldkey_alias_ckswap() {
         panic!("wrong command variant (expected Explain for ckswap)");
     }
 }
+
+// ──── Step 32 — explain governance, senate, mev-shield ────
+
+#[test]
+fn parse_explain_governance() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "explain", "--topic", "governance"]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_explain_senate() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "explain", "--topic", "senate"]);
+    assert!(cli.is_ok());
+}
+
+#[test]
+fn parse_explain_mev_shield() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "explain", "--topic", "mev-shield"]);
+    assert!(cli.is_ok());
+}

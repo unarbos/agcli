@@ -823,48 +823,46 @@ async fn handle_subnet_liquidity(client: &Client, output: &str, netuid: Option<u
         return Ok(());
     }
 
-    println!("AMM Liquidity Dashboard\n");
-    let mut table = comfy_table::Table::new();
-    table.set_header(vec![
-        "Subnet",
-        "Name",
-        "Price (τ/α)",
-        "TAO Pool",
-        "Alpha Pool",
-        "0.1τ slip",
-        "1τ slip",
-        "10τ slip",
-        "100τ slip",
-    ]);
-
     let mut sorted: Vec<_> = dynamic.iter().filter(|d| d.tao_in.rao() > 0).collect();
     sorted.sort_by(|a, b| b.tao_in.rao().cmp(&a.tao_in.rao()));
 
-    for d in &sorted {
-        let tao_in = d.tao_in.tao();
-        let alpha_in_raw = d.alpha_in.raw() as f64 / 1e9;
-
-        let slippages: Vec<String> = trade_sizes_tao
-            .iter()
-            .map(|&size| {
-                let slip = estimate_slippage(tao_in, alpha_in_raw, size);
-                format_slippage(slip)
-            })
-            .collect();
-
-        table.add_row(vec![
-            format!("SN{}", d.netuid.0),
-            d.name.chars().take(12).collect::<String>(),
-            format!("{:.6}", d.price),
-            format!("{:.1}τ", tao_in),
-            format!("{:.1}", alpha_in_raw),
-            slippages[0].clone(),
-            slippages[1].clone(),
-            slippages[2].clone(),
-            slippages[3].clone(),
-        ]);
-    }
-    println!("{table}");
+    render_rows(
+        "table",
+        &sorted,
+        "",
+        |_| String::new(),
+        &[
+            "Subnet",
+            "Name",
+            "Price (τ/α)",
+            "TAO Pool",
+            "Alpha Pool",
+            "0.1τ slip",
+            "1τ slip",
+            "10τ slip",
+            "100τ slip",
+        ],
+        |d| {
+            let tao_in = d.tao_in.tao();
+            let alpha_in_raw = d.alpha_in.raw() as f64 / 1e9;
+            let slippages: Vec<String> = trade_sizes_tao
+                .iter()
+                .map(|&size| format_slippage(estimate_slippage(tao_in, alpha_in_raw, size)))
+                .collect();
+            vec![
+                format!("SN{}", d.netuid.0),
+                d.name.chars().take(12).collect::<String>(),
+                format!("{:.6}", d.price),
+                format!("{:.1}τ", tao_in),
+                format!("{:.1}", alpha_in_raw),
+                slippages[0].clone(),
+                slippages[1].clone(),
+                slippages[2].clone(),
+                slippages[3].clone(),
+            ]
+        },
+        Some("AMM Liquidity Dashboard\n"),
+    );
     println!("\nSlippage = price impact from AMM constant-product formula.");
     println!("Higher pool depth = lower slippage. Consider limit orders for large trades on shallow pools.");
     Ok(())
@@ -1327,32 +1325,38 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: &str) -> 
     println!("  Daily emission: {:.2} τ", daily_emission);
     println!("  Tempo:          {:.0} blocks\n", tempo);
 
-    let mut table = comfy_table::Table::new();
-    table.set_header(vec![
-        "UID",
-        "Hotkey",
-        "Role",
-        "Emission (τ)",
-        "Share %",
-        "Daily Est.",
-    ]);
-    for n in sorted.iter().take(50) {
-        let share = if total_emission > 0.0 {
-            n.emission / total_emission * 100.0
-        } else {
-            0.0
-        };
-        let daily_est = share / 100.0 * daily_emission;
-        table.add_row(vec![
-            format!("{}", n.uid),
-            crate::utils::short_ss58(&n.hotkey),
-            if n.validator_permit { "V" } else { "M" }.to_string(),
-            format!("{:.6}", n.emission / 1e9),
-            format!("{:.2}%", share),
-            format!("{:.4} τ", daily_est),
-        ]);
-    }
-    println!("{table}");
+    let top: Vec<_> = sorted.into_iter().take(50).collect();
+    render_rows(
+        "table",
+        &top,
+        "",
+        |_| String::new(),
+        &[
+            "UID",
+            "Hotkey",
+            "Role",
+            "Emission (τ)",
+            "Share %",
+            "Daily Est.",
+        ],
+        |n| {
+            let share = if total_emission > 0.0 {
+                n.emission / total_emission * 100.0
+            } else {
+                0.0
+            };
+            let daily_est = share / 100.0 * daily_emission;
+            vec![
+                format!("{}", n.uid),
+                crate::utils::short_ss58(&n.hotkey),
+                if n.validator_permit { "V" } else { "M" }.to_string(),
+                format!("{:.6}", n.emission / 1e9),
+                format!("{:.2}%", share),
+                format!("{:.4} τ", daily_est),
+            ]
+        },
+        None,
+    );
     Ok(())
 }
 
