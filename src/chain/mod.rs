@@ -14,6 +14,9 @@ use crate::types::chain_data::*;
 use crate::types::network::NetUid;
 use crate::{AccountId, SubtensorConfig, api};
 
+// Re-export for event subscription
+pub use subxt;
+
 /// Signer type for extrinsic submission.
 pub type Signer = PairSigner<SubtensorConfig, sr25519::Pair>;
 
@@ -54,6 +57,16 @@ impl Client {
     fn ss58_to_account_id(ss58: &str) -> Result<AccountId> {
         let pk = crate::wallet::keypair::from_ss58(ss58)?;
         Ok(AccountId::from(pk.0))
+    }
+
+    /// Sign, submit, and wait for finalization of a typed extrinsic.
+    /// Returns the extrinsic hash. Reduces boilerplate across all extrinsic methods.
+    async fn sign_submit<T: subxt::tx::Payload>(&self, tx: &T, pair: &sr25519::Pair) -> Result<String> {
+        let signer = Self::signer(pair);
+        let result = self.inner.tx()
+            .sign_and_submit_then_watch_default(tx, &signer).await?
+            .wait_for_finalized_success().await?;
+        Ok(format!("{:?}", result.extrinsic_hash()))
     }
 
     // ──────── Balance Queries ────────
@@ -243,464 +256,175 @@ impl Client {
     }
 
     // ──────── Extrinsic Submission ────────
+    // All extrinsics use sign_submit() to reduce boilerplate.
 
     /// Transfer TAO from coldkey to destination.
-    pub async fn transfer(
-        &self,
-        signer_pair: &sr25519::Pair,
-        dest_ss58: &str,
-        amount: Balance,
-    ) -> Result<String> {
-        let dest_id = Self::ss58_to_account_id(dest_ss58)?;
-        let dest = subxt::utils::MultiAddress::Id(dest_id);
-        let tx = api::tx().balances().transfer_allow_death(dest, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn transfer(&self, pair: &sr25519::Pair, dest_ss58: &str, amount: Balance) -> Result<String> {
+        let dest = subxt::utils::MultiAddress::Id(Self::ss58_to_account_id(dest_ss58)?);
+        self.sign_submit(&api::tx().balances().transfer_allow_death(dest, amount.rao()), pair).await
     }
 
     /// Add stake to a hotkey on a subnet.
-    pub async fn add_stake(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        amount: Balance,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().add_stake(hotkey_id, netuid.0, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn add_stake(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, amount: Balance) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().add_stake(hk, netuid.0, amount.rao()), pair).await
     }
 
     /// Remove stake from a hotkey on a subnet.
-    pub async fn remove_stake(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        amount: Balance,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().remove_stake(hotkey_id, netuid.0, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn remove_stake(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, amount: Balance) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().remove_stake(hk, netuid.0, amount.rao()), pair).await
     }
 
     /// Register on a subnet via burned TAO.
-    pub async fn burned_register(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        hotkey_ss58: &str,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().burned_register(netuid.0, hotkey_id);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn burned_register(&self, pair: &sr25519::Pair, netuid: NetUid, hotkey_ss58: &str) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().burned_register(netuid.0, hk), pair).await
     }
 
     /// Set weights on a subnet.
-    pub async fn set_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        uids: &[u16],
-        weights: &[u16],
-        version_key: u64,
-    ) -> Result<String> {
-        let tx = api::tx().subtensor_module()
-            .set_weights(netuid.0, uids.to_vec(), weights.to_vec(), version_key);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn set_weights(&self, pair: &sr25519::Pair, netuid: NetUid, uids: &[u16], weights: &[u16], version_key: u64) -> Result<String> {
+        let tx = api::tx().subtensor_module().set_weights(netuid.0, uids.to_vec(), weights.to_vec(), version_key);
+        self.sign_submit(&tx, pair).await
     }
 
     /// Register a new subnet.
-    pub async fn register_network(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().register_network(hotkey_id);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn register_network(&self, pair: &sr25519::Pair, hotkey_ss58: &str) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().register_network(hk), pair).await
     }
 
-    /// Move stake between subnets (same coldkey, different hotkeys/subnets).
-    pub async fn move_stake(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        from_netuid: NetUid,
-        to_netuid: NetUid,
-        amount: Balance,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        // move_stake takes: origin_hotkey, destination_hotkey, origin_netuid, destination_netuid, alpha_amount
-        let tx = api::tx().subtensor_module()
-            .move_stake(hotkey_id.clone(), hotkey_id, from_netuid.0, to_netuid.0, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    /// Move stake between subnets (same coldkey).
+    pub async fn move_stake(&self, pair: &sr25519::Pair, hotkey_ss58: &str, from: NetUid, to: NetUid, amount: Balance) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().move_stake(hk.clone(), hk, from.0, to.0, amount.rao()), pair).await
     }
 
     /// Swap stake between subnets (same hotkey).
-    pub async fn swap_stake(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        from_netuid: NetUid,
-        to_netuid: NetUid,
-        amount: Balance,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        // swap_stake takes: hotkey, origin_netuid, destination_netuid, alpha_amount
-        let tx = api::tx().subtensor_module()
-            .swap_stake(hotkey_id, from_netuid.0, to_netuid.0, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn swap_stake(&self, pair: &sr25519::Pair, hotkey_ss58: &str, from: NetUid, to: NetUid, amount: Balance) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().swap_stake(hk, from.0, to.0, amount.rao()), pair).await
     }
 
     /// Set childkey take.
-    pub async fn set_childkey_take(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        take: u16,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().set_childkey_take(hotkey_id, netuid.0, take);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn set_childkey_take(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, take: u16) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().set_childkey_take(hk, netuid.0, take), pair).await
     }
 
     /// Set children for a hotkey.
-    pub async fn set_children(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        children: &[(u64, String)],
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let children_accounts: Vec<(u64, AccountId)> = children
-            .iter()
-            .map(|(proportion, ss58)| {
-                let id = Self::ss58_to_account_id(ss58).unwrap();
-                (*proportion, id)
-            })
-            .collect();
-        let tx = api::tx().subtensor_module()
-            .set_children(hotkey_id, netuid.0, children_accounts);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn set_children(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, children: &[(u64, String)]) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        let c: Vec<(u64, AccountId)> = children.iter()
+            .map(|(p, ss58)| Ok((*p, Self::ss58_to_account_id(ss58)?)))
+            .collect::<Result<_>>()?;
+        self.sign_submit(&api::tx().subtensor_module().set_children(hk, netuid.0, c), pair).await
     }
 
     /// Commit weights (commit-reveal scheme).
-    pub async fn commit_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        commit_hash: [u8; 32],
-    ) -> Result<String> {
+    pub async fn commit_weights(&self, pair: &sr25519::Pair, netuid: NetUid, commit_hash: [u8; 32]) -> Result<String> {
         let hash = subxt::utils::H256::from(commit_hash);
-        let tx = api::tx().subtensor_module().commit_weights(netuid.0, hash);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        self.sign_submit(&api::tx().subtensor_module().commit_weights(netuid.0, hash), pair).await
     }
 
     /// Reveal weights.
-    pub async fn reveal_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        uids: &[u16],
-        values: &[u16],
-        salt: &[u16],
-        version_key: u64,
-    ) -> Result<String> {
-        let tx = api::tx().subtensor_module()
-            .reveal_weights(netuid.0, uids.to_vec(), values.to_vec(), salt.to_vec(), version_key);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn reveal_weights(&self, pair: &sr25519::Pair, netuid: NetUid, uids: &[u16], values: &[u16], salt: &[u16], version_key: u64) -> Result<String> {
+        let tx = api::tx().subtensor_module().reveal_weights(netuid.0, uids.to_vec(), values.to_vec(), salt.to_vec(), version_key);
+        self.sign_submit(&tx, pair).await
     }
 
     /// Serve axon metadata.
-    pub async fn serve_axon(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        axon: &AxonInfo,
-    ) -> Result<String> {
+    pub async fn serve_axon(&self, pair: &sr25519::Pair, netuid: NetUid, axon: &AxonInfo) -> Result<String> {
         let ip: u128 = axon.ip.parse().unwrap_or(0);
-        let tx = api::tx().subtensor_module()
-            .serve_axon(netuid.0, axon.version, ip, axon.port, axon.ip_type, axon.protocol, 0, 0);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        let tx = api::tx().subtensor_module().serve_axon(netuid.0, axon.version, ip, axon.port, axon.ip_type, axon.protocol, 0, 0);
+        self.sign_submit(&tx, pair).await
     }
 
     /// Decrease delegate take.
-    pub async fn decrease_take(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        take: u16,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().decrease_take(hotkey_id, take);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn decrease_take(&self, pair: &sr25519::Pair, hotkey_ss58: &str, take: u16) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().decrease_take(hk, take), pair).await
     }
 
     /// Increase delegate take.
-    pub async fn increase_take(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        take: u16,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().increase_take(hotkey_id, take);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn increase_take(&self, pair: &sr25519::Pair, hotkey_ss58: &str, take: u16) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().increase_take(hk, take), pair).await
     }
 
     /// Unstake all from a hotkey.
-    pub async fn unstake_all(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().unstake_all(hotkey_id);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn unstake_all(&self, pair: &sr25519::Pair, hotkey_ss58: &str) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().unstake_all(hk), pair).await
     }
 
     /// Schedule coldkey swap.
-    pub async fn schedule_swap_coldkey(
-        &self,
-        signer_pair: &sr25519::Pair,
-        new_coldkey_ss58: &str,
-    ) -> Result<String> {
+    pub async fn schedule_swap_coldkey(&self, pair: &sr25519::Pair, new_coldkey_ss58: &str) -> Result<String> {
         let new_id = Self::ss58_to_account_id(new_coldkey_ss58)?;
-        let tx = api::tx().subtensor_module().schedule_swap_coldkey(new_id);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        self.sign_submit(&api::tx().subtensor_module().schedule_swap_coldkey(new_id), pair).await
     }
 
     /// Swap hotkey.
-    pub async fn swap_hotkey(
-        &self,
-        signer_pair: &sr25519::Pair,
-        old_hotkey_ss58: &str,
-        new_hotkey_ss58: &str,
-    ) -> Result<String> {
-        let old_id = Self::ss58_to_account_id(old_hotkey_ss58)?;
-        let new_id = Self::ss58_to_account_id(new_hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().swap_hotkey(old_id, new_id, None);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn swap_hotkey(&self, pair: &sr25519::Pair, old_ss58: &str, new_ss58: &str) -> Result<String> {
+        let old_id = Self::ss58_to_account_id(old_ss58)?;
+        let new_id = Self::ss58_to_account_id(new_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().swap_hotkey(old_id, new_id, None), pair).await
     }
 
     /// Root register.
-    pub async fn root_register(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().root_register(hotkey_id);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn root_register(&self, pair: &sr25519::Pair, hotkey_ss58: &str) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().root_register(hk), pair).await
     }
 
     /// Dissolve a subnet.
-    pub async fn dissolve_network(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-    ) -> Result<String> {
-        let coldkey_id = AccountId::from(signer_pair.public().0);
-        let tx = api::tx().subtensor_module().dissolve_network(coldkey_id, netuid.0);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn dissolve_network(&self, pair: &sr25519::Pair, netuid: NetUid) -> Result<String> {
+        let coldkey_id = AccountId::from(pair.public().0);
+        self.sign_submit(&api::tx().subtensor_module().dissolve_network(coldkey_id, netuid.0), pair).await
     }
 
     /// Transfer stake to another coldkey.
-    pub async fn transfer_stake(
-        &self,
-        signer_pair: &sr25519::Pair,
-        dest_coldkey_ss58: &str,
-        hotkey_ss58: &str,
-        from_netuid: NetUid,
-        to_netuid: NetUid,
-        amount: Balance,
-    ) -> Result<String> {
-        let dest_id = Self::ss58_to_account_id(dest_coldkey_ss58)?;
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module()
-            .transfer_stake(dest_id, hotkey_id, from_netuid.0, to_netuid.0, amount.rao());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn transfer_stake(&self, pair: &sr25519::Pair, dest_ss58: &str, hotkey_ss58: &str, from: NetUid, to: NetUid, amount: Balance) -> Result<String> {
+        let dest = Self::ss58_to_account_id(dest_ss58)?;
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().transfer_stake(dest, hk, from.0, to.0, amount.rao()), pair).await
     }
 
     /// Recycle alpha for TAO.
-    pub async fn recycle_alpha(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        amount: u64,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module().recycle_alpha(hotkey_id, amount, netuid.0);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn recycle_alpha(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, amount: u64) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().recycle_alpha(hk, amount, netuid.0), pair).await
     }
 
     /// Claim root dividends.
-    pub async fn claim_root(
-        &self,
-        signer_pair: &sr25519::Pair,
-        subnets: &[u16],
-    ) -> Result<String> {
-        let tx = api::tx().subtensor_module().claim_root(subnets.to_vec());
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn claim_root(&self, pair: &sr25519::Pair, subnets: &[u16]) -> Result<String> {
+        self.sign_submit(&api::tx().subtensor_module().claim_root(subnets.to_vec()), pair).await
     }
 
     /// Add stake with limit order.
-    pub async fn add_stake_limit(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        amount: Balance,
-        limit_price: u64,
-        allow_partial: bool,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module()
-            .add_stake_limit(hotkey_id, netuid.0, amount.rao(), limit_price, allow_partial);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn add_stake_limit(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, amount: Balance, limit_price: u64, allow_partial: bool) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().add_stake_limit(hk, netuid.0, amount.rao(), limit_price, allow_partial), pair).await
     }
 
     /// Remove stake with limit order.
-    pub async fn remove_stake_limit(
-        &self,
-        signer_pair: &sr25519::Pair,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-        amount: u64,
-        limit_price: u64,
-        allow_partial: bool,
-    ) -> Result<String> {
-        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx().subtensor_module()
-            .remove_stake_limit(hotkey_id, netuid.0, amount, limit_price, allow_partial);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    pub async fn remove_stake_limit(&self, pair: &sr25519::Pair, hotkey_ss58: &str, netuid: NetUid, amount: u64, limit_price: u64, allow_partial: bool) -> Result<String> {
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.sign_submit(&api::tx().subtensor_module().remove_stake_limit(hk, netuid.0, amount, limit_price, allow_partial), pair).await
     }
 
     /// Set subnet identity (subnet owner only).
-    /// Calls SubtensorModule::set_identity(name, url, github_repo, image, discord, description, additional).
-    pub async fn set_subnet_identity(
-        &self,
-        signer_pair: &sr25519::Pair,
-        _netuid: NetUid,
-        identity: &SubnetIdentity,
-    ) -> Result<String> {
+    pub async fn set_subnet_identity(&self, pair: &sr25519::Pair, _netuid: NetUid, identity: &SubnetIdentity) -> Result<String> {
         let tx = api::tx().subtensor_module().set_identity(
             identity.subnet_name.as_bytes().to_vec(),
             identity.subnet_url.as_bytes().to_vec(),
             identity.github_repo.as_bytes().to_vec(),
-            Vec::new(), // image
+            Vec::new(),
             identity.discord.as_bytes().to_vec(),
             identity.description.as_bytes().to_vec(),
             identity.additional.as_bytes().to_vec(),
         );
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        self.sign_submit(&tx, pair).await
     }
 
     /// Get total hotkey alpha on a subnet.
@@ -758,75 +482,45 @@ impl Client {
         Ok(val.unwrap_or(10_000_000))
     }
 
+    // ──────── Block Subscription ────────
+
+    /// Get the underlying subxt client for subscriptions.
+    pub fn inner_client(&self) -> &OnlineClient<SubtensorConfig> {
+        &self.inner
+    }
+
+    // ──────── Raw Dynamic Extrinsic Submission ────────
+
+    /// Submit a raw SCALE-encoded call via dynamic dispatch (for pallets not in compile-time metadata).
+    pub async fn submit_raw_call(&self, pair: &sr25519::Pair, pallet: &str, call: &str, fields: Vec<subxt::dynamic::Value>) -> Result<String> {
+        let tx = subxt::dynamic::tx(pallet, call, fields);
+        self.sign_submit(&tx, pair).await
+    }
+
     // ──────── Batch Extrinsics ────────
 
-    /// Batch set weights across multiple subnets in a single extrinsic.
-    pub async fn batch_set_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuids: &[u16],
-        weights: &[Vec<(u16, u16)>],
-        version_keys: &[u64],
-    ) -> Result<String> {
+    /// Batch set weights across multiple subnets.
+    pub async fn batch_set_weights(&self, pair: &sr25519::Pair, netuids: &[u16], weights: &[Vec<(u16, u16)>], version_keys: &[u64]) -> Result<String> {
         use parity_scale_codec::Compact;
-        let netuids_compact: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
-        let weights_compact: Vec<Vec<(Compact<u16>, Compact<u16>)>> = weights
-            .iter()
-            .map(|w| w.iter().map(|(u, v)| (Compact(*u), Compact(*v))).collect())
-            .collect();
-        let vkeys_compact: Vec<Compact<u64>> = version_keys.iter().map(|k| Compact(*k)).collect();
-        let tx = api::tx()
-            .subtensor_module()
-            .batch_set_weights(netuids_compact, weights_compact, vkeys_compact);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        let n: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
+        let w: Vec<Vec<(Compact<u16>, Compact<u16>)>> = weights.iter()
+            .map(|w| w.iter().map(|(u, v)| (Compact(*u), Compact(*v))).collect()).collect();
+        let v: Vec<Compact<u64>> = version_keys.iter().map(|k| Compact(*k)).collect();
+        self.sign_submit(&api::tx().subtensor_module().batch_set_weights(n, w, v), pair).await
     }
 
     /// Batch commit weights across multiple subnets.
-    pub async fn batch_commit_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuids: &[u16],
-        commit_hashes: &[[u8; 32]],
-    ) -> Result<String> {
+    pub async fn batch_commit_weights(&self, pair: &sr25519::Pair, netuids: &[u16], commit_hashes: &[[u8; 32]]) -> Result<String> {
         use parity_scale_codec::Compact;
-        let netuids_compact: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
-        let hashes: Vec<subxt::utils::H256> = commit_hashes.iter().map(|h| subxt::utils::H256::from(*h)).collect();
-        let tx = api::tx()
-            .subtensor_module()
-            .batch_commit_weights(netuids_compact, hashes);
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+        let n: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
+        let h: Vec<subxt::utils::H256> = commit_hashes.iter().map(|h| subxt::utils::H256::from(*h)).collect();
+        self.sign_submit(&api::tx().subtensor_module().batch_commit_weights(n, h), pair).await
     }
 
-    /// Batch reveal weights for a single subnet with multiple sets of values.
-    pub async fn batch_reveal_weights(
-        &self,
-        signer_pair: &sr25519::Pair,
-        netuid: NetUid,
-        uids_list: &[Vec<u16>],
-        values_list: &[Vec<u16>],
-        salts_list: &[Vec<u16>],
-        version_keys: &[u64],
-    ) -> Result<String> {
-        let tx = api::tx().subtensor_module().batch_reveal_weights(
-            netuid.0,
-            uids_list.to_vec(),
-            values_list.to_vec(),
-            salts_list.to_vec(),
-            version_keys.to_vec(),
-        );
-        let signer = Self::signer(signer_pair);
-        let result = self.inner.tx()
-            .sign_and_submit_then_watch_default(&tx, &signer).await?
-            .wait_for_finalized_success().await?;
-        Ok(format!("{:?}", result.extrinsic_hash()))
+    /// Batch reveal weights for a subnet.
+    pub async fn batch_reveal_weights(&self, pair: &sr25519::Pair, netuid: NetUid, uids_list: &[Vec<u16>], values_list: &[Vec<u16>], salts_list: &[Vec<u16>], version_keys: &[u64]) -> Result<String> {
+        let tx = api::tx().subtensor_module().batch_reveal_weights(netuid.0, uids_list.to_vec(), values_list.to_vec(), salts_list.to_vec(), version_keys.to_vec());
+        self.sign_submit(&tx, pair).await
     }
 }
 

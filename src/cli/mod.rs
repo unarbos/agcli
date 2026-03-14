@@ -33,6 +33,10 @@ pub struct Cli {
     #[arg(long, default_value = "table", value_parser = ["table", "json", "csv"])]
     pub output: String,
 
+    /// Enable live polling mode (interval in seconds, default 12)
+    #[arg(long)]
+    pub live: Option<Option<u64>>,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -100,6 +104,23 @@ pub enum Commands {
     /// Key swap operations
     #[command(subcommand)]
     Swap(SwapCommands),
+
+    // ──── Subscribe ────
+    /// Subscribe to real-time chain events
+    #[command(subcommand)]
+    Subscribe(SubscribeCommands),
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SubscribeCommands {
+    /// Watch finalized blocks
+    Blocks,
+    /// Watch chain events (all, staking, registration, transfer, weights, subnet)
+    Events {
+        /// Event filter category
+        #[arg(default_value = "all")]
+        filter: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -459,6 +480,11 @@ pub enum SwapCommands {
 }
 
 impl Cli {
+    /// Get live polling interval (None = not live, Some(secs) = live mode).
+    pub fn live_interval(&self) -> Option<u64> {
+        self.live.map(|opt| opt.unwrap_or(12))
+    }
+
     /// Resolve the network from CLI args.
     pub fn resolve_network(&self) -> Network {
         if let Some(ref endpoint) = self.endpoint {

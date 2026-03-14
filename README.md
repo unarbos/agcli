@@ -16,8 +16,11 @@ Covers everything: wallet management, staking, transfers, subnet operations, wei
 | **Delegates** | View delegates, manage take rates, childkey delegation |
 | **Identity** | Query on-chain identity (Registry pallet), set/view subnet identity (SubnetIdentitiesV3) |
 | **Queries** | Portfolio view (with prices), neuron info, network overview, dynamic info |
+| **Live Mode** | `--live` polling with delta tracking for dynamic, metagraph, portfolio |
+| **Events** | Real-time block/event subscription with filtering (staking, transfer, weights, etc.) |
 | **Key Swaps** | Hotkey swap, coldkey swap (scheduled) |
 | **Root** | Root registration, root weights |
+| **Raw Calls** | Submit to any pallet via dynamic dispatch (EVM, MEV Shield, Contracts) |
 | **Output** | Table (default), JSON (`--output json`), CSV (`--output csv`) |
 
 ## Quick Start
@@ -66,6 +69,24 @@ agcli view dynamic
 
 # View Dynamic TAO as CSV
 agcli --output csv view dynamic
+
+# Live mode — poll dynamic prices every 12s, show deltas
+agcli --live view dynamic
+
+# Live metagraph — track neuron changes on SN1 every 30s
+agcli --live 30 subnet metagraph 1
+
+# Live portfolio — watch your portfolio in real-time
+agcli --live view portfolio
+
+# Subscribe to finalized blocks
+agcli subscribe blocks
+
+# Subscribe to all chain events (as JSON)
+agcli --output json subscribe events
+
+# Subscribe to staking events only
+agcli subscribe events staking
 
 # View network info as JSON
 agcli --output json view network
@@ -133,7 +154,7 @@ agcli/
 │   ├── lib.rs           # Library root, re-exports Client/Wallet/Balance
 │   ├── main.rs          # CLI entry point
 │   ├── chain/           # Substrate client (subxt-based)
-│   │   ├── mod.rs         # Client: 35+ queries + 25+ extrinsics (incl. batch ops)
+│   │   ├── mod.rs         # Client: 35+ queries + 30+ extrinsics + sign_submit helper
 │   │   ├── rpc_types.rs   # Type conversions (NeuronInfo, DynamicInfo, DelegateInfo, etc.)
 │   │   ├── connection.rs  # Legacy JSON-RPC transport
 │   │   └── storage.rs     # Raw storage queries
@@ -145,18 +166,20 @@ agcli/
 │   │   ├── balance.rs     # TAO/Alpha balances with arithmetic
 │   │   ├── network.rs     # Network presets (finney/test/local)
 │   │   └── chain_data.rs  # NeuronInfo, SubnetInfo, StakeInfo, etc.
-│   ├── extrinsics/      # Extrinsic reference docs
+│   ├── extrinsics/      # Extrinsic helpers
 │   │   └── weights.rs     # Weight commit hash computation
 │   ├── queries/         # Composed query helpers
-│   │   ├── portfolio.rs   # Full portfolio aggregation
+│   │   ├── portfolio.rs   # Full portfolio aggregation (with DynamicInfo prices)
 │   │   ├── metagraph.rs   # Metagraph fetch
 │   │   └── subnet.rs      # Subnet queries
+│   ├── live.rs          # Live polling mode with delta tracking
+│   ├── events.rs        # Real-time block/event subscription
 │   ├── utils/           # Shared utilities
 │   │   ├── format.rs      # SS58 truncation, weight conversion
 │   │   └── pow.rs         # POW solver (multi-threaded)
 │   └── cli/             # CLI definitions
-│       ├── mod.rs         # Clap parser: 10 command groups, 40+ subcommands
-│       └── commands.rs    # Command handlers with JSON output support
+│       ├── mod.rs         # Clap parser: 11 command groups, 50+ subcommands
+│       └── commands.rs    # Command handlers with JSON/CSV/live support
 ├── docs/
 │   ├── llm.txt          # Agent-friendly docs
 │   └── tutorials/

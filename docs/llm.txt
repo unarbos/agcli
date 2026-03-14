@@ -74,6 +74,24 @@ cargo install --git https://github.com/unconst/agcli
 - `agcli root register` — register on root network
 - `agcli root weights "netuid:weight,..."` — set root weights
 
+### Live Mode
+- `agcli --live view dynamic` — poll Dynamic TAO prices, show deltas (12s default)
+- `agcli --live 30 subnet metagraph 1` — track neuron changes every 30s
+- `agcli --live view portfolio` — watch your portfolio in real-time
+- Delta tracking highlights price changes, pool movements, stake/emission shifts
+
+### Event Subscription
+- `agcli subscribe blocks` — watch finalized blocks
+- `agcli subscribe events` — stream all chain events
+- `agcli subscribe events staking` — filter staking events only
+- `agcli subscribe events transfer` — filter balance transfer events
+- Supports `--output json` for structured event streaming
+- Filter categories: all, staking, registration, transfer, weights, subnet
+
+### Raw Calls (Advanced)
+- SDK method: `client.submit_raw_call(&pair, "PalletName", "call_name", fields)`
+- Enables calling any pallet (EVM, MEVShield, Contracts) without compile-time bindings
+
 ## Output Formats
 Add `--output json` or `--output csv` to data queries:
 ```bash
@@ -99,6 +117,11 @@ let sn1 = client.get_dynamic_info(1.into()).await?;
 // Batch weight operations
 client.batch_set_weights(&pair, &[1,2], &[weights1, weights2], &[0,0]).await?;
 client.batch_commit_weights(&pair, &[1,2], &[hash1, hash2]).await?;
+// Event subscription
+agcli::events::subscribe_events(client.inner_client(), EventFilter::All, false).await?;
+// Raw call to any pallet (EVM, MEVShield, etc.)
+use subxt::dynamic::Value;
+client.submit_raw_call(&pair, "EVM", "associate_evm_key", vec![...]).await?;
 ```
 
 ## Key Concepts

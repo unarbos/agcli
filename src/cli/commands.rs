@@ -12,6 +12,7 @@ use sp_core::Pair as _;
 pub async fn execute(cli: Cli) -> Result<()> {
     let network = cli.resolve_network();
     let output = cli.output.as_str();
+    let live_interval = cli.live_interval();
 
     match cli.command {
         Commands::Wallet(cmd) => handle_wallet(cmd, &cli.wallet_dir).await,
@@ -47,7 +48,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Subnet(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
-            handle_subnet(cmd, &client, &cli.wallet_dir, &cli.wallet, &cli.hotkey, output).await
+            handle_subnet(cmd, &client, &cli.wallet_dir, &cli.wallet, &cli.hotkey, output, live_interval).await
         }
         Commands::Weights(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
@@ -63,7 +64,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::View(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
-            handle_view(cmd, &client, &cli.wallet_dir, &cli.wallet, output).await
+            handle_view(cmd, &client, &cli.wallet_dir, &cli.wallet, output, live_interval).await
         }
         Commands::Identity(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
@@ -72,6 +73,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Swap(cmd) => {
             let client = Client::connect(network.ws_url()).await?;
             handle_swap(cmd, &client, &cli.wallet_dir, &cli.wallet).await
+        }
+        Commands::Subscribe(cmd) => {
+            let client = Client::connect(network.ws_url()).await?;
+            handle_subscribe(cmd, &client, output).await
         }
     }
 }
@@ -551,6 +556,7 @@ async fn handle_subnet(
     wallet_name: &str,
     hotkey_name: &str,
     output: &str,
+    live_interval: Option<u64>,
 ) -> Result<()> {
     match cmd {
         SubnetCommands::List => {
@@ -700,6 +706,9 @@ async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::Metagraph { netuid } => {
+            if let Some(interval) = live_interval {
+                return crate::live::live_metagraph(client, netuid.into(), interval).await;
+            }
             let mg = crate::queries::fetch_metagraph(client, netuid.into()).await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&mg)?);
@@ -1094,10 +1103,14 @@ async fn handle_view(
     wallet_dir: &str,
     wallet_name: &str,
     output: &str,
+    live_interval: Option<u64>,
 ) -> Result<()> {
     match cmd {
         ViewCommands::Portfolio { address } => {
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            if let Some(interval) = live_interval {
+                return crate::live::live_portfolio(client, &addr, interval).await;
+            }
             let portfolio = crate::queries::portfolio::fetch_portfolio(client, &addr).await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&portfolio)?);
@@ -1166,6 +1179,9 @@ async fn handle_view(
             Ok(())
         }
         ViewCommands::Dynamic => {
+            if let Some(interval) = live_interval {
+                return crate::live::live_dynamic(client, interval).await;
+            }
             let dynamic = client.get_all_dynamic_info().await?;
             if output == "json" {
                 println!("{}", serde_json::to_string_pretty(&dynamic)?);
@@ -1345,6 +1361,25 @@ async fn handle_swap(
                 .await?;
             println!("Coldkey swap scheduled. Tx: {}", hash);
             Ok(())
+        }
+    }
+}
+
+// ──────── Subscribe (events/blocks) ────────
+
+async fn handle_subscribe(
+    cmd: SubscribeCommands,
+    client: &Client,
+    output: &str,
+) -> Result<()> {
+    let json = output == "json";
+    match cmd {
+        SubscribeCommands::Blocks => {
+            crate::events::subscribe_blocks(client.inner_client(), json).await
+        }
+        SubscribeCommands::Events { filter } => {
+            let f = crate::events::EventFilter::from_str(&filter);
+            crate::events::subscribe_events(client.inner_client(), f, json).await
         }
     }
 }

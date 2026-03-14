@@ -20,7 +20,9 @@
 //! ```
 
 pub mod chain;
+pub mod events;
 pub mod extrinsics;
+pub mod live;
 pub mod queries;
 pub mod types;
 pub mod utils;
