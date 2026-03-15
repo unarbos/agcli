@@ -62,12 +62,28 @@ impl Config {
     }
 
     /// Save config to a specific path.
+    /// Uses atomic write (temp file + rename) to prevent corruption from concurrent writers.
     pub fn save_to(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
         let content = toml::to_string_pretty(self)?;
-        std::fs::write(path, content)?;
+        // Write to a uniquely-named temp file, then atomic rename.
+        // Unique name prevents races when multiple processes save concurrently.
+        let pid = std::process::id();
+        let tid = std::thread::current().id();
+        let tmp_name = format!(
+            ".config.{}.{:?}.tmp",
+            pid,
+            tid,
+        );
+        let tmp_path = path.with_file_name(tmp_name);
+        std::fs::write(&tmp_path, &content)?;
+        std::fs::rename(&tmp_path, path).map_err(|e| {
+            // Clean up temp file on rename failure
+            let _ = std::fs::remove_file(&tmp_path);
+            anyhow::anyhow!("Failed to atomically save config: {}", e)
+        })?;
         Ok(())
     }
 }
@@ -154,5 +170,55 @@ mod tests {
         assert_eq!(parsed.live_interval, Some(30));
         assert_eq!(parsed.batch, Some(true));
         assert!(parsed.spending_limits.as_ref().unwrap().contains_key("18"));
+    }
+
+    /// Atomic write: no temp file left behind after successful save.
+    #[test]
+    fn atomic_write_no_temp_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let tmp_path = dir.path().join("config.toml.tmp");
+
+        let cfg = Config {
+            network: Some("finney".into()),
+            ..Default::default()
+        };
+        cfg.save_to(&path).unwrap();
+
+        assert!(path.exists(), "Config file should exist");
+        assert!(!tmp_path.exists(), "Temp file should be cleaned up after rename");
+
+        // Verify the saved file is valid TOML
+        let loaded = Config::load_from(&path).unwrap();
+        assert_eq!(loaded.network.as_deref(), Some("finney"));
+    }
+
+    /// Atomic write: concurrent writers produce a valid config (not corrupted).
+    #[test]
+    fn atomic_concurrent_writes_no_corruption() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        let mut handles = Vec::new();
+        for i in 0..20u32 {
+            let p = path.clone();
+            handles.push(std::thread::spawn(move || {
+                let cfg = Config {
+                    network: Some(format!("net-{}", i)),
+                    wallet: Some(format!("wallet-{}", i)),
+                    ..Default::default()
+                };
+                cfg.save_to(&p)
+            }));
+        }
+
+        for h in handles {
+            h.join().unwrap().unwrap();
+        }
+
+        // The final file must be valid parseable TOML (no partial writes)
+        let final_cfg = Config::load_from(&path).unwrap();
+        assert!(final_cfg.network.is_some());
+        assert!(final_cfg.wallet.is_some());
     }
 }

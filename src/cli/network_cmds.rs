@@ -20,11 +20,13 @@ pub(super) async fn handle_root(
         RootCommands::Register => {
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            tracing::info!(hotkey = %crate::utils::short_ss58(&hk), "Registering on root network");
             println!(
                 "Registering on root network with hotkey {}",
                 crate::utils::short_ss58(&hk)
             );
             let hash = client.root_register(&pair, &hk).await?;
+            tracing::info!(tx = %hash, "Root registration complete");
             println!("Root registered. Tx: {}", hash);
             Ok(())
         }
@@ -164,6 +166,7 @@ async fn change_take(
     let (pair, hk) = unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
     let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
     let dir = if increase { "Increasing" } else { "Decreasing" };
+    tracing::info!(hotkey = %crate::utils::short_ss58(&hk), take_pct = take, direction = dir, "Changing delegate take");
     println!(
         "{} take to {:.2}% for {}",
         dir,
@@ -175,6 +178,7 @@ async fn change_take(
     } else {
         client.decrease_take(&pair, &hk, take_u16).await?
     };
+    tracing::info!(tx = %hash, "Delegate take changed");
     println!(
         "Take {}. Tx: {}",
         if increase { "increased" } else { "decreased" },
@@ -240,10 +244,12 @@ pub(super) async fn handle_identity(
                 description: String::new(),
                 additional: String::new(),
             };
+            tracing::info!(netuid = netuid, name = %name, "Setting subnet identity");
             println!("Setting subnet identity for SN{}: {}", netuid, name);
             let hash = client
                 .set_subnet_identity(wallet.coldkey()?, NetUid(netuid), &identity)
                 .await?;
+            tracing::info!(tx = %hash, netuid = netuid, "Subnet identity set");
             println!("Subnet identity set. Tx: {}", hash);
             Ok(())
         }
@@ -273,6 +279,7 @@ pub(super) async fn handle_swap(
                         .ok_or_else(|| anyhow::anyhow!("Could not resolve current hotkey"))?
                 }
             };
+            tracing::info!(old = %crate::utils::short_ss58(&old_hotkey), new = %crate::utils::short_ss58(&new_hotkey), "Swapping hotkey");
             println!(
                 "Swapping hotkey {} -> {}",
                 crate::utils::short_ss58(&old_hotkey),
@@ -281,12 +288,14 @@ pub(super) async fn handle_swap(
             let hash = client
                 .swap_hotkey(wallet.coldkey()?, &old_hotkey, &new_hotkey)
                 .await?;
+            tracing::info!(tx = %hash, "Hotkey swapped");
             println!("Hotkey swapped. Tx: {}", hash);
             Ok(())
         }
         SwapCommands::Coldkey { new_coldkey } => {
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
+            tracing::info!(new_coldkey = %crate::utils::short_ss58(&new_coldkey), "Scheduling coldkey swap");
             println!(
                 "Scheduling coldkey swap to {}",
                 crate::utils::short_ss58(&new_coldkey)
@@ -294,6 +303,7 @@ pub(super) async fn handle_swap(
             let hash = client
                 .schedule_swap_coldkey(wallet.coldkey()?, &new_coldkey)
                 .await?;
+            tracing::info!(tx = %hash, "Coldkey swap scheduled");
             println!("Coldkey swap scheduled. Tx: {}", hash);
             Ok(())
         }

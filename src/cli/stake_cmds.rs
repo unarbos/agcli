@@ -113,15 +113,23 @@ pub async fn handle_stake(
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
-            // Pre-flight balance check
-            let current = client.get_balance(&sp_core::Pair::public(&pair)).await?;
-            if current.rao() < bal.rao() {
-                anyhow::bail!("Insufficient balance: you have {} but trying to stake {}.\n  Check: agcli balance",
-                    current.display_tao(), bal.display_tao());
-            }
-            // Slippage check
+            let pubkey = sp_core::Pair::public(&pair);
+            // Pre-flight checks: balance + slippage in parallel when both needed
             if let Some(max_slip) = max_slippage {
-                check_slippage(client, netuid, amount, max_slip, true).await?;
+                let (current, _) = tokio::try_join!(
+                    client.get_balance(&pubkey),
+                    check_slippage(client, netuid, amount, max_slip, true),
+                )?;
+                if current.rao() < bal.rao() {
+                    anyhow::bail!("Insufficient balance: you have {} but trying to stake {}.\n  Check: agcli balance",
+                        current.display_tao(), bal.display_tao());
+                }
+            } else {
+                let current = client.get_balance(&pubkey).await?;
+                if current.rao() < bal.rao() {
+                    anyhow::bail!("Insufficient balance: you have {} but trying to stake {}.\n  Check: agcli balance",
+                        current.display_tao(), bal.display_tao());
+                }
             }
             if mev {
                 eprintln!("MEV shield: encrypting stake operation");

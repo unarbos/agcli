@@ -122,11 +122,13 @@ pub(super) async fn handle_subnet(
                 let bh = client.get_block_hash(bn).await?;
                 let subnets = client.get_all_subnets_at_block(bh).await?;
                 let si = subnets.into_iter().find(|s| s.netuid == nuid);
-                let di = client
-                    .get_dynamic_info_at_block(nuid, bh)
-                    .await
-                    .ok()
-                    .flatten();
+                let di = match client.get_dynamic_info_at_block(nuid, bh).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::debug!(netuid = nuid.0, block = bn, error = %e, "get_dynamic_info_at_block failed (non-fatal)");
+                        None
+                    }
+                };
                 (si, di)
             } else {
                 tokio::try_join!(client.get_subnet_info(nuid), async {

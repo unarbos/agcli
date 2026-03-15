@@ -43,10 +43,13 @@ pub async fn handle_wallet(
             let entries: Vec<(String, String)> = wallets
                 .iter()
                 .map(|name| {
-                    let addr = Wallet::open(format!("{}/{}", wallet_dir, name))
-                        .ok()
-                        .and_then(|w| w.coldkey_ss58().map(|s| s.to_string()))
-                        .unwrap_or_default();
+                    let addr = match Wallet::open(format!("{}/{}", wallet_dir, name)) {
+                        Ok(w) => w.coldkey_ss58().map(|s| s.to_string()).unwrap_or_default(),
+                        Err(e) => {
+                            tracing::debug!(wallet = %name, error = %e, "Could not open wallet for listing");
+                            String::new()
+                        }
+                    };
                     (name.clone(), addr)
                 })
                 .collect();

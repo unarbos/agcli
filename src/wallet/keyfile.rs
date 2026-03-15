@@ -19,8 +19,13 @@ const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 
-/// Acquire an exclusive advisory lock on a keyfile path.
+/// Maximum time to wait for a keyfile lock before giving up.
+const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// Acquire an exclusive advisory lock on a keyfile path with timeout.
 /// Returns the lock file handle (lock released on drop).
+/// Times out after 10 seconds to prevent indefinite hangs if another process
+/// crashed while holding the lock.
 fn lock_keyfile(path: &Path) -> Result<fs::File> {
     let lock_path = path.with_extension("lock");
     if let Some(parent) = lock_path.parent() {
@@ -32,10 +37,33 @@ fn lock_keyfile(path: &Path) -> Result<fs::File> {
         .truncate(false)
         .open(&lock_path)
         .with_context(|| format!("Cannot create lock file '{}'", lock_path.display()))?;
-    lock_file
-        .lock_exclusive()
-        .with_context(|| format!("Cannot acquire lock on '{}'", lock_path.display()))?;
-    Ok(lock_file)
+    // Try non-blocking lock first for the fast path
+    match lock_file.try_lock_exclusive() {
+        Ok(()) => return Ok(lock_file),
+        Err(_) => {
+            tracing::debug!(path = %lock_path.display(), "Lock contended, polling with timeout");
+        }
+    }
+    // Poll with backoff up to LOCK_TIMEOUT
+    let start = std::time::Instant::now();
+    let mut sleep_ms = 50;
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(sleep_ms));
+        match lock_file.try_lock_exclusive() {
+            Ok(()) => return Ok(lock_file),
+            Err(_) if start.elapsed() >= LOCK_TIMEOUT => {
+                anyhow::bail!(
+                    "Timed out after {}s waiting for lock on '{}'.\n  \
+                     Another agcli process may be holding it, or a previous process crashed.\n  \
+                     If no other process is running, remove the stale lock: rm '{}'",
+                    LOCK_TIMEOUT.as_secs(), lock_path.display(), lock_path.display()
+                );
+            }
+            Err(_) => {
+                sleep_ms = (sleep_ms * 2).min(500); // backoff: 50→100→200→500ms
+            }
+        }
+    }
 }
 
 /// Write mnemonic encrypted with password.
@@ -338,5 +366,71 @@ mod tests {
         write_public_key(&path, &pk).unwrap();
         let recovered = read_public_key(&path).unwrap();
         assert_eq!(pk, recovered);
+    }
+
+    #[test]
+    fn lock_timeout_on_held_lock() {
+        // Verify that lock_keyfile times out instead of hanging forever
+        // when another process holds the lock.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("timeout_coldkey");
+        let lock_path = path.with_extension("lock");
+
+        // Manually create and hold a lock
+        fs::create_dir_all(dir.path()).unwrap();
+        let held_lock = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&lock_path)
+            .unwrap();
+        held_lock.lock_exclusive().unwrap();
+
+        // In another thread, try to acquire the same lock — should timeout
+        let p = path.clone();
+        let handle = std::thread::spawn(move || {
+            let start = std::time::Instant::now();
+            let result = lock_keyfile(&p);
+            let elapsed = start.elapsed();
+            (result, elapsed)
+        });
+
+        let (result, elapsed) = handle.join().expect("thread panicked");
+        assert!(result.is_err(), "Should have timed out");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("Timed out"), "Expected timeout error, got: {}", msg);
+        // Should have waited at least a few seconds but not more than LOCK_TIMEOUT + buffer
+        assert!(elapsed.as_secs() >= 5, "Should wait at least 5s, waited {:?}", elapsed);
+        assert!(elapsed.as_secs() <= 15, "Should not wait more than 15s, waited {:?}", elapsed);
+
+        // Release the held lock
+        drop(held_lock);
+    }
+
+    #[test]
+    fn lock_succeeds_after_contention() {
+        // Verify that a lock is acquired after brief contention.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("contention_coldkey");
+        let lock_path = path.with_extension("lock");
+
+        fs::create_dir_all(dir.path()).unwrap();
+        let held_lock = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&lock_path)
+            .unwrap();
+        held_lock.lock_exclusive().unwrap();
+
+        // Release the lock after 200ms
+        let held = std::sync::Arc::new(std::sync::Mutex::new(Some(held_lock)));
+        let held2 = held.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            drop(held2.lock().unwrap().take());
+        });
+
+        // This should succeed once the lock is released
+        let result = lock_keyfile(&path);
+        assert!(result.is_ok(), "Should acquire lock after contention: {:?}", result.err());
     }
 }

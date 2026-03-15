@@ -1327,11 +1327,13 @@ pub async fn handle_audit(client: &Client, address: &str, output: &str) -> Resul
                             .unwrap_or_default()
                     },
                     async {
-                        client
-                            .get_pending_child_keys(&hotkey, netuid)
-                            .await
-                            .ok()
-                            .flatten()
+                        match client.get_pending_child_keys(&hotkey, netuid).await {
+                            Ok(v) => v,
+                            Err(e) => {
+                                tracing::debug!(hotkey = %crate::utils::short_ss58(&hotkey), netuid = netuid.0, error = %e, "Failed to fetch pending child keys");
+                                None
+                            }
+                        }
                     },
                 );
                 (hotkey, netuid.0, children, pending)

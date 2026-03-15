@@ -24,11 +24,13 @@ pub(super) async fn handle_weights(
             let (uids, wts) = parse_weight_pairs(&weights)?;
 
             // Pre-flight checks (always run these)
-            let hyperparams = client
-                .get_subnet_hyperparams(NetUid(netuid))
-                .await
-                .ok()
-                .flatten();
+            let hyperparams = match client.get_subnet_hyperparams(NetUid(netuid)).await {
+                Ok(h) => h,
+                Err(e) => {
+                    tracing::warn!(netuid = netuid, error = %e, "Failed to fetch subnet hyperparams for pre-flight checks");
+                    None
+                }
+            };
 
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;

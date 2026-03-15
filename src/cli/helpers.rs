@@ -61,9 +61,11 @@ pub fn unlock_coldkey(wallet: &mut Wallet, password: Option<&str>) -> Result<()>
                 .interact()?
         }
     };
+    tracing::debug!("Unlocking coldkey");
     wallet.unlock_coldkey(&pw)
         .map_err(|e| {
             let msg = e.to_string();
+            tracing::warn!(error = %msg, "Coldkey unlock failed");
             if msg.contains("wrong password") || msg.contains("Decryption failed") {
                 anyhow::anyhow!("{}\n  Tip: pass --password <pw> or set AGCLI_PASSWORD env var for non-interactive use.", msg)
             } else {
@@ -80,6 +82,7 @@ pub fn check_spending_limit(netuid: u16, tao_amount: f64) -> Result<()> {
         let key = netuid.to_string();
         if let Some(&limit) = limits.get(&key) {
             if tao_amount > limit {
+                tracing::warn!(netuid = netuid, amount = tao_amount, limit = limit, "Per-subnet spending limit exceeded");
                 anyhow::bail!(
                     "Spending limit exceeded for SN{}: trying {:.4}τ but limit is {:.4}τ.\n  Adjust with: agcli config set spending_limit.{} {}",
                     netuid, tao_amount, limit, netuid, tao_amount
@@ -89,6 +92,7 @@ pub fn check_spending_limit(netuid: u16, tao_amount: f64) -> Result<()> {
         // Also check wildcard "*" key for global limit
         if let Some(&limit) = limits.get("*") {
             if tao_amount > limit {
+                tracing::warn!(amount = tao_amount, limit = limit, "Global spending limit exceeded");
                 anyhow::bail!(
                     "Global spending limit exceeded: trying {:.4}τ but limit is {:.4}τ.\n  Adjust with: agcli config set spending_limit.* {}",
                     tao_amount, limit, tao_amount
