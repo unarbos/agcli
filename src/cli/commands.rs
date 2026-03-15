@@ -16,38 +16,45 @@ async fn connect(network: &crate::types::Network, dry_run: bool) -> Result<Clien
 /// Execute the parsed CLI command.
 pub async fn execute(cli: Cli) -> Result<()> {
     let network = cli.resolve_network();
-    let output = cli.output.as_str();
-    let live_interval = cli.live_interval();
     let password = cli.password.clone();
-    let yes = cli.yes;
     let batch = cli.batch;
-    let pretty = cli.pretty;
-    let mev = cli.mev;
     let dry_run = cli.dry_run;
 
     // Set global mode flags so helpers can check them
-    set_batch_mode(batch || yes);
-    set_pretty_mode(pretty);
+    set_batch_mode(batch || cli.yes);
+    set_pretty_mode(cli.pretty);
+
+    // Build shared command context — eliminates 6-9 repeated parameters across handlers
+    let ctx = Ctx {
+        wallet_dir: &cli.wallet_dir,
+        wallet_name: &cli.wallet,
+        hotkey_name: &cli.hotkey,
+        output: cli.output.as_str(),
+        password: password.as_deref(),
+        yes: cli.yes,
+        mev: cli.mev,
+        live_interval: cli.live_interval(),
+    };
 
     match cli.command {
         Commands::Wallet(WalletCommands::AssociateHotkey { hotkey }) => {
             let client = connect(&network, dry_run).await?;
             let (pair, hk) = unlock_and_resolve(
-                &cli.wallet_dir, &cli.wallet, &cli.hotkey,
-                hotkey, password.as_deref(),
+                ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name,
+                hotkey, ctx.password,
             )?;
             println!("Associating hotkey {} on-chain", crate::utils::short_ss58(&hk));
             let hash = client.try_associate_hotkey(&pair, &hk).await?;
-            print_tx_result(output, &hash, "Hotkey associated.");
+            print_tx_result(ctx.output, &hash, "Hotkey associated.");
             Ok(())
         }
         Commands::Wallet(WalletCommands::CheckSwap { address }) => {
             let client = connect(&network, dry_run).await?;
-            let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
+            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
             let swap = client.get_coldkey_swap_scheduled(&addr).await?;
             match swap {
                 Some((block, new_ss58)) => {
-                    if output == "json" {
+                    if ctx.output == "json" {
                         print_json(&serde_json::json!({
                             "address": addr,
                             "swap_scheduled": true,
@@ -61,7 +68,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                     }
                 }
                 None => {
-                    if output == "json" {
+                    if ctx.output == "json" {
                         print_json(&serde_json::json!({
                             "address": addr,
                             "swap_scheduled": false,
@@ -76,10 +83,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Wallet(cmd) => {
             wallet_cmds::handle_wallet(
                 cmd,
-                &cli.wallet_dir,
-                &cli.wallet,
-                password.as_deref(),
-                output,
+                ctx.wallet_dir,
+                ctx.wallet_name,
+                ctx.password,
+                ctx.output,
             )
             .await
         }
@@ -90,13 +97,13 @@ pub async fn execute(cli: Cli) -> Result<()> {
             at_block,
         } => {
             let client = connect(&network, dry_run).await?;
-            let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
+            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
 
             // Historical wayback mode
             if let Some(block_num) = at_block {
                 let block_hash = client.get_block_hash(block_num).await?;
                 let balance = client.get_balance_at_block(&addr, block_hash).await?;
-                if output == "json" {
+                if ctx.output == "json" {
                     print_json(
                         &serde_json::json!({"address": addr, "block": block_num, "block_hash": format!("{:?}", block_hash), "balance_rao": balance.rao(), "balance_tao": balance.tao()}),
                     );
@@ -146,7 +153,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                         .as_ref()
                         .map(|t| balance.rao() < t.rao())
                         .unwrap_or(false);
-                    if output == "json" {
+                    if ctx.output == "json" {
                         print_json(&serde_json::json!({
                             "address": addr,
                             "balance_rao": balance.rao(),
@@ -179,7 +186,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             }
 
             let balance = client.get_balance_ss58(&addr).await?;
-            if output == "json" {
+            if ctx.output == "json" {
                 print_json(
                     &serde_json::json!({"address": addr, "balance_rao": balance.rao(), "balance_tao": balance.tao()}),
                 );
@@ -191,8 +198,8 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Transfer { dest, amount } => {
             let client = connect(&network, dry_run).await?;
-            let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
-            unlock_coldkey(&mut wallet, password.as_deref())?;
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
             let balance = Balance::from_tao(amount);
             // Pre-flight balance check
             if let Some(ss58) = wallet.coldkey_ss58() {
@@ -217,13 +224,13 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 }
             }
             let hash = client.transfer(wallet.coldkey()?, &dest, balance).await?;
-            print_tx_result(output, &hash, "Transaction submitted.");
+            print_tx_result(ctx.output, &hash, "Transaction submitted.");
             Ok(())
         }
         Commands::TransferAll { dest, keep_alive } => {
             let client = connect(&network, dry_run).await?;
-            let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
-            unlock_coldkey(&mut wallet, password.as_deref())?;
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
             println!(
                 "Transferring all balance to {} (keep_alive={})",
                 crate::utils::short_ss58(&dest), keep_alive
@@ -241,175 +248,74 @@ pub async fn execute(cli: Cli) -> Result<()> {
             let hash = client
                 .transfer_all(wallet.coldkey()?, &dest, keep_alive)
                 .await?;
-            print_tx_result(output, &hash, "All balance transferred.");
+            print_tx_result(ctx.output, &hash, "All balance transferred.");
             Ok(())
         }
         Commands::Stake(cmd) => {
             let client = connect(&network, dry_run).await?;
-            stake_cmds::handle_stake(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                output,
-                password.as_deref(),
-                yes,
-                mev,
-            )
-            .await
+            stake_cmds::handle_stake(cmd, &client, &ctx).await
         }
         Commands::Subnet(cmd) => {
             let client = connect(&network, dry_run).await?;
-            subnet_cmds::handle_subnet(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                output,
-                live_interval,
-                password.as_deref(),
-            )
-            .await
+            subnet_cmds::handle_subnet(cmd, &client, &ctx).await
         }
         Commands::Weights(cmd) => {
             let client = connect(&network, dry_run).await?;
-            weights_cmds::handle_weights(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                password.as_deref(),
-            )
-            .await
+            weights_cmds::handle_weights(cmd, &client, &ctx).await
         }
         Commands::Root(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_root(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_root(cmd, &client, &ctx).await
         }
         Commands::Delegate(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_delegate(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                output,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_delegate(cmd, &client, &ctx).await
         }
         Commands::View(cmd) => {
             let client = connect(&network, dry_run).await?;
-            view_cmds::handle_view(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                output,
-                live_interval,
-            )
-            .await
+            view_cmds::handle_view(cmd, &client, &ctx).await
         }
         Commands::Identity(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_identity(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_identity(cmd, &client, &ctx).await
         }
         Commands::Serve(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_serve(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_serve(cmd, &client, &ctx).await
         }
         Commands::Proxy(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_proxy(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                output,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_proxy(cmd, &client, &ctx).await
         }
         Commands::Crowdloan(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_crowdloan(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                output,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_crowdloan(cmd, &client, &ctx).await
         }
         Commands::Liquidity(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_liquidity(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                &cli.hotkey,
-                output,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_liquidity(cmd, &client, &ctx).await
         }
         Commands::Swap(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_swap(
-                cmd,
-                &client,
-                &cli.wallet_dir,
-                &cli.wallet,
-                password.as_deref(),
-            )
-            .await
+            network_cmds::handle_swap(cmd, &client, &ctx).await
         }
         Commands::Subscribe(cmd) => {
             let client = connect(&network, dry_run).await?;
-            network_cmds::handle_subscribe(cmd, &client, output, batch).await
+            network_cmds::handle_subscribe(cmd, &client, ctx.output, batch).await
         }
         Commands::Multisig(cmd) => {
             network_cmds::handle_multisig(
                 cmd,
-                &cli.wallet_dir,
-                &cli.wallet,
+                ctx.wallet_dir,
+                ctx.wallet_name,
                 &network,
-                password.as_deref(),
+                ctx.password,
                 dry_run,
             )
             .await
         }
         Commands::Utils(cmd) => {
-            system_cmds::handle_utils(cmd, &network, output).await
+            system_cmds::handle_utils(cmd, &network, ctx.output).await
         }
         Commands::Config(cmd) => system_cmds::handle_config(cmd).await,
         Commands::Completions { shell } => {
@@ -418,29 +324,29 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Update => system_cmds::handle_update().await,
         Commands::Doctor => {
-            system_cmds::handle_doctor(&network, &cli.wallet_dir, &cli.wallet, output).await
+            system_cmds::handle_doctor(&network, ctx.wallet_dir, ctx.wallet_name, ctx.output).await
         }
         Commands::Explain { topic } => {
-            system_cmds::handle_explain(topic.as_deref(), output)
+            system_cmds::handle_explain(topic.as_deref(), ctx.output)
         }
         Commands::Audit { address } => {
             let client = connect(&network, dry_run).await?;
-            let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
-            view_cmds::handle_audit(&client, &addr, output).await
+            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
+            view_cmds::handle_audit(&client, &addr, ctx.output).await
         }
         Commands::Block(cmd) => {
             let client = connect(&network, dry_run).await?;
-            block_cmds::handle_block(cmd, &client, output).await
+            block_cmds::handle_block(cmd, &client, ctx.output).await
         }
         Commands::Diff(cmd) => {
             let client = connect(&network, dry_run).await?;
-            block_cmds::handle_diff(cmd, &client, output, &cli.wallet_dir, &cli.wallet).await
+            block_cmds::handle_diff(cmd, &client, ctx.output, ctx.wallet_dir, ctx.wallet_name).await
         }
         Commands::Batch { file, no_atomic } => {
             let client = connect(&network, dry_run).await?;
-            let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
-            unlock_coldkey(&mut wallet, password.as_deref())?;
-            system_cmds::handle_batch(&client, wallet.coldkey()?, &file, no_atomic, output).await
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            system_cmds::handle_batch(&client, wallet.coldkey()?, &file, no_atomic, ctx.output).await
         }
     }
 }

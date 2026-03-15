@@ -3,6 +3,21 @@
 use crate::wallet::Wallet;
 use anyhow::Result;
 
+/// Common context passed to all command handlers, reducing parameter sprawl.
+///
+/// Instead of passing 6-9 individual parameters to every handler,
+/// handlers receive a single `&Ctx` reference.
+pub struct Ctx<'a> {
+    pub wallet_dir: &'a str,
+    pub wallet_name: &'a str,
+    pub hotkey_name: &'a str,
+    pub output: &'a str,
+    pub password: Option<&'a str>,
+    pub yes: bool,
+    pub mev: bool,
+    pub live_interval: Option<u64>,
+}
+
 /// Escape a value for RFC 4180 CSV output.
 /// If the value contains a comma, double-quote, or newline, wrap it in double-quotes
 /// and escape any internal double-quotes by doubling them.

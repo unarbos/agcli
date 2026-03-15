@@ -6,17 +6,13 @@ use crate::cli::*;
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
-#[allow(clippy::too_many_arguments)]
 pub(super) async fn handle_subnet(
     cmd: SubnetCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    output: &str,
-    live_interval: Option<u64>,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name) = (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name);
+    let (output, password, live_interval) = (ctx.output, ctx.password, ctx.live_interval);
     match cmd {
         SubnetCommands::List { at_block } => {
             let title: Option<String> = if let Some(bn) = at_block {

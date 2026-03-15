@@ -9,11 +9,10 @@ use anyhow::Result;
 pub(super) async fn handle_weights(
     cmd: WeightCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name, password) =
+        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
     match cmd {
         WeightCommands::Set {
             netuid,

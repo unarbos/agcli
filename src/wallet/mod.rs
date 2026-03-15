@@ -81,6 +81,9 @@ impl Wallet {
     }
 
     /// Create a new wallet with fresh keys.
+    ///
+    /// Uses an exclusive lock on the wallet directory to prevent two concurrent
+    /// processes from creating the same wallet and overwriting each other's keys.
     pub fn create(
         wallet_dir: impl AsRef<Path>,
         name: &str,
@@ -89,6 +92,17 @@ impl Wallet {
     ) -> Result<Self> {
         let dir = expand_tilde(wallet_dir.as_ref()).join(name);
         std::fs::create_dir_all(dir.join("hotkeys"))?;
+
+        // Acquire directory-level lock to prevent concurrent wallet creation
+        let _dir_lock = keyfile::lock_wallet_dir(&dir)?;
+
+        // Check if wallet already exists (under the lock)
+        if dir.join("coldkey").exists() {
+            anyhow::bail!(
+                "Wallet '{}' already exists at {}.\n  Use a different name or remove it first.",
+                name, dir.display()
+            );
+        }
 
         let coldkey = keypair::generate_mnemonic_keypair()?;
         let hotkey = keypair::generate_mnemonic_keypair()?;

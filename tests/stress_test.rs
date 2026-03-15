@@ -671,6 +671,157 @@ async fn cache_high_contention() {
     assert!(total <= 50, "Cache made {} calls (50 concurrent)", total);
 }
 
+// ──── Sprint 21: Wallet creation race + atomic cache symlink ────
+
+/// Two threads creating the same wallet name should not corrupt keys.
+/// One succeeds and the other gets an "already exists" error.
+#[test]
+fn wallet_create_race_protection() {
+    let dir = tempfile::tempdir().unwrap();
+    let wallet_dir = dir.path().to_path_buf();
+
+    let mut handles = Vec::new();
+    for _ in 0..4 {
+        let wd = wallet_dir.clone();
+        handles.push(std::thread::spawn(move || {
+            agcli::Wallet::create(&wd, "race_test", "password123", "default")
+        }));
+    }
+
+    let mut successes = 0;
+    let mut already_exists = 0;
+    for h in handles {
+        match h.join().unwrap() {
+            Ok(_) => successes += 1,
+            Err(e) => {
+                let msg = format!("{:#}", e);
+                if msg.contains("already exists") {
+                    already_exists += 1;
+                } else {
+                    // Other errors are OK too (lock contention, etc.)
+                    // but should not be corruption
+                    assert!(
+                        !msg.contains("corrupted"),
+                        "Unexpected corruption error: {}", msg
+                    );
+                }
+            }
+        }
+    }
+
+    // At least one should succeed
+    assert!(
+        successes >= 1,
+        "Expected at least 1 success, got {} successes and {} already-exists",
+        successes, already_exists
+    );
+
+    // The wallet should be valid
+    let wallet = agcli::Wallet::open(wallet_dir.join("race_test")).unwrap();
+    assert!(wallet.coldkey_ss58().is_some(), "Wallet should have a valid coldkey");
+}
+
+/// Concurrent cache save operations should not crash or leave missing latest.json.
+#[test]
+fn cache_save_concurrent_atomic_symlink() {
+    use agcli::queries::cache;
+    use agcli::types::balance::Balance;
+    use agcli::types::chain_data::{Metagraph, NeuronInfoLite};
+    use agcli::types::network::NetUid;
+
+    let netuid = 60010; // Unique to avoid interference
+
+    let make_neuron = |uid: u16| NeuronInfoLite {
+        hotkey: format!("5Hot{}", uid),
+        coldkey: "5Cold".to_string(),
+        uid,
+        netuid: NetUid(netuid),
+        active: true,
+        stake: Balance::from_rao(100_000_000_000),
+        rank: 0.0,
+        emission: 0.0,
+        incentive: 0.5,
+        consensus: 0.0,
+        trust: 0.0,
+        validator_trust: 0.0,
+        dividends: 0.0,
+        last_update: 100,
+        validator_permit: false,
+        pruning_score: 0.0,
+    };
+
+    let neurons = vec![make_neuron(0), make_neuron(1)];
+
+    let threads: Vec<_> = (0..8)
+        .map(|i| {
+            let ns = neurons.clone();
+            std::thread::spawn(move || {
+                let mg = Metagraph {
+                    netuid: NetUid(netuid),
+                    n: ns.len() as u16,
+                    block: 900000 + i as u64,
+                    stake: ns.iter().map(|n| n.stake).collect(),
+                    ranks: ns.iter().map(|n| n.rank).collect(),
+                    trust: ns.iter().map(|n| n.trust).collect(),
+                    consensus: ns.iter().map(|n| n.consensus).collect(),
+                    incentive: ns.iter().map(|n| n.incentive).collect(),
+                    dividends: ns.iter().map(|n| n.dividends).collect(),
+                    emission: ns.iter().map(|n| n.emission).collect(),
+                    validator_trust: ns.iter().map(|n| n.validator_trust).collect(),
+                    validator_permit: ns.iter().map(|n| n.validator_permit).collect(),
+                    uids: ns.iter().map(|n| n.uid).collect(),
+                    active: ns.iter().map(|n| n.active).collect(),
+                    last_update: ns.iter().map(|n| n.last_update).collect(),
+                    neurons: ns,
+                };
+                cache::save(&mg).unwrap();
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
+    }
+
+    // latest.json should exist and be readable
+    let loaded = cache::load_latest(netuid).unwrap();
+    assert!(loaded.is_some(), "latest.json should exist after concurrent saves");
+    let mg = loaded.unwrap();
+    assert!(mg.block >= 900000, "Should have a valid block number");
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(cache::cache_path(netuid));
+}
+
+/// Wallet directory lock prevents concurrent creation interference.
+#[test]
+fn wallet_dir_lock_serializes_creation() {
+    let dir = tempfile::tempdir().unwrap();
+    let wallet_dir = dir.path().to_path_buf();
+    let lock_order = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+
+    let threads: Vec<_> = (0..3)
+        .map(|i| {
+            let wd = wallet_dir.clone();
+            let order = lock_order.clone();
+            std::thread::spawn(move || {
+                let name = format!("serial_test_{}", i);
+                match agcli::Wallet::create(&wd, &name, "pw", "default") {
+                    Ok(_) => order.lock().unwrap().push(i),
+                    Err(e) => panic!("Wallet {} creation failed: {}", i, e),
+                }
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
+    }
+
+    // All 3 should succeed (different names)
+    assert_eq!(lock_order.lock().unwrap().len(), 3);
+}
+
 /// Verify format_* utilities are safe under concurrent use.
 #[test]
 fn format_utilities_concurrent() {

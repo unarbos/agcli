@@ -6,18 +6,13 @@ use crate::cli::StakeCommands;
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
-#[allow(clippy::too_many_arguments)]
 pub async fn handle_stake(
     cmd: StakeCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    output: &str,
-    password: Option<&str>,
-    yes: bool,
-    mev: bool,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name) = (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name);
+    let (output, password, mev) = (ctx.output, ctx.password, ctx.mev);
     match cmd {
         StakeCommands::List { address, at_block } => {
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
@@ -567,7 +562,7 @@ pub async fn handle_stake(
                 wallet_name,
                 hotkey_name,
                 password,
-                yes,
+                ctx.yes,
                 netuid,
                 amount,
                 hotkey,

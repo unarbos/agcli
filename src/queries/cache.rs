@@ -32,23 +32,30 @@ pub fn save(metagraph: &Metagraph) -> Result<PathBuf> {
     std::fs::write(&path, json.as_bytes())
         .with_context(|| format!("Failed to write {}", path.display()))?;
 
-    // Update "latest" symlink
+    // Atomically update "latest" symlink via temp symlink + rename.
+    // This prevents a race where concurrent saves could leave "latest.json" missing.
     let latest = dir.join("latest.json");
-    if let Err(e) = std::fs::remove_file(&latest) {
-        if e.kind() != std::io::ErrorKind::NotFound {
-            tracing::warn!(path = %latest.display(), error = %e, "Failed to remove old latest symlink");
-        }
-    }
     #[cfg(unix)]
     {
-        if let Err(e) = std::os::unix::fs::symlink(&filename, &latest) {
-            tracing::warn!(src = %filename, dst = %latest.display(), error = %e, "Failed to create latest symlink");
+        let tmp_link = dir.join(format!(".latest-{}.tmp", std::process::id()));
+        // Remove stale temp link if process crashed previously
+        let _ = std::fs::remove_file(&tmp_link);
+        if let Err(e) = std::os::unix::fs::symlink(&filename, &tmp_link) {
+            tracing::warn!(src = %filename, dst = %tmp_link.display(), error = %e, "Failed to create temp symlink");
+        } else if let Err(e) = std::fs::rename(&tmp_link, &latest) {
+            tracing::warn!(src = %tmp_link.display(), dst = %latest.display(), error = %e, "Failed to rename temp symlink to latest");
+            let _ = std::fs::remove_file(&tmp_link);
         }
     }
     #[cfg(not(unix))]
     {
-        if let Err(e) = std::fs::copy(&path, &latest) {
-            tracing::warn!(src = %path.display(), dst = %latest.display(), error = %e, "Failed to copy latest cache");
+        // On non-Unix: best-effort copy (rename of a regular file is atomic)
+        let tmp_copy = dir.join(format!(".latest-{}.tmp", std::process::id()));
+        if let Err(e) = std::fs::copy(&path, &tmp_copy) {
+            tracing::warn!(src = %path.display(), dst = %tmp_copy.display(), error = %e, "Failed to copy latest cache");
+        } else if let Err(e) = std::fs::rename(&tmp_copy, &latest) {
+            tracing::warn!(error = %e, "Failed to rename temp copy to latest");
+            let _ = std::fs::remove_file(&tmp_copy);
         }
     }
 

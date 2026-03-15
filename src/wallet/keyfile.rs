@@ -66,6 +66,46 @@ fn lock_keyfile(path: &Path) -> Result<fs::File> {
     }
 }
 
+/// Acquire an exclusive lock on a wallet directory (for creation/import).
+/// Prevents two processes from creating the same wallet concurrently.
+/// Returns the lock file handle (released on drop).
+pub fn lock_wallet_dir(dir: &Path) -> Result<fs::File> {
+    let lock_path = dir.join(".wallet.lock");
+    if let Some(parent) = lock_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let lock_file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .with_context(|| format!("Cannot create wallet dir lock '{}'", lock_path.display()))?;
+    match lock_file.try_lock_exclusive() {
+        Ok(()) => return Ok(lock_file),
+        Err(_) => {
+            tracing::debug!(path = %lock_path.display(), "Wallet dir lock contended, polling");
+        }
+    }
+    let start = std::time::Instant::now();
+    let mut sleep_ms = 50;
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(sleep_ms));
+        match lock_file.try_lock_exclusive() {
+            Ok(()) => return Ok(lock_file),
+            Err(_) if start.elapsed() >= LOCK_TIMEOUT => {
+                anyhow::bail!(
+                    "Timed out waiting for wallet directory lock on '{}'.\n  \
+                     Another agcli process may be creating this wallet. If not, remove: rm '{}'",
+                    lock_path.display(), lock_path.display()
+                );
+            }
+            Err(_) => {
+                sleep_ms = (sleep_ms * 2).min(500);
+            }
+        }
+    }
+}
+
 /// Write mnemonic encrypted with password.
 pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> Result<()> {
     tracing::debug!(path = %path.display(), "Writing encrypted keyfile");

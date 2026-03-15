@@ -9,11 +9,10 @@ use anyhow::Result;
 pub async fn handle_view(
     cmd: ViewCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    output: &str,
-    live_interval: Option<u64>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name) = (ctx.wallet_dir, ctx.wallet_name);
+    let (output, live_interval) = (ctx.output, ctx.live_interval);
     match cmd {
         ViewCommands::Portfolio { address, at_block } => {
             let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);

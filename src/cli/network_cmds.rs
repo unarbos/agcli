@@ -11,11 +11,10 @@ use anyhow::Result;
 pub(super) async fn handle_root(
     cmd: RootCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name, password) =
+        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
     match cmd {
         RootCommands::Register => {
             let (pair, hk) =
@@ -50,12 +49,10 @@ pub(super) async fn handle_root(
 pub(super) async fn handle_delegate(
     cmd: DelegateCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    output: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name) = (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name);
+    let (output, password) = (ctx.output, ctx.password);
     match cmd {
         DelegateCommands::List => {
             let delegates = client.get_delegates().await?;
@@ -192,10 +189,9 @@ async fn change_take(
 pub(super) async fn handle_identity(
     cmd: IdentityCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, password) = (ctx.wallet_dir, ctx.wallet_name, ctx.password);
     match cmd {
         IdentityCommands::Show { address } => {
             let identity = client.get_identity(&address).await?;
@@ -261,10 +257,9 @@ pub(super) async fn handle_identity(
 pub(super) async fn handle_swap(
     cmd: SwapCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, password) = (ctx.wallet_dir, ctx.wallet_name, ctx.password);
     match cmd {
         SwapCommands::Hotkey { new_hotkey } => {
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
@@ -461,11 +456,10 @@ pub(super) async fn handle_multisig(
 pub(super) async fn handle_serve(
     cmd: ServeCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name, password) =
+        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
     match cmd {
         ServeCommands::Axon {
             netuid,
@@ -532,11 +526,10 @@ pub(super) async fn handle_serve(
 pub(super) async fn handle_proxy(
     cmd: ProxyCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    output: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, output, password) =
+        (ctx.wallet_dir, ctx.wallet_name, ctx.output, ctx.password);
     let adding = matches!(cmd, ProxyCommands::Add { .. });
     match cmd {
         ProxyCommands::Add {
@@ -649,11 +642,9 @@ pub(super) async fn handle_proxy(
 pub(super) async fn handle_crowdloan(
     cmd: CrowdloanCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    _output: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
+    let (wallet_dir, wallet_name, password, output) = (ctx.wallet_dir, ctx.wallet_name, ctx.password, ctx.output);
     // Read-only query commands (no wallet needed)
     match &cmd {
         CrowdloanCommands::List => {
@@ -662,7 +653,7 @@ pub(super) async fn handle_crowdloan(
                 println!("No crowdloans found.");
             } else {
                 render_rows(
-                    _output,
+                    output,
                     &crowdloans,
                     "id,creator,deposit,raised,cap,end_block,finalized",
                     |(id, creator, deposit, raised, cap, end_block, finalized)| {
@@ -722,7 +713,7 @@ pub(super) async fn handle_crowdloan(
             } else {
                 let total: u64 = contributors.iter().map(|(_, amount)| amount).sum();
                 render_rows(
-                    _output,
+                    output,
                     &contributors,
                     "address,amount_rao,pct",
                     |(addr, amount)| {
@@ -908,14 +899,11 @@ fn price_to_tick(price: f64) -> i32 {
 pub(super) async fn handle_liquidity(
     cmd: LiquidityCommands,
     client: &Client,
-    wallet_dir: &str,
-    wallet_name: &str,
-    hotkey_name: &str,
-    _output: &str,
-    password: Option<&str>,
+    ctx: &Ctx<'_>,
 ) -> Result<()> {
-    let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-    unlock_coldkey(&mut wallet, password)?;
+    let hotkey_name = ctx.hotkey_name;
+    let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+    unlock_coldkey(&mut wallet, ctx.password)?;
 
     match cmd {
         LiquidityCommands::Add {
