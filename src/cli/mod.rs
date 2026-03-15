@@ -6,6 +6,12 @@ pub mod stake_cmds;
 pub mod view_cmds;
 pub mod wallet_cmds;
 
+mod block_cmds;
+mod network_cmds;
+mod subnet_cmds;
+mod system_cmds;
+mod weights_cmds;
+
 use crate::types::network::Network;
 use clap::{Parser, Subcommand};
 
