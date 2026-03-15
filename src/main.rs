@@ -83,6 +83,7 @@ async fn main() {
     };
 
     let elapsed = start.elapsed();
+    tracing::info!(elapsed_ms = elapsed.as_millis() as u64, "Command completed");
     if show_time {
         eprintln!("[time] {:.3}s", elapsed.as_secs_f64());
     }

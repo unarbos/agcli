@@ -36,6 +36,45 @@ pub async fn execute(cli: Cli) -> Result<()> {
         live_interval: cli.live_interval(),
     };
 
+    // Log the command being executed for telemetry
+    let cmd_name = match &cli.command {
+        Commands::Wallet(_) => "wallet",
+        Commands::Balance { .. } => "balance",
+        Commands::Transfer { .. } => "transfer",
+        Commands::TransferAll { .. } => "transfer-all",
+        Commands::Stake(_) => "stake",
+        Commands::Subnet(_) => "subnet",
+        Commands::Weights(_) => "weights",
+        Commands::Root(_) => "root",
+        Commands::Delegate(_) => "delegate",
+        Commands::View(_) => "view",
+        Commands::Identity(_) => "identity",
+        Commands::Serve(_) => "serve",
+        Commands::Proxy(_) => "proxy",
+        Commands::Crowdloan(_) => "crowdloan",
+        Commands::Liquidity(_) => "liquidity",
+        Commands::Swap(_) => "swap",
+        Commands::Subscribe(_) => "subscribe",
+        Commands::Multisig(_) => "multisig",
+        Commands::Utils(_) => "utils",
+        Commands::Config(_) => "config",
+        Commands::Completions { .. } => "completions",
+        Commands::Update => "update",
+        Commands::Doctor => "doctor",
+        Commands::Explain { .. } => "explain",
+        Commands::Audit { .. } => "audit",
+        Commands::Block(_) => "block",
+        Commands::Diff(_) => "diff",
+        Commands::Batch { .. } => "batch",
+    };
+    tracing::info!(
+        command = cmd_name,
+        network = %network,
+        dry_run = dry_run,
+        batch = batch,
+        "Executing command"
+    );
+
     match cli.command {
         Commands::Wallet(WalletCommands::AssociateHotkey { hotkey }) => {
             let client = connect(&network, dry_run).await?;

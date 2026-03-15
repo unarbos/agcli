@@ -846,3 +846,219 @@ fn format_utilities_concurrent() {
         t.join().unwrap();
     }
 }
+
+// ──── Sprint 23: Dry-run and error path coverage ────
+
+/// Dry-run mode should be settable and queryable without any chain connection.
+#[test]
+fn dry_run_flag_parse() {
+    use clap::Parser;
+    let cli = agcli::cli::Cli::try_parse_from(&["agcli", "--dry-run", "balance"]).unwrap();
+    assert!(cli.dry_run, "dry-run flag should be parsed");
+}
+
+/// OutputFormat should round-trip through clap parsing for all variants.
+#[test]
+fn output_format_roundtrip() {
+    use clap::Parser;
+    for fmt in &["json", "csv", "table"] {
+        let cli = agcli::cli::Cli::try_parse_from(&["agcli", "--output", fmt, "balance"]).unwrap();
+        match *fmt {
+            "json" => assert!(cli.output.is_json()),
+            "csv" => assert!(cli.output.is_csv()),
+            "table" => assert!(!cli.output.is_json() && !cli.output.is_csv()),
+            _ => unreachable!(),
+        }
+    }
+}
+
+/// Config roundtrip with all fields set — verifies serialization fidelity.
+#[test]
+fn config_full_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+
+    let mut cfg = agcli::Config::default();
+    cfg.network = Some("test".into());
+    cfg.endpoint = Some("wss://test.finney.opentensor.ai:443".into());
+    cfg.wallet_dir = Some("/tmp/wallets".into());
+    cfg.wallet = Some("mywallet".into());
+    cfg.hotkey = Some("myhotkey".into());
+    cfg.output = Some("json".into());
+    cfg.proxy = Some("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB".into());
+    cfg.live_interval = Some(30);
+    cfg.batch = Some(true);
+    let mut limits = std::collections::HashMap::new();
+    limits.insert("1".into(), 100.0);
+    limits.insert("*".into(), 500.0);
+    cfg.spending_limits = Some(limits);
+
+    cfg.save_to(&path).unwrap();
+    let loaded = agcli::Config::load_from(&path).unwrap();
+    assert_eq!(loaded.network.as_deref(), Some("test"));
+    assert_eq!(loaded.endpoint.as_deref(), Some("wss://test.finney.opentensor.ai:443"));
+    assert_eq!(loaded.wallet.as_deref(), Some("mywallet"));
+    assert_eq!(loaded.hotkey.as_deref(), Some("myhotkey"));
+    assert_eq!(loaded.output.as_deref(), Some("json"));
+    assert_eq!(loaded.live_interval, Some(30));
+    assert_eq!(loaded.batch, Some(true));
+    let limits = loaded.spending_limits.unwrap();
+    assert_eq!(*limits.get("1").unwrap(), 100.0);
+    assert_eq!(*limits.get("*").unwrap(), 500.0);
+}
+
+/// Error classification should handle every possible exit code.
+#[test]
+fn error_codes_are_complete() {
+    // Verify all exit codes are in range [1, 15]
+    let codes = vec![
+        agcli::error::exit_code::GENERIC,
+        agcli::error::exit_code::NETWORK,
+        agcli::error::exit_code::AUTH,
+        agcli::error::exit_code::VALIDATION,
+        agcli::error::exit_code::CHAIN,
+        agcli::error::exit_code::IO,
+        agcli::error::exit_code::TIMEOUT,
+    ];
+    for code in &codes {
+        assert!(*code >= 1 && *code <= 15, "Exit code {} out of range", code);
+    }
+    // Verify they are all distinct
+    let mut unique = codes.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(unique.len(), codes.len(), "Exit codes must be unique");
+}
+
+/// Spending limit check should pass when no limits are configured.
+#[test]
+fn spending_limit_no_config() {
+    // With no config file, check_spending_limit should always pass
+    let result = agcli::cli::helpers::check_spending_limit(1, 999999.0);
+    assert!(result.is_ok(), "Should pass with no spending limits configured");
+}
+
+/// CSV escape handles edge cases correctly.
+#[test]
+fn csv_escape_edge_cases() {
+    use agcli::cli::helpers::csv_escape;
+    assert_eq!(csv_escape("simple"), "simple");
+    assert_eq!(csv_escape("has,comma"), "\"has,comma\"");
+    assert_eq!(csv_escape("has\"quote"), "\"has\"\"quote\"");
+    assert_eq!(csv_escape("has\nnewline"), "\"has\nnewline\"");
+    assert_eq!(csv_escape(""), "");
+    assert_eq!(csv_escape("already \"quoted\""), "\"already \"\"quoted\"\"\"");
+}
+
+/// Weight pair parsing should validate rigorously.
+#[test]
+fn weight_pair_parsing_edge_cases() {
+    use agcli::cli::helpers::parse_weight_pairs;
+
+    // Valid
+    let (uids, weights) = parse_weight_pairs("0:100,1:200").unwrap();
+    assert_eq!(uids, vec![0, 1]);
+    assert_eq!(weights, vec![100, 200]);
+
+    // Single pair
+    let (uids, weights) = parse_weight_pairs("5:32767").unwrap();
+    assert_eq!(uids, vec![5]);
+    assert_eq!(weights, vec![32767]);
+
+    // Invalid: missing weight
+    assert!(parse_weight_pairs("0").is_err());
+    // Invalid: non-numeric UID
+    assert!(parse_weight_pairs("abc:100").is_err());
+    // Invalid: non-numeric weight
+    assert!(parse_weight_pairs("0:abc").is_err());
+    // Invalid: empty string
+    assert!(parse_weight_pairs("").is_err());
+    // Invalid: overflow u16 for UID
+    assert!(parse_weight_pairs("99999:100").is_err());
+}
+
+/// Children pair parsing should validate correctly.
+#[test]
+fn children_pair_parsing() {
+    use agcli::cli::helpers::parse_children;
+
+    // Valid
+    let result = parse_children("50000:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].0, 50000);
+
+    // Invalid: missing proportion
+    assert!(parse_children("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").is_err());
+    // Invalid: non-numeric proportion
+    assert!(parse_children("abc:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").is_err());
+}
+
+/// Parallel error classification with all error types simultaneously.
+#[test]
+fn parallel_error_classification_all_types() {
+    let test_cases = vec![
+        ("Connection refused to endpoint", agcli::error::exit_code::NETWORK),
+        ("Decryption failed — wrong password for coldkey", agcli::error::exit_code::AUTH),
+        ("Invalid SS58 address format", agcli::error::exit_code::VALIDATION),
+        ("Extrinsic rejected: insufficient balance", agcli::error::exit_code::CHAIN),
+        ("Permission denied writing config", agcli::error::exit_code::IO),
+        ("Operation timed out after 30s", agcli::error::exit_code::TIMEOUT),
+        ("Unknown error with no pattern match", agcli::error::exit_code::GENERIC),
+    ];
+
+    // Run all classifications in parallel threads, 50 iterations each
+    let threads: Vec<_> = test_cases
+        .into_iter()
+        .map(|(msg, expected)| {
+            std::thread::spawn(move || {
+                for _ in 0..50 {
+                    let err = anyhow::anyhow!("{}", msg);
+                    let code = agcli::error::classify(&err);
+                    assert_eq!(code, expected, "Mismatch for '{}': got {} expected {}", msg, code, expected);
+
+                    // Also test hint generation doesn't panic
+                    let _ = agcli::error::hint(code, msg);
+                }
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
+    }
+}
+
+/// Concurrent config file creation and destruction.
+#[test]
+fn config_create_destroy_concurrent() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let threads: Vec<_> = (0..8)
+        .map(|i| {
+            let base = dir.path().to_path_buf();
+            std::thread::spawn(move || {
+                let path = base.join(format!("config_{}.toml", i));
+                for round in 0..10 {
+                    // Create
+                    let mut cfg = agcli::Config::default();
+                    cfg.network = Some(format!("thread_{}_round_{}", i, round));
+                    cfg.save_to(&path).unwrap();
+
+                    // Read back
+                    let loaded = agcli::Config::load_from(&path).unwrap();
+                    assert!(
+                        loaded.network.is_some(),
+                        "Config should be readable after save (thread={}, round={})", i, round
+                    );
+
+                    // Delete
+                    let _ = std::fs::remove_file(&path);
+                }
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
+    }
+}
