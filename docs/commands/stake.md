@@ -106,18 +106,30 @@ Delegate weight to child hotkeys on a subnet.
 agcli stake set-children --netuid 1 --children "0.5:5Child1...,0.3:5Child2..."
 ```
 
-**On-chain**: `SubtensorModule::set_children(origin, hotkey, netuid, children_with_proportions)`
-- Errors: `InvalidChild`, `DuplicateChild`, `ProportionOverflow`, `TooManyChildren` (max 5)
+**On-chain**: `SubtensorModule::set_children(origin, hotkey, netuid, children)` → `do_schedule_children()`
+- Children are NOT applied immediately — they go into `PendingChildKeys` with a cooldown period
+- Events: `SetChildrenScheduled(hotkey, netuid, cooldown_block, children)`
+- Errors: `InvalidChild`, `DuplicateChild`, `ProportionOverflow`, `TooManyChildren` (max 5), `ChildParentInconsistency` (bipartite separation enforced), `NotEnoughStakeToSetChildkeys`
+
+### stake remove-stake-full-limit
+Remove ALL stake for a hotkey/subnet pair, optionally with a price limit.
+
+```bash
+agcli stake remove --amount MAX --netuid 1 [--hotkey SS58]
+```
+
+**On-chain**: `SubtensorModule::remove_stake_full_limit(origin, hotkey, netuid, limit_price)`
+- If `limit_price` is set, uses limit order logic; otherwise unstakes everything at market.
 
 ### stake recycle-alpha
-Recycle alpha tokens back to TAO (burns alpha, credits TAO to the subnet's emission pool).
+Recycle alpha tokens back to TAO (burns alpha, reduces `SubnetAlphaOut` — increases alpha price).
 
 ```bash
 agcli stake recycle-alpha --amount 100.0 --netuid 1 [--hotkey SS58]
 ```
 
 ### stake burn-alpha
-Permanently burn alpha tokens (deflationary — no TAO credited back).
+Permanently burn alpha tokens. Unlike recycle, does NOT reduce `SubnetAlphaOut` (pool ratio unchanged).
 
 ```bash
 agcli stake burn-alpha --amount 50.0 --netuid 1 [--hotkey SS58]
