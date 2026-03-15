@@ -38,7 +38,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             threshold,
             at_block,
         } => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
 
             // Historical wayback mode
@@ -114,7 +114,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::Transfer { dest, amount } => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
             unlock_coldkey(&mut wallet, password.as_deref())?;
             let balance = Balance::from_tao(amount);
@@ -135,7 +135,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::TransferAll { dest, keep_alive } => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
             unlock_coldkey(&mut wallet, password.as_deref())?;
             println!(
@@ -149,7 +149,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::Stake(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             stake_cmds::handle_stake(
                 cmd,
                 &client,
@@ -163,7 +163,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Subnet(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_subnet(
                 cmd,
                 &client,
@@ -177,7 +177,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Weights(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_weights(
                 cmd,
                 &client,
@@ -189,7 +189,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Root(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_root(
                 cmd,
                 &client,
@@ -201,7 +201,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Delegate(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_delegate(
                 cmd,
                 &client,
@@ -214,7 +214,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::View(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             view_cmds::handle_view(
                 cmd,
                 &client,
@@ -226,7 +226,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Identity(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_identity(
                 cmd,
                 &client,
@@ -237,7 +237,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Serve(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_serve(
                 cmd,
                 &client,
@@ -249,7 +249,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Proxy(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_proxy(
                 cmd,
                 &client,
@@ -261,7 +261,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Crowdloan(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_crowdloan(
                 cmd,
                 &client,
@@ -273,7 +273,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Swap(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_swap(
                 cmd,
                 &client,
@@ -284,7 +284,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Subscribe(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_subscribe(cmd, &client, output, batch).await
         }
         Commands::Multisig(cmd) => {
@@ -292,7 +292,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 cmd,
                 &cli.wallet_dir,
                 &cli.wallet,
-                network.ws_url(),
+                &network,
                 password.as_deref(),
             )
             .await
@@ -303,24 +303,27 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::Update => handle_update().await,
+        Commands::Doctor => {
+            handle_doctor(&network, &cli.wallet_dir, &cli.wallet, output).await
+        }
         Commands::Explain { topic } => {
             handle_explain(topic.as_deref(), output)
         }
         Commands::Audit { address } => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             let addr = resolve_coldkey_address(address, &cli.wallet_dir, &cli.wallet);
             view_cmds::handle_audit(&client, &addr, output).await
         }
         Commands::Block(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_block(cmd, &client, output).await
         }
         Commands::Diff(cmd) => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             handle_diff(cmd, &client, output, &cli.wallet_dir, &cli.wallet).await
         }
         Commands::Batch { file, no_atomic } => {
-            let client = Client::connect(network.ws_url()).await?;
+            let client = Client::connect_network(&network).await?;
             let mut wallet = open_wallet(&cli.wallet_dir, &cli.wallet)?;
             unlock_coldkey(&mut wallet, password.as_deref())?;
             handle_batch(&client, wallet.coldkey()?, &file, no_atomic, output).await
@@ -345,9 +348,12 @@ async fn handle_subnet(
         SubnetCommands::List { at_block } => {
             let title: Option<String> = if let Some(bn) = at_block {
                 let block_hash = client.get_block_hash(bn).await?;
-                let mut subnets = client.get_all_subnets_at_block(block_hash).await?;
+                let (mut subnets, dynamic_result) = tokio::try_join!(
+                    client.get_all_subnets_at_block(block_hash),
+                    async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info_at_block(block_hash).await) },
+                )?;
                 // Try to enrich names from dynamic info at the same block
-                if let Ok(dynamic) = client.get_all_dynamic_info_at_block(block_hash).await {
+                if let Ok(dynamic) = dynamic_result {
                     let name_map: std::collections::HashMap<u16, (String, u64)> = dynamic
                         .iter()
                         .filter(|d| !d.name.is_empty())
@@ -585,8 +591,10 @@ async fn handle_subnet(
             netuid,
             uid,
             at_block,
+            full,
+            save,
         } => {
-            // Single-UID lookup
+            // Single-UID lookup (always fetches full info)
             if let Some(target_uid) = uid {
                 let neuron = if let Some(bn) = at_block {
                     let bh = client.get_block_hash(bn).await?;
@@ -621,6 +629,12 @@ async fn handle_subnet(
                                     axon.ip, axon.port, axon.version, axon.protocol
                                 );
                             }
+                            if let Some(prom) = &n.prometheus_info {
+                                println!(
+                                    "  Prometheus:  {}:{} (v{})",
+                                    prom.ip, prom.port, prom.version
+                                );
+                            }
                         }
                     }
                     None => {
@@ -641,16 +655,115 @@ async fn handle_subnet(
                     return crate::live::live_metagraph(client, netuid.into(), interval).await;
                 }
             }
+
+            // --full mode: fetch full NeuronInfo (with axon/prometheus) for each neuron
+            if full {
+                let (neurons_lite, block) = if let Some(bn) = at_block {
+                    let bh = client.get_block_hash(bn).await?;
+                    let neurons = client.get_neurons_lite_at_block(NetUid(netuid), bh).await?;
+                    (neurons, bn as u64)
+                } else {
+                    tokio::try_join!(
+                        client.get_neurons_lite(NetUid(netuid)),
+                        client.get_block_number(),
+                    )?
+                };
+                let n_count = neurons_lite.len();
+
+                // Fetch full info for each UID in parallel batches
+                tracing::info!("Fetching full info for {} neurons...", n_count);
+                let mut full_neurons = Vec::with_capacity(n_count);
+                for chunk in neurons_lite.chunks(32) {
+                    let futs: Vec<_> = chunk
+                        .iter()
+                        .map(|n| client.get_neuron(NetUid(netuid), n.uid))
+                        .collect();
+                    let results = futures::future::join_all(futs).await;
+                    for result in results {
+                        if let Ok(Some(neuron)) = result {
+                            full_neurons.push(neuron);
+                        }
+                    }
+                }
+
+                render_rows(
+                    output,
+                    &full_neurons,
+                    "uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit,last_update,axon_ip,axon_port,axon_version,prometheus_ip,prometheus_port",
+                    |n| {
+                        let (aip, aport, aver) = n.axon_info.as_ref()
+                            .map(|a| (a.ip.as_str(), a.port.to_string(), a.version.to_string()))
+                            .unwrap_or(("", String::new(), String::new()));
+                        let (pip, pport) = n.prometheus_info.as_ref()
+                            .map(|p| (p.ip.as_str(), p.port.to_string()))
+                            .unwrap_or(("", String::new()));
+                        format!(
+                            "{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{},{},{},{},{},{},{}",
+                            n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust,
+                            n.consensus, n.incentive, n.dividends, n.emission,
+                            n.validator_permit, n.last_update, aip, aport, aver, pip, pport
+                        )
+                    },
+                    &["UID", "Hotkey", "Stake", "Rank", "Trust", "Incentive", "Emission", "Axon", "VP"],
+                    |n| {
+                        let axon_str = n.axon_info.as_ref()
+                            .filter(|a| a.port > 0)
+                            .map(|a| format!("{}:{}", a.ip, a.port))
+                            .unwrap_or_else(|| "—".to_string());
+                        vec![
+                            format!("{}", n.uid),
+                            crate::utils::short_ss58(&n.hotkey),
+                            format!("{:.4}τ", n.stake.tao()),
+                            format!("{:.4}", n.rank),
+                            format!("{:.4}", n.trust),
+                            format!("{:.4}", n.incentive),
+                            format!("{:.4} τ", n.emission / 1e9),
+                            axon_str,
+                            if n.validator_permit { "Y" } else { "" }.to_string(),
+                        ]
+                    },
+                    Some(&format!("Metagraph SN{} (full) — {} neurons, block {}", netuid, full_neurons.len(), block)),
+                );
+                return Ok(());
+            }
+
             let (neurons, block) = if let Some(bn) = at_block {
                 let bh = client.get_block_hash(bn).await?;
                 let neurons = client.get_neurons_lite_at_block(NetUid(netuid), bh).await?;
                 (neurons, bn as u64)
             } else {
-                let neurons = client.get_neurons_lite(NetUid(netuid)).await?;
-                let block = client.get_block_number().await?;
+                let (neurons, block) = tokio::try_join!(
+                    client.get_neurons_lite(NetUid(netuid)),
+                    client.get_block_number(),
+                )?;
                 (neurons, block)
             };
             let n_count = neurons.len() as u16;
+
+            // --save: cache the metagraph to disk
+            if save {
+                let mg = crate::types::chain_data::Metagraph {
+                    netuid: NetUid(netuid),
+                    n: n_count,
+                    block,
+                    stake: neurons.iter().map(|n| n.stake).collect(),
+                    ranks: neurons.iter().map(|n| n.rank).collect(),
+                    trust: neurons.iter().map(|n| n.trust).collect(),
+                    consensus: neurons.iter().map(|n| n.consensus).collect(),
+                    incentive: neurons.iter().map(|n| n.incentive).collect(),
+                    dividends: neurons.iter().map(|n| n.dividends).collect(),
+                    emission: neurons.iter().map(|n| n.emission).collect(),
+                    validator_trust: neurons.iter().map(|n| n.validator_trust).collect(),
+                    validator_permit: neurons.iter().map(|n| n.validator_permit).collect(),
+                    uids: neurons.iter().map(|n| n.uid).collect(),
+                    active: neurons.iter().map(|n| n.active).collect(),
+                    last_update: neurons.iter().map(|n| n.last_update).collect(),
+                    neurons: neurons.clone(),
+                };
+                let path = crate::queries::cache::save(&mg)?;
+                eprintln!("Snapshot saved: {}", path.display());
+            }
+
             render_rows(
                 output,
                 &neurons,
@@ -767,6 +880,153 @@ async fn handle_subnet(
             handle_subnet_emissions(client, netuid, output).await
         }
         SubnetCommands::Cost { netuid } => handle_subnet_cost(client, netuid, output).await,
+        SubnetCommands::CacheLoad { netuid, block } => {
+            let mg = if let Some(b) = block {
+                crate::queries::cache::load_block(netuid, b)?
+            } else {
+                crate::queries::cache::load_latest(netuid)?
+            };
+            match mg {
+                Some(mg) => {
+                    if output == "json" {
+                        print_json_ser(&mg);
+                    } else {
+                        let n_count = mg.neurons.len();
+                        render_rows(
+                            output,
+                            &mg.neurons,
+                            "uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit,last_update",
+                            |n| {
+                                format!(
+                                    "{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{},{}",
+                                    n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust,
+                                    n.consensus, n.incentive, n.dividends, n.emission,
+                                    n.validator_permit, n.last_update
+                                )
+                            },
+                            &["UID", "Hotkey", "Stake", "Rank", "Trust", "Incentive", "Emission", "Updated", "VP"],
+                            |n| {
+                                vec![
+                                    format!("{}", n.uid),
+                                    crate::utils::short_ss58(&n.hotkey),
+                                    format!("{:.4}τ", n.stake.tao()),
+                                    format!("{:.4}", n.rank),
+                                    format!("{:.4}", n.trust),
+                                    format!("{:.4}", n.incentive),
+                                    format!("{:.4} τ", n.emission / 1e9),
+                                    format!("{}", n.last_update),
+                                    if n.validator_permit { "Y" } else { "" }.to_string(),
+                                ]
+                            },
+                            Some(&format!("Cached Metagraph SN{} — {} neurons, block {} (from disk)", netuid, n_count, mg.block)),
+                        );
+                    }
+                }
+                None => {
+                    let msg = if let Some(b) = block {
+                        format!("No cached snapshot for SN{} at block {}", netuid, b)
+                    } else {
+                        format!("No cached snapshots for SN{}", netuid)
+                    };
+                    if output == "json" {
+                        print_json(&serde_json::json!({"error": msg}));
+                    } else {
+                        println!("{}", msg);
+                        println!("  Tip: run `agcli subnet metagraph --netuid {} --save` to create one", netuid);
+                    }
+                }
+            }
+            Ok(())
+        }
+        SubnetCommands::CacheList { netuid } => {
+            let blocks = crate::queries::cache::list_cached_blocks(netuid)?;
+            if blocks.is_empty() {
+                if output == "json" {
+                    print_json(&serde_json::json!({"netuid": netuid, "snapshots": []}));
+                } else {
+                    println!("No cached snapshots for SN{}", netuid);
+                    println!("  Tip: run `agcli subnet metagraph --netuid {} --save` to create one", netuid);
+                }
+            } else {
+                if output == "json" {
+                    print_json(&serde_json::json!({"netuid": netuid, "snapshots": blocks}));
+                } else {
+                    println!("Cached snapshots for SN{} ({} total):", netuid, blocks.len());
+                    let dir = crate::queries::cache::cache_path(netuid);
+                    for b in &blocks {
+                        let path = dir.join(format!("block-{}.json", b));
+                        let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                        println!("  block {} ({:.1} KB)", b, size as f64 / 1024.0);
+                    }
+                    println!("  Cache dir: {}", dir.display());
+                }
+            }
+            Ok(())
+        }
+        SubnetCommands::CacheDiff {
+            netuid,
+            from_block,
+            to_block,
+        } => {
+            // Load "from" snapshot
+            let from_mg = if let Some(fb) = from_block {
+                crate::queries::cache::load_block(netuid, fb)?
+                    .ok_or_else(|| anyhow::anyhow!("No cached snapshot for SN{} at block {}", netuid, fb))?
+            } else {
+                crate::queries::cache::load_latest(netuid)?
+                    .ok_or_else(|| anyhow::anyhow!("No cached snapshots for SN{}. Run `agcli subnet metagraph --netuid {} --save` first.", netuid, netuid))?
+            };
+
+            // Load "to" snapshot (or fetch live)
+            let to_mg = if let Some(tb) = to_block {
+                crate::queries::cache::load_block(netuid, tb)?
+                    .ok_or_else(|| anyhow::anyhow!("No cached snapshot for SN{} at block {}", netuid, tb))?
+            } else {
+                // Fetch live from chain
+                crate::queries::fetch_metagraph(client, NetUid(netuid)).await?
+            };
+
+            let deltas = crate::queries::cache::diff(&from_mg, &to_mg);
+            if output == "json" {
+                print_json_ser(&deltas);
+            } else {
+                println!(
+                    "Diff SN{}: block {} → {} ({} changes)",
+                    netuid,
+                    from_mg.block,
+                    to_mg.block,
+                    deltas.len()
+                );
+                if deltas.is_empty() {
+                    println!("  No significant changes detected.");
+                } else {
+                    for d in &deltas {
+                        println!("{}", d);
+                    }
+                }
+            }
+            Ok(())
+        }
+        SubnetCommands::CachePrune { netuid, keep } => {
+            let removed = crate::queries::cache::prune(netuid, keep)?;
+            if output == "json" {
+                print_json(&serde_json::json!({"netuid": netuid, "removed": removed, "kept": keep}));
+            } else {
+                println!("Pruned {} old snapshots for SN{} (kept {})", removed, netuid, keep);
+            }
+            Ok(())
+        }
+        SubnetCommands::Probe {
+            netuid,
+            uids,
+            timeout_ms,
+            concurrency,
+        } => {
+            handle_subnet_probe(client, netuid, uids, timeout_ms, concurrency, output).await
+        }
+        SubnetCommands::Commits { netuid, hotkey } => {
+            handle_subnet_commits(client, netuid, hotkey, output).await
+        }
     }
 }
 
@@ -1002,10 +1262,11 @@ async fn handle_block(cmd: BlockCommands, client: &Client, output: &str) -> Resu
     match cmd {
         BlockCommands::Info { number } => {
             let block_hash = client.get_block_hash(number).await?;
-            let (block_num, hash, parent_hash, state_root) =
-                client.get_block_header(block_hash).await?;
-            let ext_count = client.get_block_extrinsic_count(block_hash).await?;
-            let timestamp = client.get_block_timestamp(block_hash).await?;
+            let ((block_num, hash, parent_hash, state_root), ext_count, timestamp) = tokio::try_join!(
+                client.get_block_header(block_hash),
+                client.get_block_extrinsic_count(block_hash),
+                client.get_block_timestamp(block_hash),
+            )?;
 
             if output == "json" {
                 let mut obj = serde_json::json!({
@@ -1061,8 +1322,10 @@ async fn handle_block(cmd: BlockCommands, client: &Client, output: &str) -> Resu
             let mut rows: Vec<BlockRow> = Vec::with_capacity(count);
             for block_num in from..=to {
                 let block_hash = client.get_block_hash(block_num).await?;
-                let ext_count = client.get_block_extrinsic_count(block_hash).await?;
-                let timestamp = client.get_block_timestamp(block_hash).await?;
+                let (ext_count, timestamp) = tokio::try_join!(
+                    client.get_block_extrinsic_count(block_hash),
+                    client.get_block_timestamp(block_hash),
+                )?;
 
                 let ts_str = timestamp
                     .and_then(|ts| chrono::DateTime::from_timestamp_millis(ts as i64))
@@ -1098,8 +1361,10 @@ async fn handle_block(cmd: BlockCommands, client: &Client, output: &str) -> Resu
         BlockCommands::Latest => {
             let block_num = client.get_block_number().await?;
             let block_hash = client.get_block_hash(block_num as u32).await?;
-            let ext_count = client.get_block_extrinsic_count(block_hash).await?;
-            let timestamp = client.get_block_timestamp(block_hash).await?;
+            let (ext_count, timestamp) = tokio::try_join!(
+                client.get_block_extrinsic_count(block_hash),
+                client.get_block_timestamp(block_hash),
+            )?;
 
             if output == "json" {
                 let mut obj = serde_json::json!({
@@ -1938,6 +2203,369 @@ async fn handle_subnet_cost(client: &Client, netuid: u16, output: &str) -> Resul
     Ok(())
 }
 
+// ──────── Axon Probe ────────
+
+/// Probe result for a single neuron's axon endpoint.
+#[derive(Debug, serde::Serialize)]
+struct ProbeResult {
+    uid: u16,
+    hotkey: String,
+    ip: String,
+    port: u16,
+    status: String,
+    latency_ms: Option<f64>,
+    version: u32,
+}
+
+async fn handle_subnet_probe(
+    client: &Client,
+    netuid: u16,
+    uids_filter: Option<String>,
+    timeout_ms: u64,
+    concurrency: usize,
+    output: &str,
+) -> Result<()> {
+    use futures::stream::{self, StreamExt};
+    use std::time::Instant;
+
+    // Parse UID filter if provided
+    let uid_set: Option<std::collections::HashSet<u16>> = uids_filter.map(|s| {
+        s.split(',')
+            .filter_map(|u| u.trim().parse::<u16>().ok())
+            .collect()
+    });
+
+    // Fetch neurons lite first to get UIDs, then fetch full info for axon endpoints
+    let neurons_lite = client.get_neurons_lite(NetUid(netuid)).await?;
+    let target_uids: Vec<u16> = neurons_lite
+        .iter()
+        .filter(|n| uid_set.as_ref().map_or(true, |s| s.contains(&n.uid)))
+        .map(|n| n.uid)
+        .collect();
+
+    if target_uids.is_empty() {
+        if output == "json" {
+            print_json(&serde_json::json!({"error": "No neurons to probe", "netuid": netuid}));
+        } else {
+            println!("No neurons to probe on SN{}", netuid);
+        }
+        return Ok(());
+    }
+
+    // Fetch full neuron info (with axon endpoints) in parallel
+    let mut neurons = Vec::new();
+    for chunk in target_uids.chunks(32) {
+        let futs: Vec<_> = chunk
+            .iter()
+            .map(|&uid| client.get_neuron(NetUid(netuid), uid))
+            .collect();
+        let results = futures::future::join_all(futs).await;
+        for r in results {
+            if let Ok(Some(n)) = r {
+                neurons.push(n);
+            }
+        }
+    }
+
+    // Filter to neurons with axon endpoints
+    let probeable: Vec<_> = neurons
+        .iter()
+        .filter(|n| {
+            n.axon_info
+                .as_ref()
+                .map_or(false, |a| a.port > 0 && a.ip != "0.0.0.0")
+        })
+        .collect();
+
+    if output != "json" {
+        println!(
+            "Probing {} axon endpoints on SN{} ({} total neurons, {}ms timeout, {} concurrent)...\n",
+            probeable.len(),
+            netuid,
+            neurons.len(),
+            timeout_ms,
+            concurrency,
+        );
+    }
+
+    let timeout_dur = std::time::Duration::from_millis(timeout_ms);
+    let http_client = reqwest::Client::builder()
+        .timeout(timeout_dur)
+        .build()?;
+
+    // Probe each axon endpoint concurrently
+    let results: Vec<ProbeResult> = stream::iter(probeable.iter().map(|n| {
+        let http = http_client.clone();
+        let axon = n.axon_info.as_ref().unwrap();
+        let uid = n.uid;
+        let hotkey = n.hotkey.clone();
+        let ip = axon.ip.clone();
+        let port = axon.port;
+        let version = axon.version;
+
+        async move {
+            let url = format!("http://{}:{}/", ip, port);
+            let start = Instant::now();
+            let res = http.get(&url).send().await;
+            let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+
+            match res {
+                Ok(resp) => ProbeResult {
+                    uid,
+                    hotkey,
+                    ip,
+                    port,
+                    status: format!("{}", resp.status().as_u16()),
+                    latency_ms: Some(elapsed),
+                    version,
+                },
+                Err(e) => {
+                    let status = if e.is_timeout() {
+                        "timeout".to_string()
+                    } else if e.is_connect() {
+                        "refused".to_string()
+                    } else {
+                        format!("error: {}", e)
+                    };
+                    ProbeResult {
+                        uid,
+                        hotkey,
+                        ip,
+                        port,
+                        status,
+                        latency_ms: None,
+                        version,
+                    }
+                }
+            }
+        }
+    }))
+    .buffer_unordered(concurrency)
+    .collect()
+    .await;
+
+    // Count stats
+    let reachable = results.iter().filter(|r| r.latency_ms.is_some()).count();
+    let no_axon = neurons.len() - probeable.len();
+
+    render_rows(
+        output,
+        &results,
+        "uid,hotkey,ip,port,status,latency_ms,version",
+        |r| {
+            format!(
+                "{},{},{},{},{},{},{}",
+                r.uid,
+                r.hotkey,
+                r.ip,
+                r.port,
+                r.status,
+                r.latency_ms.map(|l| format!("{:.1}", l)).unwrap_or_default(),
+                r.version
+            )
+        },
+        &["UID", "Hotkey", "Endpoint", "Status", "Latency", "Version"],
+        |r| {
+            vec![
+                format!("{}", r.uid),
+                crate::utils::short_ss58(&r.hotkey),
+                format!("{}:{}", r.ip, r.port),
+                r.status.clone(),
+                r.latency_ms
+                    .map(|l| format!("{:.0}ms", l))
+                    .unwrap_or_else(|| "—".to_string()),
+                format!("v{}", r.version),
+            ]
+        },
+        Some(&format!(
+            "Axon Probe SN{} — {}/{} reachable, {} no endpoint",
+            netuid, reachable, probeable.len(), no_axon
+        )),
+    );
+    Ok(())
+}
+
+// ──────── Subnet Commits ────────
+
+async fn handle_subnet_commits(
+    client: &Client,
+    netuid: u16,
+    hotkey: Option<String>,
+    output: &str,
+) -> Result<()> {
+    let nuid = NetUid(netuid);
+
+    let (block, hyperparams, reveal_period) = tokio::try_join!(
+        client.get_block_number(),
+        client.get_subnet_hyperparams(nuid),
+        client.get_reveal_period_epochs(nuid),
+    )?;
+
+    let cr_enabled = hyperparams
+        .as_ref()
+        .map(|h| h.commit_reveal_weights_enabled)
+        .unwrap_or(false);
+
+    if !cr_enabled {
+        if output == "json" {
+            print_json(&serde_json::json!({
+                "netuid": netuid,
+                "commit_reveal_enabled": false,
+                "message": "Commit-reveal is not enabled on this subnet"
+            }));
+        } else {
+            println!("SN{}: commit-reveal is not enabled. Validators use direct set_weights.", netuid);
+        }
+        return Ok(());
+    }
+
+    #[derive(serde::Serialize)]
+    struct CommitEntry {
+        hotkey: String,
+        hash: String,
+        commit_block: u64,
+        first_reveal: u64,
+        last_reveal: u64,
+        status: String,
+        blocks_until_action: Option<i64>,
+    }
+
+    let mut entries = Vec::new();
+
+    if let Some(hk) = &hotkey {
+        // Single hotkey query
+        if let Some(commits) = client.get_weight_commits(nuid, hk).await? {
+            for (hash, commit_block, first_reveal, last_reveal) in commits {
+                let (status, blocks_until) = commit_status(block, first_reveal, last_reveal);
+                entries.push(CommitEntry {
+                    hotkey: hk.clone(),
+                    hash: format!("0x{}", hex::encode(hash.0)),
+                    commit_block,
+                    first_reveal,
+                    last_reveal,
+                    status,
+                    blocks_until_action: blocks_until,
+                });
+            }
+        }
+    } else {
+        // All hotkeys on subnet
+        let all_commits = client.get_all_weight_commits(nuid).await?;
+        for (account, commits) in all_commits {
+            let hk_ss58 = account.to_string();
+            for (hash, commit_block, first_reveal, last_reveal) in commits {
+                let (status, blocks_until) = commit_status(block, first_reveal, last_reveal);
+                entries.push(CommitEntry {
+                    hotkey: hk_ss58.clone(),
+                    hash: format!("0x{}", hex::encode(hash.0)),
+                    commit_block,
+                    first_reveal,
+                    last_reveal,
+                    status,
+                    blocks_until_action: blocks_until,
+                });
+            }
+        }
+    }
+
+    // Sort: ready-to-reveal first, then waiting, then expired
+    entries.sort_by(|a, b| {
+        let order = |s: &str| match s {
+            "READY" => 0,
+            "WAITING" => 1,
+            _ => 2,
+        };
+        order(&a.status)
+            .cmp(&order(&b.status))
+            .then(a.first_reveal.cmp(&b.first_reveal))
+    });
+
+    if output == "json" {
+        print_json(&serde_json::json!({
+            "netuid": netuid,
+            "block": block,
+            "commit_reveal_enabled": true,
+            "reveal_period_epochs": reveal_period,
+            "commits": entries,
+        }));
+    } else {
+        println!(
+            "Weight Commits — SN{} (block {}, reveal_period={} epochs)\n",
+            netuid, block, reveal_period
+        );
+
+        if entries.is_empty() {
+            println!("  No pending weight commits.");
+        } else {
+            render_rows(
+                output,
+                &entries,
+                "hotkey,hash,commit_block,first_reveal,last_reveal,status,blocks_until",
+                |e| {
+                    format!(
+                        "{},{},{},{},{},{},{}",
+                        e.hotkey,
+                        e.hash,
+                        e.commit_block,
+                        e.first_reveal,
+                        e.last_reveal,
+                        e.status,
+                        e.blocks_until_action
+                            .map(|b| b.to_string())
+                            .unwrap_or_default()
+                    )
+                },
+                &[
+                    "Hotkey",
+                    "Hash",
+                    "Committed",
+                    "Reveal Window",
+                    "Status",
+                    "Blocks",
+                ],
+                |e| {
+                    vec![
+                        crate::utils::short_ss58(&e.hotkey),
+                        if e.hash.len() > 18 {
+                            format!("{}..{}", &e.hash[..10], &e.hash[e.hash.len() - 6..])
+                        } else {
+                            e.hash.clone()
+                        },
+                        format!("#{}", e.commit_block),
+                        format!("{}..{}", e.first_reveal, e.last_reveal),
+                        e.status.clone(),
+                        e.blocks_until_action
+                            .map(|b| format!("{}", b))
+                            .unwrap_or_else(|| "—".to_string()),
+                    ]
+                },
+                Some(&format!(
+                    "{} commits ({} ready, {} waiting, {} expired)",
+                    entries.len(),
+                    entries.iter().filter(|e| e.status == "READY").count(),
+                    entries.iter().filter(|e| e.status == "WAITING").count(),
+                    entries.iter().filter(|e| e.status == "EXPIRED").count(),
+                )),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Determine commit status relative to current block.
+fn commit_status(block: u64, first_reveal: u64, last_reveal: u64) -> (String, Option<i64>) {
+    if block < first_reveal {
+        let remaining = first_reveal - block;
+        ("WAITING".to_string(), Some(remaining as i64))
+    } else if block <= last_reveal {
+        let remaining = last_reveal - block;
+        ("READY".to_string(), Some(remaining as i64))
+    } else {
+        ("EXPIRED".to_string(), None)
+    }
+}
+
 // ──────── Weights ────────
 
 async fn handle_weights(
@@ -2242,6 +2870,62 @@ async fn handle_weights(
                     "reveal_block": final_block,
                     "num_weights": uids.len(),
                 }));
+            }
+
+            Ok(())
+        }
+        WeightCommands::Status { netuid } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            wallet.load_hotkey(hotkey_name)?;
+            let hotkey_ss58 = wallet
+                .hotkey_ss58()
+                .ok_or_else(|| anyhow::anyhow!("No hotkey loaded"))?
+                .to_string();
+
+            let (commits, block, hyperparams, reveal_period) = tokio::try_join!(
+                client.get_weight_commits(NetUid(netuid), &hotkey_ss58),
+                client.get_block_number(),
+                client.get_subnet_hyperparams(NetUid(netuid)),
+                client.get_reveal_period_epochs(NetUid(netuid)),
+            )?;
+
+            let cr_enabled = hyperparams
+                .as_ref()
+                .map(|h| h.commit_reveal_weights_enabled)
+                .unwrap_or(false);
+
+            println!("Weight Commit Status — SN{}", netuid);
+            println!("  Hotkey:          {}", crate::utils::short_ss58(&hotkey_ss58));
+            println!("  Current block:   {}", block);
+            println!("  Commit-reveal:   {}", if cr_enabled { "ENABLED" } else { "disabled" });
+            println!("  Reveal period:   {} epochs", reveal_period);
+
+            match commits {
+                Some(entries) if !entries.is_empty() => {
+                    println!("\n  Pending commits: {}\n", entries.len());
+                    for (i, (hash, commit_block, first_reveal, last_reveal)) in
+                        entries.iter().enumerate()
+                    {
+                        let status = if block < *first_reveal {
+                            let remaining = first_reveal - block;
+                            format!("WAITING ({} blocks until reveal window)", remaining)
+                        } else if block <= *last_reveal {
+                            let remaining = last_reveal - block;
+                            format!("READY TO REVEAL ({} blocks remaining)", remaining)
+                        } else {
+                            "EXPIRED".to_string()
+                        };
+
+                        println!("  [{}] Hash:    0x{}", i + 1, hex::encode(hash.0));
+                        println!("      Commit:  block {}", commit_block);
+                        println!("      Reveal:  blocks {}..{}", first_reveal, last_reveal);
+                        println!("      Status:  {}\n", status);
+                    }
+                }
+                _ => {
+                    println!("\n  No pending commits.");
+                }
             }
 
             Ok(())
@@ -2660,7 +3344,7 @@ async fn handle_multisig(
     cmd: MultisigCommands,
     wallet_dir: &str,
     wallet_name: &str,
-    ws_url: &str,
+    network: &crate::types::Network,
     password: Option<&str>,
 ) -> Result<()> {
     match cmd {
@@ -2704,7 +3388,7 @@ async fn handle_multisig(
             call,
             args,
         } => {
-            let client = Client::connect(ws_url).await?;
+            let client = Client::connect_network(network).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             let other_ids = parse_sorted_signatories(&others)?;
@@ -2745,7 +3429,7 @@ async fn handle_multisig(
             threshold,
             call_hash,
         } => {
-            let client = Client::connect(ws_url).await?;
+            let client = Client::connect_network(network).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             let other_ids = parse_sorted_signatories(&others)?;
@@ -3165,4 +3849,154 @@ async fn handle_batch(
         &format!("Batch ({} calls) submitted.", calls.len()),
     );
     Ok(())
+}
+
+// ──────── Doctor ────────
+
+async fn handle_doctor(
+    network: &crate::types::Network,
+    wallet_dir: &str,
+    wallet_name: &str,
+    output: &str,
+) -> Result<()> {
+    use std::time::Instant;
+
+    let mut checks: Vec<(&str, String, bool)> = Vec::new();
+
+    // 1. Version
+    let version = env!("CARGO_PKG_VERSION");
+    checks.push(("Version", format!("agcli v{}", version), true));
+
+    // 2. Network
+    let urls = network.ws_urls();
+    checks.push(("Network", format!("{} ({} endpoint{})", network, urls.len(), if urls.len() > 1 { "s" } else { "" }), true));
+
+    // 3. Connectivity test
+    let conn_start = Instant::now();
+    let client_result = Client::connect_network(network).await;
+    let conn_elapsed = conn_start.elapsed();
+
+    match &client_result {
+        Ok(_) => {
+            checks.push(("Connection", format!("OK ({:.0}ms)", conn_elapsed.as_millis()), true));
+        }
+        Err(e) => {
+            checks.push(("Connection", format!("FAILED: {}", e), false));
+        }
+    }
+
+    // 4. Chain queries (only if connected)
+    if let Ok(ref client) = client_result {
+        // Block number
+        let t = Instant::now();
+        match client.get_block_number().await {
+            Ok(block) => {
+                checks.push(("Block height", format!("{} ({:.0}ms)", block, t.elapsed().as_millis()), true));
+            }
+            Err(e) => {
+                checks.push(("Block height", format!("FAILED: {}", e), false));
+            }
+        }
+
+        // Total subnets
+        let t = Instant::now();
+        match client.get_total_networks().await {
+            Ok(n) => {
+                checks.push(("Subnets", format!("{} ({:.0}ms)", n, t.elapsed().as_millis()), true));
+            }
+            Err(e) => {
+                checks.push(("Subnets", format!("FAILED: {}", e), false));
+            }
+        }
+
+        // Latency test: 3 quick block queries
+        let mut latencies = Vec::new();
+        for _ in 0..3 {
+            let t = Instant::now();
+            let _ = client.get_block_number().await;
+            latencies.push(t.elapsed().as_millis());
+        }
+        let avg: u128 = latencies.iter().sum::<u128>() / latencies.len() as u128;
+        let min = latencies.iter().min().unwrap();
+        let max = latencies.iter().max().unwrap();
+        checks.push(("Latency (3 pings)", format!("avg {avg}ms  min {min}ms  max {max}ms"), true));
+    }
+
+    // 5. Wallet check
+    let wallet_path = format!("{}/{}", wallet_dir, wallet_name);
+    match crate::wallet::Wallet::open(&wallet_path) {
+        Ok(w) => {
+            let has_coldkey = w.coldkey_ss58().is_some();
+            let hotkeys = w.list_hotkeys().unwrap_or_default();
+            checks.push(("Wallet", format!(
+                "'{}' (coldkey: {}, hotkeys: {})",
+                wallet_name,
+                if has_coldkey { "present" } else { "missing" },
+                hotkeys.len()
+            ), has_coldkey));
+        }
+        Err(_) => {
+            checks.push(("Wallet", format!("'{}' not found at {}", wallet_name, wallet_path), false));
+        }
+    }
+
+    // Output
+    if output == "json" {
+        let items: Vec<serde_json::Value> = checks
+            .iter()
+            .map(|(name, detail, ok)| {
+                serde_json::json!({"check": name, "detail": detail, "ok": ok})
+            })
+            .collect();
+        print_json(&serde_json::json!({"doctor": items}));
+    } else {
+        println!("agcli doctor");
+        println!("{}", "-".repeat(60));
+        for (name, detail, ok) in &checks {
+            let status = if *ok { "OK" } else { "FAIL" };
+            println!("  [{:>4}] {:<20} {}", status, name, detail);
+        }
+        println!("{}", "-".repeat(60));
+        let failed = checks.iter().filter(|(_, _, ok)| !ok).count();
+        if failed == 0 {
+            println!("  All checks passed.");
+        } else {
+            println!("  {} check(s) failed.", failed);
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::commit_status;
+
+    #[test]
+    fn commit_status_waiting() {
+        let (status, blocks) = commit_status(100, 200, 300);
+        assert_eq!(status, "WAITING");
+        assert_eq!(blocks, Some(100));
+    }
+
+    #[test]
+    fn commit_status_ready() {
+        let (status, blocks) = commit_status(250, 200, 300);
+        assert_eq!(status, "READY");
+        assert_eq!(blocks, Some(50));
+    }
+
+    #[test]
+    fn commit_status_ready_at_boundary() {
+        let (status, blocks) = commit_status(200, 200, 300);
+        assert_eq!(status, "READY");
+        assert_eq!(blocks, Some(100));
+    }
+
+    #[test]
+    fn commit_status_expired() {
+        let (status, blocks) = commit_status(301, 200, 300);
+        assert_eq!(status, "EXPIRED");
+        assert_eq!(blocks, None);
+    }
 }

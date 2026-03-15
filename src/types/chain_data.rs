@@ -219,8 +219,6 @@ pub struct Metagraph {
     pub uids: Vec<u16>,
     pub active: Vec<bool>,
     pub last_update: Vec<u64>,
-    pub weights: Vec<Vec<(u16, u16)>>,
-    pub bonds: Vec<Vec<(u16, u16)>>,
 }
 
 /// Root claim information.

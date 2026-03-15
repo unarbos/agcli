@@ -40,7 +40,7 @@ pub enum Network {
 }
 
 impl Network {
-    /// WebSocket endpoint URL.
+    /// WebSocket endpoint URL (primary).
     pub fn ws_url(&self) -> &str {
         match self {
             Network::Finney => "wss://entrypoint-finney.opentensor.ai:443",
@@ -48,6 +48,23 @@ impl Network {
             Network::Local => "ws://127.0.0.1:9944",
             Network::Archive => "wss://bittensor-finney.api.onfinality.io/public-ws",
             Network::Custom(url) => url,
+        }
+    }
+
+    /// All endpoint URLs (primary + fallbacks) for connection retry.
+    pub fn ws_urls(&self) -> Vec<&str> {
+        match self {
+            Network::Finney => vec![
+                "wss://entrypoint-finney.opentensor.ai:443",
+                "wss://bittensor-finney.api.onfinality.io/public-ws",
+            ],
+            Network::Test => vec!["wss://test.finney.opentensor.ai:443"],
+            Network::Local => vec!["ws://127.0.0.1:9944"],
+            Network::Archive => vec![
+                "wss://bittensor-finney.api.onfinality.io/public-ws",
+                "wss://entrypoint-finney.opentensor.ai:443",
+            ],
+            Network::Custom(url) => vec![url.as_str()],
         }
     }
 

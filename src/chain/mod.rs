@@ -29,8 +29,9 @@ pub struct Client {
 }
 
 impl Client {
-    /// Connect to a subtensor node.
-    pub async fn connect(url: &str) -> Result<Self> {
+    /// Connect to a subtensor node (single URL, no retry).
+    async fn connect_once(url: &str) -> Result<Self> {
+        let start = std::time::Instant::now();
         tracing::info!("Connecting to {}", url);
         let rpc_client = RpcClient::from_url(url)
             .await
@@ -42,12 +43,52 @@ impl Client {
         let inner = OnlineClient::from_rpc_client(rpc_client)
             .await
             .with_context(|| "Failed to initialize subxt client from RPC connection")?;
+        tracing::info!("Connected to {} in {:?}", url, start.elapsed());
         Ok(Self { inner, rpc })
     }
 
-    /// Connect to a well-known network.
+    /// Connect to a subtensor node with retry + exponential backoff.
+    /// Tries each URL in order, retrying up to 3 times per URL with 1s→2s→4s delays.
+    pub async fn connect(url: &str) -> Result<Self> {
+        Self::connect_with_retry(&[url]).await
+    }
+
+    /// Connect with retry across multiple endpoints.
+    /// Tries each URL in order; on failure retries with exponential backoff (1s, 2s, 4s).
+    pub async fn connect_with_retry(urls: &[&str]) -> Result<Self> {
+        let max_retries: u32 = 3;
+        let mut last_err = None;
+
+        for url in urls {
+            for attempt in 0..max_retries {
+                if attempt > 0 {
+                    let delay = std::time::Duration::from_secs(1 << (attempt - 1));
+                    tracing::warn!("Retry {}/{} for {} in {:?}", attempt, max_retries - 1, url, delay);
+                    tokio::time::sleep(delay).await;
+                }
+                match Self::connect_once(url).await {
+                    Ok(client) => {
+                        if attempt > 0 {
+                            tracing::info!("Connected to {} on attempt {}", url, attempt + 1);
+                        }
+                        return Ok(client);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Connection attempt {} to {} failed: {}", attempt + 1, url, e);
+                        last_err = Some(e);
+                    }
+                }
+            }
+            tracing::warn!("All {} attempts to {} exhausted, trying next endpoint", max_retries, url);
+        }
+
+        Err(last_err.unwrap_or_else(|| anyhow::anyhow!("No endpoints provided")))
+    }
+
+    /// Connect to a well-known network with automatic fallback endpoints.
     pub async fn connect_network(network: &crate::types::Network) -> Result<Self> {
-        Self::connect(network.ws_url()).await
+        let urls = network.ws_urls();
+        Self::connect_with_retry(&urls).await
     }
 
     /// Get a reference to the underlying subxt client.
@@ -647,6 +688,66 @@ impl Client {
             version_key,
         );
         self.sign_submit(&tx, pair).await
+    }
+
+    /// Query weight commits for a hotkey on a subnet.
+    /// Returns Vec<(hash, commit_block, first_reveal_block, last_reveal_block)>.
+    pub async fn get_weight_commits(
+        &self,
+        netuid: NetUid,
+        hotkey_ss58: &str,
+    ) -> Result<Option<Vec<(subxt::utils::H256, u64, u64, u64)>>> {
+        let hotkey_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let addr = api::storage()
+            .subtensor_module()
+            .weight_commits(netuid.0, &hotkey_id);
+        self.inner
+            .storage()
+            .at_latest()
+            .await?
+            .fetch(&addr)
+            .await
+            .context("Failed to fetch weight commits")
+    }
+
+    /// Iterate all weight commits on a subnet (all hotkeys).
+    /// Returns Vec<(AccountId32, Vec<(hash, commit_block, first_reveal_block, last_reveal_block)>)>.
+    pub async fn get_all_weight_commits(
+        &self,
+        netuid: NetUid,
+    ) -> Result<Vec<(AccountId, Vec<(subxt::utils::H256, u64, u64, u64)>)>> {
+        let addr = api::storage()
+            .subtensor_module()
+            .weight_commits_iter1(netuid.0);
+        let mut results = Vec::new();
+        let mut iter = self
+            .inner
+            .storage()
+            .at_latest()
+            .await?
+            .iter(addr)
+            .await?;
+        while let Some(Ok(kv)) = iter.next().await {
+            // Extract the account ID from the storage key (last 32 bytes)
+            let key_bytes = kv.key_bytes;
+            if key_bytes.len() >= 32 {
+                let account_bytes: [u8; 32] = key_bytes[key_bytes.len() - 32..]
+                    .try_into()
+                    .unwrap_or([0u8; 32]);
+                let account = AccountId::from(account_bytes);
+                results.push((account, kv.value));
+            }
+        }
+        Ok(results)
+    }
+
+    /// Get reveal period epochs for a subnet.
+    pub async fn get_reveal_period_epochs(&self, netuid: NetUid) -> Result<u64> {
+        let addr = api::storage()
+            .subtensor_module()
+            .reveal_period_epochs(netuid.0);
+        let val = self.inner.storage().at_latest().await?.fetch(&addr).await?;
+        Ok(val.unwrap_or(1))
     }
 
     /// Serve axon metadata.

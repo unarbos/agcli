@@ -1,16 +1,49 @@
 use clap::Parser;
+use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() {
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
-        )
-        .init();
-
     let mut cli = agcli::cli::Cli::parse();
+
+    // Configure logging level: --debug > --verbose > RUST_LOG > warn
+    let filter = if cli.debug {
+        tracing_subscriber::EnvFilter::new("debug")
+    } else if cli.verbose {
+        tracing_subscriber::EnvFilter::new("agcli=info,warn")
+    } else {
+        tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"))
+    };
+
+    // Set up logging: stderr always, file optionally
+    if let Some(ref log_path) = cli.log_file {
+        let path = std::path::Path::new(log_path);
+        let dir = path.parent().unwrap_or(std::path::Path::new("."));
+        let filename = path
+            .file_name()
+            .unwrap_or(std::ffi::OsStr::new("agcli.log"))
+            .to_string_lossy();
+
+        let file_appender = tracing_appender::rolling::daily(dir, filename.as_ref());
+        let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+        // Keep _guard alive for the duration of main
+        let _file_guard = _guard;
+
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .init();
+    }
 
     // Load config file and apply defaults (CLI flags take precedence)
     let cfg = agcli::Config::load();
@@ -21,16 +54,18 @@ async fn main() {
     match agcli::cli::commands::execute(cli).await {
         Ok(()) => std::process::exit(0),
         Err(e) => {
+            let code = agcli::error::classify(&e);
             if json_errors {
                 // Structured error JSON on stderr for agents
                 agcli::cli::helpers::eprint_json(&serde_json::json!({
                     "error": true,
+                    "code": code,
                     "message": format!("{:#}", e),
                 }));
             } else {
                 eprintln!("Error: {:#}", e);
             }
-            std::process::exit(1);
+            std::process::exit(code);
         }
     }
 }

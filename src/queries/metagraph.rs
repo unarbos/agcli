@@ -27,8 +27,6 @@ pub async fn fetch_metagraph(client: &Client, netuid: NetUid) -> Result<Metagrap
         uids: neurons.iter().map(|n| n.uid).collect(),
         active: neurons.iter().map(|n| n.active).collect(),
         last_update: neurons.iter().map(|n| n.last_update).collect(),
-        weights: vec![],
-        bonds: vec![],
         neurons,
     })
 }

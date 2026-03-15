@@ -9,6 +9,7 @@ use aes_gcm::{
 };
 use anyhow::{Context, Result};
 use argon2::Argon2;
+use fs2::FileExt;
 use rand::RngCore;
 use sp_core::sr25519;
 use std::fs;
@@ -18,8 +19,29 @@ const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 
+/// Acquire an exclusive advisory lock on a keyfile path.
+/// Returns the lock file handle (lock released on drop).
+fn lock_keyfile(path: &Path) -> Result<fs::File> {
+    let lock_path = path.with_extension("lock");
+    if let Some(parent) = lock_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let lock_file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .with_context(|| format!("Cannot create lock file '{}'", lock_path.display()))?;
+    lock_file
+        .lock_exclusive()
+        .with_context(|| format!("Cannot acquire lock on '{}'", lock_path.display()))?;
+    Ok(lock_file)
+}
+
 /// Write mnemonic encrypted with password.
 pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> Result<()> {
+    let _lock = lock_keyfile(path)?;
+
     let mut salt = [0u8; SALT_LEN];
     let mut nonce_bytes = [0u8; NONCE_LEN];
     rand::thread_rng().fill_bytes(&mut salt);
@@ -70,6 +92,7 @@ pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
 
 /// Write a plaintext keyfile (for hotkeys).
 pub fn write_keyfile(path: &Path, mnemonic: &str) -> Result<()> {
+    let _lock = lock_keyfile(path)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -84,6 +107,7 @@ pub fn read_keyfile(path: &Path) -> Result<String> {
 
 /// Write public key to a file (hex-encoded).
 pub fn write_public_key(path: &Path, public: &sr25519::Public) -> Result<()> {
+    let _lock = lock_keyfile(path)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }

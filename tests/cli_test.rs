@@ -2175,3 +2175,49 @@ fn explain_diff_via_compare_alias() {
     let text = agcli::utils::explain::explain("compare");
     assert!(text.is_some());
 }
+
+#[test]
+fn parse_subnet_commits() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "subnet",
+        "commits",
+        "--netuid",
+        "1",
+    ]);
+    assert!(cli.is_ok(), "should parse subnet commits: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_commits_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "subnet",
+        "commits",
+        "--netuid",
+        "1",
+        "--hotkey",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse subnet commits with hotkey: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_weights_status() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "status",
+        "--netuid",
+        "1",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "should parse weights status: {:?}",
+        cli.err()
+    );
+}

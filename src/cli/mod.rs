@@ -57,6 +57,18 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub pretty: bool,
 
+    /// Verbose output: show connection info and query timing
+    #[arg(long, short = 'v', global = true)]
+    pub verbose: bool,
+
+    /// Debug output: show all RPC calls and detailed diagnostics
+    #[arg(long, global = true)]
+    pub debug: bool,
+
+    /// Write logs to a file (in addition to stderr). Supports daily rotation.
+    #[arg(long, global = true, env = "AGCLI_LOG_FILE")]
+    pub log_file: Option<String>,
+
     /// Wallet password (avoids interactive prompt; prefer env var for security)
     #[arg(long, global = true, env = "AGCLI_PASSWORD", hide_env_values = true)]
     pub password: Option<String>,
@@ -191,6 +203,10 @@ pub enum Commands {
     // ──── Update ────
     /// Self-update agcli to the latest version from GitHub
     Update,
+
+    // ──── Doctor ────
+    /// Diagnostic check: test connectivity, wallet health, chain version, and latency
+    Doctor,
 
     // ──── Explain ────
     /// Built-in Bittensor concept reference (tempo, commit-reveal, AMM, etc.)
@@ -573,6 +589,63 @@ pub enum SubnetCommands {
         /// Query at a specific block number (historical wayback)
         #[arg(long)]
         at_block: Option<u32>,
+        /// Fetch full neuron info including axon/prometheus endpoints
+        #[arg(long)]
+        full: bool,
+        /// Save snapshot to disk cache (~/.agcli/metagraph/)
+        #[arg(long)]
+        save: bool,
+    },
+    /// Load a cached metagraph snapshot from disk
+    CacheLoad {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Block number to load (default: latest)
+        #[arg(long)]
+        block: Option<u64>,
+    },
+    /// List cached metagraph snapshots for a subnet
+    CacheList {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
+    /// Diff two metagraph snapshots (current vs cached, or two cached blocks)
+    CacheDiff {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// First block number (older, default: latest cached)
+        #[arg(long)]
+        from_block: Option<u64>,
+        /// Second block number (newer, default: fetch live from chain)
+        #[arg(long)]
+        to_block: Option<u64>,
+    },
+    /// Prune old cached metagraph snapshots
+    CachePrune {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Number of snapshots to keep (default: 10)
+        #[arg(long, default_value = "10")]
+        keep: usize,
+    },
+    /// Probe axon health for neurons on a subnet
+    Probe {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Only probe specific UIDs (comma-separated)
+        #[arg(long)]
+        uids: Option<String>,
+        /// Timeout per probe in milliseconds (default: 3000)
+        #[arg(long, default_value = "3000")]
+        timeout_ms: u64,
+        /// Max concurrent probes (default: 32)
+        #[arg(long, default_value = "32")]
+        concurrency: usize,
     },
     /// Register a new subnet
     Register,
@@ -642,6 +715,15 @@ pub enum SubnetCommands {
         #[arg(long)]
         netuid: u16,
     },
+    /// Show pending weight commits on a subnet (commit-reveal status)
+    Commits {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Filter by hotkey SS58 address (default: show all)
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -687,6 +769,12 @@ pub enum WeightCommands {
         /// Version key
         #[arg(long, default_value = "0")]
         version_key: u64,
+    },
+    /// Check commit status for your hotkey on a subnet
+    Status {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
     },
     /// Atomic commit-reveal: commit weights, wait for reveal window, then auto-reveal
     CommitReveal {
