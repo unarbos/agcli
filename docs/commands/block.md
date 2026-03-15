@@ -20,6 +20,15 @@ agcli block info --number 4000000
 # JSON: {"number", "hash", "parent_hash", "state_root", "timestamp", "extrinsics": [...]}
 ```
 
+### block range
+Query a range of blocks (max 1000).
+
+```bash
+agcli block range --from 3999900 --to 4000000
+```
+
+Parallel queries for each block in range. Shows number, hash, extrinsic count, timestamp.
+
 ## Related Commands
 - `agcli diff` — Compare chain state between two blocks
 - `agcli subscribe blocks` — Watch blocks in real-time

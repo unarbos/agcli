@@ -25,6 +25,16 @@ agcli serve axon --netuid 1 --ip 1.2.3.4 --port 8091 [--protocol 4] [--version 0
 - Errors: `InvalidIpType`, `InvalidIpAddress`, `InvalidPort`, `ServingRateLimitExceeded`
 - Rate limited per `serving_rate_limit` hyperparameter
 
+### serve prometheus
+Set prometheus monitoring endpoint for your neuron.
+
+```bash
+agcli serve prometheus --ip 1.2.3.4 --port 9090 [--version 0]
+```
+
+**On-chain**: `SubtensorModule::serve_prometheus(origin, netuid, version, ip, port, ip_type)`
+- Events: `PrometheusServed(netuid, hotkey)`
+
 ## Related Commands
 - `agcli subnet metagraph --netuid N --full` — See axon endpoints for all neurons
 - `agcli subnet probe --netuid N` — Test axon connectivity
