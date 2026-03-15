@@ -482,6 +482,80 @@ pub async fn handle_stake(
             println!("Stake transferred. Tx: {}", hash);
             Ok(())
         }
+        StakeCommands::ProcessClaim { hotkey, netuids } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            // Parse optional netuid filter
+            let filter_netuids: Option<Vec<u16>> = netuids.as_ref().map(|s| {
+                s.split(',')
+                    .filter_map(|n| n.trim().parse::<u16>().ok())
+                    .collect()
+            });
+
+            // Fetch stakes to find all netuids where this hotkey has root emissions
+            let coldkey_ss58 = resolve_coldkey_address(None, wallet_dir, wallet_name);
+            let stakes = client.get_stake_for_coldkey(&coldkey_ss58).await?;
+
+            // Filter to netuids where we have stake on this hotkey
+            let target_netuids: Vec<u16> = stakes
+                .iter()
+                .filter(|s| s.hotkey == hk)
+                .filter(|s| {
+                    filter_netuids
+                        .as_ref()
+                        .map(|f| f.contains(&s.netuid.0))
+                        .unwrap_or(true)
+                })
+                .map(|s| s.netuid.0)
+                .collect();
+
+            if target_netuids.is_empty() {
+                println!("No stakes found for hotkey {} to claim from.", crate::utils::short_ss58(&hk));
+                return Ok(());
+            }
+
+            println!(
+                "Processing root claims for hotkey {} across {} subnet(s): {:?}",
+                crate::utils::short_ss58(&hk),
+                target_netuids.len(),
+                target_netuids
+            );
+
+            let mut success = 0u32;
+            let mut failed = 0u32;
+            for nuid in &target_netuids {
+                match client
+                    .submit_raw_call(
+                        &pair,
+                        "SubtensorModule",
+                        "claim_root_dividends",
+                        vec![
+                            subxt::dynamic::Value::from_bytes(
+                                Client::ss58_to_account_id_pub(&hk)?.0,
+                            ),
+                            subxt::dynamic::Value::u128(*nuid as u128),
+                        ],
+                    )
+                    .await
+                {
+                    Ok(hash) => {
+                        println!("  SN{}: claimed (tx: {})", nuid, hash);
+                        success += 1;
+                    }
+                    Err(e) => {
+                        eprintln!("  SN{}: failed — {}", nuid, e);
+                        failed += 1;
+                    }
+                }
+            }
+            println!(
+                "\nDone: {} claimed, {} failed out of {} total",
+                success,
+                failed,
+                target_netuids.len()
+            );
+            Ok(())
+        }
         StakeCommands::Wizard {
             netuid,
             amount,

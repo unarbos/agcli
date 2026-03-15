@@ -408,6 +408,9 @@ pub async fn execute(cli: Cli) -> Result<()> {
             )
             .await
         }
+        Commands::Utils(cmd) => {
+            system_cmds::handle_utils(cmd, &network, output).await
+        }
         Commands::Config(cmd) => system_cmds::handle_config(cmd).await,
         Commands::Completions { shell } => {
             system_cmds::generate_completions(&shell);

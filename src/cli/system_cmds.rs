@@ -181,6 +181,153 @@ pub(super) fn handle_explain(topic: Option<&str>, output: &str) -> Result<()> {
     Ok(())
 }
 
+pub(super) async fn handle_utils(
+    cmd: crate::cli::UtilsCommands,
+    network: &crate::types::Network,
+    output: &str,
+) -> Result<()> {
+    use crate::cli::UtilsCommands;
+    match cmd {
+        UtilsCommands::Convert { amount, to_rao } => {
+            if to_rao {
+                let rao = (amount * 1e9) as u64;
+                if output == "json" {
+                    print_json(&serde_json::json!({
+                        "tao": amount,
+                        "rao": rao,
+                    }));
+                } else {
+                    println!("{} TAO = {} RAO", amount, rao);
+                }
+            } else {
+                let tao = amount / 1e9;
+                if output == "json" {
+                    print_json(&serde_json::json!({
+                        "rao": amount as u64,
+                        "tao": tao,
+                    }));
+                } else {
+                    println!("{} RAO = {:.9} TAO", amount as u64, tao);
+                }
+            }
+            Ok(())
+        }
+        UtilsCommands::Latency { extra, pings } => {
+            use std::time::Instant;
+            use crate::chain::Client;
+
+            let mut endpoints: Vec<(String, String)> = Vec::new();
+            // Add standard network endpoints
+            let urls = network.ws_urls();
+            for url in &urls {
+                endpoints.push((format!("{}", network), url.to_string()));
+            }
+            // Add extra endpoints
+            if let Some(ref extra_str) = extra {
+                for url in extra_str.split(',') {
+                    let url = url.trim().to_string();
+                    if !url.is_empty() {
+                        endpoints.push(("custom".to_string(), url));
+                    }
+                }
+            }
+
+            if endpoints.is_empty() {
+                anyhow::bail!("No endpoints to test");
+            }
+
+            println!("Testing {} endpoint(s) with {} pings each...\n", endpoints.len(), pings);
+
+            #[derive(serde::Serialize)]
+            struct EndpointResult {
+                label: String,
+                url: String,
+                connected: bool,
+                avg_ms: Option<u128>,
+                min_ms: Option<u128>,
+                max_ms: Option<u128>,
+                failures: u32,
+            }
+
+            let mut results: Vec<EndpointResult> = Vec::new();
+
+            for (label, url) in &endpoints {
+                let custom_network = crate::types::Network::Custom(url.clone());
+                let connect_start = Instant::now();
+                match Client::connect_network(&custom_network).await {
+                    Ok(client) => {
+                        let connect_ms = connect_start.elapsed().as_millis();
+                        let mut latencies = Vec::new();
+                        let mut failures = 0u32;
+                        for _ in 0..pings {
+                            let t = Instant::now();
+                            match client.get_block_number().await {
+                                Ok(_) => latencies.push(t.elapsed().as_millis()),
+                                Err(_) => failures += 1,
+                            }
+                        }
+                        if latencies.is_empty() {
+                            results.push(EndpointResult {
+                                label: label.clone(),
+                                url: url.clone(),
+                                connected: true,
+                                avg_ms: None,
+                                min_ms: None,
+                                max_ms: None,
+                                failures,
+                            });
+                            println!("{:<12} {}", label, url);
+                            println!("  Connect: {}ms, pings: all {} failed\n", connect_ms, pings);
+                        } else {
+                            let avg = latencies.iter().sum::<u128>() / latencies.len() as u128;
+                            let min = *latencies.iter().min().unwrap();
+                            let max = *latencies.iter().max().unwrap();
+                            results.push(EndpointResult {
+                                label: label.clone(),
+                                url: url.clone(),
+                                connected: true,
+                                avg_ms: Some(avg),
+                                min_ms: Some(min),
+                                max_ms: Some(max),
+                                failures,
+                            });
+                            if output != "json" {
+                                println!("{:<12} {}", label, url);
+                                let fail_note = if failures > 0 { format!(" ({} failed)", failures) } else { String::new() };
+                                println!(
+                                    "  Connect: {}ms | avg: {}ms | min: {}ms | max: {}ms{}\n",
+                                    connect_ms, avg, min, max, fail_note
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        results.push(EndpointResult {
+                            label: label.clone(),
+                            url: url.clone(),
+                            connected: false,
+                            avg_ms: None,
+                            min_ms: None,
+                            max_ms: None,
+                            failures: pings as u32,
+                        });
+                        if output != "json" {
+                            println!("{:<12} {}", label, url);
+                            println!("  FAILED to connect: {}\n", e);
+                        }
+                    }
+                }
+            }
+
+            if output == "json" {
+                print_json(&serde_json::json!({"latency": results}));
+            }
+
+            Ok(())
+        }
+    }
+}
+
 pub(super) async fn handle_update() -> Result<()> {
     println!("Updating agcli from GitHub...");
     let status = std::process::Command::new("cargo")

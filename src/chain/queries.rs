@@ -811,6 +811,48 @@ impl Client {
         }
     }
 
+    // ──────── Subnet State Queries ────────
+
+    /// Check if a subnet is active (emissions are running).
+    pub async fn is_subnet_active(&self, netuid: NetUid) -> Result<bool> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+        let result = retry_on_transient("is_subnet_active", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                "SubtensorModule",
+                "SubnetActive",
+                vec![subxt::dynamic::Value::u128(nid as u128)],
+            );
+            let r = inner.storage().at_latest().await?.fetch(&addr).await
+                .with_context(|| format!("Failed to check active status for SN{}", nid))?;
+            Ok(r)
+        }).await?;
+        match result {
+            Some(val) => Ok(val.as_type::<bool>().unwrap_or(false)),
+            None => Ok(false),
+        }
+    }
+
+    /// Get mechanism count for a subnet.
+    pub async fn get_mechanism_count(&self, netuid: NetUid) -> Result<u16> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+        let result = retry_on_transient("get_mechanism_count", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                "SubtensorModule",
+                "MechanismCountCurrent",
+                vec![subxt::dynamic::Value::u128(nid as u128)],
+            );
+            let r = inner.storage().at_latest().await?.fetch(&addr).await
+                .with_context(|| format!("Failed to fetch mechanism count for SN{}", nid))?;
+            Ok(r)
+        }).await?;
+        match result {
+            Some(val) => Ok(val.as_type::<u16>().unwrap_or(1)),
+            None => Ok(1), // Default is 1 mechanism
+        }
+    }
+
     // ──────── Crowdloan Queries ────────
 
     /// List all crowdloans by iterating Crowdloan storage.

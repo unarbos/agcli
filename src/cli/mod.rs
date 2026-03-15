@@ -262,6 +262,11 @@ pub enum Commands {
     #[command(subcommand)]
     Diff(DiffCommands),
 
+    // ──── Utils ────
+    /// Utility commands (convert, latency)
+    #[command(subcommand)]
+    Utils(UtilsCommands),
+
     // ──── Batch ────
     /// Submit multiple extrinsics from a JSON file via Utility.batch_all
     Batch {
@@ -595,6 +600,15 @@ pub enum StakeCommands {
         #[arg(long)]
         address: Option<String>,
     },
+    /// Process pending root emission claims across subnets
+    ProcessClaim {
+        /// Hotkey SS58 (defaults to wallet hotkey)
+        #[arg(long)]
+        hotkey: Option<String>,
+        /// Only claim for specific subnet UIDs (comma-separated)
+        #[arg(long)]
+        netuids: Option<String>,
+    },
     /// Set root claim type (how root emissions are handled)
     SetClaim {
         /// Claim type: swap (alpha→TAO), keep (keep alpha), keep-subnets (keep for specific subnets)
@@ -831,6 +845,51 @@ pub enum SubnetCommands {
         /// Subnet UID
         #[arg(long)]
         netuid: u16,
+    },
+    /// Trim UIDs to a specified max on your subnet (subnet owner only)
+    Trim {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Maximum number of UIDs to keep
+        #[arg(long)]
+        max_uids: u16,
+    },
+    /// Check if a subnet's emission schedule can be started
+    CheckStart {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
+    /// Start a subnet's emission schedule (subnet owner only)
+    Start {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
+    /// Show mechanism count for a subnet
+    MechanismCount {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
+    /// Set mechanism count for a subnet (subnet owner only)
+    SetMechanismCount {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Number of mechanisms
+        #[arg(long)]
+        count: u16,
+    },
+    /// Set emission split weights across mechanisms (subnet owner only)
+    SetEmissionSplit {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Emission weights as comma-separated u16 values (e.g. "50,50" or "70,30")
+        #[arg(long)]
+        weights: String,
     },
 }
 
@@ -1099,6 +1158,12 @@ pub enum ServeCommands {
         /// Axon version
         #[arg(long, default_value = "0")]
         version: u32,
+    },
+    /// Reset axon information for a neuron (clears serving endpoint)
+    Reset {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
     },
 }
 
@@ -1434,6 +1499,28 @@ pub enum DiffCommands {
         /// Second block number
         #[arg(long)]
         block2: u32,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum UtilsCommands {
+    /// Convert between TAO and RAO
+    Convert {
+        /// Amount to convert
+        #[arg(long)]
+        amount: f64,
+        /// Convert from TAO to RAO (default: RAO to TAO)
+        #[arg(long)]
+        to_rao: bool,
+    },
+    /// Benchmark latency to network endpoints
+    Latency {
+        /// Additional endpoints to test (comma-separated ws:// URLs)
+        #[arg(long)]
+        extra: Option<String>,
+        /// Number of pings per endpoint (default 5)
+        #[arg(long, default_value = "5")]
+        pings: usize,
     },
 }
 

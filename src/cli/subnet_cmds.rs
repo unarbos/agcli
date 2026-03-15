@@ -772,6 +772,147 @@ pub(super) async fn handle_subnet(
             }
             Ok(())
         }
+        SubnetCommands::Trim { netuid, max_uids } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!("Trimming SN{} to max {} UIDs (subnet owner only)", netuid, max_uids);
+            if !crate::cli::helpers::is_batch_mode() {
+                let proceed = dialoguer::Confirm::new()
+                    .with_prompt("This will deregister neurons above the limit. Proceed?")
+                    .default(false)
+                    .interact()?;
+                if !proceed {
+                    println!("Cancelled.");
+                    return Ok(());
+                }
+            }
+            let hash = client
+                .submit_raw_call(
+                    wallet.coldkey()?,
+                    "SubtensorModule",
+                    "sudo_set_max_allowed_uids",
+                    vec![
+                        subxt::dynamic::Value::u128(netuid as u128),
+                        subxt::dynamic::Value::u128(max_uids as u128),
+                    ],
+                )
+                .await?;
+            print_tx_result(output, &hash, &format!("SN{} trimmed to max {} UIDs", netuid, max_uids));
+            Ok(())
+        }
+        SubnetCommands::CheckStart { netuid } => {
+            let nuid = NetUid(netuid);
+            let is_active = client.is_subnet_active(nuid).await?;
+            let hyperparams = client.get_subnet_hyperparams(nuid).await?;
+            let neurons = client.get_neurons_lite(nuid).await?;
+            let n_neurons = neurons.len();
+            if output == "json" {
+                print_json(&serde_json::json!({
+                    "netuid": netuid,
+                    "active": is_active,
+                    "neurons": n_neurons,
+                    "min_neurons_to_start": 1,
+                    "can_start": !is_active && n_neurons > 0,
+                    "tempo": hyperparams.as_ref().map(|h| h.tempo),
+                }));
+            } else if is_active {
+                println!("SN{} is already active (emissions running)", netuid);
+            } else if n_neurons == 0 {
+                println!("SN{} has 0 neurons — register at least 1 neuron before starting", netuid);
+            } else {
+                println!("SN{} is ready to start ({} neurons registered)", netuid, n_neurons);
+                println!("  Run: agcli subnet start --netuid {}", netuid);
+            }
+            Ok(())
+        }
+        SubnetCommands::Start { netuid } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!("Starting emission schedule for SN{} (subnet owner only)", netuid);
+            let hash = client
+                .submit_raw_call(
+                    wallet.coldkey()?,
+                    "SubtensorModule",
+                    "start_call",
+                    vec![subxt::dynamic::Value::u128(netuid as u128)],
+                )
+                .await?;
+            print_tx_result(output, &hash, &format!("SN{} emission schedule started", netuid));
+            Ok(())
+        }
+        SubnetCommands::MechanismCount { netuid } => {
+            let nuid = NetUid(netuid);
+            let count = client.get_mechanism_count(nuid).await?;
+            if output == "json" {
+                print_json(&serde_json::json!({"netuid": netuid, "mechanism_count": count}));
+            } else {
+                println!("SN{} mechanism count: {}", netuid, count);
+            }
+            Ok(())
+        }
+        SubnetCommands::SetMechanismCount { netuid, count } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!("Setting SN{} mechanism count to {} (subnet owner only)", netuid, count);
+            let hash = client
+                .submit_raw_call(
+                    wallet.coldkey()?,
+                    "SubtensorModule",
+                    "sudo_set_mechanism_count",
+                    vec![
+                        subxt::dynamic::Value::u128(netuid as u128),
+                        subxt::dynamic::Value::u128(count as u128),
+                    ],
+                )
+                .await?;
+            print_tx_result(output, &hash, &format!("SN{} mechanism count set to {}", netuid, count));
+            Ok(())
+        }
+        SubnetCommands::SetEmissionSplit { netuid, weights } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            let split: Vec<u16> = weights
+                .split(',')
+                .map(|s| s.trim().parse::<u16>())
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(|e| anyhow::anyhow!("Invalid weight value: {}. Use comma-separated u16 values.", e))?;
+            if split.is_empty() {
+                anyhow::bail!("At least one emission weight is required.");
+            }
+            let total: u64 = split.iter().map(|v| *v as u64).sum();
+            println!("Setting SN{} emission split: {:?} (total: {})", netuid, split, total);
+            for (i, w) in split.iter().enumerate() {
+                let pct = *w as f64 / total as f64 * 100.0;
+                println!("  Mechanism {}: {} ({:.1}%)", i, w, pct);
+            }
+            if !crate::cli::helpers::is_batch_mode() {
+                let proceed = dialoguer::Confirm::new()
+                    .with_prompt("Proceed?")
+                    .default(true)
+                    .interact()?;
+                if !proceed {
+                    println!("Cancelled.");
+                    return Ok(());
+                }
+            }
+            let weights_val: Vec<subxt::dynamic::Value> = split
+                .iter()
+                .map(|w| subxt::dynamic::Value::u128(*w as u128))
+                .collect();
+            let hash = client
+                .submit_raw_call(
+                    wallet.coldkey()?,
+                    "SubtensorModule",
+                    "sudo_set_mechanism_emission_split",
+                    vec![
+                        subxt::dynamic::Value::u128(netuid as u128),
+                        subxt::dynamic::Value::unnamed_composite(weights_val),
+                    ],
+                )
+                .await?;
+            print_tx_result(output, &hash, &format!("SN{} emission split set", netuid));
+            Ok(())
+        }
     }
 }
 

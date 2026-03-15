@@ -2670,3 +2670,109 @@ fn parse_stake_transfer_stake_requires_amount() {
     ]);
     assert!(cli.is_err(), "transfer-stake should require --amount");
 }
+
+// ──────── Sprint 20: New Commands ────────
+
+#[test]
+fn parse_subnet_trim() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "trim", "--netuid", "1", "--max-uids", "256",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_check_start() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "check-start", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_start() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "start", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_mechanism_count() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "mechanism-count", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_set_mechanism_count() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-mechanism-count", "--netuid", "1", "--count", "2",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_set_emission_split() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-emission-split", "--netuid", "1", "--weights", "50,50",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_serve_reset() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "serve", "reset", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_process_claim() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "process-claim",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_process_claim_with_netuids() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "process-claim", "--netuids", "1,2,3",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_convert_to_rao() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "convert", "--amount", "1.5", "--to-rao",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_convert_to_tao() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "convert", "--amount", "1500000000",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_latency() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "latency",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_latency_with_extra() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "latency", "--extra", "wss://custom.node:9944", "--pings", "3",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}

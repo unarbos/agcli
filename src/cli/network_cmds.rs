@@ -503,6 +503,27 @@ pub(super) async fn handle_serve(
             println!("Axon served. Tx: {}", hash);
             Ok(())
         }
+        ServeCommands::Reset { netuid } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            println!(
+                "Resetting axon info for hotkey {} on SN{}",
+                crate::utils::short_ss58(&hk),
+                netuid
+            );
+            // Reset axon by setting all fields to zero
+            let axon = crate::types::chain_data::AxonInfo {
+                block: 0,
+                version: 0,
+                ip: "0".to_string(),
+                port: 0,
+                ip_type: 4,
+                protocol: 0,
+            };
+            let hash = client.serve_axon(&pair, NetUid(netuid), &axon).await?;
+            println!("Axon reset. Tx: {}", hash);
+            Ok(())
+        }
     }
 }
 
