@@ -50,7 +50,8 @@ impl QueryCache {
         Self::with_ttl_and_disk(ttl, false)
     }
 
-    fn with_ttl_and_disk(ttl: Duration, use_disk: bool) -> Self {
+    /// Internal constructor with explicit disk cache control. Also used in tests.
+    pub(crate) fn with_ttl_and_disk(ttl: Duration, use_disk: bool) -> Self {
         Self {
             subnets: Cache::builder()
                 .time_to_live(ttl)
@@ -70,6 +71,7 @@ impl QueryCache {
 
     /// Get or fetch all subnets. Concurrent callers coalesce into one fetch.
     /// Layered: in-memory (30s) → disk (5min) → chain.
+    /// On chain fetch failure, serves stale disk cache if available (stale-while-error).
     pub async fn get_all_subnets<F, Fut>(&self, fetch: F) -> anyhow::Result<Arc<Vec<SubnetInfo>>>
     where
         F: FnOnce() -> Fut,
@@ -87,15 +89,28 @@ impl QueryCache {
                 }
                 tracing::debug!("cache miss: all_subnets — fetching from chain");
                 let start = std::time::Instant::now();
-                let data = fetch().await?;
-                tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_subnets");
-                // Write through to disk cache (best-effort)
-                if disk {
-                    if let Err(e) = super::disk_cache::put("all_subnets", &data) {
-                        tracing::warn!(error = %e, "failed to write all_subnets to disk cache");
+                match fetch().await {
+                    Ok(data) => {
+                        tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_subnets");
+                        // Write through to disk cache (best-effort)
+                        if disk {
+                            if let Err(e) = super::disk_cache::put("all_subnets", &data) {
+                                tracing::warn!(error = %e, "failed to write all_subnets to disk cache");
+                            }
+                        }
+                        Ok(Arc::new(data))
+                    }
+                    Err(e) => {
+                        // Stale-while-error: serve expired disk cache on chain failure
+                        if disk {
+                            if let Some(stale) = super::disk_cache::get_stale::<Vec<SubnetInfo>>("all_subnets") {
+                                tracing::warn!(count = stale.len(), error = %e, "chain fetch failed, serving stale all_subnets from disk cache");
+                                return Ok(Arc::new(stale));
+                            }
+                        }
+                        Err(e)
                     }
                 }
-                Ok(Arc::new(data))
             })
             .await
             .map_err(|e| anyhow::anyhow!("{}", e))
@@ -103,6 +118,7 @@ impl QueryCache {
 
     /// Get or fetch all dynamic info. Concurrent callers coalesce into one fetch.
     /// Layered: in-memory (30s) → disk (5min) → chain.
+    /// On chain fetch failure, serves stale disk cache if available (stale-while-error).
     pub async fn get_all_dynamic_info<F, Fut>(
         &self,
         fetch: F,
@@ -129,22 +145,39 @@ impl QueryCache {
                 }
                 tracing::debug!("cache miss: all_dynamic_info — fetching from chain");
                 let start = std::time::Instant::now();
-                let data = fetch().await?;
-                tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_dynamic_info");
-                // Write through to disk cache (best-effort)
-                if disk {
-                    if let Err(e) = super::disk_cache::put("all_dynamic_info", &data) {
-                        tracing::warn!(error = %e, "failed to write all_dynamic_info to disk cache");
+                match fetch().await {
+                    Ok(data) => {
+                        tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_dynamic_info");
+                        // Write through to disk cache (best-effort)
+                        if disk {
+                            if let Err(e) = super::disk_cache::put("all_dynamic_info", &data) {
+                                tracing::warn!(error = %e, "failed to write all_dynamic_info to disk cache");
+                            }
+                        }
+                        let data = Arc::new(data);
+                        // Also populate per-netuid cache
+                        for d in data.iter() {
+                            per_netuid
+                                .insert(d.netuid.0, Arc::new(d.clone()))
+                                .await;
+                        }
+                        Ok(data)
+                    }
+                    Err(e) => {
+                        // Stale-while-error: serve expired disk cache on chain failure
+                        if disk {
+                            if let Some(stale) = super::disk_cache::get_stale::<Vec<DynamicInfo>>("all_dynamic_info") {
+                                tracing::warn!(count = stale.len(), error = %e, "chain fetch failed, serving stale all_dynamic_info from disk cache");
+                                let data = Arc::new(stale);
+                                for d in data.iter() {
+                                    per_netuid.insert(d.netuid.0, Arc::new(d.clone())).await;
+                                }
+                                return Ok(data);
+                            }
+                        }
+                        Err(e)
                     }
                 }
-                let data = Arc::new(data);
-                // Also populate per-netuid cache
-                for d in data.iter() {
-                    per_netuid
-                        .insert(d.netuid.0, Arc::new(d.clone()))
-                        .await;
-                }
-                Ok(data)
             })
             .await
             .map_err(|e| anyhow::anyhow!("{}", e))
@@ -425,5 +458,84 @@ mod tests {
             .get_all_subnets(|| async { Ok(vec![]) })
             .await;
         assert!(result.is_ok());
+    }
+
+    /// Stale-while-error: when chain fetch fails and disk has stale data, serve it.
+    #[tokio::test]
+    async fn stale_while_error_subnets() {
+        use crate::queries::disk_cache;
+
+        // This test uses the real disk cache, so use a unique key prefix
+        let key = "all_subnets";
+
+        // Pre-populate disk cache with known data
+        let stale_data: Vec<SubnetInfo> = vec![];
+        disk_cache::put(key, &stale_data).unwrap();
+
+        // Force in-memory TTL to be expired by using short TTL
+        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(1), true);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Fetch fails — should fall back to stale disk data
+        let result = cache
+            .get_all_subnets(|| async { Err(anyhow::anyhow!("chain connection failed")) })
+            .await;
+        assert!(result.is_ok(), "stale-while-error should serve stale disk data");
+
+        // Clean up
+        disk_cache::remove(key);
+    }
+
+    /// Stale-while-error: when no stale data exists, error propagates normally.
+    #[tokio::test]
+    async fn stale_while_error_no_stale_data() {
+        use crate::queries::disk_cache;
+
+        // Use a unique key that no other test writes to
+        // We test by disabling disk so no stale lookup happens
+        let cache = QueryCache::with_ttl(Duration::from_millis(1));
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Fetch fails with disk disabled — error should propagate (no stale fallback)
+        let result = cache
+            .get_all_subnets(|| async { Err(anyhow::anyhow!("chain connection failed")) })
+            .await;
+        assert!(result.is_err(), "should propagate error when disk cache is disabled");
+        let _ = disk_cache::path(); // suppress unused import
+    }
+
+    /// Stale-while-error for dynamic info.
+    #[tokio::test]
+    async fn stale_while_error_dynamic_info() {
+        use crate::queries::disk_cache;
+
+        let key = "all_dynamic_info";
+
+        // Pre-populate disk cache
+        let stale_data: Vec<DynamicInfo> = vec![make_dynamic_info(1, "TestNet")];
+        disk_cache::put(key, &stale_data).unwrap();
+
+        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(1), true);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Fetch fails — should fall back to stale disk data
+        let result = cache
+            .get_all_dynamic_info(|| async { Err(anyhow::anyhow!("timeout")) })
+            .await;
+        assert!(result.is_ok(), "stale-while-error should serve stale dynamic info");
+        let data = result.unwrap();
+        assert_eq!(data.len(), 1);
+        assert_eq!(data[0].name, "TestNet");
+
+        // Per-netuid cache should also be populated from stale data
+        let single = cache
+            .get_dynamic_info(1, || async { Err(anyhow::anyhow!("should not be called")) })
+            .await
+            .unwrap();
+        assert!(single.is_some());
+        assert_eq!(single.unwrap().name, "TestNet");
+
+        // Clean up
+        disk_cache::remove(key);
     }
 }

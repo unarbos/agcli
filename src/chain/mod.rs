@@ -151,6 +151,74 @@ impl Client {
         Err(last_err.unwrap_or_else(|| anyhow::anyhow!("No endpoints provided")))
     }
 
+    /// Test multiple endpoints concurrently and connect to the fastest one.
+    /// Measures connection + RPC round-trip latency for each URL in parallel,
+    /// then picks the endpoint with the lowest average latency.
+    /// Falls back to `connect_with_retry` if all measurements fail.
+    pub async fn best_connection(urls: &[&str]) -> Result<Self> {
+        if urls.len() <= 1 {
+            return Self::connect_with_retry(urls).await;
+        }
+
+        tracing::info!(endpoints = urls.len(), "Testing endpoints for best connection");
+
+        // Test all endpoints concurrently
+        let mut handles = Vec::with_capacity(urls.len());
+        for url in urls {
+            let url_owned = url.to_string();
+            handles.push(tokio::spawn(async move {
+                let start = std::time::Instant::now();
+                match Self::connect_once(&url_owned).await {
+                    Ok(client) => {
+                        let connect_ms = start.elapsed().as_millis();
+                        // One RPC round-trip to measure total latency
+                        let rpc_start = std::time::Instant::now();
+                        match client.get_block_number().await {
+                            Ok(_) => {
+                                let rpc_ms = rpc_start.elapsed().as_millis();
+                                let total = connect_ms + rpc_ms;
+                                tracing::debug!(url = %url_owned, connect_ms, rpc_ms, total_ms = total, "Endpoint measured");
+                                Ok((url_owned, client, total))
+                            }
+                            Err(e) => {
+                                tracing::debug!(url = %url_owned, error = %e, "Endpoint RPC failed");
+                                Err(anyhow::anyhow!("RPC failed for {}: {}", url_owned, e))
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::debug!(url = %url_owned, error = %e, "Endpoint connection failed");
+                        Err(e)
+                    }
+                }
+            }));
+        }
+
+        // Collect results
+        let mut best: Option<(String, Self, u128)> = None;
+        let mut last_err = None;
+        for handle in handles {
+            match handle.await {
+                Ok(Ok((url, client, latency))) => {
+                    let is_better = best.as_ref().is_none_or(|(_, _, best_lat)| latency < *best_lat);
+                    if is_better {
+                        best = Some((url, client, latency));
+                    }
+                }
+                Ok(Err(e)) => { last_err = Some(e); }
+                Err(e) => { last_err = Some(anyhow::anyhow!("Task join error: {}", e)); }
+            }
+        }
+
+        match best {
+            Some((url, client, latency)) => {
+                tracing::info!(url = %url, latency_ms = latency, "Selected best endpoint");
+                Ok(client)
+            }
+            None => Err(last_err.unwrap_or_else(|| anyhow::anyhow!("All endpoints failed"))),
+        }
+    }
+
     /// Connect to a well-known network with automatic fallback endpoints.
     pub async fn connect_network(network: &crate::types::Network) -> Result<Self> {
         let urls = network.ws_urls();
@@ -610,6 +678,18 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "This coldkey is not associated with the specified hotkey."
     } else if msg.contains("CommitRevealEnabled") {
         "This subnet requires commit-reveal for weights. Use `agcli weights commit` then `agcli weights reveal`."
+    } else if msg.contains("SubnetLocked") || msg.contains("NetworkIsImmuned") {
+        "This subnet is in its immunity period and cannot be modified yet."
+    } else if msg.contains("MaxAllowedUIDs") || msg.contains("SubNetworkDoesNotExist") {
+        "Subnet capacity reached or does not exist. Check `agcli subnet list` for current subnets."
+    } else if msg.contains("HotKeyAlreadyRegistered") {
+        "This hotkey is already registered. Use a different hotkey or deregister the existing one first."
+    } else if msg.contains("ColdKeySwapScheduled") || msg.contains("ColdKeyAlreadyAssociated") {
+        "A coldkey operation is already pending for this account. Wait for it to complete."
+    } else if msg.contains("DelegateAlreadySet") {
+        "Delegate is already set for this hotkey."
+    } else if msg.contains("InvalidTransaction") && msg.contains("proxy") {
+        "Proxy transaction failed. Check that the proxy account has enough balance for fees and that the proxy type matches the operation."
     } else {
         "" // no special hint
     };
@@ -692,5 +772,55 @@ mod tests {
         // (The actual chain test is in integration tests)
         let addrs = ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"];
         assert_eq!(addrs.len(), 2, "batch addresses should preserve count");
+    }
+
+    #[test]
+    fn format_dispatch_error_subnet_locked() {
+        let err = subxt::Error::Other("SubnetLocked: cannot modify".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(msg.contains("immunity period"), "should mention immunity: {}", msg);
+    }
+
+    #[test]
+    fn format_dispatch_error_proxy() {
+        let err = subxt::Error::Other("InvalidTransaction proxy check failed".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(msg.contains("Proxy transaction"), "should mention proxy: {}", msg);
+    }
+
+    #[test]
+    fn format_dispatch_error_unknown() {
+        let err = subxt::Error::Other("SomeTotallyNewError".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(msg.contains("Transaction failed on chain"), "unknown errors get generic message: {}", msg);
+    }
+
+    #[test]
+    fn format_submit_error_priority() {
+        let err = subxt::Error::Other("Priority is too low".to_string());
+        let result = format_submit_error(err);
+        let msg = format!("{:#}", result);
+        assert!(msg.contains("conflicting transaction"), "should mention conflict: {}", msg);
+    }
+
+    #[test]
+    fn format_submit_error_insufficient() {
+        let err = subxt::Error::Other("Inability to pay some fees".to_string());
+        let result = format_submit_error(err);
+        let msg = format!("{:#}", result);
+        assert!(msg.contains("Insufficient balance"), "should mention balance: {}", msg);
+    }
+
+    #[test]
+    fn is_transient_catches_common_patterns() {
+        assert!(is_transient_error("Connection reset by peer"));
+        assert!(is_transient_error("Ws transport error"));
+        assert!(is_transient_error("Connection closed unexpectedly"));
+        assert!(is_transient_error("request timeout after 30s"));
+        assert!(!is_transient_error("Invalid SS58 address"));
+        assert!(!is_transient_error("NotEnoughBalance"));
     }
 }

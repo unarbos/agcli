@@ -323,4 +323,70 @@ mod tests {
         let h = hint(exit_code::GENERIC, "unknown error");
         assert!(h.is_none());
     }
+
+    // ──── Additional classify() coverage ────
+
+    #[test]
+    fn classify_dispatch_error() {
+        let err = anyhow::anyhow!("Dispatch error: extrinsic failed on chain");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_cannot_create() {
+        let err = anyhow::anyhow!("Cannot create directory: /foo/bar");
+        assert_eq!(classify(&err), exit_code::IO);
+    }
+
+    #[test]
+    fn classify_not_valid() {
+        let err = anyhow::anyhow!("Input is not a valid netuid");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+    }
+
+    #[test]
+    fn classify_expected_format() {
+        let err = anyhow::anyhow!("Expected format: ss58 address");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+    }
+
+    #[test]
+    fn classify_unreachable() {
+        let err = anyhow::anyhow!("Host unreachable: entrypoint-finney.opentensor.ai");
+        assert_eq!(classify(&err), exit_code::NETWORK);
+    }
+
+    #[test]
+    fn classify_cannot_read() {
+        // "Cannot read" matches IO, but "keyfile" matches AUTH first — AUTH takes priority
+        let err = anyhow::anyhow!("Cannot read wallet keyfile");
+        assert_eq!(classify(&err), exit_code::AUTH);
+    }
+
+    #[test]
+    fn classify_cannot_read_generic_file() {
+        let err = anyhow::anyhow!("Cannot read config file /etc/foo");
+        assert_eq!(classify(&err), exit_code::IO);
+    }
+
+    #[test]
+    fn hint_chain_rate_limit() {
+        let h = hint(exit_code::CHAIN, "Rate limit exceeded");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("Wait"));
+    }
+
+    #[test]
+    fn hint_network_generic() {
+        let h = hint(exit_code::NETWORK, "some network error");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("internet connection"));
+    }
+
+    #[test]
+    fn hint_auth_generic() {
+        let h = hint(exit_code::AUTH, "wallet locked");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("wallet"));
+    }
 }
