@@ -703,6 +703,23 @@ pub(super) async fn handle_subnet(
         SubnetCommands::Commits { netuid, hotkey } => {
             handle_subnet_commits(client, netuid, hotkey, output).await
         }
+        SubnetCommands::SetParam {
+            netuid,
+            param,
+            value,
+        } => {
+            handle_subnet_set_param(
+                client,
+                netuid,
+                &param,
+                value.as_deref(),
+                wallet_dir,
+                wallet_name,
+                output,
+                password,
+            )
+            .await
+        }
     }
 }
 
@@ -1764,6 +1781,201 @@ async fn handle_subnet_commits(
     Ok(())
 }
 
+// ──────── Subnet Set Param ────────
+
+/// Value type for hyperparameter setting.
+#[derive(Clone, Copy)]
+enum ParamType {
+    U16,
+    U64,
+    Bool,
+}
+
+/// A hyperparameter that can be set by the subnet owner.
+struct ParamDef {
+    /// Friendly name (what the user types)
+    name: &'static str,
+    /// The on-chain extrinsic call name (e.g., "sudo_set_tempo")
+    call: &'static str,
+    /// Value type
+    ty: ParamType,
+    /// Short description
+    desc: &'static str,
+}
+
+/// All supported subnet hyperparameters.
+/// These are the `SubtensorModule::sudo_set_*` extrinsics that take `(netuid, value)`.
+const SUBNET_PARAMS: &[ParamDef] = &[
+    ParamDef { name: "tempo", call: "sudo_set_tempo", ty: ParamType::U16, desc: "Blocks per epoch" },
+    ParamDef { name: "rho", call: "sudo_set_rho", ty: ParamType::U16, desc: "Consensus rho parameter" },
+    ParamDef { name: "kappa", call: "sudo_set_kappa", ty: ParamType::U16, desc: "Consensus kappa parameter" },
+    ParamDef { name: "immunity_period", call: "sudo_set_immunity_period", ty: ParamType::U16, desc: "Blocks a new neuron is immune from deregistration" },
+    ParamDef { name: "min_allowed_weights", call: "sudo_set_min_allowed_weights", ty: ParamType::U16, desc: "Minimum weight entries required per set_weights" },
+    ParamDef { name: "max_allowed_uids", call: "sudo_set_max_allowed_uids", ty: ParamType::U16, desc: "Maximum neurons allowed on subnet" },
+    ParamDef { name: "max_allowed_validators", call: "sudo_set_max_allowed_validators", ty: ParamType::U16, desc: "Maximum validator count" },
+    ParamDef { name: "min_difficulty", call: "sudo_set_min_difficulty", ty: ParamType::U64, desc: "Minimum POW difficulty" },
+    ParamDef { name: "max_difficulty", call: "sudo_set_max_difficulty", ty: ParamType::U64, desc: "Maximum POW difficulty" },
+    ParamDef { name: "weights_version", call: "sudo_set_weights_version_key", ty: ParamType::U64, desc: "Expected weights version key" },
+    ParamDef { name: "weights_rate_limit", call: "sudo_set_weights_set_rate_limit", ty: ParamType::U64, desc: "Min blocks between weight sets" },
+    ParamDef { name: "adjustment_interval", call: "sudo_set_adjustment_interval", ty: ParamType::U16, desc: "Blocks between difficulty adjustments" },
+    ParamDef { name: "adjustment_alpha", call: "sudo_set_adjustment_alpha", ty: ParamType::U64, desc: "EMA smoothing for difficulty adjustment" },
+    ParamDef { name: "activity_cutoff", call: "sudo_set_activity_cutoff", ty: ParamType::U16, desc: "Blocks of inactivity before deregistration" },
+    ParamDef { name: "registration_allowed", call: "sudo_set_network_registration_allowed", ty: ParamType::Bool, desc: "Allow new registrations" },
+    ParamDef { name: "pow_registration_allowed", call: "sudo_set_network_pow_registration_allowed", ty: ParamType::Bool, desc: "Allow POW registrations" },
+    ParamDef { name: "target_regs_per_interval", call: "sudo_set_target_registrations_per_interval", ty: ParamType::U16, desc: "Target registrations per adjustment interval" },
+    ParamDef { name: "min_burn", call: "sudo_set_min_burn", ty: ParamType::U64, desc: "Minimum burn cost (RAO)" },
+    ParamDef { name: "max_burn", call: "sudo_set_max_burn", ty: ParamType::U64, desc: "Maximum burn cost (RAO)" },
+    ParamDef { name: "bonds_moving_average", call: "sudo_set_bonds_moving_average", ty: ParamType::U64, desc: "Bonds moving average period" },
+    ParamDef { name: "max_regs_per_block", call: "sudo_set_max_registrations_per_block", ty: ParamType::U16, desc: "Max registrations per block" },
+    ParamDef { name: "serving_rate_limit", call: "sudo_set_serving_rate_limit", ty: ParamType::U64, desc: "Min blocks between serve_axon calls" },
+    ParamDef { name: "difficulty", call: "sudo_set_difficulty", ty: ParamType::U64, desc: "Current POW difficulty" },
+    ParamDef { name: "commit_reveal_weights_enabled", call: "sudo_set_commit_reveal_weights_enabled", ty: ParamType::Bool, desc: "Enable commit-reveal for weights" },
+    ParamDef { name: "commit_reveal_weights_interval", call: "sudo_set_commit_reveal_weights_interval", ty: ParamType::U64, desc: "Blocks between commit-reveal phases" },
+    ParamDef { name: "liquid_alpha_enabled", call: "sudo_set_liquid_alpha_enabled", ty: ParamType::Bool, desc: "Enable liquid alpha (dynamic dividends)" },
+    ParamDef { name: "bonds_penalty", call: "sudo_set_bonds_penalty", ty: ParamType::U16, desc: "Bonds penalty factor" },
+    ParamDef { name: "bonds_reset_enabled", call: "sudo_set_bonds_reset_enabled", ty: ParamType::Bool, desc: "Allow bonds reset" },
+    ParamDef { name: "commit_reveal_version", call: "sudo_set_commit_reveal_version", ty: ParamType::U64, desc: "Commit-reveal protocol version" },
+    ParamDef { name: "yuma", call: "sudo_set_yuma", ty: ParamType::Bool, desc: "Enable Yuma consensus" },
+    ParamDef { name: "min_allowed_uids", call: "sudo_set_min_allowed_uids", ty: ParamType::U16, desc: "Minimum neurons on subnet" },
+    ParamDef { name: "min_non_immune_uids", call: "sudo_set_min_non_immune_uids", ty: ParamType::U16, desc: "Minimum non-immune neurons" },
+];
+
+async fn handle_subnet_set_param(
+    client: &Client,
+    netuid: u16,
+    param: &str,
+    value: Option<&str>,
+    wallet_dir: &str,
+    wallet_name: &str,
+    output: &str,
+    password: Option<&str>,
+) -> Result<()> {
+    // List mode
+    if param == "list" || param == "help" {
+        if output == "json" {
+            let params: Vec<serde_json::Value> = SUBNET_PARAMS
+                .iter()
+                .map(|p| {
+                    serde_json::json!({
+                        "name": p.name,
+                        "type": match p.ty { ParamType::U16 => "u16", ParamType::U64 => "u64", ParamType::Bool => "bool" },
+                        "description": p.desc,
+                    })
+                })
+                .collect();
+            print_json(&serde_json::json!({"parameters": params}));
+        } else {
+            println!("Available subnet hyperparameters:\n");
+            let mut table = comfy_table::Table::new();
+            table.set_header(vec!["Parameter", "Type", "Description"]);
+            for p in SUBNET_PARAMS {
+                table.add_row(vec![
+                    p.name,
+                    match p.ty {
+                        ParamType::U16 => "u16",
+                        ParamType::U64 => "u64",
+                        ParamType::Bool => "bool",
+                    },
+                    p.desc,
+                ]);
+            }
+            println!("{}", table);
+            println!("\nUsage: agcli subnet set-param --netuid <N> --param <name> --value <val>");
+        }
+        return Ok(());
+    }
+
+    // Find the parameter definition
+    let def = SUBNET_PARAMS.iter().find(|p| p.name == param);
+    let def = match def {
+        Some(d) => d,
+        None => {
+            // Suggest closest match
+            let available: Vec<&str> = SUBNET_PARAMS.iter().map(|p| p.name).collect();
+            let mut suggestions: Vec<(&str, usize)> = available
+                .iter()
+                .filter_map(|name| {
+                    if name.contains(param) || param.contains(name) {
+                        Some((*name, 0))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            suggestions.truncate(5);
+            let hint = if suggestions.is_empty() {
+                format!("Use --param list to see all {} available parameters.", SUBNET_PARAMS.len())
+            } else {
+                format!(
+                    "Did you mean: {}? Use --param list to see all.",
+                    suggestions.iter().map(|(n, _)| *n).collect::<Vec<_>>().join(", ")
+                )
+            };
+            anyhow::bail!("Unknown parameter '{}'. {}", param, hint);
+        }
+    };
+
+    // Require --value
+    let value_str = match value {
+        Some(v) => v,
+        None => anyhow::bail!(
+            "Missing --value for parameter '{}' (type: {}, {})",
+            def.name,
+            match def.ty { ParamType::U16 => "u16", ParamType::U64 => "u64", ParamType::Bool => "bool" },
+            def.desc,
+        ),
+    };
+
+    // Parse and build the dynamic Value
+    use subxt::dynamic::Value;
+    let val = match def.ty {
+        ParamType::U16 => {
+            let v: u16 = value_str.parse().map_err(|_| {
+                anyhow::anyhow!("Invalid u16 value '{}' for parameter '{}' (range: 0-65535)", value_str, def.name)
+            })?;
+            Value::u128(v as u128)
+        }
+        ParamType::U64 => {
+            let v: u64 = value_str.parse().map_err(|_| {
+                anyhow::anyhow!("Invalid u64 value '{}' for parameter '{}'", value_str, def.name)
+            })?;
+            Value::u128(v as u128)
+        }
+        ParamType::Bool => {
+            let v: bool = match value_str {
+                "true" | "1" | "yes" | "on" => true,
+                "false" | "0" | "no" | "off" => false,
+                _ => anyhow::bail!("Invalid bool value '{}' for parameter '{}' (use: true/false, 1/0, yes/no, on/off)", value_str, def.name),
+            };
+            Value::bool(v)
+        }
+    };
+
+    // Confirm
+    println!(
+        "Setting SN{} {} = {} (via {})",
+        netuid, def.name, value_str, def.call
+    );
+
+    // Unlock wallet
+    let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+    unlock_coldkey(&mut wallet, password)?;
+    let pair = wallet.coldkey()?.clone();
+
+    // Submit
+    let hash = client
+        .submit_raw_call(
+            &pair,
+            "SubtensorModule",
+            def.call,
+            vec![Value::u128(netuid as u128), val],
+        )
+        .await?;
+
+    print_tx_result(output, &hash, &format!("SN{} {} set to {}", netuid, def.name, value_str));
+    Ok(())
+}
+
 /// Determine commit status relative to current block.
 pub(super) fn commit_status(block: u64, first_reveal: u64, last_reveal: u64) -> (String, Option<i64>) {
     if block < first_reveal {
@@ -1807,5 +2019,63 @@ mod tests {
         let (status, blocks) = commit_status(301, 200, 300);
         assert_eq!(status, "EXPIRED");
         assert_eq!(blocks, None);
+    }
+
+    #[test]
+    fn subnet_params_no_duplicate_names() {
+        use super::SUBNET_PARAMS;
+        let mut names: Vec<&str> = SUBNET_PARAMS.iter().map(|p| p.name).collect();
+        let count_before = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), count_before, "Duplicate param names in SUBNET_PARAMS");
+    }
+
+    #[test]
+    fn subnet_params_no_duplicate_calls() {
+        use super::SUBNET_PARAMS;
+        let mut calls: Vec<&str> = SUBNET_PARAMS.iter().map(|p| p.call).collect();
+        let count_before = calls.len();
+        calls.sort_unstable();
+        calls.dedup();
+        assert_eq!(calls.len(), count_before, "Duplicate call names in SUBNET_PARAMS");
+    }
+
+    #[test]
+    fn subnet_params_all_have_sudo_prefix() {
+        use super::SUBNET_PARAMS;
+        for p in SUBNET_PARAMS {
+            assert!(
+                p.call.starts_with("sudo_set_"),
+                "Param '{}' call '{}' should start with sudo_set_",
+                p.name,
+                p.call
+            );
+        }
+    }
+
+    #[test]
+    fn subnet_params_cover_common_hyperparams() {
+        use super::SUBNET_PARAMS;
+        let names: Vec<&str> = SUBNET_PARAMS.iter().map(|p| p.name).collect();
+        // Verify the most important params for subnet owners are present
+        for expected in &[
+            "tempo",
+            "immunity_period",
+            "max_allowed_uids",
+            "max_allowed_validators",
+            "registration_allowed",
+            "min_burn",
+            "max_burn",
+            "commit_reveal_weights_enabled",
+            "liquid_alpha_enabled",
+            "weights_rate_limit",
+        ] {
+            assert!(
+                names.contains(expected),
+                "Essential param '{}' missing from SUBNET_PARAMS",
+                expected
+            );
+        }
     }
 }

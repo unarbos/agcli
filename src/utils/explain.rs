@@ -247,8 +247,8 @@ Getting a new subnet operational step-by-step:
    (Set weights on at least one UID — usually yourself for bootstrapping)
 
 4. CONFIGURE HYPERPARAMS (as subnet owner)
-   The owner can adjust subnet parameters through governance proposals or
-   directly if the chain allows direct hyperparam setting.
+   agcli subnet set-param --netuid <N> --param <name> --value <val>
+   Use --param list to see all available parameters.
 
 5. REGISTER MINERS
    Miners register via burn or POW:
@@ -699,7 +699,8 @@ Key parameters:
 - liquid_alpha_enabled: whether liquid alpha token trading is active.
 
 Changing hyperparams:
-- Subnet owners propose changes via `agcli sudo set --netuid <n> --param <name> --value <v>`.
+- Subnet owners set params with: `agcli subnet set-param --netuid <N> --param <name> --value <val>`
+- List all params: `agcli subnet set-param --netuid 1 --param list`
 - Some params (like tempo, max_validators) may need root governance approval.
 - Changes take effect at the next tempo boundary after being applied.";
 

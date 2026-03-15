@@ -765,6 +765,18 @@ pub enum SubnetCommands {
         #[arg(long)]
         hotkey: Option<String>,
     },
+    /// Set a subnet hyperparameter (subnet owner only)
+    SetParam {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Parameter name (e.g., tempo, max_allowed_uids, min_burn). Use --param list to see all.
+        #[arg(long)]
+        param: String,
+        /// Value to set (interpreted based on parameter type)
+        #[arg(long)]
+        value: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]

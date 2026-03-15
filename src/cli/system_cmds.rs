@@ -44,7 +44,7 @@ pub(super) async fn handle_config(cmd: ConfigCommands) -> Result<()> {
                     cfg.batch = Some(v);
                 }
                 k if k.starts_with("spending_limit.") => {
-                    let netuid = k.strip_prefix("spending_limit.").unwrap();
+                    let netuid = &k["spending_limit.".len()..];
                     let limit: f64 = value.parse().map_err(|_| anyhow::anyhow!("Invalid TAO amount '{}'", value))?;
                     let limits = cfg.spending_limits.get_or_insert_with(Default::default);
                     limits.insert(netuid.to_string(), limit);
@@ -68,7 +68,7 @@ pub(super) async fn handle_config(cmd: ConfigCommands) -> Result<()> {
                 "live_interval" => cfg.live_interval = None,
                 "batch" => cfg.batch = None,
                 k if k.starts_with("spending_limit.") => {
-                    let netuid = k.strip_prefix("spending_limit.").unwrap();
+                    let netuid = &k["spending_limit.".len()..];
                     if let Some(ref mut limits) = cfg.spending_limits {
                         limits.remove(netuid);
                     }
@@ -98,7 +98,7 @@ fn cfg_value_display(key: &str, cfg: &crate::config::Config) -> String {
         "live_interval" => cfg.live_interval.map(|v| v.to_string()).unwrap_or_default(),
         "batch" => cfg.batch.map(|v| v.to_string()).unwrap_or_default(),
         k if k.starts_with("spending_limit.") => {
-            let netuid = k.strip_prefix("spending_limit.").unwrap();
+            let netuid = &k["spending_limit.".len()..];
             cfg.spending_limits
                 .as_ref()
                 .and_then(|m| m.get(netuid))

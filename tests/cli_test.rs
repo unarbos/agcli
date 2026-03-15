@@ -2561,3 +2561,54 @@ fn parse_timeout_large_value() {
     assert!(cli.is_ok());
     assert_eq!(cli.unwrap().timeout, Some(3600));
 }
+
+// ──────── subnet set-param ────────
+
+#[test]
+fn parse_subnet_set_param() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "tempo", "--value", "100",
+    ]);
+    assert!(cli.is_ok(), "subnet set-param should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_set_param_bool_value() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--netuid", "5", "--param", "registration_allowed", "--value", "false",
+    ]);
+    assert!(cli.is_ok(), "subnet set-param bool should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_set_param_list_mode() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "list",
+    ]);
+    assert!(cli.is_ok(), "subnet set-param list should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_set_param_requires_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--param", "tempo", "--value", "100",
+    ]);
+    assert!(cli.is_err(), "subnet set-param should require --netuid");
+}
+
+#[test]
+fn parse_subnet_set_param_requires_param() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--netuid", "1", "--value", "100",
+    ]);
+    assert!(cli.is_err(), "subnet set-param should require --param");
+}
+
+#[test]
+fn parse_subnet_set_param_value_is_optional() {
+    // --value is optional (for list mode)
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "tempo",
+    ]);
+    assert!(cli.is_ok(), "subnet set-param without --value should parse");
+}
