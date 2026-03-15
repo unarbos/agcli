@@ -83,6 +83,36 @@ pub(super) async fn handle_config(cmd: ConfigCommands) -> Result<()> {
             println!("{}", crate::config::Config::default_path().display());
             Ok(())
         }
+        ConfigCommands::CacheClear => {
+            let keys = crate::queries::disk_cache::list_keys();
+            if keys.is_empty() {
+                println!("Disk cache is already empty.");
+            } else {
+                for key in &keys {
+                    crate::queries::disk_cache::remove(key);
+                }
+                println!("Cleared {} cached entries.", keys.len());
+            }
+            Ok(())
+        }
+        ConfigCommands::CacheInfo => {
+            let keys = crate::queries::disk_cache::list_keys();
+            let cache_path = crate::queries::disk_cache::path();
+            println!("Cache directory: {}", cache_path.display());
+            if keys.is_empty() {
+                println!("No cached entries.");
+            } else {
+                let mut total_bytes: u64 = 0;
+                for key in &keys {
+                    let path = cache_path.join(format!("{}.json", key));
+                    let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                    total_bytes += size;
+                    println!("  {} ({:.1}KB)", key, size as f64 / 1024.0);
+                }
+                println!("Total: {} entries, {:.1}KB", keys.len(), total_bytes as f64 / 1024.0);
+            }
+            Ok(())
+        }
     }
 }
 
@@ -634,7 +664,28 @@ pub(super) async fn handle_doctor(
         }
     }
 
-    // 5. Wallet check
+    // 5. Disk cache
+    let cache_keys = crate::queries::disk_cache::list_keys();
+    let cache_path = crate::queries::disk_cache::path();
+    if cache_keys.is_empty() {
+        checks.push(("Disk cache", format!("empty ({})", cache_path.display()), true));
+    } else {
+        // Calculate total size
+        let mut total_bytes: u64 = 0;
+        for key in &cache_keys {
+            let path = cache_path.join(format!("{}.json", key));
+            if let Ok(meta) = std::fs::metadata(&path) {
+                total_bytes += meta.len();
+            }
+        }
+        let size_kb = total_bytes as f64 / 1024.0;
+        checks.push(("Disk cache", format!(
+            "{} entries, {:.1}KB ({})",
+            cache_keys.len(), size_kb, cache_path.display()
+        ), true));
+    }
+
+    // 6. Wallet check
     let wallet_path = format!("{}/{}", wallet_dir, wallet_name);
     match crate::wallet::Wallet::open(&wallet_path) {
         Ok(w) => {

@@ -14,8 +14,12 @@ use std::time::Duration;
 
 use crate::types::chain_data::{DynamicInfo, SubnetInfo};
 
-/// Default cache TTL in seconds.
+/// Default in-memory cache TTL in seconds.
 const DEFAULT_TTL_SECS: u64 = 30;
+
+/// Disk cache TTL — longer than in-memory since disk cache survives across CLI invocations.
+/// Avoids redundant chain fetches when running multiple commands in quick succession.
+const DISK_TTL: Duration = Duration::from_secs(300); // 5 minutes
 
 /// Shared query cache for chain data that changes slowly.
 ///
@@ -30,16 +34,23 @@ pub struct QueryCache {
     all_dynamic: Cache<(), Arc<Vec<DynamicInfo>>>,
     /// Cached dynamic info per subnet.
     dynamic_by_netuid: Cache<u16, Arc<DynamicInfo>>,
+    /// Whether to use the disk cache layer. Disabled for tests with custom TTLs.
+    use_disk: bool,
 }
 
 impl QueryCache {
-    /// Create a new cache with the default TTL.
+    /// Create a new cache with the default TTL and disk caching enabled.
     pub fn new() -> Self {
-        Self::with_ttl(Duration::from_secs(DEFAULT_TTL_SECS))
+        Self::with_ttl_and_disk(Duration::from_secs(DEFAULT_TTL_SECS), true)
     }
 
-    /// Create a cache with a custom TTL.
+    /// Create a cache with a custom TTL. Disk caching is disabled for custom TTLs
+    /// (used in tests and special configurations).
     pub fn with_ttl(ttl: Duration) -> Self {
+        Self::with_ttl_and_disk(ttl, false)
+    }
+
+    fn with_ttl_and_disk(ttl: Duration, use_disk: bool) -> Self {
         Self {
             subnets: Cache::builder()
                 .time_to_live(ttl)
@@ -53,28 +64,45 @@ impl QueryCache {
                 .time_to_live(ttl)
                 .max_capacity(100)
                 .build(),
+            use_disk,
         }
     }
 
     /// Get or fetch all subnets. Concurrent callers coalesce into one fetch.
+    /// Layered: in-memory (30s) → disk (5min) → chain.
     pub async fn get_all_subnets<F, Fut>(&self, fetch: F) -> anyhow::Result<Arc<Vec<SubnetInfo>>>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = anyhow::Result<Vec<SubnetInfo>>>,
     {
+        let disk = self.use_disk;
         self.subnets
             .try_get_with((), async {
+                // Check disk cache before hitting chain
+                if disk {
+                    if let Some(cached) = super::disk_cache::get::<Vec<SubnetInfo>>("all_subnets", DISK_TTL) {
+                        tracing::debug!(count = cached.len(), "cache hit: all_subnets (disk)");
+                        return Ok(Arc::new(cached)) as anyhow::Result<_>;
+                    }
+                }
                 tracing::debug!("cache miss: all_subnets — fetching from chain");
                 let start = std::time::Instant::now();
-                let data = Arc::new(fetch().await?);
+                let data = fetch().await?;
                 tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_subnets");
-                Ok(data) as anyhow::Result<_>
+                // Write through to disk cache (best-effort)
+                if disk {
+                    if let Err(e) = super::disk_cache::put("all_subnets", &data) {
+                        tracing::warn!(error = %e, "failed to write all_subnets to disk cache");
+                    }
+                }
+                Ok(Arc::new(data))
             })
             .await
             .map_err(|e| anyhow::anyhow!("{}", e))
     }
 
     /// Get or fetch all dynamic info. Concurrent callers coalesce into one fetch.
+    /// Layered: in-memory (30s) → disk (5min) → chain.
     pub async fn get_all_dynamic_info<F, Fut>(
         &self,
         fetch: F,
@@ -84,19 +112,39 @@ impl QueryCache {
         Fut: std::future::Future<Output = anyhow::Result<Vec<DynamicInfo>>>,
     {
         let per_netuid = self.dynamic_by_netuid.clone();
+        let disk = self.use_disk;
         self.all_dynamic
             .try_get_with((), async {
+                // Check disk cache before hitting chain
+                if disk {
+                    if let Some(cached) = super::disk_cache::get::<Vec<DynamicInfo>>("all_dynamic_info", DISK_TTL) {
+                        tracing::debug!(count = cached.len(), "cache hit: all_dynamic_info (disk)");
+                        let data = Arc::new(cached);
+                        // Also populate per-netuid in-memory cache
+                        for d in data.iter() {
+                            per_netuid.insert(d.netuid.0, Arc::new(d.clone())).await;
+                        }
+                        return Ok(data) as anyhow::Result<_>;
+                    }
+                }
                 tracing::debug!("cache miss: all_dynamic_info — fetching from chain");
                 let start = std::time::Instant::now();
-                let data = Arc::new(fetch().await?);
+                let data = fetch().await?;
                 tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_dynamic_info");
+                // Write through to disk cache (best-effort)
+                if disk {
+                    if let Err(e) = super::disk_cache::put("all_dynamic_info", &data) {
+                        tracing::warn!(error = %e, "failed to write all_dynamic_info to disk cache");
+                    }
+                }
+                let data = Arc::new(data);
                 // Also populate per-netuid cache
                 for d in data.iter() {
                     per_netuid
                         .insert(d.netuid.0, Arc::new(d.clone()))
                         .await;
                 }
-                Ok(data) as anyhow::Result<_>
+                Ok(data)
             })
             .await
             .map_err(|e| anyhow::anyhow!("{}", e))
@@ -133,11 +181,13 @@ impl QueryCache {
         }
     }
 
-    /// Invalidate all cached data.
+    /// Invalidate all cached data (both in-memory and disk).
     pub async fn invalidate_all(&self) {
         self.subnets.invalidate_all();
         self.all_dynamic.invalidate_all();
         self.dynamic_by_netuid.invalidate_all();
+        super::disk_cache::remove("all_subnets");
+        super::disk_cache::remove("all_dynamic_info");
     }
 }
 
@@ -154,7 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn cache_deduplicates_calls() {
-        let cache = QueryCache::new();
+        let cache = QueryCache::with_ttl(Duration::from_secs(30));
         let call_count = Arc::new(AtomicU32::new(0));
 
         let count = call_count.clone();
@@ -223,7 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn invalidate_clears_cache() {
-        let cache = QueryCache::new();
+        let cache = QueryCache::with_ttl(Duration::from_secs(30));
         let call_count = Arc::new(AtomicU32::new(0));
 
         let count = call_count.clone();
@@ -258,7 +308,7 @@ mod tests {
     /// Stress test: concurrent readers coalesce — only one fetch executes.
     #[tokio::test]
     async fn cache_concurrent_readers_coalesce() {
-        let cache = Arc::new(QueryCache::new());
+        let cache = Arc::new(QueryCache::with_ttl(Duration::from_secs(30)));
         let call_count = Arc::new(AtomicU32::new(0));
 
         // Spawn 50 concurrent readers — with try_get_with, only ONE fetch should run
@@ -323,7 +373,7 @@ mod tests {
     /// Stress test: per-netuid cache populated from all_dynamic fetch.
     #[tokio::test]
     async fn cache_per_netuid_stress() {
-        let cache = QueryCache::new();
+        let cache = QueryCache::with_ttl(Duration::from_secs(30));
 
         // Bulk-fetch populates per-netuid cache
         let infos: Vec<DynamicInfo> = (0..64u16)
@@ -362,7 +412,7 @@ mod tests {
     /// Cache handles fetch failures gracefully — error propagates, no poisoning.
     #[tokio::test]
     async fn cache_fetch_error_does_not_poison() {
-        let cache = QueryCache::new();
+        let cache = QueryCache::with_ttl(Duration::from_secs(30));
 
         // First call: fetch fails
         let result = cache

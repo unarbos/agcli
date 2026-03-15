@@ -1570,6 +1570,10 @@ pub enum ConfigCommands {
     },
     /// Show config file path
     Path,
+    /// Clear the disk cache (subnet info, dynamic info)
+    CacheClear,
+    /// Show disk cache info (entries, size, path)
+    CacheInfo,
 }
 
 impl Cli {

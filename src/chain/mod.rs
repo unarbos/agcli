@@ -495,9 +495,11 @@ impl Client {
 
     /// Get balances for multiple SS58 addresses using a single pinned block.
     /// More efficient than individual `get_balance_ss58()` calls because:
+    ///
     /// 1. Single `at_latest()` call instead of N calls
     /// 2. All reads are from the same block (data consistency)
-    /// Returns Vec<(ss58, Balance)> in the same order as input.
+    ///
+    /// Returns `Vec<(ss58, Balance)>` in the same order as input.
     pub async fn get_balances_multi(&self, addresses: &[&str]) -> Result<Vec<(String, Balance)>> {
         if addresses.is_empty() {
             return Ok(vec![]);

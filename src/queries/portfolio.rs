@@ -26,14 +26,19 @@ pub struct SubnetPosition {
 }
 
 /// Fetch the full portfolio for a coldkey (resolves subnet names and prices from DynamicInfo).
+/// Uses a single pinned block hash for all queries — saves 2 redundant at_latest() RPC
+/// round-trips and ensures balance, stakes, and dynamic info are all from the same block.
 pub async fn fetch_portfolio(client: &Client, coldkey_ss58: &str) -> Result<Portfolio> {
-    // Parallel fetch: balance, stakes, and dynamic info all at once
+    // Pin a single block for consistency across all three queries
+    let block_hash = client.pin_latest_block().await?;
+
+    // Parallel fetch at the pinned block: balance, stakes, and dynamic info
     let (balance, stakes, dynamic) = tokio::try_join!(
-        client.get_balance_ss58(coldkey_ss58),
-        client.get_stake_for_coldkey(coldkey_ss58),
+        client.get_balance_at_hash(coldkey_ss58, block_hash),
+        client.get_stake_for_coldkey_at_block(coldkey_ss58, block_hash),
         async {
-            match client.get_all_dynamic_info().await {
-                Ok(d) => Ok::<_, anyhow::Error>(d),
+            match client.get_all_dynamic_info_at_block(block_hash).await {
+                Ok(d) => Ok::<_, anyhow::Error>(std::sync::Arc::new(d)),
                 Err(e) => {
                     tracing::warn!("Failed to fetch dynamic info for portfolio: {e:#}");
                     Ok(std::sync::Arc::new(vec![]))

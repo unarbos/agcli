@@ -4,6 +4,7 @@
 //! into domain-specific results (e.g. "show me my full stake portfolio").
 
 pub mod cache;
+pub mod disk_cache;
 pub mod metagraph;
 pub mod portfolio;
 pub mod query_cache;

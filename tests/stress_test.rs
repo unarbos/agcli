@@ -147,7 +147,7 @@ fn error_classifier_exhaustive() {
 async fn cache_concurrent_access() {
     use agcli::queries::query_cache::QueryCache;
 
-    let cache = QueryCache::new();
+    let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
     let call_count = Arc::new(AtomicU32::new(0));
 
     // Launch 10 concurrent cache reads — only 1 should actually fetch
@@ -247,7 +247,7 @@ async fn query_cache_sequential_dedup() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    let cache = QueryCache::new();
+    let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
     let fetch_count = Arc::new(AtomicU32::new(0));
 
     // First call: should fetch
@@ -293,7 +293,7 @@ async fn query_cache_dynamic_populates_per_netuid() {
     use agcli::types::balance::{AlphaBalance, Balance};
     use agcli::types::network::NetUid;
 
-    let cache = QueryCache::new();
+    let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
 
     let make_di = |netuid: u16, name: &str, price: f64, tao_rao: u64| DynamicInfo {
         netuid: NetUid(netuid),
@@ -626,7 +626,7 @@ fn wallet_operations_isolated_concurrent() {
 async fn cache_high_contention() {
     use agcli::queries::query_cache::QueryCache;
 
-    let cache = QueryCache::new();
+    let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
     let call_count = Arc::new(AtomicU32::new(0));
 
     // Simulate 50 concurrent readers hitting both all-subnets and per-netuid caches
