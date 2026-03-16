@@ -17,16 +17,23 @@ pub async fn handle_wallet(
         WalletCommands::Create {
             name,
             password: cmd_password,
+            no_mnemonic,
         } => {
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
-            let wallet = Wallet::create(wallet_dir, &name, &password, "default")?;
+            let (wallet, coldkey_mnemonic, hotkey_mnemonic) =
+                Wallet::create(wallet_dir, &name, &password, "default")?;
             if output.is_json() {
-                crate::cli::helpers::print_json(&serde_json::json!({
+                let mut obj = serde_json::json!({
                     "name": name,
                     "coldkey": wallet.coldkey_ss58().unwrap_or(""),
                     "hotkey": wallet.hotkey_ss58().unwrap_or(""),
-                }));
+                });
+                if !no_mnemonic {
+                    obj["coldkey_mnemonic"] = serde_json::json!(coldkey_mnemonic);
+                    obj["hotkey_mnemonic"] = serde_json::json!(hotkey_mnemonic);
+                }
+                crate::cli::helpers::print_json(&obj);
             } else {
                 println!("Wallet '{}' created.", name);
                 if let Some(addr) = wallet.coldkey_ss58() {
@@ -34,6 +41,14 @@ pub async fn handle_wallet(
                 }
                 if let Some(addr) = wallet.hotkey_ss58() {
                     println!("Hotkey:  {}", addr);
+                }
+                if !no_mnemonic {
+                    println!();
+                    println!("IMPORTANT — Back up these mnemonics! They will NOT be shown again.");
+                    println!("Coldkey mnemonic: {}", coldkey_mnemonic);
+                    println!("Hotkey mnemonic:  {}", hotkey_mnemonic);
+                } else {
+                    println!("Mnemonic display suppressed. Use `agcli wallet show-mnemonic` to retrieve it later.");
                 }
             }
             Ok(())
@@ -322,6 +337,25 @@ pub async fn handle_wallet(
             }
             Ok(())
         }
+        WalletCommands::ShowMnemonic {
+            password: cmd_password,
+        } => {
+            let password =
+                crate::cli::helpers::require_password(cmd_password, global_password, false)?;
+            let coldkey_path = std::path::PathBuf::from(wallet_dir)
+                .join(wallet_name)
+                .join("coldkey");
+            let mnemonic =
+                crate::wallet::keyfile::read_any_encrypted_keyfile(&coldkey_path, &password)?;
+            if output.is_json() {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "mnemonic": mnemonic.trim(),
+                }));
+            } else {
+                println!("{}", mnemonic.trim());
+            }
+            Ok(())
+        }
         // These variants are handled in commands.rs with a Client connection
         WalletCommands::AssociateHotkey { .. } | WalletCommands::CheckSwap { .. } => {
             unreachable!("handled in commands.rs")
@@ -354,6 +388,43 @@ pub async fn handle_wallet(
                     "public_key": format!("0x{}", hex::encode(pair.public().0)),
                     "ss58": ss58,
                 }));
+            }
+            Ok(())
+        }
+        WalletCommands::DevKey {
+            uri,
+            password: cmd_password,
+        } => {
+            // Normalize: accept "Alice", "alice", "//Alice"
+            let uri = if uri.starts_with("//") {
+                uri
+            } else {
+                // Capitalize first letter to match Substrate convention
+                let mut c = uri.chars();
+                let capitalized = match c.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                };
+                format!("//{}", capitalized)
+            };
+            let password =
+                crate::cli::helpers::require_password(cmd_password, global_password, true)?;
+            let wallet = Wallet::create_from_uri(wallet_dir, &uri, &password)?;
+            if output.is_json() {
+                crate::cli::helpers::print_json(&serde_json::json!({
+                    "name": wallet.name,
+                    "uri": uri,
+                    "coldkey": wallet.coldkey_ss58().unwrap_or(""),
+                    "hotkey": wallet.hotkey_ss58().unwrap_or(""),
+                }));
+            } else {
+                println!("Dev wallet '{}' created from {}", wallet.name, uri);
+                if let Some(addr) = wallet.coldkey_ss58() {
+                    println!("Coldkey: {}", addr);
+                }
+                if let Some(addr) = wallet.hotkey_ss58() {
+                    println!("Hotkey:  {}", addr);
+                }
             }
             Ok(())
         }

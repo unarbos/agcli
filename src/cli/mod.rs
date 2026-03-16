@@ -382,6 +382,9 @@ pub enum WalletCommands {
         /// Coldkey password (non-interactive)
         #[arg(long, env = "AGCLI_PASSWORD", hide_env_values = true)]
         password: Option<String>,
+        /// Suppress mnemonic display (use `wallet show-mnemonic` later to retrieve)
+        #[arg(long)]
+        no_mnemonic: bool,
     },
     /// List all wallets
     List,
@@ -472,6 +475,12 @@ pub enum WalletCommands {
         /// SS58 address to check (defaults to wallet coldkey)
         #[arg(long)]
         address: Option<String>,
+    },
+    /// Decrypt and display the coldkey mnemonic (requires password)
+    ShowMnemonic {
+        /// Coldkey password (non-interactive)
+        #[arg(long, env = "AGCLI_PASSWORD", hide_env_values = true)]
+        password: Option<String>,
     },
 }
 

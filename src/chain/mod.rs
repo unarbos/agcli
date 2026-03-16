@@ -97,6 +97,11 @@ pub struct Client {
 }
 
 impl Client {
+    /// Access the runtime metadata from the connected chain.
+    pub fn metadata(&self) -> subxt::Metadata {
+        self.inner.metadata()
+    }
+
     /// Connect to a subtensor node (single URL, no retry).
     async fn connect_once(url: &str) -> Result<Self> {
         let start = std::time::Instant::now();
@@ -549,7 +554,8 @@ impl Client {
         retry_on_transient("get_total_issuance", RPC_RETRIES, || async {
             let addr = api::storage().balances().total_issuance();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
-            Ok(Balance::from_rao(val.unwrap_or(0) as u64))
+            let raw = val.unwrap_or(0);
+            Ok(Balance::from_rao(u64::try_from(raw).unwrap_or(u64::MAX)))
         })
         .await
     }
@@ -668,7 +674,8 @@ impl Client {
             .fetch(&addr)
             .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
-        Ok(Balance::from_rao(val.unwrap_or(0) as u64))
+        let raw = val.unwrap_or(0);
+        Ok(Balance::from_rao(u64::try_from(raw).unwrap_or(u64::MAX)))
     }
 
     /// Total staked TAO at a pinned block hash.

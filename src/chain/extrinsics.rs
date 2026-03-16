@@ -540,7 +540,10 @@ impl Client {
         netuid: NetUid,
         axon: &AxonInfo,
     ) -> Result<String> {
-        let ip: u128 = axon.ip.parse().unwrap_or(0);
+        let ip: u128 = axon
+            .ip
+            .parse()
+            .with_context(|| format!("Invalid IP address for axon: {:?}", axon.ip))?;
         let tx = api::tx().subtensor_module().serve_axon(
             netuid.0,
             axon.version,
@@ -1287,6 +1290,84 @@ impl Client {
         let inner_value = inner.into_value();
         let sudo_tx = subxt::dynamic::tx("Sudo", "sudo", vec![inner_value]);
         self.sign_submit(&sudo_tx, pair).await
+    }
+
+    /// Submit a call wrapped in `Sudo.sudo()` and verify the inner dispatch succeeded.
+    ///
+    /// Unlike `submit_sudo_raw_call`, this checks the `Sudo::Sudid` event to detect inner
+    /// dispatch errors that `Sudo.sudo()` would otherwise swallow (the outer tx always succeeds
+    /// if the caller is the sudo key).
+    pub async fn submit_sudo_raw_call_checked(
+        &self,
+        pair: &sr25519::Pair,
+        pallet: &str,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        // Validate the call exists in the pallet's metadata before encoding.
+        let metadata = self.inner.metadata();
+        match metadata.pallet_by_name(pallet) {
+            Some(p) => {
+                if p.call_variant_by_name(call).is_none() {
+                    anyhow::bail!(
+                        "Call {}.{} not found in runtime metadata",
+                        pallet,
+                        call
+                    );
+                }
+            }
+            None => {
+                anyhow::bail!("Pallet '{}' not found in runtime metadata", pallet);
+            }
+        }
+
+        // Build and submit the Sudo-wrapped tx
+        let inner_tx = subxt::dynamic::tx(pallet, call, fields);
+        let inner_value = inner_tx.into_value();
+        let sudo_tx = subxt::dynamic::tx("Sudo", "sudo", vec![inner_value]);
+
+        let signer = Self::signer(pair);
+        let progress = self
+            .inner
+            .tx()
+            .sign_and_submit_then_watch_default(&sudo_tx, &signer)
+            .await
+            .map_err(|e| anyhow::anyhow!("Sudo submission failed: {}", e))?;
+
+        let events = progress
+            .wait_for_finalized_success()
+            .await
+            .map_err(|e| anyhow::anyhow!("Sudo tx dispatch failed: {}", e))?;
+
+        let hash = format!("{:?}", events.extrinsic_hash());
+
+        // Check the Sudid event for inner dispatch errors.
+        // The Sudid event has: sudo_result: Result<(), DispatchError>.
+        // In the debug format, a failed inner call produces:
+        //   Variant { name: "Err", values: Unnamed([...Module error...]) }
+        // We look specifically for the Err variant name in the sudo_result field.
+        for event in events.all_events_in_block().iter() {
+            let event = match event {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            if event.pallet_name() == "Sudo" && event.variant_name() == "Sudid" {
+                let field_str = format!("{:?}", event.field_values());
+                // Check for 'name: "Err"' which indicates the inner dispatch returned an error.
+                // We use 'name: "Err"' rather than just 'Err(' to avoid false positives from
+                // field names like "error" that appear in the module error structure.
+                if field_str.contains("name: \"Err\"") {
+                    anyhow::bail!(
+                        "Sudo inner dispatch failed for {}.{}: {}",
+                        pallet,
+                        call,
+                        field_str
+                    );
+                }
+            }
+        }
+
+        Ok(hash)
     }
 
     // ──────── Commitments ────────

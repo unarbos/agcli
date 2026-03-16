@@ -81,6 +81,7 @@ impl Wallet {
     }
 
     /// Create a new wallet with fresh keys.
+    /// Returns `(wallet, coldkey_mnemonic, hotkey_mnemonic)`.
     ///
     /// Uses an exclusive lock on the wallet directory to prevent two concurrent
     /// processes from creating the same wallet and overwriting each other's keys.
@@ -89,7 +90,7 @@ impl Wallet {
         name: &str,
         password: &str,
         hotkey_name: &str,
-    ) -> Result<Self> {
+    ) -> Result<(Self, String, String)> {
         let dir = expand_tilde(wallet_dir.as_ref()).join(name);
         // Create directory structure first (idempotent, needed so lock file can be placed)
         std::fs::create_dir_all(dir.join("hotkeys"))?;
@@ -125,11 +126,53 @@ impl Wallet {
         // Save hotkey (unencrypted)
         keyfile::write_keyfile(&dir.join("hotkeys").join(hotkey_name), &hotkey.1)?;
 
+        let coldkey_mnemonic = coldkey.1.clone();
+        let hotkey_mnemonic = hotkey.1.clone();
+
+        Ok((
+            Self {
+                name: name.to_string(),
+                path: dir,
+                coldkey: Some(coldkey.0),
+                hotkey: Some(hotkey.0),
+                coldkey_ss58: Some(coldkey_ss58),
+                hotkey_ss58: Some(hotkey_ss58),
+            },
+            coldkey_mnemonic,
+            hotkey_mnemonic,
+        ))
+    }
+
+    /// Create wallet from a Substrate dev URI (e.g. "//Alice").
+    ///
+    /// The wallet name defaults to the lowercase account name (e.g. "alice").
+    /// Both coldkey and hotkey are derived from the same URI.
+    /// The URI is stored encrypted as the coldkey (re-derivable on unlock).
+    pub fn create_from_uri(
+        wallet_dir: impl AsRef<Path>,
+        uri: &str,
+        password: &str,
+    ) -> Result<Self> {
+        let pair = keypair::pair_from_uri(uri)?;
+        let name = uri.trim_start_matches('/').to_lowercase();
+        let dir = expand_tilde(wallet_dir.as_ref()).join(&name);
+        std::fs::create_dir_all(dir.join("hotkeys"))?;
+        let _dir_lock = keyfile::lock_wallet_dir(&dir)?;
+
+        let coldkey_ss58 = keypair::to_ss58(&pair.public(), 42);
+        let hotkey_ss58 = coldkey_ss58.clone();
+
+        // Store URI as encrypted coldkey content
+        keyfile::write_encrypted_keyfile(&dir.join("coldkey"), uri, password)?;
+        keyfile::write_public_key(&dir.join("coldkeypub.txt"), &pair.public())?;
+        // Store URI as hotkey (unencrypted, same key for dev convenience)
+        keyfile::write_keyfile(&dir.join("hotkeys").join("default"), uri)?;
+
         Ok(Self {
-            name: name.to_string(),
+            name,
             path: dir,
-            coldkey: Some(coldkey.0),
-            hotkey: Some(hotkey.0),
+            coldkey: Some(pair.clone()),
+            hotkey: Some(pair),
             coldkey_ss58: Some(coldkey_ss58),
             hotkey_ss58: Some(hotkey_ss58),
         })
@@ -184,6 +227,9 @@ impl Wallet {
             } else {
                 anyhow::bail!("Python keyfile JSON has no secretSeed or secretPhrase");
             }
+        } else if data.trim().starts_with("//") {
+            // Dev URI (e.g. "//Alice") — stored by create_from_uri
+            keypair::pair_from_uri(data.trim())?
         } else {
             keypair::pair_from_mnemonic(data.trim())?
         };
@@ -206,6 +252,8 @@ impl Wallet {
             } else {
                 anyhow::bail!("Hotkey JSON has no secretSeed or secretPhrase");
             }
+        } else if data.trim().starts_with("//") {
+            keypair::pair_from_uri(data.trim())?
         } else {
             keypair::pair_from_mnemonic(data.trim())?
         };

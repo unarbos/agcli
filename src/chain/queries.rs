@@ -678,7 +678,8 @@ impl Client {
             .fetch(&addr)
             .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
-        Ok(Balance::from_rao(val.unwrap_or(0) as u64))
+        let raw = val.unwrap_or(0);
+        Ok(Balance::from_rao(u64::try_from(raw).unwrap_or(u64::MAX)))
     }
 
     // ──────── Block Header / Info ────────
@@ -912,7 +913,7 @@ impl Client {
         let result = retry_on_transient("is_subnet_active", RPC_RETRIES, || async {
             let addr = subxt::dynamic::storage(
                 "SubtensorModule",
-                "SubnetActive",
+                "NetworksAdded",
                 vec![subxt::dynamic::Value::u128(nid as u128)],
             );
             let r = inner
@@ -926,7 +927,19 @@ impl Client {
         })
         .await?;
         match result {
-            Some(val) => Ok(val.as_type::<bool>().unwrap_or(false)),
+            Some(val) => {
+                // Try bool first, fall back to u8 (some runtimes encode as 0/1 u8)
+                if let Ok(b) = val.as_type::<bool>() {
+                    Ok(b)
+                } else if let Ok(n) = val.as_type::<u8>() {
+                    Ok(n != 0)
+                } else {
+                    anyhow::bail!(
+                        "Failed to decode NetworksAdded for SN{}: not bool or u8",
+                        nid
+                    );
+                }
+            }
             None => Ok(false),
         }
     }
@@ -952,7 +965,9 @@ impl Client {
         })
         .await?;
         match result {
-            Some(val) => Ok(val.as_type::<u16>().unwrap_or(1)),
+            Some(val) => Ok(val
+                .as_type::<u16>()
+                .context("Failed to decode mechanism count as u16")?),
             None => Ok(1), // Default is 1 mechanism
         }
     }
@@ -980,9 +995,10 @@ impl Client {
             // Extract crowdloan ID from key (last 4 bytes for u32)
             let key_bytes = &kv.key_bytes;
             if key_bytes.len() >= 4 {
-                let id_bytes: [u8; 4] = key_bytes[key_bytes.len() - 4..]
-                    .try_into()
-                    .unwrap_or([0u8; 4]);
+                let id_bytes: [u8; 4] = match key_bytes[key_bytes.len() - 4..].try_into() {
+                    Ok(b) => b,
+                    Err(_) => continue, // skip malformed key
+                };
                 let id = u32::from_le_bytes(id_bytes);
 
                 // Try to decode the value
@@ -1114,9 +1130,11 @@ impl Client {
         while let Some(Ok(kv)) = iter.next().await {
             let key_bytes = &kv.key_bytes;
             if key_bytes.len() >= 32 {
-                let account_bytes: [u8; 32] = key_bytes[key_bytes.len() - 32..]
-                    .try_into()
-                    .unwrap_or([0u8; 32]);
+                let account_bytes: [u8; 32] = match key_bytes[key_bytes.len() - 32..].try_into()
+                {
+                    Ok(b) => b,
+                    Err(_) => continue, // skip malformed key
+                };
                 let account = crate::AccountId::from(account_bytes).to_string();
                 if let Ok(amount) = kv.value.as_type::<u64>() {
                     results.push((account, amount));
@@ -1156,9 +1174,10 @@ impl Client {
             // Extract UID from the storage key (last 2 bytes before key suffix)
             let key_bytes = &kv.key_bytes;
             if key_bytes.len() >= 2 {
-                let uid_bytes: [u8; 2] = key_bytes[key_bytes.len() - 2..]
-                    .try_into()
-                    .unwrap_or([0u8; 2]);
+                let uid_bytes: [u8; 2] = match key_bytes[key_bytes.len() - 2..].try_into() {
+                    Ok(b) => b,
+                    Err(_) => continue, // skip malformed key
+                };
                 let uid = u16::from_le_bytes(uid_bytes);
                 results.push((uid, kv.value));
             }
@@ -1255,9 +1274,11 @@ impl Client {
             // Extract the account_id from the storage key (last 32 bytes)
             let key_bytes = kv.key_bytes;
             if key_bytes.len() >= 32 {
-                let account_bytes: [u8; 32] = key_bytes[key_bytes.len() - 32..]
-                    .try_into()
-                    .unwrap_or([0u8; 32]);
+                let account_bytes: [u8; 32] =
+                    match key_bytes[key_bytes.len() - 32..].try_into() {
+                        Ok(b) => b,
+                        Err(_) => continue, // skip malformed key
+                    };
                 let account_id = subxt::ext::subxt_core::utils::AccountId32::from(account_bytes);
                 let ss58 = account_id.to_string();
                 let block = kv.value.block;

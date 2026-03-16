@@ -2,6 +2,19 @@
 
 This guide covers creating and managing a Bittensor subnet, registering neurons, setting up miners and validators, and managing weights.
 
+## Local Development (Start Here)
+
+Before spending TAO on mainnet, develop and test locally for free:
+
+```bash
+# One command: starts a local chain, creates a subnet, funds accounts, registers neurons
+agcli localnet scaffold
+```
+
+This gives you a fully-configured test environment in seconds — no TAO needed, 250ms blocks for instant feedback. See the [Local Testing Guide](local-testing.md) for details.
+
+Once your subnet logic works locally, deploy to testnet (`--network test`) and then mainnet.
+
 ## Creating a Subnet
 
 Subnet registration costs TAO (the lock cost decreases over time after each registration).

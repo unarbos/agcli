@@ -161,6 +161,8 @@ agcli completions --shell fish > ~/.config/fish/completions/agcli.fish  # Fish
 | Local | `--network local` | `ws://127.0.0.1:9944` |
 | Custom | `--endpoint wss://...` | any WebSocket URL |
 
+**Local development** — Start a local chain for zero-cost testing with `agcli localnet scaffold` (requires Docker). This gives you funded accounts and a pre-configured subnet in seconds. Scaffold-created wallets use deterministic keypairs, so you don't need `agcli wallet create` — just start building. See the [Local Testing Guide](local-testing.md).
+
 ## Troubleshooting
 
 **Connection refused / timeout:**

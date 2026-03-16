@@ -27,6 +27,9 @@ agcli weights commit-reveal --netuid 1 --weights "0:100,1:200" --wait
 
 # Live subnet monitoring (JSON streaming)
 agcli subnet monitor --netuid 97 --json
+
+# Local development — zero cost, instant feedback
+agcli localnet scaffold
 ```
 
 Every command supports `--output json|csv`, `--yes` (skip prompts), `--batch` (hard-error mode), and `--dry-run` (preview). Full non-interactive operation for AI agents.
@@ -39,6 +42,8 @@ Every command supports `--output json|csv`, `--yes` (skip prompts), `--batch` (h
 | **[docs/llm.txt](docs/llm.txt)** | Agent/LLM reference — quick-ref card + full command reference |
 | **[docs/commands/](docs/commands/)** | Per-command deep dives — on-chain behavior, pallet refs, storage keys, events, errors |
 | **[docs/tutorials/](docs/tutorials/)** | Step-by-step guides: [getting started](docs/tutorials/getting-started.md), [staking](docs/tutorials/staking-guide.md), [validator](docs/tutorials/validator-guide.md), [subnet builder](docs/tutorials/subnet-builder.md), [agent automation](docs/tutorials/agent-automation.md) |
+| **[docs/faq.md](docs/faq.md)** | Beyond agcli — miners, Yuma math, picking subnets, validator↔miner protocols, subnet codebases |
+| **[docs/philosophy.md](docs/philosophy.md)** | Subnet design philosophy, incentive patterns, trust model |
 
 ## SDK Usage
 

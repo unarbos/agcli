@@ -39,6 +39,16 @@ pub fn to_ss58(public: &sr25519::Public, prefix: u16) -> String {
     public.to_ss58check_with_version(sp_core::crypto::Ss58AddressFormat::custom(prefix))
 }
 
+/// Derive SR25519 keypair from a Substrate dev URI (e.g. "//Alice", "//Bob").
+/// Supports: Alice, Bob, Charlie, Dave, Eve, Ferdie, and arbitrary `//Name` URIs.
+pub fn pair_from_uri(uri: &str) -> Result<sr25519::Pair> {
+    sr25519::Pair::from_string(uri, None)
+        .map_err(|e| anyhow::anyhow!("Invalid key URI '{}': {:?}", uri, e))
+}
+
+/// Well-known Substrate dev account names.
+pub const DEV_ACCOUNTS: &[&str] = &["Alice", "Bob", "Charlie", "Dave", "Eve", "Ferdie"];
+
 /// Decode an SS58 address to an SR25519 public key.
 pub fn from_ss58(address: &str) -> Result<sr25519::Public> {
     sr25519::Public::from_ss58check(address)
@@ -71,5 +81,26 @@ mod tests {
         let addr = to_ss58(&pair.public(), 42);
         let pub2 = from_ss58(&addr).unwrap();
         assert_eq!(pair.public(), pub2);
+    }
+
+    #[test]
+    fn dev_accounts_derive() {
+        // Alice's well-known SS58 address
+        let alice = pair_from_uri("//Alice").unwrap();
+        assert_eq!(
+            to_ss58(&alice.public(), 42),
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+        );
+        // Bob's well-known SS58 address
+        let bob = pair_from_uri("//Bob").unwrap();
+        assert_eq!(
+            to_ss58(&bob.public(), 42),
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+        );
+        // All dev accounts should derive without error
+        for name in DEV_ACCOUNTS {
+            let uri = format!("//{}", name);
+            pair_from_uri(&uri).unwrap();
+        }
     }
 }
