@@ -56,7 +56,15 @@ pub fn spinner(msg: &str) -> indicatif::ProgressBar {
 }
 
 pub fn open_wallet(wallet_dir: &str, wallet_name: &str) -> Result<Wallet> {
-    let path = format!("{}/{}", wallet_dir, wallet_name);
+    let raw = format!("{}/{}", wallet_dir, wallet_name);
+    // Expand ~ so the existence check works outside a shell context.
+    let path = if let Some(rest) = raw.strip_prefix("~/") {
+        dirs::home_dir()
+            .map(|h| h.join(rest).to_string_lossy().into_owned())
+            .unwrap_or(raw)
+    } else {
+        raw
+    };
     if !std::path::Path::new(&path).exists() {
         anyhow::bail!(
             "Wallet '{}' not found in {}.\n  Create one with: agcli wallet create --name {}\n  List existing:   agcli wallet list",
