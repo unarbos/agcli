@@ -103,6 +103,53 @@ pub fn unlock_coldkey(wallet: &mut Wallet, password: Option<&str>) -> Result<()>
         })
 }
 
+/// Validate that an amount is positive and non-zero.
+/// Returns a human-friendly error if the amount is invalid.
+pub fn validate_amount(amount: f64, label: &str) -> Result<()> {
+    if amount < 0.0 {
+        anyhow::bail!(
+            "Invalid {}: {:.9}. Amount cannot be negative.",
+            label, amount
+        );
+    }
+    if amount == 0.0 {
+        anyhow::bail!(
+            "Invalid {}: amount must be greater than zero.\n  Tip: minimum stake is 1 RAO (0.000000001 τ).",
+            label
+        );
+    }
+    if !amount.is_finite() {
+        anyhow::bail!(
+            "Invalid {}: amount must be a finite number (got {}).",
+            label, amount
+        );
+    }
+    Ok(())
+}
+
+/// Validate childkey take percentage is in the allowed range [0, 18].
+pub fn validate_take_pct(take: f64) -> Result<()> {
+    if take < 0.0 {
+        anyhow::bail!(
+            "Invalid childkey take: {:.2}%. Take cannot be negative.",
+            take
+        );
+    }
+    if take > 18.0 {
+        anyhow::bail!(
+            "Invalid childkey take: {:.2}%. Maximum allowed is 18%.\n  Tip: use --take 18 for maximum take.",
+            take
+        );
+    }
+    if !take.is_finite() {
+        anyhow::bail!(
+            "Invalid childkey take: must be a finite number (got {}).",
+            take
+        );
+    }
+    Ok(())
+}
+
 /// Check per-subnet spending limit from config.
 /// Returns Ok if no limit set or amount is within limit, Err otherwise.
 pub fn check_spending_limit(netuid: u16, tao_amount: f64) -> Result<()> {

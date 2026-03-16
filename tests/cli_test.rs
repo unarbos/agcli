@@ -3410,3 +3410,712 @@ fn parse_subnet_snipe_fast_with_all_opts() {
     ]);
     assert!(cli.is_ok(), "subnet snipe full combo: {:?}", cli.err());
 }
+
+// ──── Comprehensive stake CLI arg edge case tests ────
+
+// ── stake add edge cases ──
+
+#[test]
+fn parse_stake_add_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.5", "--netuid", "1",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "stake add with hotkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_with_all_flags() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--yes", "--password", "pw", "--mev",
+        "stake", "add", "--amount", "10.0", "--netuid", "42",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--max-slippage", "5.0",
+    ]);
+    assert!(cli.is_ok(), "stake add full combo: {:?}", cli.err());
+    let cli = cli.unwrap();
+    assert!(cli.yes);
+    assert!(cli.mev);
+}
+
+#[test]
+fn parse_stake_add_zero_amount() {
+    // 0 amount should parse (chain may reject, but CLI accepts)
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "0.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "zero amount should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_tiny_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "0.000000001", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "tiny amount (1 RAO): {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_large_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1000000.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "large amount: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_netuid_zero() {
+    // Root network is netuid 0
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.0", "--netuid", "0",
+    ]);
+    assert!(cli.is_ok(), "netuid 0 (root): {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_netuid_max() {
+    // Max u16 netuid
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.0", "--netuid", "65535",
+    ]);
+    assert!(cli.is_ok(), "netuid 65535: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_netuid_overflow() {
+    // Beyond u16 should fail
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.0", "--netuid", "65536",
+    ]);
+    assert!(cli.is_err(), "netuid 65536 should overflow u16");
+}
+
+#[test]
+fn parse_stake_add_negative_amount() {
+    // Clap treats -1.0 as an unknown argument (the dash is ambiguous),
+    // so negative amounts are rejected at the CLI parsing level — good UX.
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "-1.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "negative amount should be rejected by clap");
+}
+
+#[test]
+fn parse_stake_add_non_numeric_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "abc", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "non-numeric amount should fail");
+}
+
+#[test]
+fn parse_stake_add_non_numeric_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.0", "--netuid", "abc",
+    ]);
+    assert!(cli.is_err(), "non-numeric netuid should fail");
+}
+
+#[test]
+fn parse_stake_add_negative_slippage() {
+    // Clap treats negative numbers as unknown args (dash prefix), so this is rejected.
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add", "--amount", "1.0", "--netuid", "1",
+        "--max-slippage", "-1.0",
+    ]);
+    assert!(cli.is_err(), "negative slippage should be rejected by clap");
+}
+
+// ── stake remove edge cases ──
+
+#[test]
+fn parse_stake_remove_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove", "--amount", "1.0", "--netuid", "1",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_zero_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove", "--amount", "0.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove", "--amount", "1.0",
+    ]);
+    assert!(cli.is_err(), "remove without netuid should fail");
+    let err = cli.unwrap_err().to_string();
+    assert!(err.contains("netuid"), "error should mention netuid: {}", err);
+}
+
+#[test]
+fn parse_stake_remove_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "remove without amount should fail");
+    let err = cli.unwrap_err().to_string();
+    assert!(err.contains("amount"), "error should mention amount: {}", err);
+}
+
+// ── stake move edge cases ──
+
+#[test]
+fn parse_stake_move_same_subnet() {
+    // Moving from and to same subnet — semantically odd but should parse
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--amount", "1.0", "--from", "1", "--to", "1",
+    ]);
+    assert!(cli.is_ok(), "move same subnet: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_move_missing_from() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--amount", "1.0", "--to", "2",
+    ]);
+    assert!(cli.is_err(), "move without --from should fail");
+}
+
+#[test]
+fn parse_stake_move_missing_to() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--amount", "1.0", "--from", "1",
+    ]);
+    assert!(cli.is_err(), "move without --to should fail");
+}
+
+#[test]
+fn parse_stake_move_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--from", "1", "--to", "2",
+    ]);
+    assert!(cli.is_err(), "move without --amount should fail");
+}
+
+#[test]
+fn parse_stake_move_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "move", "--amount", "5.0", "--from", "1", "--to", "2",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake swap edge cases ──
+
+#[test]
+fn parse_stake_swap_missing_from_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap", "--amount", "1.0", "--netuid", "1",
+        "--to-hotkey", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_err(), "swap without --from-hotkey should fail");
+}
+
+#[test]
+fn parse_stake_swap_missing_to_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap", "--amount", "1.0", "--netuid", "1",
+        "--from-hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_err(), "swap without --to-hotkey should fail");
+}
+
+#[test]
+fn parse_stake_swap_same_hotkey() {
+    // Swap from and to same hotkey — semantically odd but should parse
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap", "--amount", "1.0", "--netuid", "1",
+        "--from-hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--to-hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "same hotkey swap: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_swap_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap", "--amount", "1.0",
+        "--from-hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--to-hotkey", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_err(), "swap without --netuid should fail");
+}
+
+// ── stake list edge cases ──
+
+#[test]
+fn parse_stake_list_default() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "list"]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_list_with_address() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "list",
+        "--address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_list_with_address_and_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "list",
+        "--address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--at-block", "1000000",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_list_json_output() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "stake", "list",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+// ── stake add-limit edge cases ──
+
+#[test]
+fn parse_stake_add_limit_missing_price() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add-limit", "--amount", "1.0", "--netuid", "1", "--partial",
+    ]);
+    assert!(cli.is_err(), "add-limit without --price should fail");
+}
+
+#[test]
+fn parse_stake_add_limit_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add-limit", "--netuid", "1", "--price", "0.5", "--partial",
+    ]);
+    assert!(cli.is_err(), "add-limit without --amount should fail");
+}
+
+#[test]
+fn parse_stake_add_limit_zero_price() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add-limit", "--amount", "1.0", "--netuid", "1",
+        "--price", "0.0", "--partial",
+    ]);
+    assert!(cli.is_ok(), "zero price: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_limit_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "add-limit", "--amount", "10.0", "--netuid", "1",
+        "--price", "0.001", "--partial",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake remove-limit edge cases ──
+
+#[test]
+fn parse_stake_remove_limit_missing_price() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove-limit", "--amount", "1.0", "--netuid", "1", "--partial",
+    ]);
+    assert!(cli.is_err(), "remove-limit without --price should fail");
+}
+
+#[test]
+fn parse_stake_remove_limit_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "remove-limit", "--amount", "1.0", "--price", "0.5", "--partial",
+    ]);
+    assert!(cli.is_err(), "remove-limit without --netuid should fail");
+}
+
+// ── stake swap-limit edge cases ──
+
+#[test]
+fn parse_stake_swap_limit_missing_from() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap-limit", "--amount", "1.0", "--to", "2",
+        "--price", "0.5", "--partial",
+    ]);
+    assert!(cli.is_err(), "swap-limit without --from should fail");
+}
+
+#[test]
+fn parse_stake_swap_limit_missing_to() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap-limit", "--amount", "1.0", "--from", "1",
+        "--price", "0.5", "--partial",
+    ]);
+    assert!(cli.is_err(), "swap-limit without --to should fail");
+}
+
+#[test]
+fn parse_stake_swap_limit_missing_price() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap-limit", "--amount", "1.0", "--from", "1", "--to", "2",
+        "--partial",
+    ]);
+    assert!(cli.is_err(), "swap-limit without --price should fail");
+}
+
+#[test]
+fn parse_stake_swap_limit_all_flags() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "swap-limit",
+        "--amount", "50.0", "--from", "1", "--to", "5",
+        "--price", "1.5", "--partial",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake childkey-take edge cases ──
+
+#[test]
+fn parse_stake_childkey_take_missing_take() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "childkey-take", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "childkey-take without --take should fail");
+}
+
+#[test]
+fn parse_stake_childkey_take_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "childkey-take", "--take", "5.0",
+    ]);
+    assert!(cli.is_err(), "childkey-take without --netuid should fail");
+}
+
+#[test]
+fn parse_stake_childkey_take_zero() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "childkey-take", "--take", "0.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "zero take: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_childkey_take_max() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "childkey-take", "--take", "18.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "max take (18%): {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_childkey_take_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "childkey-take", "--take", "10.0", "--netuid", "1",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake set-children edge cases ──
+
+#[test]
+fn parse_stake_set_children_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-children",
+        "--children", "1000:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_err(), "set-children without --netuid should fail");
+}
+
+#[test]
+fn parse_stake_set_children_missing_children() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-children", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "set-children without --children should fail");
+}
+
+#[test]
+fn parse_stake_set_children_multiple() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-children", "--netuid", "1",
+        "--children", "500:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,500:5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake recycle-alpha edge cases ──
+
+#[test]
+fn parse_stake_recycle_alpha_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "recycle-alpha", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "recycle-alpha without --amount should fail");
+}
+
+#[test]
+fn parse_stake_recycle_alpha_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "recycle-alpha", "--amount", "1.0",
+    ]);
+    assert!(cli.is_err(), "recycle-alpha without --netuid should fail");
+}
+
+// ── stake burn-alpha edge cases ──
+
+#[test]
+fn parse_stake_burn_alpha_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "burn-alpha", "--netuid", "1",
+    ]);
+    assert!(cli.is_err(), "burn-alpha without --amount should fail");
+}
+
+#[test]
+fn parse_stake_burn_alpha_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "burn-alpha", "--amount", "1.0",
+    ]);
+    assert!(cli.is_err(), "burn-alpha without --netuid should fail");
+}
+
+// ── stake unstake-all edge cases ──
+
+#[test]
+fn parse_stake_unstake_all_no_args() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "unstake-all"]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_unstake_all_alpha_no_args() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "unstake-all-alpha"]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_unstake_all_alpha_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "unstake-all-alpha",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake claim-root edge cases ──
+
+#[test]
+fn parse_stake_claim_root_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "claim-root"]);
+    assert!(cli.is_err(), "claim-root without --netuid should fail");
+}
+
+#[test]
+fn parse_stake_claim_root_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "claim-root", "--netuid", "1",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake set-auto edge cases ──
+
+#[test]
+fn parse_stake_set_auto_missing_netuid() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "set-auto"]);
+    assert!(cli.is_err(), "set-auto without --netuid should fail");
+}
+
+#[test]
+fn parse_stake_set_auto_netuid_zero() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-auto", "--netuid", "0",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake show-auto edge cases ──
+
+#[test]
+fn parse_stake_show_auto_default() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "show-auto"]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_show_auto_with_address() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "show-auto",
+        "--address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake set-claim edge cases ──
+
+#[test]
+fn parse_stake_set_claim_invalid_type() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-claim", "--claim-type", "invalid",
+    ]);
+    assert!(cli.is_err(), "invalid claim type should fail");
+}
+
+#[test]
+fn parse_stake_set_claim_keep_subnets_without_subnets() {
+    // keep-subnets without --subnets should parse (subnets is optional)
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-claim", "--claim-type", "keep-subnets",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_set_claim_keep_subnets_with_subnets() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-claim", "--claim-type", "keep-subnets",
+        "--subnets", "1,2,5,10",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_set_claim_missing_type() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "set-claim",
+    ]);
+    assert!(cli.is_err(), "set-claim without --claim-type should fail");
+}
+
+// ── stake transfer-stake edge cases ──
+
+#[test]
+fn parse_stake_transfer_stake_missing_from() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "transfer-stake",
+        "--dest", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--amount", "10.0", "--to", "2",
+    ]);
+    assert!(cli.is_err(), "transfer-stake without --from should fail");
+}
+
+#[test]
+fn parse_stake_transfer_stake_missing_to() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "transfer-stake",
+        "--dest", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--amount", "10.0", "--from", "1",
+    ]);
+    assert!(cli.is_err(), "transfer-stake without --to should fail");
+}
+
+#[test]
+fn parse_stake_transfer_stake_same_subnet() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "transfer-stake",
+        "--dest", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--amount", "10.0", "--from", "1", "--to", "1",
+    ]);
+    assert!(cli.is_ok(), "same subnet transfer: {:?}", cli.err());
+}
+
+// ── stake process-claim edge cases ──
+
+#[test]
+fn parse_stake_process_claim_with_hotkey() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "process-claim",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_process_claim_with_hotkey_and_netuids() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "stake", "process-claim",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--netuids", "1,5,10",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+}
+
+// ── stake wizard edge cases ──
+
+#[test]
+fn parse_stake_wizard_all_flags() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--yes", "--password", "pass",
+        "stake", "wizard",
+        "--netuid", "1", "--amount", "5.0",
+        "--hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "wizard full non-interactive: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_wizard_partial_flags() {
+    // Only netuid — amount and hotkey will be prompted
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--yes", "stake", "wizard", "--netuid", "5",
+    ]);
+    assert!(cli.is_ok(), "wizard with only netuid: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_wizard_no_flags() {
+    // Fully interactive mode
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "wizard"]);
+    assert!(cli.is_ok(), "wizard no flags: {:?}", cli.err());
+}
+
+// ── global flag combinations with stake commands ──
+
+#[test]
+fn parse_stake_add_with_dry_run() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run", "stake", "add", "--amount", "1.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn parse_stake_add_with_batch_mode() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--batch", "stake", "add", "--amount", "1.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+    assert!(cli.unwrap().batch);
+}
+
+#[test]
+fn parse_stake_list_with_verbose_and_time() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--verbose", "--time", "stake", "list",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+    let cli = cli.unwrap();
+    assert!(cli.verbose);
+    assert!(cli.time);
+}
+
+#[test]
+fn parse_stake_add_with_proxy() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--proxy", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "stake", "add", "--amount", "1.0", "--netuid", "1",
+    ]);
+    assert!(cli.is_ok(), "{:?}", cli.err());
+    assert!(cli.unwrap().proxy.is_some());
+}

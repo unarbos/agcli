@@ -1,7 +1,7 @@
 //! Tests for CLI helper functions.
 //! Run with: cargo test --test helpers_test
 
-use agcli::cli::helpers::{parse_children, parse_weight_pairs};
+use agcli::cli::helpers::{parse_children, parse_weight_pairs, validate_amount, validate_take_pct};
 use agcli::utils::explain;
 
 #[test]
@@ -685,6 +685,204 @@ fn network_finney_not_archive() {
     assert!(!matches!(Network::Finney, Network::Archive));
     assert!(!matches!(Network::Test, Network::Archive));
     assert!(!matches!(Network::Local, Network::Archive));
+}
+
+// ──── Amount validation tests ────
+
+#[test]
+fn validate_amount_positive() {
+    assert!(validate_amount(1.0, "test").is_ok());
+    assert!(validate_amount(0.000000001, "test").is_ok());
+    assert!(validate_amount(1000000.0, "test").is_ok());
+}
+
+#[test]
+fn validate_amount_zero_rejects() {
+    let result = validate_amount(0.0, "test");
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("greater than zero"), "error msg: {}", msg);
+}
+
+#[test]
+fn validate_amount_negative_rejects() {
+    let result = validate_amount(-1.0, "stake amount");
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("negative"), "error msg: {}", msg);
+    assert!(msg.contains("stake amount"), "should include label: {}", msg);
+}
+
+#[test]
+fn validate_amount_nan_rejects() {
+    let result = validate_amount(f64::NAN, "test");
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("finite"), "error msg: {}", msg);
+}
+
+#[test]
+fn validate_amount_infinity_rejects() {
+    let result = validate_amount(f64::INFINITY, "test");
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("finite"), "error msg: {}", msg);
+}
+
+#[test]
+fn validate_amount_neg_infinity_rejects() {
+    let result = validate_amount(f64::NEG_INFINITY, "test");
+    assert!(result.is_err());
+}
+
+// ──── Take percentage validation tests ────
+
+#[test]
+fn validate_take_valid_range() {
+    assert!(validate_take_pct(0.0).is_ok());
+    assert!(validate_take_pct(9.0).is_ok());
+    assert!(validate_take_pct(18.0).is_ok());
+}
+
+#[test]
+fn validate_take_over_max_rejects() {
+    let result = validate_take_pct(18.01);
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("18%"), "should mention max: {}", msg);
+}
+
+#[test]
+fn validate_take_negative_rejects() {
+    let result = validate_take_pct(-1.0);
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("negative"), "error msg: {}", msg);
+}
+
+#[test]
+fn validate_take_nan_rejects() {
+    let result = validate_take_pct(f64::NAN);
+    assert!(result.is_err());
+}
+
+#[test]
+fn validate_take_very_large_rejects() {
+    let result = validate_take_pct(100.0);
+    assert!(result.is_err());
+}
+
+// ──── Comprehensive parse_children tests ────
+
+#[test]
+fn parse_children_whitespace_around_colons() {
+    let result = parse_children("1000 : 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
+    assert!(result.is_ok(), "whitespace around colon: {:?}", result.err());
+    let children = result.unwrap();
+    assert_eq!(children[0].0, 1000);
+}
+
+#[test]
+fn parse_children_whitespace_around_commas() {
+    let result = parse_children("500:5Abc , 500:5Def");
+    assert!(result.is_ok(), "whitespace around commas: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 2);
+}
+
+#[test]
+fn parse_children_large_proportion() {
+    // u64::MAX should be valid
+    let result = parse_children(&format!("{}:5Abc", u64::MAX));
+    assert!(result.is_ok(), "u64 max proportion: {:?}", result.err());
+    assert_eq!(result.unwrap()[0].0, u64::MAX);
+}
+
+#[test]
+fn parse_children_negative_proportion() {
+    let result = parse_children("-1:5Abc");
+    assert!(result.is_err(), "negative proportion should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("Invalid proportion"), "error msg: {}", msg);
+}
+
+#[test]
+fn parse_children_float_proportion() {
+    let result = parse_children("1.5:5Abc");
+    assert!(result.is_err(), "float proportion should fail");
+}
+
+#[test]
+fn parse_children_multiple_colons() {
+    let result = parse_children("1000:5Abc:extra");
+    assert!(result.is_err(), "multiple colons should fail");
+}
+
+#[test]
+fn parse_children_only_commas() {
+    let result = parse_children(",,,");
+    // This should either error or produce empty results
+    // The function splits on comma, each empty part will fail the colon split
+    assert!(result.is_err(), "comma-only input should fail");
+}
+
+#[test]
+fn parse_children_single_colon_only() {
+    let result = parse_children(":");
+    // proportion is empty → parse error
+    assert!(result.is_err(), "colon-only should fail");
+}
+
+// ──── Balance edge case tests ────
+
+#[test]
+fn balance_from_tao_zero() {
+    use agcli::types::Balance;
+    let b = Balance::from_tao(0.0);
+    assert_eq!(b.rao(), 0);
+    assert_eq!(b.tao(), 0.0);
+}
+
+#[test]
+fn balance_from_rao_zero() {
+    use agcli::types::Balance;
+    let b = Balance::from_rao(0);
+    assert_eq!(b.rao(), 0);
+    assert_eq!(b.tao(), 0.0);
+}
+
+#[test]
+fn balance_from_tao_fractional() {
+    use agcli::types::Balance;
+    let b = Balance::from_tao(1.5);
+    assert_eq!(b.rao(), 1_500_000_000);
+}
+
+#[test]
+fn balance_from_tao_one_rao() {
+    use agcli::types::Balance;
+    // 0.000000001 TAO = 1 RAO
+    let b = Balance::from_tao(0.000000001);
+    assert_eq!(b.rao(), 1);
+}
+
+#[test]
+fn balance_roundtrip() {
+    use agcli::types::Balance;
+    let original_rao = 12_345_678_901u64;
+    let b = Balance::from_rao(original_rao);
+    let tao = b.tao();
+    let b2 = Balance::from_tao(tao);
+    // May lose precision due to f64, but should be close
+    let diff = (b2.rao() as i64 - original_rao as i64).unsigned_abs();
+    assert!(diff <= 1, "roundtrip error too large: {} vs {}", b2.rao(), original_rao);
+}
+
+#[test]
+fn balance_display_tao_whole_number() {
+    use agcli::types::Balance;
+    let b = Balance::from_tao(100.0);
+    let s = b.display_tao();
+    assert!(s.contains("100"), "display should contain 100: {}", s);
 }
 
 // ──── Sprint 14: CSV escaping ────

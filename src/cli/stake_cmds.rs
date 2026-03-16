@@ -99,6 +99,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             hotkey,
             max_slippage,
         } => {
+            validate_amount(amount, "stake amount")?;
             // Spending limit check
             check_spending_limit(netuid, amount)?;
             let (pair, hk) =
@@ -142,6 +143,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             hotkey,
             max_slippage,
         } => {
+            validate_amount(amount, "unstake amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             // Slippage check
@@ -171,6 +173,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             to,
             hotkey,
         } => {
+            validate_amount(amount, "move amount")?;
+            if from == to {
+                anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
+            }
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             {
@@ -198,6 +204,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             from_hotkey,
             to_hotkey,
         } => {
+            validate_amount(amount, "swap amount")?;
+            if from_hotkey == to_hotkey {
+                anyhow::bail!("Source and destination hotkeys are the same. Use different hotkeys for swap.");
+            }
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             let bal = Balance::from_tao(amount);
@@ -248,6 +258,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_amount(amount, "limit stake amount")?;
+            validate_amount(price, "limit price")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
@@ -275,6 +287,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_amount(amount, "limit unstake amount")?;
+            validate_amount(price, "limit price")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let lp = (price * 1_000_000_000.0) as u64;
@@ -297,6 +311,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_take_pct(take)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
@@ -339,6 +354,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_amount(amount, "recycle alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             stake_op(
@@ -367,6 +383,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_amount(amount, "burn alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             stake_op(
@@ -387,6 +404,11 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_amount(amount, "swap-limit amount")?;
+            validate_amount(price, "swap-limit price")?;
+            if from == to {
+                anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
+            }
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let amt = (amount * 1_000_000_000.0) as u64;
@@ -504,6 +526,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             to,
             hotkey,
         } => {
+            validate_amount(amount, "transfer stake amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let amt = Balance::from_tao(amount);
