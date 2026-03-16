@@ -953,6 +953,18 @@ pub enum SubnetCommands {
         #[arg(long)]
         weights: String,
     },
+    /// Snipe a registration slot — subscribe to blocks and register the instant a slot opens
+    Snipe {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Maximum burn cost in TAO you're willing to pay (default: no limit)
+        #[arg(long)]
+        max_cost: Option<f64>,
+        /// Maximum number of attempts before giving up (default: unlimited)
+        #[arg(long)]
+        max_attempts: Option<u64>,
+    },
 }
 
 #[derive(Subcommand, Debug)]

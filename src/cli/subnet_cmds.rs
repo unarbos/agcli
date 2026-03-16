@@ -956,7 +956,244 @@ pub(super) async fn handle_subnet(
             print_tx_result(output, &hash, &format!("SN{} emission split set", netuid));
             Ok(())
         }
+        SubnetCommands::Snipe {
+            netuid,
+            max_cost,
+            max_attempts,
+        } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            let max_burn = max_cost.map(Balance::from_tao);
+            handle_snipe(client, &pair, &hk, netuid, max_burn, max_attempts, output).await
+        }
     }
+}
+
+// ──────── Subnet Snipe ────────
+
+/// Hyper-optimized registration sniper.
+///
+/// Subscribes to finalized blocks and attempts burn registration the instant each
+/// block arrives. Pre-flight checks ensure we only submit when:
+///   1. The subnet exists and `registration_allowed` is true
+///   2. There is capacity (`n < max_n`) or the chain will prune lowest-stake neurons
+///   3. The current burn cost is within the caller's budget (`--max-cost`)
+///   4. The coldkey balance covers the burn
+///
+/// On `TooManyRegistrationsThisBlock`, waits for the very next block instead of
+/// sleeping a fixed 12 seconds. On permanent errors (`AlreadyRegistered`,
+/// `InvalidNetuid`, etc.) it aborts immediately.
+async fn handle_snipe(
+    client: &Client,
+    pair: &sp_core::sr25519::Pair,
+    hotkey_ss58: &str,
+    netuid: u16,
+    max_burn: Option<Balance>,
+    max_attempts: Option<u64>,
+    output: crate::cli::OutputFormat,
+) -> Result<()> {
+    use std::io::Write;
+    let nuid = NetUid(netuid);
+    let short_hk = crate::utils::short_ss58(hotkey_ss58);
+    let coldkey_pub = sp_core::Pair::public(pair);
+    let coldkey_ss58 = crate::wallet::keypair::to_ss58(&coldkey_pub, 42);
+
+    // ── Pre-flight: verify subnet and registration status ──
+    let info = client
+        .get_subnet_info(nuid)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Subnet SN{} does not exist", netuid))?;
+    if !info.registration_allowed {
+        anyhow::bail!(
+            "Registration is disabled on SN{}. The subnet owner must enable it first.",
+            netuid
+        );
+    }
+
+    let balance = client.get_balance_ss58(&coldkey_ss58).await?;
+    let burn = info.burn.clone();
+
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!("║           REGISTRATION SNIPER — SN{}               ║", netuid);
+    println!("╚══════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Hotkey:    {}", short_hk);
+    println!("  Coldkey:   {}", crate::utils::short_ss58(&coldkey_ss58));
+    println!("  Balance:   {}", balance.display_tao());
+    println!("  Burn cost: {}", burn.display_tao());
+    println!("  Capacity:  {}/{}", info.n, info.max_n);
+    if let Some(ref cap) = max_burn {
+        println!("  Max cost:  {}", cap.display_tao());
+    }
+    if let Some(max) = max_attempts {
+        println!("  Max tries: {}", max);
+    }
+    println!();
+
+    // Cost sanity check
+    if let Some(ref cap) = max_burn {
+        if burn.rao() > cap.rao() {
+            anyhow::bail!(
+                "Current burn ({}) exceeds your max cost ({}). Aborting.",
+                burn.display_tao(),
+                cap.display_tao()
+            );
+        }
+    }
+    if balance.rao() < burn.rao() {
+        anyhow::bail!(
+            "Insufficient balance ({}) for burn cost ({}). Fund your coldkey first.",
+            balance.display_tao(),
+            burn.display_tao()
+        );
+    }
+
+    // ── Subscribe to finalized blocks ──
+    println!("Subscribing to blocks... (Ctrl+C to abort)\n");
+    let subxt_client = client.subxt();
+    let mut block_sub = subxt_client.blocks().subscribe_finalized().await?;
+    let mut attempt: u64 = 0;
+    let start = std::time::Instant::now();
+
+    while let Some(block_result) = block_sub.next().await {
+        let block = match block_result {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("  ⚠ Block stream error: {}. Reconnecting...", e);
+                // Reconnect
+                block_sub = subxt_client.blocks().subscribe_finalized().await?;
+                continue;
+            }
+        };
+        let block_num = block.number();
+        attempt += 1;
+
+        if let Some(max) = max_attempts {
+            if attempt > max {
+                println!(
+                    "\n✗ Gave up after {} attempts ({:.1}s). No slot opened.",
+                    attempt - 1,
+                    start.elapsed().as_secs_f64()
+                );
+                anyhow::bail!("Max attempts ({}) reached without registration.", max);
+            }
+        }
+
+        // ── Re-check subnet state each block ──
+        let (info_opt, bal) = tokio::try_join!(
+            client.get_subnet_info(nuid),
+            client.get_balance_ss58(&coldkey_ss58),
+        )?;
+        let info = match info_opt {
+            Some(i) => i,
+            None => {
+                eprintln!("  ⚠ Block #{}: Subnet SN{} disappeared!", block_num, netuid);
+                continue;
+            }
+        };
+
+        if !info.registration_allowed {
+            print!("\r  Block #{}: Registration disabled, waiting...          ", block_num);
+            std::io::stderr().flush().ok();
+            continue;
+        }
+
+        let current_burn = &info.burn;
+
+        // Check max cost limit
+        if let Some(ref cap) = max_burn {
+            if current_burn.rao() > cap.rao() {
+                print!(
+                    "\r  Block #{}: Burn {} > max {}, waiting...          ",
+                    block_num,
+                    current_burn.display_tao(),
+                    cap.display_tao()
+                );
+                std::io::stderr().flush().ok();
+                continue;
+            }
+        }
+
+        // Check balance
+        if bal.rao() < current_burn.rao() {
+            print!(
+                "\r  Block #{}: Balance {} < burn {}, waiting for funds...  ",
+                block_num,
+                bal.display_tao(),
+                current_burn.display_tao()
+            );
+            std::io::stderr().flush().ok();
+            continue;
+        }
+
+        // ── Fire the registration ──
+        print!(
+            "\r  Block #{}: Attempt {} — burn {} — {}/{} slots — submitting...",
+            block_num,
+            attempt,
+            current_burn.display_tao(),
+            info.n,
+            info.max_n,
+        );
+        std::io::stdout().flush().ok();
+
+        match client.burned_register(pair, nuid, hotkey_ss58).await {
+            Ok(hash) => {
+                let elapsed = start.elapsed();
+                println!();
+                println!();
+                println!("╔══════════════════════════════════════════════════════╗");
+                println!("║                 ✓ REGISTERED!                       ║");
+                println!("╚══════════════════════════════════════════════════════╝");
+                println!("  Subnet:   SN{}", netuid);
+                println!("  Hotkey:   {}", short_hk);
+                println!("  Tx hash:  {}", hash);
+                println!("  Attempts: {}", attempt);
+                println!("  Time:     {:.1}s", elapsed.as_secs_f64());
+                println!("  Burn:     {}", current_burn.display_tao());
+                if output.is_json() {
+                    print_json(&serde_json::json!({
+                        "status": "registered",
+                        "netuid": netuid,
+                        "hotkey": hotkey_ss58,
+                        "tx_hash": hash,
+                        "attempts": attempt,
+                        "elapsed_secs": elapsed.as_secs_f64(),
+                        "burn_rao": current_burn.rao(),
+                    }));
+                }
+                return Ok(());
+            }
+            Err(e) => {
+                let msg = format!("{}", e);
+                // Classify the error
+                if msg.contains("AlreadyRegistered") || msg.contains("HotKeyAlreadyRegistered") {
+                    println!();
+                    println!("\n  ✓ Hotkey {} is already registered on SN{}.", short_hk, netuid);
+                    return Ok(());
+                } else if msg.contains("InvalidNetuid") || msg.contains("NetworkDoesNotExist") {
+                    println!();
+                    anyhow::bail!("SN{} does not exist. Aborting.", netuid);
+                } else if msg.contains("TooManyRegistrationsThisBlock") {
+                    // Wait for next block — the subscription will deliver it
+                    print!(" rate-limited, next block...");
+                    std::io::stdout().flush().ok();
+                    continue;
+                } else if msg.contains("MaxAllowedUIDs") {
+                    print!(" full, waiting for slot...");
+                    std::io::stdout().flush().ok();
+                    continue;
+                } else {
+                    // Transient or unknown — log and retry next block
+                    print!(" err: {}, retrying...", crate::utils::truncate(&msg, 60));
+                    std::io::stdout().flush().ok();
+                    continue;
+                }
+            }
+        }
+    }
+
+    anyhow::bail!("Block subscription ended unexpectedly.")
 }
 
 // ──────── Subnet Watch ────────
