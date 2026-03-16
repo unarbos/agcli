@@ -1930,13 +1930,15 @@ impl Client {
 
     /// Enter safe mode permissionlessly (SafeMode::enter).
     pub async fn safe_mode_enter(&self, pair: &sr25519::Pair) -> Result<String> {
-        let tx = subxt::dynamic::tx("SafeMode", "enter", vec![]);
+        use subxt::dynamic::Value;
+        let tx = subxt::dynamic::tx("SafeMode", "enter", Vec::<Value>::new());
         self.sign_submit(&tx, pair).await
     }
 
     /// Extend safe mode duration (SafeMode::extend).
     pub async fn safe_mode_extend(&self, pair: &sr25519::Pair) -> Result<String> {
-        let tx = subxt::dynamic::tx("SafeMode", "extend", vec![]);
+        use subxt::dynamic::Value;
+        let tx = subxt::dynamic::tx("SafeMode", "extend", Vec::<Value>::new());
         self.sign_submit(&tx, pair).await
     }
 

@@ -80,6 +80,9 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Batch { .. } => "batch",
         Commands::Scheduler(_) => "scheduler",
         Commands::Preimage(_) => "preimage",
+        Commands::Contracts(_) => "contracts",
+        Commands::Evm(_) => "evm",
+        Commands::SafeMode(_) => "safe-mode",
         Commands::Localnet(_) => "localnet",
         Commands::Admin(_) => "admin",
     };
@@ -452,6 +455,18 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Preimage(cmd) => {
             let client = connect(&network, dry_run, best).await?;
             network_cmds::handle_preimage(cmd, &client, &ctx).await
+        }
+        Commands::Contracts(cmd) => {
+            let client = connect(&network, dry_run, best).await?;
+            network_cmds::handle_contracts(cmd, &client, &ctx).await
+        }
+        Commands::Evm(cmd) => {
+            let client = connect(&network, dry_run, best).await?;
+            network_cmds::handle_evm(cmd, &client, &ctx).await
+        }
+        Commands::SafeMode(cmd) => {
+            let client = connect(&network, dry_run, best).await?;
+            network_cmds::handle_safe_mode(cmd, &client, &ctx).await
         }
         Commands::Localnet(cmd) => localnet_cmds::handle_localnet(cmd, &ctx).await,
         Commands::Admin(cmd) => {

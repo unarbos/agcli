@@ -682,6 +682,232 @@ pub(super) async fn handle_preimage(
     }
 }
 
+// ──────── Contracts ────────
+
+pub(super) async fn handle_contracts(
+    cmd: ContractsCommands,
+    client: &Client,
+    ctx: &Ctx<'_>,
+) -> Result<()> {
+    match cmd {
+        ContractsCommands::Upload {
+            code,
+            storage_deposit_limit,
+        } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let wasm = std::fs::read(&code)
+                .map_err(|e| anyhow::anyhow!("Failed to read WASM file '{}': {}", code, e))?;
+            println!("Uploading contract code ({} bytes)", wasm.len());
+            let tx_hash = client
+                .contracts_upload_code(wallet.coldkey()?, wasm, storage_deposit_limit)
+                .await?;
+            println!("Contract code uploaded. Tx: {}", tx_hash);
+            Ok(())
+        }
+        ContractsCommands::Instantiate {
+            code_hash,
+            value,
+            data,
+            salt,
+            gas_ref_time,
+            gas_proof_size,
+            storage_deposit_limit,
+        } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let hash_hex = code_hash.strip_prefix("0x").unwrap_or(&code_hash);
+            let hash_bytes: [u8; 32] = hex::decode(hash_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Code hash must be 32 bytes"))?;
+            let data_hex = data.strip_prefix("0x").unwrap_or(&data);
+            let data_bytes = hex::decode(data_hex).unwrap_or_default();
+            let salt_hex = salt.strip_prefix("0x").unwrap_or(&salt);
+            let salt_bytes = hex::decode(salt_hex).unwrap_or_default();
+            println!("Instantiating contract from code hash 0x{}", hash_hex);
+            let tx_hash = client
+                .contracts_instantiate(
+                    wallet.coldkey()?,
+                    value,
+                    gas_ref_time,
+                    gas_proof_size,
+                    storage_deposit_limit,
+                    hash_bytes,
+                    data_bytes,
+                    salt_bytes,
+                )
+                .await?;
+            println!("Contract instantiated. Tx: {}", tx_hash);
+            Ok(())
+        }
+        ContractsCommands::Call {
+            contract,
+            value,
+            data,
+            gas_ref_time,
+            gas_proof_size,
+            storage_deposit_limit,
+        } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let data_hex = data.strip_prefix("0x").unwrap_or(&data);
+            let data_bytes =
+                hex::decode(data_hex).map_err(|e| anyhow::anyhow!("Invalid hex data: {}", e))?;
+            println!(
+                "Calling contract {} ({} bytes input)",
+                crate::utils::short_ss58(&contract),
+                data_bytes.len()
+            );
+            let tx_hash = client
+                .contracts_call(
+                    wallet.coldkey()?,
+                    &contract,
+                    value,
+                    gas_ref_time,
+                    gas_proof_size,
+                    storage_deposit_limit,
+                    data_bytes,
+                )
+                .await?;
+            println!("Contract call submitted. Tx: {}", tx_hash);
+            Ok(())
+        }
+        ContractsCommands::RemoveCode { code_hash } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let hash_hex = code_hash.strip_prefix("0x").unwrap_or(&code_hash);
+            let hash_bytes: [u8; 32] = hex::decode(hash_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Code hash must be 32 bytes"))?;
+            println!("Removing contract code 0x{}", hash_hex);
+            let tx_hash = client
+                .contracts_remove_code(wallet.coldkey()?, hash_bytes)
+                .await?;
+            println!("Contract code removed. Tx: {}", tx_hash);
+            Ok(())
+        }
+    }
+}
+
+// ──────── EVM ────────
+
+pub(super) async fn handle_evm(cmd: EvmCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
+    match cmd {
+        EvmCommands::Call {
+            source,
+            target,
+            input,
+            value,
+            gas_limit,
+            max_fee_per_gas,
+        } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let src_hex = source.strip_prefix("0x").unwrap_or(&source);
+            let src_bytes: [u8; 20] = hex::decode(src_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Source must be 20 bytes (EVM address)"))?;
+            let tgt_hex = target.strip_prefix("0x").unwrap_or(&target);
+            let tgt_bytes: [u8; 20] = hex::decode(tgt_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Target must be 20 bytes (EVM address)"))?;
+            let input_hex = input.strip_prefix("0x").unwrap_or(&input);
+            let input_bytes = hex::decode(input_hex).unwrap_or_default();
+            let value_hex = value.strip_prefix("0x").unwrap_or(&value);
+            let value_bytes: [u8; 32] = hex::decode(value_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Value must be 32 bytes (U256)"))?;
+            let fee_hex = max_fee_per_gas
+                .strip_prefix("0x")
+                .unwrap_or(&max_fee_per_gas);
+            let fee_bytes: [u8; 32] = hex::decode(fee_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Max fee must be 32 bytes (U256)"))?;
+            println!(
+                "EVM call: {} -> {} ({} bytes input, gas={})",
+                source,
+                target,
+                input_bytes.len(),
+                gas_limit
+            );
+            let tx_hash = client
+                .evm_call(
+                    wallet.coldkey()?,
+                    src_bytes,
+                    tgt_bytes,
+                    input_bytes,
+                    value_bytes,
+                    gas_limit,
+                    fee_bytes,
+                    None,
+                    None,
+                )
+                .await?;
+            println!("EVM call submitted. Tx: {}", tx_hash);
+            Ok(())
+        }
+        EvmCommands::Withdraw { address, amount } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let addr_hex = address.strip_prefix("0x").unwrap_or(&address);
+            let addr_bytes: [u8; 20] = hex::decode(addr_hex)?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Address must be 20 bytes (EVM address)"))?;
+            println!("Withdrawing {} RAO from EVM address {}", amount, address);
+            let tx_hash = client
+                .evm_withdraw(wallet.coldkey()?, addr_bytes, amount)
+                .await?;
+            println!("EVM withdrawal submitted. Tx: {}", tx_hash);
+            Ok(())
+        }
+    }
+}
+
+// ──────── SafeMode ────────
+
+pub(super) async fn handle_safe_mode(
+    cmd: SafeModeCommands,
+    client: &Client,
+    ctx: &Ctx<'_>,
+) -> Result<()> {
+    match cmd {
+        SafeModeCommands::Enter => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            println!("Entering safe mode (permissionless)...");
+            let tx_hash = client.safe_mode_enter(wallet.coldkey()?).await?;
+            println!("Safe mode entered. Tx: {}", tx_hash);
+            Ok(())
+        }
+        SafeModeCommands::Extend => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            println!("Extending safe mode...");
+            let tx_hash = client.safe_mode_extend(wallet.coldkey()?).await?;
+            println!("Safe mode extended. Tx: {}", tx_hash);
+            Ok(())
+        }
+        SafeModeCommands::ForceEnter { duration } => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            println!("Force entering safe mode for {} blocks (sudo)...", duration);
+            let tx_hash = client
+                .safe_mode_force_enter(wallet.coldkey()?, duration)
+                .await?;
+            println!("Safe mode force-entered. Tx: {}", tx_hash);
+            Ok(())
+        }
+        SafeModeCommands::ForceExit => {
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            println!("Force exiting safe mode (sudo)...");
+            let tx_hash = client.safe_mode_force_exit(wallet.coldkey()?).await?;
+            println!("Safe mode force-exited. Tx: {}", tx_hash);
+            Ok(())
+        }
+    }
+}
+
 // ──────── Serve ────────
 
 pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {

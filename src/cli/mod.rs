@@ -330,6 +330,21 @@ pub enum Commands {
     #[command(subcommand)]
     Preimage(PreimageCommands),
 
+    // ──── Contracts ────
+    /// WASM smart contract operations (upload, instantiate, call, remove)
+    #[command(subcommand)]
+    Contracts(ContractsCommands),
+
+    // ──── EVM ────
+    /// Ethereum Virtual Machine operations (call, withdraw)
+    #[command(subcommand)]
+    Evm(EvmCommands),
+
+    // ──── SafeMode ────
+    /// Safe mode operations (enter, extend, force-enter, force-exit, status)
+    #[command(subcommand)]
+    SafeMode(SafeModeCommands),
+
     // ──── Batch ────
     /// Submit multiple extrinsics from a JSON file via Utility.batch_all
     Batch {
@@ -1685,6 +1700,126 @@ pub enum PreimageCommands {
         #[arg(long)]
         hash: String,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ContractsCommands {
+    /// Upload WASM contract code to the chain
+    Upload {
+        /// Path to .wasm file
+        #[arg(long)]
+        code: String,
+        /// Storage deposit limit in RAO (optional)
+        #[arg(long)]
+        storage_deposit_limit: Option<u128>,
+    },
+    /// Instantiate a contract from an uploaded code hash
+    Instantiate {
+        /// Code hash (0x-prefixed hex, 32 bytes)
+        #[arg(long)]
+        code_hash: String,
+        /// Value to transfer to the contract in RAO
+        #[arg(long, default_value = "0")]
+        value: u128,
+        /// Constructor data (hex-encoded)
+        #[arg(long, default_value = "0x")]
+        data: String,
+        /// Salt for address derivation (hex-encoded)
+        #[arg(long, default_value = "0x")]
+        salt: String,
+        /// Gas limit (ref_time)
+        #[arg(long, default_value = "10000000000")]
+        gas_ref_time: u64,
+        /// Gas limit (proof_size)
+        #[arg(long, default_value = "1048576")]
+        gas_proof_size: u64,
+        /// Storage deposit limit in RAO (optional)
+        #[arg(long)]
+        storage_deposit_limit: Option<u128>,
+    },
+    /// Call an existing contract
+    Call {
+        /// Contract SS58 address
+        #[arg(long)]
+        contract: String,
+        /// Value to transfer in RAO
+        #[arg(long, default_value = "0")]
+        value: u128,
+        /// Call data (hex-encoded, e.g. selector + args)
+        #[arg(long)]
+        data: String,
+        /// Gas limit (ref_time)
+        #[arg(long, default_value = "10000000000")]
+        gas_ref_time: u64,
+        /// Gas limit (proof_size)
+        #[arg(long, default_value = "1048576")]
+        gas_proof_size: u64,
+        /// Storage deposit limit in RAO (optional)
+        #[arg(long)]
+        storage_deposit_limit: Option<u128>,
+    },
+    /// Remove uploaded contract code by hash
+    RemoveCode {
+        /// Code hash (0x-prefixed hex)
+        #[arg(long)]
+        code_hash: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum EvmCommands {
+    /// Execute an EVM call
+    Call {
+        /// Source EVM address (0x-prefixed, 20 bytes)
+        #[arg(long)]
+        source: String,
+        /// Target EVM address (0x-prefixed, 20 bytes)
+        #[arg(long)]
+        target: String,
+        /// Input data (hex-encoded)
+        #[arg(long, default_value = "0x")]
+        input: String,
+        /// Value to send (hex-encoded U256, default 0)
+        #[arg(
+            long,
+            default_value = "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )]
+        value: String,
+        /// Gas limit
+        #[arg(long, default_value = "21000")]
+        gas_limit: u64,
+        /// Max fee per gas (hex-encoded U256)
+        #[arg(
+            long,
+            default_value = "0x0000000000000000000000000000000000000000000000000000000000000001"
+        )]
+        max_fee_per_gas: String,
+    },
+    /// Withdraw balance from EVM address to Substrate
+    Withdraw {
+        /// EVM address to withdraw from (0x-prefixed, 20 bytes)
+        #[arg(long)]
+        address: String,
+        /// Amount in RAO to withdraw
+        #[arg(long)]
+        amount: u128,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SafeModeCommands {
+    /// Enter safe mode permissionlessly (reserves deposit)
+    Enter,
+    /// Extend safe mode duration
+    Extend,
+    /// Force enter safe mode (requires sudo)
+    ForceEnter {
+        /// Duration in blocks
+        #[arg(long)]
+        duration: u32,
+    },
+    /// Force exit safe mode (requires sudo)
+    ForceExit,
 }
 
 #[derive(Subcommand, Debug)]
