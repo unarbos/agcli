@@ -72,11 +72,7 @@ impl Config {
         // Unique name prevents races when multiple processes save concurrently.
         let pid = std::process::id();
         let tid = std::thread::current().id();
-        let tmp_name = format!(
-            ".config.{}.{:?}.tmp",
-            pid,
-            tid,
-        );
+        let tmp_name = format!(".config.{}.{:?}.tmp", pid, tid,);
         let tmp_path = path.with_file_name(tmp_name);
         std::fs::write(&tmp_path, &content)?;
         std::fs::rename(&tmp_path, path).map_err(|e| {
@@ -186,7 +182,10 @@ mod tests {
         cfg.save_to(&path).unwrap();
 
         assert!(path.exists(), "Config file should exist");
-        assert!(!tmp_path.exists(), "Temp file should be cleaned up after rename");
+        assert!(
+            !tmp_path.exists(),
+            "Temp file should be cleaned up after rename"
+        );
 
         // Verify the saved file is valid TOML
         let loaded = Config::load_from(&path).unwrap();

@@ -8,13 +8,13 @@ use anyhow::Result;
 
 // ──────── Root ────────
 
-pub(super) async fn handle_root(
-    cmd: RootCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
-    let (wallet_dir, wallet_name, hotkey_name, password) =
-        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
+pub(super) async fn handle_root(cmd: RootCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name, password) = (
+        ctx.wallet_dir,
+        ctx.wallet_name,
+        ctx.hotkey_name,
+        ctx.password,
+    );
     match cmd {
         RootCommands::Register => {
             let (pair, hk) =
@@ -134,7 +134,13 @@ async fn change_take(
     take: f64,
     increase: bool,
 ) -> Result<()> {
-    let (pair, hk) = unlock_and_resolve(ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, hotkey, ctx.password)?;
+    let (pair, hk) = unlock_and_resolve(
+        ctx.wallet_dir,
+        ctx.wallet_name,
+        ctx.hotkey_name,
+        hotkey,
+        ctx.password,
+    )?;
     let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
     let dir = if increase { "Increasing" } else { "Decreasing" };
     tracing::info!(hotkey = %crate::utils::short_ss58(&hk), take_pct = take, direction = dir, "Changing delegate take");
@@ -228,11 +234,7 @@ pub(super) async fn handle_identity(
 
 // ──────── Swap ────────
 
-pub(super) async fn handle_swap(
-    cmd: SwapCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
+pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
     let (wallet_dir, wallet_name, password) = (ctx.wallet_dir, ctx.wallet_name, ctx.password);
     match cmd {
         SwapCommands::Hotkey { new_hotkey } => {
@@ -295,7 +297,8 @@ pub(super) async fn handle_subscribe(
             netuid,
             account,
         } => {
-            let f: crate::events::EventFilter = filter.parse()
+            let f: crate::events::EventFilter = filter
+                .parse()
                 .map_err(|e| anyhow::anyhow!("Invalid event filter '{}': {}", filter, e))?;
             crate::events::subscribe_events_filtered(
                 client.subxt(),
@@ -427,13 +430,13 @@ pub(super) async fn handle_multisig(
 
 // ──────── Serve ────────
 
-pub(super) async fn handle_serve(
-    cmd: ServeCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
-    let (wallet_dir, wallet_name, hotkey_name, password) =
-        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
+pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
+    let (wallet_dir, wallet_name, hotkey_name, password) = (
+        ctx.wallet_dir,
+        ctx.wallet_name,
+        ctx.hotkey_name,
+        ctx.password,
+    );
     match cmd {
         ServeCommands::Axon {
             netuid,
@@ -497,11 +500,7 @@ pub(super) async fn handle_serve(
 
 // ──────── Proxy ────────
 
-pub(super) async fn handle_proxy(
-    cmd: ProxyCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
+pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
     let (wallet_dir, wallet_name, output, password) =
         (ctx.wallet_dir, ctx.wallet_name, ctx.output, ctx.password);
     let adding = matches!(cmd, ProxyCommands::Add { .. });
@@ -573,7 +572,14 @@ pub(super) async fn handle_proxy(
                 "WARNING: Killing pure proxy will make all funds in it permanently inaccessible!"
             );
             let hash = client
-                .kill_pure_proxy(wallet.coldkey()?, &spawner, &proxy_type, index, height, ext_index)
+                .kill_pure_proxy(
+                    wallet.coldkey()?,
+                    &spawner,
+                    &proxy_type,
+                    index,
+                    height,
+                    ext_index,
+                )
                 .await?;
             println!("Pure proxy killed. Tx: {}", hash);
             Ok(())
@@ -618,7 +624,8 @@ pub(super) async fn handle_crowdloan(
     client: &Client,
     ctx: &Ctx<'_>,
 ) -> Result<()> {
-    let (wallet_dir, wallet_name, password, output) = (ctx.wallet_dir, ctx.wallet_name, ctx.password, ctx.output);
+    let (wallet_dir, wallet_name, password, output) =
+        (ctx.wallet_dir, ctx.wallet_name, ctx.password, ctx.output);
     // Read-only query commands (no wallet needed)
     match &cmd {
         CrowdloanCommands::List => {
@@ -642,7 +649,15 @@ pub(super) async fn handle_crowdloan(
                             finalized,
                         )
                     },
-                    &["ID", "Creator", "Deposit", "Raised", "Cap", "End Block", "Done"],
+                    &[
+                        "ID",
+                        "Creator",
+                        "Deposit",
+                        "Raised",
+                        "Cap",
+                        "End Block",
+                        "Done",
+                    ],
                     |(id, creator, deposit, raised, cap, end_block, finalized)| {
                         vec![
                             format!("{}", id),
@@ -662,16 +677,47 @@ pub(super) async fn handle_crowdloan(
         CrowdloanCommands::Info { crowdloan_id } => {
             let info = client.get_crowdloan_info(*crowdloan_id).await?;
             match info {
-                Some((creator, deposit, raised, cap, end_block, min_contrib, finalized, target)) => {
+                Some((
+                    creator,
+                    deposit,
+                    raised,
+                    cap,
+                    end_block,
+                    min_contrib,
+                    finalized,
+                    target,
+                )) => {
                     println!("Crowdloan #{}", crowdloan_id);
                     println!("  Creator:          {}", creator);
-                    println!("  Deposit:          {}", Balance::from_rao(deposit).display_tao());
-                    println!("  Raised:           {}", Balance::from_rao(raised).display_tao());
-                    println!("  Cap:              {}", Balance::from_rao(cap).display_tao());
-                    println!("  Progress:         {:.1}%", if cap > 0 { raised as f64 / cap as f64 * 100.0 } else { 0.0 });
+                    println!(
+                        "  Deposit:          {}",
+                        Balance::from_rao(deposit).display_tao()
+                    );
+                    println!(
+                        "  Raised:           {}",
+                        Balance::from_rao(raised).display_tao()
+                    );
+                    println!(
+                        "  Cap:              {}",
+                        Balance::from_rao(cap).display_tao()
+                    );
+                    println!(
+                        "  Progress:         {:.1}%",
+                        if cap > 0 {
+                            raised as f64 / cap as f64 * 100.0
+                        } else {
+                            0.0
+                        }
+                    );
                     println!("  End block:        {}", end_block);
-                    println!("  Min contribution: {}", Balance::from_rao(min_contrib).display_tao());
-                    println!("  Finalized:        {}", if finalized { "Yes" } else { "No" });
+                    println!(
+                        "  Min contribution: {}",
+                        Balance::from_rao(min_contrib).display_tao()
+                    );
+                    println!(
+                        "  Finalized:        {}",
+                        if finalized { "Yes" } else { "No" }
+                    );
                     if let Some(t) = target {
                         println!("  Target address:   {}", t);
                     }
@@ -695,7 +741,11 @@ pub(super) async fn handle_crowdloan(
                             "{},{},{:.2}",
                             addr,
                             amount,
-                            if total > 0 { *amount as f64 / total as f64 * 100.0 } else { 0.0 },
+                            if total > 0 {
+                                *amount as f64 / total as f64 * 100.0
+                            } else {
+                                0.0
+                            },
                         )
                     },
                     &["Address", "Amount", "%"],
@@ -705,7 +755,11 @@ pub(super) async fn handle_crowdloan(
                             Balance::from_rao(*amount).display_tao(),
                             format!(
                                 "{:.1}%",
-                                if total > 0 { *amount as f64 / total as f64 * 100.0 } else { 0.0 }
+                                if total > 0 {
+                                    *amount as f64 / total as f64 * 100.0
+                                } else {
+                                    0.0
+                                }
                             ),
                         ]
                     },

@@ -1,6 +1,9 @@
 //! Stress tests — verify agcli handles concurrency and edge cases.
 
-use std::sync::{Arc, atomic::{AtomicU32, Ordering}};
+use std::sync::{
+    atomic::{AtomicU32, Ordering},
+    Arc,
+};
 
 /// Concurrent wallet writes should not corrupt data thanks to file locking.
 #[test]
@@ -26,7 +29,8 @@ fn concurrent_wallet_writes_no_corruption() {
                 let read = agcli::wallet::keyfile::read_encrypted_keyfile(&path, &pw).unwrap();
                 assert!(
                     read.contains("abandon") || read.starts_with("thread"),
-                    "Got corrupted data: {}", read
+                    "Got corrupted data: {}",
+                    read
                 );
             })
         })
@@ -38,7 +42,11 @@ fn concurrent_wallet_writes_no_corruption() {
 
     // Final read should succeed
     let final_read = agcli::wallet::keyfile::read_encrypted_keyfile(&keyfile, password);
-    assert!(final_read.is_ok(), "Final read failed: {:?}", final_read.err());
+    assert!(
+        final_read.is_ok(),
+        "Final read failed: {:?}",
+        final_read.err()
+    );
 }
 
 /// Concurrent hotkey file writes should be safe.
@@ -59,7 +67,8 @@ fn concurrent_hotkey_writes_no_corruption() {
                 let read = agcli::wallet::keyfile::read_keyfile(&path).unwrap();
                 assert!(
                     read.contains("hotkey_thread") || read.contains("test mnemonic"),
-                    "Got corrupted data: {}", read
+                    "Got corrupted data: {}",
+                    read
                 );
             })
         })
@@ -134,7 +143,7 @@ fn error_classifier_exhaustive() {
         let err = anyhow::anyhow!("{}", msg);
         let code = agcli::error::classify(&err);
         assert!(
-            code >= 1 && code <= 15,
+            (1..=15).contains(&code),
             "Unexpected exit code {} for message: {}",
             code,
             &msg[..msg.len().min(100)]
@@ -244,8 +253,8 @@ fn public_key_roundtrip_concurrent() {
 #[tokio::test]
 async fn query_cache_sequential_dedup() {
     use agcli::queries::query_cache::QueryCache;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicU32, Ordering};
+    use std::sync::Arc;
 
     let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
     let fetch_count = Arc::new(AtomicU32::new(0));
@@ -289,8 +298,8 @@ async fn query_cache_sequential_dedup() {
 #[tokio::test]
 async fn query_cache_dynamic_populates_per_netuid() {
     use agcli::queries::query_cache::QueryCache;
-    use agcli::types::chain_data::DynamicInfo;
     use agcli::types::balance::{AlphaBalance, Balance};
+    use agcli::types::chain_data::DynamicInfo;
     use agcli::types::network::NetUid;
 
     let cache = QueryCache::with_ttl(std::time::Duration::from_secs(30));
@@ -353,7 +362,11 @@ async fn query_cache_dynamic_populates_per_netuid() {
 
     assert!(result.is_some(), "netuid 1 should be cached");
     assert_eq!(result.unwrap().name, "alpha");
-    assert_eq!(per_netuid_count.load(Ordering::SeqCst), 0, "should use cache, not fetch");
+    assert_eq!(
+        per_netuid_count.load(Ordering::SeqCst),
+        0,
+        "should use cache, not fetch"
+    );
 }
 
 // ──── Sprint 6: Balance edge cases ────
@@ -407,7 +420,11 @@ fn mev_encrypt_empty_plaintext() {
 
     // Empty plaintext should still work
     let result = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), b"");
-    assert!(result.is_ok(), "empty plaintext should encrypt: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "empty plaintext should encrypt: {:?}",
+        result.err()
+    );
     let (_, ct) = result.unwrap();
     // Ciphertext: 2 + 1088 + 24 + (0 + 16 tag)
     assert_eq!(ct.len(), 2 + 1088 + 24 + 16);
@@ -422,8 +439,13 @@ fn mev_encrypt_large_plaintext() {
 
     // Large 10KB plaintext
     let plaintext = vec![0xABu8; 10_000];
-    let result = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), &plaintext);
-    assert!(result.is_ok(), "large plaintext should encrypt: {:?}", result.err());
+    let result =
+        agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), &plaintext);
+    assert!(
+        result.is_ok(),
+        "large plaintext should encrypt: {:?}",
+        result.err()
+    );
     let (_, ct) = result.unwrap();
     assert_eq!(ct.len(), 2 + 1088 + 24 + plaintext.len() + 16);
 }
@@ -436,8 +458,12 @@ fn mev_encrypt_commitment_deterministic() {
     let ek_bytes = ek.as_bytes();
     let plaintext = b"deterministic commitment test";
 
-    let (c1, _) = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext).unwrap();
-    let (c2, _) = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext).unwrap();
+    let (c1, _) =
+        agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext)
+            .unwrap();
+    let (c2, _) =
+        agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext)
+            .unwrap();
     assert_eq!(c1, c2, "same plaintext should produce same commitment");
 }
 
@@ -449,8 +475,12 @@ fn mev_encrypt_ciphertext_nondeterministic() {
     let ek_bytes = ek.as_bytes();
     let plaintext = b"nondeterministic ciphertext test";
 
-    let (_, ct1) = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext).unwrap();
-    let (_, ct2) = agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext).unwrap();
+    let (_, ct1) =
+        agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext)
+            .unwrap();
+    let (_, ct2) =
+        agcli::extrinsics::mev_shield::encrypt_for_mev_shield(ek_bytes.as_slice(), plaintext)
+            .unwrap();
     assert_ne!(ct1, ct2, "ciphertext should differ due to random nonce/KEM");
 }
 
@@ -471,7 +501,8 @@ fn config_concurrent_writes() {
             std::thread::spawn(move || {
                 let content = format!(
                     "[network]\ndefault = \"thread_{}\"\n[spending_limits]\n\"*\" = {}.0\n",
-                    i, i * 100
+                    i,
+                    i * 100
                 );
                 // Atomic write pattern: write to temp then rename
                 let tmp = path.with_extension(format!("tmp.{}", i));
@@ -480,7 +511,12 @@ fn config_concurrent_writes() {
 
                 // Read back should always get valid TOML
                 let read = std::fs::read_to_string(&path).unwrap();
-                assert!(read.contains("[network]"), "Config corrupted by thread {}: {}", i, read);
+                assert!(
+                    read.contains("[network]"),
+                    "Config corrupted by thread {}: {}",
+                    i,
+                    read
+                );
             })
         })
         .collect();
@@ -491,7 +527,11 @@ fn config_concurrent_writes() {
 
     // Final read should be valid TOML
     let final_content = std::fs::read_to_string(&config_path).unwrap();
-    assert!(final_content.contains("[network]"), "Final config corrupted: {}", final_content);
+    assert!(
+        final_content.contains("[network]"),
+        "Final config corrupted: {}",
+        final_content
+    );
 }
 
 /// Verify that clap parser is truly thread-safe by parsing conflicting args concurrently.
@@ -505,7 +545,10 @@ fn cli_parsing_conflicting_args_concurrent() {
         (vec!["agcli", "--output", "json", "subnet", "list"], true),
         (vec!["agcli", "--output", "csv", "wallet", "list"], true),
         (vec!["agcli", "--debug", "doctor"], true),
-        (vec!["agcli", "--verbose", "--timeout", "30", "balance"], true),
+        (
+            vec!["agcli", "--verbose", "--timeout", "30", "balance"],
+            true,
+        ),
         (vec!["agcli", "subnet", "show", "--netuid", "1"], true),
         (vec!["agcli", "--network", "test", "balance"], true),
         (vec!["agcli", "--batch", "balance"], true),
@@ -517,7 +560,12 @@ fn cli_parsing_conflicting_args_concurrent() {
             std::thread::spawn(move || {
                 let result = agcli::cli::Cli::try_parse_from(&args);
                 if should_succeed {
-                    assert!(result.is_ok(), "Expected success for {:?}: {:?}", args, result.err());
+                    assert!(
+                        result.is_ok(),
+                        "Expected success for {:?}: {:?}",
+                        args,
+                        result.err()
+                    );
                 }
             })
         })
@@ -548,7 +596,11 @@ fn error_classification_concurrent() {
                 for _ in 0..100 {
                     let err = anyhow::anyhow!("{}", msg);
                     let code = agcli::error::classify(&err);
-                    assert_eq!(code, expected_code, "Classification inconsistent for '{}': got {}, expected {}", msg, code, expected_code);
+                    assert_eq!(
+                        code, expected_code,
+                        "Classification inconsistent for '{}': got {}, expected {}",
+                        msg, code, expected_code
+                    );
                 }
             })
         })
@@ -702,7 +754,8 @@ fn wallet_create_race_protection() {
                     // but should not be corruption
                     assert!(
                         !msg.contains("corrupted"),
-                        "Unexpected corruption error: {}", msg
+                        "Unexpected corruption error: {}",
+                        msg
                     );
                 }
             }
@@ -713,12 +766,16 @@ fn wallet_create_race_protection() {
     assert!(
         successes >= 1,
         "Expected at least 1 success, got {} successes and {} already-exists",
-        successes, already_exists
+        successes,
+        already_exists
     );
 
     // The wallet should be valid
     let wallet = agcli::Wallet::open(wallet_dir.join("race_test")).unwrap();
-    assert!(wallet.coldkey_ss58().is_some(), "Wallet should have a valid coldkey");
+    assert!(
+        wallet.coldkey_ss58().is_some(),
+        "Wallet should have a valid coldkey"
+    );
 }
 
 /// Concurrent cache save operations should not crash or leave missing latest.json.
@@ -785,7 +842,10 @@ fn cache_save_concurrent_atomic_symlink() {
 
     // latest.json should exist and be readable
     let loaded = cache::load_latest(netuid).unwrap();
-    assert!(loaded.is_some(), "latest.json should exist after concurrent saves");
+    assert!(
+        loaded.is_some(),
+        "latest.json should exist after concurrent saves"
+    );
     let mg = loaded.unwrap();
     assert!(mg.block >= 900000, "Should have a valid block number");
 
@@ -825,9 +885,9 @@ fn wallet_dir_lock_serializes_creation() {
 /// Verify format_* utilities are safe under concurrent use.
 #[test]
 fn format_utilities_concurrent() {
+    use agcli::types::Balance;
     use agcli::utils::format_tao;
     use agcli::utils::short_ss58;
-    use agcli::types::Balance;
 
     let threads: Vec<_> = (0..8)
         .map(|_| {
@@ -853,7 +913,7 @@ fn format_utilities_concurrent() {
 #[test]
 fn dry_run_flag_parse() {
     use clap::Parser;
-    let cli = agcli::cli::Cli::try_parse_from(&["agcli", "--dry-run", "balance"]).unwrap();
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--dry-run", "balance"]).unwrap();
     assert!(cli.dry_run, "dry-run flag should be parsed");
 }
 
@@ -862,7 +922,7 @@ fn dry_run_flag_parse() {
 fn output_format_roundtrip() {
     use clap::Parser;
     for fmt in &["json", "csv", "table"] {
-        let cli = agcli::cli::Cli::try_parse_from(&["agcli", "--output", fmt, "balance"]).unwrap();
+        let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", fmt, "balance"]).unwrap();
         match *fmt {
             "json" => assert!(cli.output.is_json()),
             "csv" => assert!(cli.output.is_csv()),
@@ -878,25 +938,31 @@ fn config_full_roundtrip() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("config.toml");
 
-    let mut cfg = agcli::Config::default();
-    cfg.network = Some("test".into());
-    cfg.endpoint = Some("wss://test.finney.opentensor.ai:443".into());
-    cfg.wallet_dir = Some("/tmp/wallets".into());
-    cfg.wallet = Some("mywallet".into());
-    cfg.hotkey = Some("myhotkey".into());
-    cfg.output = Some("json".into());
-    cfg.proxy = Some("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB".into());
-    cfg.live_interval = Some(30);
-    cfg.batch = Some(true);
-    let mut limits = std::collections::HashMap::new();
-    limits.insert("1".into(), 100.0);
-    limits.insert("*".into(), 500.0);
-    cfg.spending_limits = Some(limits);
+    let cfg = agcli::Config {
+        network: Some("test".into()),
+        endpoint: Some("wss://test.finney.opentensor.ai:443".into()),
+        wallet_dir: Some("/tmp/wallets".into()),
+        wallet: Some("mywallet".into()),
+        hotkey: Some("myhotkey".into()),
+        output: Some("json".into()),
+        proxy: Some("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB".into()),
+        live_interval: Some(30),
+        batch: Some(true),
+        spending_limits: Some({
+            let mut limits = std::collections::HashMap::new();
+            limits.insert("1".into(), 100.0);
+            limits.insert("*".into(), 500.0);
+            limits
+        }),
+    };
 
     cfg.save_to(&path).unwrap();
     let loaded = agcli::Config::load_from(&path).unwrap();
     assert_eq!(loaded.network.as_deref(), Some("test"));
-    assert_eq!(loaded.endpoint.as_deref(), Some("wss://test.finney.opentensor.ai:443"));
+    assert_eq!(
+        loaded.endpoint.as_deref(),
+        Some("wss://test.finney.opentensor.ai:443")
+    );
     assert_eq!(loaded.wallet.as_deref(), Some("mywallet"));
     assert_eq!(loaded.hotkey.as_deref(), Some("myhotkey"));
     assert_eq!(loaded.output.as_deref(), Some("json"));
@@ -935,7 +1001,10 @@ fn error_codes_are_complete() {
 fn spending_limit_no_config() {
     // With no config file, check_spending_limit should always pass
     let result = agcli::cli::helpers::check_spending_limit(1, 999999.0);
-    assert!(result.is_ok(), "Should pass with no spending limits configured");
+    assert!(
+        result.is_ok(),
+        "Should pass with no spending limits configured"
+    );
 }
 
 /// CSV escape handles edge cases correctly.
@@ -947,7 +1016,10 @@ fn csv_escape_edge_cases() {
     assert_eq!(csv_escape("has\"quote"), "\"has\"\"quote\"");
     assert_eq!(csv_escape("has\nnewline"), "\"has\nnewline\"");
     assert_eq!(csv_escape(""), "");
-    assert_eq!(csv_escape("already \"quoted\""), "\"already \"\"quoted\"\"\"");
+    assert_eq!(
+        csv_escape("already \"quoted\""),
+        "\"already \"\"quoted\"\"\""
+    );
 }
 
 /// Weight pair parsing should validate rigorously.
@@ -997,13 +1069,34 @@ fn children_pair_parsing() {
 #[test]
 fn parallel_error_classification_all_types() {
     let test_cases = vec![
-        ("Connection refused to endpoint", agcli::error::exit_code::NETWORK),
-        ("Decryption failed — wrong password for coldkey", agcli::error::exit_code::AUTH),
-        ("Invalid SS58 address format", agcli::error::exit_code::VALIDATION),
-        ("Extrinsic rejected: insufficient balance", agcli::error::exit_code::CHAIN),
-        ("Permission denied writing config", agcli::error::exit_code::IO),
-        ("Operation timed out after 30s", agcli::error::exit_code::TIMEOUT),
-        ("Unknown error with no pattern match", agcli::error::exit_code::GENERIC),
+        (
+            "Connection refused to endpoint",
+            agcli::error::exit_code::NETWORK,
+        ),
+        (
+            "Decryption failed — wrong password for coldkey",
+            agcli::error::exit_code::AUTH,
+        ),
+        (
+            "Invalid SS58 address format",
+            agcli::error::exit_code::VALIDATION,
+        ),
+        (
+            "Extrinsic rejected: insufficient balance",
+            agcli::error::exit_code::CHAIN,
+        ),
+        (
+            "Permission denied writing config",
+            agcli::error::exit_code::IO,
+        ),
+        (
+            "Operation timed out after 30s",
+            agcli::error::exit_code::TIMEOUT,
+        ),
+        (
+            "Unknown error with no pattern match",
+            agcli::error::exit_code::GENERIC,
+        ),
     ];
 
     // Run all classifications in parallel threads, 50 iterations each
@@ -1014,7 +1107,11 @@ fn parallel_error_classification_all_types() {
                 for _ in 0..50 {
                     let err = anyhow::anyhow!("{}", msg);
                     let code = agcli::error::classify(&err);
-                    assert_eq!(code, expected, "Mismatch for '{}': got {} expected {}", msg, code, expected);
+                    assert_eq!(
+                        code, expected,
+                        "Mismatch for '{}': got {} expected {}",
+                        msg, code, expected
+                    );
 
                     // Also test hint generation doesn't panic
                     let _ = agcli::error::hint(code, msg);
@@ -1037,7 +1134,7 @@ fn disk_cache_concurrent_put_prune() {
         .map(|i| {
             std::thread::spawn(move || {
                 for j in 0..15u32 {
-                    let key = format!("{}_{}_{}",  key_prefix, i, j);
+                    let key = format!("{}_{}_{}", key_prefix, i, j);
                     let _ = agcli::queries::disk_cache::put(&key, &(i * 100 + j));
                 }
             })
@@ -1074,23 +1171,39 @@ fn error_classify_serde_json() {
     let json_err: serde_json::Error = serde_json::from_str::<Vec<u32>>("not json").unwrap_err();
     let err = anyhow::Error::new(json_err).context("Decoding chain response");
     let code = agcli::error::classify(&err);
-    assert_eq!(code, agcli::error::exit_code::VALIDATION, "serde_json errors should be VALIDATION");
+    assert_eq!(
+        code,
+        agcli::error::exit_code::VALIDATION,
+        "serde_json errors should be VALIDATION"
+    );
 }
 
 /// The --best flag should be parseable.
 #[test]
 fn best_flag_parse() {
     use clap::Parser;
-    let cli = agcli::cli::Cli::try_parse_from(&["agcli", "--best", "balance"]).unwrap();
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--best", "balance"]).unwrap();
     assert!(cli.best, "--best flag should be parsed");
 }
 
 /// event filter parsing covers all known variants.
 #[test]
 fn event_filter_parsing_all_variants() {
-    for input in &["staking", "stake", "registration", "register", "reg",
-                   "transfer", "transfers", "weights", "weight",
-                   "subnet", "subnets", "all", "unknown"] {
+    for input in &[
+        "staking",
+        "stake",
+        "registration",
+        "register",
+        "reg",
+        "transfer",
+        "transfers",
+        "weights",
+        "weight",
+        "subnet",
+        "subnets",
+        "all",
+        "unknown",
+    ] {
         let _: agcli::events::EventFilter = input.parse().unwrap();
     }
 }
@@ -1107,15 +1220,19 @@ fn config_create_destroy_concurrent() {
                 let path = base.join(format!("config_{}.toml", i));
                 for round in 0..10 {
                     // Create
-                    let mut cfg = agcli::Config::default();
-                    cfg.network = Some(format!("thread_{}_round_{}", i, round));
+                    let cfg = agcli::Config {
+                        network: Some(format!("thread_{}_round_{}", i, round)),
+                        ..Default::default()
+                    };
                     cfg.save_to(&path).unwrap();
 
                     // Read back
                     let loaded = agcli::Config::load_from(&path).unwrap();
                     assert!(
                         loaded.network.is_some(),
-                        "Config should be readable after save (thread={}, round={})", i, round
+                        "Config should be readable after save (thread={}, round={})",
+                        i,
+                        round
                     );
 
                     // Delete

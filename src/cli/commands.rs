@@ -11,7 +11,10 @@ use anyhow::Result;
 async fn connect(network: &crate::types::Network, dry_run: bool, best: bool) -> Result<Client> {
     let urls = network.ws_urls();
     let mut client = if best && urls.len() > 1 {
-        tracing::info!("Using best-connection mode: testing {} endpoints", urls.len());
+        tracing::info!(
+            "Using best-connection mode: testing {} endpoints",
+            urls.len()
+        );
         Client::best_connection(&urls).await?
     } else {
         Client::connect_with_retry(&urls).await?
@@ -87,10 +90,16 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Wallet(WalletCommands::AssociateHotkey { hotkey }) => {
             let client = connect(&network, dry_run, best).await?;
             let (pair, hk) = unlock_and_resolve(
-                ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name,
-                hotkey, ctx.password,
+                ctx.wallet_dir,
+                ctx.wallet_name,
+                ctx.hotkey_name,
+                hotkey,
+                ctx.password,
             )?;
-            println!("Associating hotkey {} on-chain", crate::utils::short_ss58(&hk));
+            println!(
+                "Associating hotkey {} on-chain",
+                crate::utils::short_ss58(&hk)
+            );
             let hash = client.try_associate_hotkey(&pair, &hk).await?;
             print_tx_result(ctx.output, &hash, "Hotkey associated.");
             Ok(())
@@ -184,7 +193,11 @@ pub async fn execute(cli: Cli) -> Result<()> {
                     let balance = match client.get_balance_ss58(&addr).await {
                         Ok(b) => b,
                         Err(e) => {
-                            eprintln!("[{}] Warning: balance query failed: {}", chrono::Local::now().format("%H:%M:%S"), e);
+                            eprintln!(
+                                "[{}] Warning: balance query failed: {}",
+                                chrono::Local::now().format("%H:%M:%S"),
+                                e
+                            );
                             tracing::warn!(error = %e, "Balance query failed during watch mode");
                             tokio::select! {
                                 _ = tokio::time::sleep(tokio::time::Duration::from_secs(interval)) => {},
@@ -259,7 +272,11 @@ pub async fn execute(cli: Cli) -> Result<()> {
                     );
                 }
             }
-            println!("Transferring {} to {}", balance.display_tao(), crate::utils::short_ss58(&dest));
+            println!(
+                "Transferring {} to {}",
+                balance.display_tao(),
+                crate::utils::short_ss58(&dest)
+            );
             if !is_batch_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Proceed?")
@@ -280,7 +297,8 @@ pub async fn execute(cli: Cli) -> Result<()> {
             unlock_coldkey(&mut wallet, ctx.password)?;
             println!(
                 "Transferring all balance to {} (keep_alive={})",
-                crate::utils::short_ss58(&dest), keep_alive
+                crate::utils::short_ss58(&dest),
+                keep_alive
             );
             if !is_batch_mode() {
                 let proceed = dialoguer::Confirm::new()
@@ -361,9 +379,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             )
             .await
         }
-        Commands::Utils(cmd) => {
-            system_cmds::handle_utils(cmd, &network, ctx.output).await
-        }
+        Commands::Utils(cmd) => system_cmds::handle_utils(cmd, &network, ctx.output).await,
         Commands::Config(cmd) => system_cmds::handle_config(cmd).await,
         Commands::Completions { shell } => {
             system_cmds::generate_completions(&shell);
@@ -393,7 +409,8 @@ pub async fn execute(cli: Cli) -> Result<()> {
             let client = connect(&network, dry_run, best).await?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
-            system_cmds::handle_batch(&client, wallet.coldkey()?, &file, no_atomic, ctx.output).await
+            system_cmds::handle_batch(&client, wallet.coldkey()?, &file, no_atomic, ctx.output)
+                .await
         }
     }
 }

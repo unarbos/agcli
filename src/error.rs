@@ -261,7 +261,8 @@ mod tests {
 
     #[test]
     fn classify_serde_json_error() {
-        let json_err: serde_json::Error = serde_json::from_str::<String>("not valid json").unwrap_err();
+        let json_err: serde_json::Error =
+            serde_json::from_str::<String>("not valid json").unwrap_err();
         let err = anyhow::Error::new(json_err).context("Failed to deserialize chain data");
         assert_eq!(classify(&err), exit_code::VALIDATION);
     }

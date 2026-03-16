@@ -2,10 +2,10 @@
 
 use anyhow::{Context, Result};
 
+use crate::api;
 use crate::types::balance::Balance;
 use crate::types::chain_data::*;
 use crate::types::network::NetUid;
-use crate::api;
 
 use super::{retry_on_transient, Client, RPC_RETRIES};
 
@@ -31,9 +31,14 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query stakes for coldkey {}", short))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         let stakes: Vec<StakeInfo> = result.into_iter().map(StakeInfo::from).collect();
-        tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = stakes.len(), "get_stake_for_coldkey");
+        tracing::debug!(
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            count = stakes.len(),
+            "get_stake_for_coldkey"
+        );
         Ok(stakes)
     }
 
@@ -56,7 +61,8 @@ impl Client {
                         .await
                         .context("Failed to query all subnets")?;
                     Ok(result.into_iter().flatten().map(SubnetInfo::from).collect())
-                }).await
+                })
+                .await
             })
             .await
     }
@@ -66,9 +72,7 @@ impl Client {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_subnet_info", RPC_RETRIES, || async {
-            let payload = api::apis()
-                .subnet_info_runtime_api()
-                .get_subnet_info(nid);
+            let payload = api::apis().subnet_info_runtime_api().get_subnet_info(nid);
             let r = inner
                 .runtime_api()
                 .at_latest()
@@ -78,7 +82,8 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query subnet info for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(SubnetInfo::from))
     }
 
@@ -102,7 +107,8 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query hyperparams for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(|h| SubnetHyperparameters::from_gen(h, netuid)))
     }
 
@@ -127,7 +133,8 @@ impl Client {
                         .flatten()
                         .map(DynamicInfo::from)
                         .collect())
-                }).await
+                })
+                .await
             })
             .await
     }
@@ -140,9 +147,7 @@ impl Client {
             .cache
             .get_dynamic_info(nid, || async {
                 retry_on_transient("get_dynamic_info", RPC_RETRIES, || async {
-                    let payload = api::apis()
-                        .subnet_info_runtime_api()
-                        .get_dynamic_info(nid);
+                    let payload = api::apis().subnet_info_runtime_api().get_dynamic_info(nid);
                     let r = inner
                         .runtime_api()
                         .at_latest()
@@ -152,7 +157,8 @@ impl Client {
                         .await
                         .with_context(|| format!("Failed to query dynamic info for SN{}", nid))?;
                     Ok(r.map(DynamicInfo::from))
-                }).await
+                })
+                .await
             })
             .await?;
         Ok(result.map(|arc| (*arc).clone()))
@@ -165,9 +171,7 @@ impl Client {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_neurons_lite", RPC_RETRIES, || async {
-            let payload = api::apis()
-                .neuron_info_runtime_api()
-                .get_neurons_lite(nid);
+            let payload = api::apis().neuron_info_runtime_api().get_neurons_lite(nid);
             let r = inner
                 .runtime_api()
                 .at_latest()
@@ -177,7 +181,8 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query neurons for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.into_iter().map(NeuronInfoLite::from).collect())
     }
 
@@ -186,9 +191,7 @@ impl Client {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_neuron", RPC_RETRIES, || async {
-            let payload = api::apis()
-                .neuron_info_runtime_api()
-                .get_neuron(nid, uid);
+            let payload = api::apis().neuron_info_runtime_api().get_neuron(nid, uid);
             let r = inner
                 .runtime_api()
                 .at_latest()
@@ -198,7 +201,8 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query neuron UID {} on SN{}", uid, nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(NeuronInfo::from))
     }
 
@@ -223,7 +227,8 @@ impl Client {
                 .await
                 .context("Failed to query delegates")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.into_iter().map(DelegateInfo::from).collect())
     }
 
@@ -244,7 +249,8 @@ impl Client {
                 .await
                 .context("Failed to query delegate info")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(DelegateInfo::from))
     }
 
@@ -257,11 +263,16 @@ impl Client {
         let short = crate::utils::short_ss58(ss58);
         let result = retry_on_transient("get_identity", RPC_RETRIES, || async {
             let addr = api::storage().registry().identity_of(&account_id);
-            let r = inner.storage().at_latest().await?
-                .fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to fetch identity for {}", short))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(|reg| chain_identity_from_registration(reg.info)))
     }
 
@@ -270,13 +281,17 @@ impl Client {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_subnet_identity", RPC_RETRIES, || async {
-            let addr = api::storage()
-                .subtensor_module()
-                .subnet_identities_v3(nid);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let addr = api::storage().subtensor_module().subnet_identities_v3(nid);
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to fetch subnet identity for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(|id| SubnetIdentity {
             subnet_name: String::from_utf8_lossy(&id.subnet_name).into_owned(),
             github_repo: String::from_utf8_lossy(&id.github_repo).into_owned(),
@@ -308,7 +323,8 @@ impl Client {
                 .await
                 .context("Failed to query delegated info")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result
             .into_iter()
             .map(|(di, _extra)| DelegateInfo::from(di))
@@ -323,10 +339,16 @@ impl Client {
         let inner = &self.inner;
         let result = retry_on_transient("list_proxies", RPC_RETRIES, || async {
             let addr = api::storage().proxy().proxies(&account_id);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch proxy list")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some((proxies, _deposit)) => Ok(proxies
                 .0
@@ -352,10 +374,16 @@ impl Client {
             let addr = api::storage()
                 .subtensor_module()
                 .coldkey_swap_scheduled(&account_id);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to query coldkey swap status")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(|(block, new_coldkey)| {
             let new_ss58 = sp_core::crypto::AccountId32::from(new_coldkey.0).to_string();
             (block, new_ss58)
@@ -377,10 +405,16 @@ impl Client {
             let addr = api::storage()
                 .subtensor_module()
                 .child_keys(&account_id, nid);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch child keys")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result
             .unwrap_or_default()
             .into_iter()
@@ -404,10 +438,16 @@ impl Client {
             let addr = api::storage()
                 .subtensor_module()
                 .parent_keys(&account_id, nid);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch parent keys")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result
             .unwrap_or_default()
             .into_iter()
@@ -434,10 +474,16 @@ impl Client {
             let addr = api::storage()
                 .subtensor_module()
                 .pending_child_keys(nid, &account_id);
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch pending child keys")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok(result.map(|(children, cooldown_block)| {
             let children_parsed: Vec<(u64, String)> = children
                 .into_iter()
@@ -630,7 +676,10 @@ impl Client {
     )> {
         let inner = &self.inner;
         retry_on_transient("get_block_header", RPC_RETRIES, || async {
-            let block = inner.blocks().at(block_hash).await
+            let block = inner
+                .blocks()
+                .at(block_hash)
+                .await
                 .context("Failed to fetch block header")?;
             let header = block.header();
             Ok((
@@ -639,19 +688,26 @@ impl Client {
                 header.parent_hash,
                 header.state_root,
             ))
-        }).await
+        })
+        .await
     }
 
     /// Get extrinsic count in a block.
     pub async fn get_block_extrinsic_count(&self, block_hash: subxt::utils::H256) -> Result<usize> {
         let inner = &self.inner;
         retry_on_transient("get_block_extrinsic_count", RPC_RETRIES, || async {
-            let block = inner.blocks().at(block_hash).await
+            let block = inner
+                .blocks()
+                .at(block_hash)
+                .await
                 .context("Failed to fetch block")?;
-            let extrinsics = block.extrinsics().await
+            let extrinsics = block
+                .extrinsics()
+                .await
                 .context("Failed to decode block extrinsics")?;
             Ok(extrinsics.len())
-        }).await
+        })
+        .await
     }
 
     /// Get the timestamp for a block by reading the Timestamp.set() inherent.
@@ -659,10 +715,15 @@ impl Client {
         let inner = &self.inner;
         retry_on_transient("get_block_timestamp", RPC_RETRIES, || async {
             let addr = api::storage().timestamp().now();
-            let val = inner.storage().at(block_hash).fetch(&addr).await
+            let val = inner
+                .storage()
+                .at(block_hash)
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch block timestamp")?;
             Ok(val)
-        }).await
+        })
+        .await
     }
 
     // ──────── Swap Simulation (Runtime APIs) ────────
@@ -682,7 +743,8 @@ impl Client {
                 .await
                 .with_context(|| format!("Failed to query alpha price for SN{}", nid))?;
             Ok(r)
-        }).await
+        })
+        .await
     }
 
     /// Simulate swapping TAO for alpha on a subnet.
@@ -707,7 +769,8 @@ impl Client {
                 .await
                 .context("Failed to simulate TAO→alpha swap")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok((result.alpha_amount, result.tao_fee, result.alpha_fee))
     }
 
@@ -733,7 +796,8 @@ impl Client {
                 .await
                 .context("Failed to simulate alpha→TAO swap")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         Ok((result.tao_amount, result.tao_fee, result.alpha_fee))
     }
 
@@ -758,10 +822,16 @@ impl Client {
                     subxt::dynamic::Value::u128(nid as u128),
                 ],
             );
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch auto-stake hotkey")?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some(val) => {
                 let account_bytes: [u8; 32] = val.as_type()?;
@@ -775,10 +845,7 @@ impl Client {
     // ──────── Emission Split Queries ────────
 
     /// Get mechanism emission split for a subnet (if set).
-    pub async fn get_emission_split(
-        &self,
-        netuid: NetUid,
-    ) -> Result<Option<Vec<(String, u64)>>> {
+    pub async fn get_emission_split(&self, netuid: NetUid) -> Result<Option<Vec<(String, u64)>>> {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_emission_split", RPC_RETRIES, || async {
@@ -787,10 +854,16 @@ impl Client {
                 "MechanismEmissionSplit",
                 vec![subxt::dynamic::Value::u128(nid as u128)],
             );
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to fetch emission split for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some(val) => {
                 let raw: Vec<(u8, u64)> = val.as_type()?;
@@ -823,10 +896,16 @@ impl Client {
                 "SubnetActive",
                 vec![subxt::dynamic::Value::u128(nid as u128)],
             );
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to check active status for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some(val) => Ok(val.as_type::<bool>().unwrap_or(false)),
             None => Ok(false),
@@ -843,10 +922,16 @@ impl Client {
                 "MechanismCountCurrent",
                 vec![subxt::dynamic::Value::u128(nid as u128)],
             );
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to fetch mechanism count for SN{}", nid))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some(val) => Ok(val.as_type::<u16>().unwrap_or(1)),
             None => Ok(1), // Default is 1 mechanism
@@ -857,17 +942,21 @@ impl Client {
 
     /// List all crowdloans by iterating Crowdloan storage.
     /// Returns Vec<(id, creator_ss58, deposit, raised, cap, end_block, finalized)>.
-    pub async fn list_crowdloans(
-        &self,
-    ) -> Result<Vec<(u32, String, u64, u64, u64, u32, bool)>> {
+    pub async fn list_crowdloans(&self) -> Result<Vec<(u32, String, u64, u64, u64, u32, bool)>> {
         let inner = &self.inner;
         let mut results = Vec::new();
         let mut iter = retry_on_transient("list_crowdloans", RPC_RETRIES, || async {
             let addr = subxt::dynamic::storage("Crowdloan", "Crowdloans", ());
-            let i = inner.storage().at_latest().await?.iter(addr).await
+            let i = inner
+                .storage()
+                .at_latest()
+                .await?
+                .iter(addr)
+                .await
                 .context("Failed to iterate crowdloans")?;
             Ok(i)
-        }).await?;
+        })
+        .await?;
         while let Some(Ok(kv)) = iter.next().await {
             // Extract crowdloan ID from key (last 4 bytes for u32)
             let key_bytes = &kv.key_bytes;
@@ -878,9 +967,27 @@ impl Client {
                 let id = u32::from_le_bytes(id_bytes);
 
                 // Try to decode the value
-                if let Ok((creator_bytes, deposit, raised, cap, end_block, _min_contrib, finalized, _target, _call))
-                    = kv.value.as_type::<([u8; 32], u64, u64, u64, u32, u64, bool, Option<[u8; 32]>, Option<Vec<u8>>)>()
-                {
+                if let Ok((
+                    creator_bytes,
+                    deposit,
+                    raised,
+                    cap,
+                    end_block,
+                    _min_contrib,
+                    finalized,
+                    _target,
+                    _call,
+                )) = kv.value.as_type::<(
+                    [u8; 32],
+                    u64,
+                    u64,
+                    u64,
+                    u32,
+                    u64,
+                    bool,
+                    Option<[u8; 32]>,
+                    Option<Vec<u8>>,
+                )>() {
                     let creator = crate::AccountId::from(creator_bytes).to_string();
                     results.push((id, creator, deposit, raised, cap, end_block, finalized));
                 }
@@ -903,18 +1010,51 @@ impl Client {
                 "Crowdloans",
                 vec![subxt::dynamic::Value::u128(crowdloan_id as u128)],
             );
-            let r = inner.storage().at_latest().await?.fetch(&addr).await
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
                 .with_context(|| format!("Failed to fetch crowdloan {}", crowdloan_id))?;
             Ok(r)
-        }).await?;
+        })
+        .await?;
         match result {
             Some(val) => {
-                if let Ok((creator_bytes, deposit, raised, cap, end_block, min_contrib, finalized, target_opt, _call))
-                    = val.as_type::<([u8; 32], u64, u64, u64, u32, u64, bool, Option<[u8; 32]>, Option<Vec<u8>>)>()
-                {
+                if let Ok((
+                    creator_bytes,
+                    deposit,
+                    raised,
+                    cap,
+                    end_block,
+                    min_contrib,
+                    finalized,
+                    target_opt,
+                    _call,
+                )) = val.as_type::<(
+                    [u8; 32],
+                    u64,
+                    u64,
+                    u64,
+                    u32,
+                    u64,
+                    bool,
+                    Option<[u8; 32]>,
+                    Option<Vec<u8>>,
+                )>() {
                     let creator = crate::AccountId::from(creator_bytes).to_string();
                     let target = target_opt.map(|t| crate::AccountId::from(t).to_string());
-                    Ok(Some((creator, deposit, raised, cap, end_block, min_contrib, finalized, target)))
+                    Ok(Some((
+                        creator,
+                        deposit,
+                        raised,
+                        cap,
+                        end_block,
+                        min_contrib,
+                        finalized,
+                        target,
+                    )))
                 } else {
                     Ok(None)
                 }
@@ -937,10 +1077,21 @@ impl Client {
                 "Contributors",
                 vec![subxt::dynamic::Value::u128(crowdloan_id as u128)],
             );
-            let i = inner.storage().at_latest().await?.iter(addr).await
-                .with_context(|| format!("Failed to iterate contributors for crowdloan {}", crowdloan_id))?;
+            let i = inner
+                .storage()
+                .at_latest()
+                .await?
+                .iter(addr)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to iterate contributors for crowdloan {}",
+                        crowdloan_id
+                    )
+                })?;
             Ok(i)
-        }).await?;
+        })
+        .await?;
         while let Some(Ok(kv)) = iter.next().await {
             let key_bytes = &kv.key_bytes;
             if key_bytes.len() >= 32 {
@@ -956,7 +1107,6 @@ impl Client {
         results.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by amount descending
         Ok(results)
     }
-
 }
 
 /// Convert a Registry pallet `IdentityInfo` into our `ChainIdentity` struct.

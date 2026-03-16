@@ -53,7 +53,8 @@ impl Client {
         netuid: NetUid,
         amount: Balance,
     ) -> Result<String> {
-        self.add_stake_mev(pair, hotkey_ss58, netuid, amount, false).await
+        self.add_stake_mev(pair, hotkey_ss58, netuid, amount, false)
+            .await
     }
 
     /// Add stake, optionally wrapping through MEV shield.
@@ -80,7 +81,8 @@ impl Client {
         netuid: NetUid,
         amount: Balance,
     ) -> Result<String> {
-        self.remove_stake_mev(pair, hotkey_ss58, netuid, amount, false).await
+        self.remove_stake_mev(pair, hotkey_ss58, netuid, amount, false)
+            .await
     }
 
     /// Remove stake, optionally wrapping through MEV shield.
@@ -396,13 +398,7 @@ impl Client {
             .subtensor_module()
             .weight_commits_iter1(netuid.0);
         let mut results = Vec::new();
-        let mut iter = self
-            .inner
-            .storage()
-            .at_latest()
-            .await?
-            .iter(addr)
-            .await?;
+        let mut iter = self.inner.storage().at_latest().await?.iter(addr).await?;
         while let Some(Ok(kv)) = iter.next().await {
             // Extract the account ID from the storage key (last 32 bytes)
             let key_bytes = kv.key_bytes;
@@ -426,7 +422,11 @@ impl Client {
         match val {
             Some(v) => Ok(v),
             None => {
-                tracing::debug!(netuid = netuid.0, default = 1, "reveal_period_epochs not set on-chain, using default");
+                tracing::debug!(
+                    netuid = netuid.0,
+                    default = 1,
+                    "reveal_period_epochs not set on-chain, using default"
+                );
                 Ok(1)
             }
         }
@@ -481,7 +481,11 @@ impl Client {
         match val {
             Some(v) => Ok(v),
             None => {
-                tracing::warn!(netuid = netuid.0, default = 10_000_000, "Difficulty not set on-chain, using default");
+                tracing::warn!(
+                    netuid = netuid.0,
+                    default = 10_000_000,
+                    "Difficulty not set on-chain, using default"
+                );
                 Ok(10_000_000)
             }
         }
@@ -849,7 +853,10 @@ impl Client {
                     [("subnets", Value::unnamed_composite(subnet_vals))],
                 )
             }
-            _ => anyhow::bail!("Invalid claim type: {}. Use 'swap', 'keep', or 'keep-subnets'", claim_type),
+            _ => anyhow::bail!(
+                "Invalid claim type: {}. Use 'swap', 'keep', or 'keep-subnets'",
+                claim_type
+            ),
         };
         self.submit_raw_call(
             pair,
@@ -949,10 +956,7 @@ impl Client {
             pair,
             "Swap",
             "toggle_user_liquidity",
-            vec![
-                Value::u128(netuid.0 as u128),
-                Value::bool(enable),
-            ],
+            vec![Value::u128(netuid.0 as u128), Value::bool(enable)],
         )
         .await
     }
@@ -962,14 +966,22 @@ impl Client {
     /// Fetch the current ML-KEM-768 public key for MEV shield from chain storage.
     pub async fn get_mev_shield_next_key(&self) -> Result<Vec<u8>> {
         let storage_query = subxt::dynamic::storage("MevShield", "NextKey", ());
-        let result = self.inner.storage().at_latest().await?.fetch(&storage_query).await?;
+        let result = self
+            .inner
+            .storage()
+            .at_latest()
+            .await?
+            .fetch(&storage_query)
+            .await?;
         match result {
             Some(val) => {
                 // Decode the BoundedVec<u8> from the storage value
                 let bytes: Vec<u8> = val.as_type()?;
                 Ok(bytes)
             }
-            None => anyhow::bail!("MEV shield key not available — the chain may not have MEV shield enabled"),
+            None => anyhow::bail!(
+                "MEV shield key not available — the chain may not have MEV shield enabled"
+            ),
         }
     }
 
@@ -986,10 +998,7 @@ impl Client {
             pair,
             "MevShield",
             "submit_encrypted",
-            vec![
-                Value::from_bytes(commitment),
-                Value::from_bytes(ciphertext),
-            ],
+            vec![Value::from_bytes(commitment), Value::from_bytes(ciphertext)],
         )
         .await
     }
@@ -1317,4 +1326,3 @@ pub(crate) fn parse_proxy_type(s: &str) -> &'static str {
         _ => "Any",
     }
 }
-

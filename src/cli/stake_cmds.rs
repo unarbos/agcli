@@ -6,11 +6,7 @@ use crate::cli::{OutputFormat, StakeCommands};
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
-pub async fn handle_stake(
-    cmd: StakeCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
+pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
     let (wallet_dir, wallet_name, hotkey_name) = (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name);
     let (output, password, mev) = (ctx.output, ctx.password, ctx.mev);
     match cmd {
@@ -134,7 +130,9 @@ pub async fn handle_stake(
                 "Adding",
                 "added",
                 &hk,
-                client.add_stake_mev(&pair, &hk, NetUid(netuid), bal, mev).await,
+                client
+                    .add_stake_mev(&pair, &hk, NetUid(netuid), bal, mev)
+                    .await,
             )
         }
         StakeCommands::Remove {
@@ -376,13 +374,8 @@ pub async fn handle_stake(
             Ok(())
         }
         StakeCommands::SetAuto { netuid, hotkey } => {
-            let (pair, hk) = unlock_and_resolve(
-                wallet_dir,
-                wallet_name,
-                hotkey_name,
-                hotkey,
-                password,
-            )?;
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             println!(
                 "Setting auto-stake on SN{} to hotkey {}...",
                 netuid,
@@ -400,17 +393,27 @@ pub async fn handle_stake(
                 match client.get_auto_stake_hotkey(&addr, subnet.netuid).await {
                     Ok(Some(hotkey)) => {
                         if !found {
-                            println!("Auto-stake destinations for {}:", crate::utils::short_ss58(&addr));
+                            println!(
+                                "Auto-stake destinations for {}:",
+                                crate::utils::short_ss58(&addr)
+                            );
                             found = true;
                         }
-                        println!("  SN{:<4} → {}", subnet.netuid, crate::utils::short_ss58(&hotkey));
+                        println!(
+                            "  SN{:<4} → {}",
+                            subnet.netuid,
+                            crate::utils::short_ss58(&hotkey)
+                        );
                     }
                     Ok(None) => {} // No auto-stake set for this subnet
                     Err(_) => {}   // Storage key may not exist
                 }
             }
             if !found {
-                println!("No auto-stake destinations set for {}", crate::utils::short_ss58(&addr));
+                println!(
+                    "No auto-stake destinations set for {}",
+                    crate::utils::short_ss58(&addr)
+                );
             }
             Ok(())
         }
@@ -418,18 +421,15 @@ pub async fn handle_stake(
             claim_type,
             subnets,
         } => {
-            let (pair, _) = unlock_and_resolve(
-                wallet_dir,
-                wallet_name,
-                hotkey_name,
-                None,
-                password,
-            )?;
+            let (pair, _) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             let subnet_ids: Option<Vec<u16>> = subnets.as_ref().map(|s| {
                 let mut ids = Vec::new();
                 for n in s.split(',') {
                     let trimmed = n.trim();
-                    if trimmed.is_empty() { continue; }
+                    if trimmed.is_empty() {
+                        continue;
+                    }
                     match trimmed.parse::<u16>() {
                         Ok(id) => ids.push(id),
                         Err(_) => {
@@ -505,7 +505,10 @@ pub async fn handle_stake(
                 .collect();
 
             if target_netuids.is_empty() {
-                println!("No stakes found for hotkey {} to claim from.", crate::utils::short_ss58(&hk));
+                println!(
+                    "No stakes found for hotkey {} to claim from.",
+                    crate::utils::short_ss58(&hk)
+                );
                 return Ok(());
             }
 
@@ -555,9 +558,7 @@ pub async fn handle_stake(
             netuid,
             amount,
             hotkey,
-        } => {
-            staking_wizard(client, ctx, netuid, amount, hotkey).await
-        }
+        } => staking_wizard(client, ctx, netuid, amount, hotkey).await,
     }
 }
 
@@ -619,7 +620,11 @@ async fn check_slippage(
             "Warning: estimated slippage is {:.2}% on SN{}",
             slippage, netuid
         );
-        tracing::warn!(slippage_pct = slippage, netuid = netuid, "Estimated slippage exceeds 2%");
+        tracing::warn!(
+            slippage_pct = slippage,
+            netuid = netuid,
+            "Estimated slippage exceeds 2%"
+        );
     }
     Ok(())
 }
@@ -631,8 +636,13 @@ async fn staking_wizard(
     amount_arg: Option<f64>,
     hotkey_arg: Option<String>,
 ) -> Result<()> {
-    let (wallet_dir, wallet_name, hotkey_name, password, yes) =
-        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password, ctx.yes);
+    let (wallet_dir, wallet_name, hotkey_name, password, yes) = (
+        ctx.wallet_dir,
+        ctx.wallet_name,
+        ctx.hotkey_name,
+        ctx.password,
+        ctx.yes,
+    );
     println!("=== Staking Wizard ===\n");
 
     let mut wallet = open_wallet(wallet_dir, wallet_name)?;

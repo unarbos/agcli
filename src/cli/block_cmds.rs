@@ -6,7 +6,11 @@ use crate::cli::*;
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
-pub(super) async fn handle_block(cmd: BlockCommands, client: &Client, output: OutputFormat) -> Result<()> {
+pub(super) async fn handle_block(
+    cmd: BlockCommands,
+    client: &Client,
+    output: OutputFormat,
+) -> Result<()> {
     match cmd {
         BlockCommands::Info { number } => {
             let block_hash = client.get_block_hash(number).await?;

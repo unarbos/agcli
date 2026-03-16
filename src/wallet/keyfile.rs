@@ -20,7 +20,7 @@ const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 
 /// Maximum time to wait for a keyfile lock before giving up.
-const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Acquire an exclusive advisory lock on a keyfile path with timeout.
 /// Returns the lock file handle (lock released on drop).
@@ -56,7 +56,9 @@ fn lock_keyfile(path: &Path) -> Result<fs::File> {
                     "Timed out after {}s waiting for lock on '{}'.\n  \
                      Another agcli process may be holding it, or a previous process crashed.\n  \
                      If no other process is running, remove the stale lock: rm '{}'",
-                    LOCK_TIMEOUT.as_secs(), lock_path.display(), lock_path.display()
+                    LOCK_TIMEOUT.as_secs(),
+                    lock_path.display(),
+                    lock_path.display()
                 );
             }
             Err(_) => {
@@ -96,7 +98,8 @@ pub fn lock_wallet_dir(dir: &Path) -> Result<fs::File> {
                 anyhow::bail!(
                     "Timed out waiting for wallet directory lock on '{}'.\n  \
                      Another agcli process may be creating this wallet. If not, remove: rm '{}'",
-                    lock_path.display(), lock_path.display()
+                    lock_path.display(),
+                    lock_path.display()
                 );
             }
             Err(_) => {
@@ -354,9 +357,7 @@ mod tests {
         for _ in 0..8 {
             let p = path.clone();
             let pw = password.to_string();
-            handles.push(std::thread::spawn(move || {
-                read_encrypted_keyfile(&p, &pw)
-            }));
+            handles.push(std::thread::spawn(move || read_encrypted_keyfile(&p, &pw)));
         }
 
         // All reads should succeed with the same result
@@ -391,11 +392,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("bad_coldkey");
         // Write a file that's too short to be valid
-        std::fs::write(&path, &[0u8; 5]).unwrap();
+        std::fs::write(&path, [0u8; 5]).unwrap();
         let result = read_encrypted_keyfile(&path, "any");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("corrupted"), "Expected 'corrupted' in error: {}", msg);
+        assert!(
+            msg.contains("corrupted"),
+            "Expected 'corrupted' in error: {}",
+            msg
+        );
     }
 
     #[test]
@@ -421,6 +426,7 @@ mod tests {
         let held_lock = fs::OpenOptions::new()
             .create(true)
             .write(true)
+            .truncate(false)
             .open(&lock_path)
             .unwrap();
         held_lock.lock_exclusive().unwrap();
@@ -437,10 +443,22 @@ mod tests {
         let (result, elapsed) = handle.join().expect("thread panicked");
         assert!(result.is_err(), "Should have timed out");
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("Timed out"), "Expected timeout error, got: {}", msg);
+        assert!(
+            msg.contains("Timed out"),
+            "Expected timeout error, got: {}",
+            msg
+        );
         // Should have waited at least a few seconds but not more than LOCK_TIMEOUT + buffer
-        assert!(elapsed.as_secs() >= 5, "Should wait at least 5s, waited {:?}", elapsed);
-        assert!(elapsed.as_secs() <= 15, "Should not wait more than 15s, waited {:?}", elapsed);
+        assert!(
+            elapsed.as_secs() >= 10,
+            "Should wait at least 10s, waited {:?}",
+            elapsed
+        );
+        assert!(
+            elapsed.as_secs() <= 40,
+            "Should not wait more than 40s, waited {:?}",
+            elapsed
+        );
 
         // Release the held lock
         drop(held_lock);
@@ -457,6 +475,7 @@ mod tests {
         let held_lock = fs::OpenOptions::new()
             .create(true)
             .write(true)
+            .truncate(false)
             .open(&lock_path)
             .unwrap();
         held_lock.lock_exclusive().unwrap();
@@ -471,6 +490,10 @@ mod tests {
 
         // This should succeed once the lock is released
         let result = lock_keyfile(&path);
-        assert!(result.is_ok(), "Should acquire lock after contention: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should acquire lock after contention: {:?}",
+            result.err()
+        );
     }
 }

@@ -6,11 +6,7 @@ use crate::cli::{OutputFormat, ViewCommands};
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
-pub async fn handle_view(
-    cmd: ViewCommands,
-    client: &Client,
-    ctx: &Ctx<'_>,
-) -> Result<()> {
+pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
     let (wallet_dir, wallet_name) = (ctx.wallet_dir, ctx.wallet_name);
     let (output, live_interval) = (ctx.output, ctx.live_interval);
     match cmd {
@@ -114,7 +110,11 @@ async fn handle_portfolio(client: &Client, addr: &str, output: OutputFormat) -> 
     Ok(())
 }
 
-async fn handle_network(client: &Client, output: OutputFormat, at_block: Option<u32>) -> Result<()> {
+async fn handle_network(
+    client: &Client,
+    output: OutputFormat,
+    at_block: Option<u32>,
+) -> Result<()> {
     // Historical wayback mode
     if let Some(block_num) = at_block {
         let block_hash = client.get_block_hash(block_num).await?;
@@ -294,7 +294,11 @@ async fn handle_portfolio_at_block(
     Ok(())
 }
 
-async fn handle_dynamic_at_block(client: &Client, output: OutputFormat, block_num: u32) -> Result<()> {
+async fn handle_dynamic_at_block(
+    client: &Client,
+    output: OutputFormat,
+    block_num: u32,
+) -> Result<()> {
     let block_hash = client.get_block_hash(block_num).await?;
     let dynamic = client.get_all_dynamic_info_at_block(block_hash).await?;
     render_rows(
@@ -550,9 +554,11 @@ async fn handle_history(address: &str, output: OutputFormat, limit: usize) -> Re
                             .and_then(|v| v.as_str())
                             .unwrap_or(""),
                         csv_escape(tx.get("call_module").and_then(|v| v.as_str()).unwrap_or("")),
-                        csv_escape(tx.get("call_module_function")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")),
+                        csv_escape(
+                            tx.get("call_module_function")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                        ),
                         tx.get("success").and_then(|v| v.as_bool()).unwrap_or(false),
                         tx.get("block_timestamp")
                             .and_then(|v| v.as_u64())
@@ -684,13 +690,19 @@ async fn handle_account_explorer(
         async {
             match client.get_all_dynamic_info().await {
                 Ok(d) => Ok::<_, anyhow::Error>(d),
-                Err(e) => { tracing::warn!("get_all_dynamic_info failed (non-fatal): {e:#}"); Ok(Default::default()) }
+                Err(e) => {
+                    tracing::warn!("get_all_dynamic_info failed (non-fatal): {e:#}");
+                    Ok(Default::default())
+                }
             }
         },
         async {
             Ok::<_, anyhow::Error>(match client.get_delegate(address).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(error = %e, "get_delegate failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(error = %e, "get_delegate failed (non-fatal)");
+                    None
+                }
             })
         },
     )?;
@@ -803,20 +815,29 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         async {
             Ok::<_, anyhow::Error>(match client.get_dynamic_info(nuid).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
+                    None
+                }
             })
         },
         client.get_neurons_lite(nuid),
         async {
             Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams(nuid).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
+                    None
+                }
             })
         },
         async {
             Ok::<_, anyhow::Error>(match client.get_subnet_identity(nuid).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_identity failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_identity failed (non-fatal)");
+                    None
+                }
             })
         },
     )?;
@@ -1006,13 +1027,20 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
     Ok(())
 }
 
-async fn handle_staking_analytics(client: &Client, address: &str, output: OutputFormat) -> Result<()> {
+async fn handle_staking_analytics(
+    client: &Client,
+    address: &str,
+    output: OutputFormat,
+) -> Result<()> {
     let (stakes, dynamic, block_emission) = tokio::try_join!(
         client.get_stake_for_coldkey(address),
         async {
             match client.get_all_dynamic_info().await {
                 Ok(d) => Ok::<_, anyhow::Error>(d),
-                Err(e) => { tracing::warn!("get_all_dynamic_info failed (non-fatal): {e:#}"); Ok(Default::default()) }
+                Err(e) => {
+                    tracing::warn!("get_all_dynamic_info failed (non-fatal): {e:#}");
+                    Ok(Default::default())
+                }
             }
         },
         client.get_block_emission(),
@@ -1289,19 +1317,28 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         async {
             Ok::<_, anyhow::Error>(match client.get_delegate(address).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(error = %e, "get_delegate failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(error = %e, "get_delegate failed (non-fatal)");
+                    None
+                }
             })
         },
         async {
             match client.get_all_dynamic_info().await {
                 Ok(d) => Ok::<_, anyhow::Error>(d),
-                Err(e) => { tracing::debug!(error = %e, "get_all_dynamic_info failed (non-fatal)"); Ok(Default::default()) }
+                Err(e) => {
+                    tracing::debug!(error = %e, "get_all_dynamic_info failed (non-fatal)");
+                    Ok(Default::default())
+                }
             }
         },
         async {
             Ok::<_, anyhow::Error>(match client.get_coldkey_swap_scheduled(address).await {
                 Ok(v) => v,
-                Err(e) => { tracing::debug!(error = %e, "get_coldkey_swap_scheduled failed (non-fatal)"); None }
+                Err(e) => {
+                    tracing::debug!(error = %e, "get_coldkey_swap_scheduled failed (non-fatal)");
+                    None
+                }
             })
         },
     )?;

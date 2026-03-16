@@ -40,9 +40,7 @@ async fn main() {
             .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
             .init();
     } else {
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .init();
+        tracing_subscriber::fmt().with_env_filter(filter).init();
     }
 
     // Load config file and apply defaults (CLI flags take precedence)

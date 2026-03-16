@@ -220,4 +220,3 @@ pub struct Metagraph {
     pub active: Vec<bool>,
     pub last_update: Vec<u64>,
 }
-

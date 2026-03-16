@@ -101,7 +101,8 @@ impl Wallet {
         if dir.join("coldkey").exists() {
             anyhow::bail!(
                 "Wallet '{}' already exists at {}.\n  Use a different name or remove it first.",
-                name, dir.display()
+                name,
+                dir.display()
             );
         }
 

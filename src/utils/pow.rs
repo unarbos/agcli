@@ -92,14 +92,22 @@ mod tests {
             handles.into_iter().map(|h| h.join().unwrap()).collect();
 
         // At least one thread should find a solution with difficulty=2
-        assert!(results.iter().any(|r| r.is_some()), "No solution found in 4000 nonces with difficulty=2");
+        assert!(
+            results.iter().any(|r| r.is_some()),
+            "No solution found in 4000 nonces with difficulty=2"
+        );
 
         // Verify all found solutions are valid
         for r in results.into_iter().flatten() {
             let (nonce, hash) = r;
             let score = u64::from_le_bytes(hash[..8].try_into().unwrap());
             let target = u64::MAX / difficulty;
-            assert!(score <= target, "Invalid solution: score {} > target {}", score, target);
+            assert!(
+                score <= target,
+                "Invalid solution: score {} > target {}",
+                score,
+                target
+            );
             // Verify reproducibility
             let verify = compute_pow_hash(&block, &hotkey, nonce);
             assert_eq!(hash, verify);

@@ -8,10 +8,8 @@ use anyhow::Result;
 /// Fetch the metagraph for a subnet.
 pub async fn fetch_metagraph(client: &Client, netuid: NetUid) -> Result<Metagraph> {
     // Parallel fetch: neurons and block number are independent queries
-    let (neurons, block) = tokio::try_join!(
-        client.get_neurons_lite(netuid),
-        client.get_block_number(),
-    )?;
+    let (neurons, block) =
+        tokio::try_join!(client.get_neurons_lite(netuid), client.get_block_number(),)?;
     let n = neurons.len() as u16;
 
     // Single-pass extraction: iterate once instead of 12 times

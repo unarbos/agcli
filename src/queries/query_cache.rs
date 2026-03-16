@@ -53,18 +53,9 @@ impl QueryCache {
     /// Internal constructor with explicit disk cache control. Also used in tests.
     pub(crate) fn with_ttl_and_disk(ttl: Duration, use_disk: bool) -> Self {
         Self {
-            subnets: Cache::builder()
-                .time_to_live(ttl)
-                .max_capacity(1)
-                .build(),
-            all_dynamic: Cache::builder()
-                .time_to_live(ttl)
-                .max_capacity(1)
-                .build(),
-            dynamic_by_netuid: Cache::builder()
-                .time_to_live(ttl)
-                .max_capacity(100)
-                .build(),
+            subnets: Cache::builder().time_to_live(ttl).max_capacity(1).build(),
+            all_dynamic: Cache::builder().time_to_live(ttl).max_capacity(1).build(),
+            dynamic_by_netuid: Cache::builder().time_to_live(ttl).max_capacity(100).build(),
             use_disk,
         }
     }
@@ -205,7 +196,11 @@ impl QueryCache {
         let start = std::time::Instant::now();
         match fetch().await? {
             Some(data) => {
-                tracing::debug!(netuid, elapsed_ms = start.elapsed().as_millis() as u64, "fetched dynamic_info");
+                tracing::debug!(
+                    netuid,
+                    elapsed_ms = start.elapsed().as_millis() as u64,
+                    "fetched dynamic_info"
+                );
                 let arc = Arc::new(data);
                 self.dynamic_by_netuid.insert(netuid, arc.clone()).await;
                 Ok(Some(arc))
@@ -454,9 +449,7 @@ mod tests {
         assert!(result.is_err());
 
         // Second call: fetch succeeds — cache should not be poisoned
-        let result = cache
-            .get_all_subnets(|| async { Ok(vec![]) })
-            .await;
+        let result = cache.get_all_subnets(|| async { Ok(vec![]) }).await;
         assert!(result.is_ok());
     }
 
@@ -480,7 +473,10 @@ mod tests {
         let result = cache
             .get_all_subnets(|| async { Err(anyhow::anyhow!("chain connection failed")) })
             .await;
-        assert!(result.is_ok(), "stale-while-error should serve stale disk data");
+        assert!(
+            result.is_ok(),
+            "stale-while-error should serve stale disk data"
+        );
 
         // Clean up
         disk_cache::remove(key);
@@ -500,7 +496,10 @@ mod tests {
         let result = cache
             .get_all_subnets(|| async { Err(anyhow::anyhow!("chain connection failed")) })
             .await;
-        assert!(result.is_err(), "should propagate error when disk cache is disabled");
+        assert!(
+            result.is_err(),
+            "should propagate error when disk cache is disabled"
+        );
         let _ = disk_cache::path(); // suppress unused import
     }
 
@@ -522,7 +521,10 @@ mod tests {
         let result = cache
             .get_all_dynamic_info(|| async { Err(anyhow::anyhow!("timeout")) })
             .await;
-        assert!(result.is_ok(), "stale-while-error should serve stale dynamic info");
+        assert!(
+            result.is_ok(),
+            "stale-while-error should serve stale dynamic info"
+        );
         let data = result.unwrap();
         assert_eq!(data.len(), 1);
         assert_eq!(data[0].name, "TestNet");

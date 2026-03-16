@@ -26,4 +26,3 @@ pub async fn list_subnets(client: &Client) -> Result<Vec<SubnetInfo>> {
     }
     Ok(subnets)
 }
-

@@ -101,8 +101,8 @@ pub async fn handle_wallet(
                     if all {
                         if let Ok(hk_names) = w.list_hotkeys() {
                             for hk_name in &hk_names {
-                                let mut w2 =
-                                    match Wallet::open(format!("{}/{}", wallet_dir, name)) {
+                                let mut w2 = match Wallet::open(format!("{}/{}", wallet_dir, name))
+                                {
                                     Ok(w) => w,
                                     Err(_) => continue,
                                 };
@@ -146,8 +146,13 @@ pub async fn handle_wallet(
                             println!("{},{},,", esc_name, e.coldkey);
                         } else {
                             for (hk_name, hk_addr) in &e.hotkeys {
-                                println!("{},{},{},{}", esc_name, e.coldkey,
-                                    crate::cli::helpers::csv_escape(hk_name), hk_addr);
+                                println!(
+                                    "{},{},{},{}",
+                                    esc_name,
+                                    e.coldkey,
+                                    crate::cli::helpers::csv_escape(hk_name),
+                                    hk_addr
+                                );
                             }
                         }
                     }
@@ -261,8 +266,7 @@ pub async fn handle_wallet(
             crate::cli::helpers::unlock_coldkey(&mut wallet, global_password)?;
             let pair = wallet.coldkey()?;
             let msg_bytes = if let Some(hex_str) = message.strip_prefix("0x") {
-                hex::decode(hex_str)
-                    .map_err(|e| anyhow::anyhow!("Invalid hex message: {}", e))?
+                hex::decode(hex_str).map_err(|e| anyhow::anyhow!("Invalid hex message: {}", e))?
             } else {
                 message.as_bytes().to_vec()
             };
@@ -290,8 +294,7 @@ pub async fn handle_wallet(
                 }
             };
             let msg_bytes = if let Some(hex_str) = message.strip_prefix("0x") {
-                hex::decode(hex_str)
-                    .map_err(|e| anyhow::anyhow!("Invalid hex message: {}", e))?
+                hex::decode(hex_str).map_err(|e| anyhow::anyhow!("Invalid hex message: {}", e))?
             } else {
                 message.as_bytes().to_vec()
             };
@@ -305,7 +308,8 @@ pub async fn handle_wallet(
                 );
             }
             let public = crate::wallet::keypair::from_ss58(&signer_ss58)?;
-            let sig_arr: [u8; 64] = sig_bytes.try_into()
+            let sig_arr: [u8; 64] = sig_bytes
+                .try_into()
                 .map_err(|_| anyhow::anyhow!("Signature bytes conversion failed"))?;
             let sig = sp_core::sr25519::Signature::from_raw(sig_arr);
             let valid = sp_core::sr25519::Pair::verify(&sig, &msg_bytes, &public);
@@ -325,14 +329,16 @@ pub async fn handle_wallet(
         WalletCommands::Derive { input } => {
             if input.starts_with("0x") {
                 // Public key hex
-                let hex_str = input.strip_prefix("0x")
+                let hex_str = input
+                    .strip_prefix("0x")
                     .ok_or_else(|| anyhow::anyhow!("Expected 0x-prefixed hex"))?;
-                let bytes = hex::decode(hex_str)
-                    .map_err(|e| anyhow::anyhow!("Invalid hex: {}", e))?;
+                let bytes =
+                    hex::decode(hex_str).map_err(|e| anyhow::anyhow!("Invalid hex: {}", e))?;
                 if bytes.len() != 32 {
                     anyhow::bail!("Public key must be 32 bytes, got {}", bytes.len());
                 }
-                let arr: [u8; 32] = bytes.try_into()
+                let arr: [u8; 32] = bytes
+                    .try_into()
                     .map_err(|_| anyhow::anyhow!("Public key must be exactly 32 bytes"))?;
                 let public = sp_core::sr25519::Public::from_raw(arr);
                 let ss58 = crate::wallet::keypair::to_ss58(&public, 42);

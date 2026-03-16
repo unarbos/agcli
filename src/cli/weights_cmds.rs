@@ -11,8 +11,12 @@ pub(super) async fn handle_weights(
     client: &Client,
     ctx: &Ctx<'_>,
 ) -> Result<()> {
-    let (wallet_dir, wallet_name, hotkey_name, password) =
-        (ctx.wallet_dir, ctx.wallet_name, ctx.hotkey_name, ctx.password);
+    let (wallet_dir, wallet_name, hotkey_name, password) = (
+        ctx.wallet_dir,
+        ctx.wallet_name,
+        ctx.hotkey_name,
+        ctx.password,
+    );
     match cmd {
         WeightCommands::Set {
             netuid,
@@ -60,7 +64,10 @@ pub(super) async fn handle_weights(
                 .unwrap_or(false);
             if cr_enabled {
                 eprintln!("Warning: SN{} has commit-reveal enabled. Use `agcli weights commit-reveal` instead.", netuid);
-                tracing::warn!(netuid = netuid, "Subnet has commit-reveal enabled; use `agcli weights commit-reveal` instead");
+                tracing::warn!(
+                    netuid = netuid,
+                    "Subnet has commit-reveal enabled; use `agcli weights commit-reveal` instead"
+                );
             }
 
             // Check rate limit
@@ -114,8 +121,9 @@ pub(super) async fn handle_weights(
                 println!("Generated salt: {}", s);
                 s
             });
-            let hash_out = crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
-                .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
+            let hash_out =
+                crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
             println!("Committing weights on SN{}", netuid);
             println!("  Commit hash: 0x{}", hex::encode(hash_out));
             println!("  Save this salt for reveal: {}", salt_str);
@@ -205,8 +213,9 @@ pub(super) async fn handle_weights(
                     .collect()
             };
 
-            let commit_hash = crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
-                .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
+            let commit_hash =
+                crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
 
             let block_at_commit = client.get_block_number().await?;
 
@@ -310,9 +319,15 @@ pub(super) async fn handle_weights(
                 .unwrap_or(false);
 
             println!("Weight Commit Status — SN{}", netuid);
-            println!("  Hotkey:          {}", crate::utils::short_ss58(&hotkey_ss58));
+            println!(
+                "  Hotkey:          {}",
+                crate::utils::short_ss58(&hotkey_ss58)
+            );
             println!("  Current block:   {}", block);
-            println!("  Commit-reveal:   {}", if cr_enabled { "ENABLED" } else { "disabled" });
+            println!(
+                "  Commit-reveal:   {}",
+                if cr_enabled { "ENABLED" } else { "disabled" }
+            );
             println!("  Reveal period:   {} epochs", reveal_period);
 
             match commits {

@@ -110,7 +110,12 @@ impl Client {
             .await
             .with_context(|| "Failed to initialize subxt client from RPC connection")?;
         tracing::info!("Connected to {} in {:?}", url, start.elapsed());
-        Ok(Self { inner, rpc, cache: QueryCache::new(), dry_run: false })
+        Ok(Self {
+            inner,
+            rpc,
+            cache: QueryCache::new(),
+            dry_run: false,
+        })
     }
 
     /// Connect to a subtensor node with retry + exponential backoff.
@@ -129,7 +134,13 @@ impl Client {
             for attempt in 0..max_retries {
                 if attempt > 0 {
                     let delay = std::time::Duration::from_secs(1 << (attempt - 1));
-                    tracing::warn!("Retry {}/{} for {} in {:?}", attempt, max_retries - 1, url, delay);
+                    tracing::warn!(
+                        "Retry {}/{} for {} in {:?}",
+                        attempt,
+                        max_retries - 1,
+                        url,
+                        delay
+                    );
                     tokio::time::sleep(delay).await;
                 }
                 match Self::connect_once(url).await {
@@ -140,12 +151,21 @@ impl Client {
                         return Ok(client);
                     }
                     Err(e) => {
-                        tracing::warn!("Connection attempt {} to {} failed: {}", attempt + 1, url, e);
+                        tracing::warn!(
+                            "Connection attempt {} to {} failed: {}",
+                            attempt + 1,
+                            url,
+                            e
+                        );
                         last_err = Some(e);
                     }
                 }
             }
-            tracing::warn!("All {} attempts to {} exhausted, trying next endpoint", max_retries, url);
+            tracing::warn!(
+                "All {} attempts to {} exhausted, trying next endpoint",
+                max_retries,
+                url
+            );
         }
 
         Err(last_err.unwrap_or_else(|| anyhow::anyhow!("No endpoints provided")))
@@ -160,7 +180,10 @@ impl Client {
             return Self::connect_with_retry(urls).await;
         }
 
-        tracing::info!(endpoints = urls.len(), "Testing endpoints for best connection");
+        tracing::info!(
+            endpoints = urls.len(),
+            "Testing endpoints for best connection"
+        );
 
         // Test all endpoints concurrently
         let mut handles = Vec::with_capacity(urls.len());
@@ -200,13 +223,19 @@ impl Client {
         for handle in handles {
             match handle.await {
                 Ok(Ok((url, client, latency))) => {
-                    let is_better = best.as_ref().is_none_or(|(_, _, best_lat)| latency < *best_lat);
+                    let is_better = best
+                        .as_ref()
+                        .is_none_or(|(_, _, best_lat)| latency < *best_lat);
                     if is_better {
                         best = Some((url, client, latency));
                     }
                 }
-                Ok(Err(e)) => { last_err = Some(e); }
-                Err(e) => { last_err = Some(anyhow::anyhow!("Task join error: {}", e)); }
+                Ok(Err(e)) => {
+                    last_err = Some(e);
+                }
+                Err(e) => {
+                    last_err = Some(anyhow::anyhow!("Task join error: {}", e));
+                }
             }
         }
 
@@ -277,8 +306,11 @@ impl Client {
                 "call_data_hex": format!("0x{}", hex::encode(&call_data)),
                 "call_data_len": call_data.len(),
             });
-            eprintln!("[dry-run] Transaction would be submitted by {} ({} bytes call data)",
-                signer_ss58, call_data.len());
+            eprintln!(
+                "[dry-run] Transaction would be submitted by {} ({} bytes call data)",
+                signer_ss58,
+                call_data.len()
+            );
             crate::cli::helpers::print_json(&info);
             return Ok("dry-run".to_string());
         }
@@ -307,7 +339,8 @@ impl Client {
                     }
                 }
             }
-        }).await?;
+        })
+        .await?;
         spinner.set_message("Waiting for finalization...");
         tracing::debug!("Extrinsic submitted, waiting for finalization");
         let result = tokio::time::timeout(
@@ -315,12 +348,18 @@ impl Client {
             progress.wait_for_finalized_success(),
         )
         .await
-        .map_err(|_| { spinner.finish_and_clear(); anyhow::anyhow!(
-            "Transaction timed out after 30s waiting for finalization. \
+        .map_err(|_| {
+            spinner.finish_and_clear();
+            anyhow::anyhow!(
+                "Transaction timed out after 30s waiting for finalization. \
              The extrinsic may have been dropped from the pool \
              (insufficient balance, invalid state, or node not producing blocks)."
-        )})?
-        .map_err(|e| { spinner.finish_and_clear(); format_dispatch_error(e) })?;
+            )
+        })?
+        .map_err(|e| {
+            spinner.finish_and_clear();
+            format_dispatch_error(e)
+        })?;
         let hash = format!("{:?}", result.extrinsic_hash());
         spinner.finish_and_clear();
         tracing::info!(tx_hash = %hash, elapsed_ms = start.elapsed().as_millis() as u64, "Extrinsic finalized");
@@ -385,17 +424,25 @@ impl Client {
         let inner = &self.inner;
         let info = retry_on_transient("get_balance", 2, || async {
             let addr = api::storage().system().account(&account_id);
-            let result = inner.storage().at_latest().await
+            let result = inner
+                .storage()
+                .at_latest()
+                .await
                 .context("Failed to get latest block for balance query")?
-                .fetch(&addr).await
+                .fetch(&addr)
+                .await
                 .context("Failed to fetch account balance")?;
             Ok(result)
-        }).await?;
+        })
+        .await?;
         let balance = match info {
             Some(info) => Balance::from_rao(info.data.free),
             None => Balance::ZERO,
         };
-        tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, "get_balance");
+        tracing::debug!(
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            "get_balance"
+        );
         Ok(balance)
     }
 
@@ -415,7 +462,8 @@ impl Client {
                 .await
                 .context("Failed to get block hash")?;
             Ok(h)
-        }).await?;
+        })
+        .await?;
         hash.ok_or_else(|| anyhow::anyhow!("Block {} not found", block_number))
     }
 
@@ -481,10 +529,14 @@ impl Client {
     pub async fn get_block_number(&self) -> Result<u64> {
         let inner = &self.inner;
         retry_on_transient("get_block_number", RPC_RETRIES, || async {
-            let block = inner.blocks().at_latest().await
+            let block = inner
+                .blocks()
+                .at_latest()
+                .await
                 .context("Failed to fetch latest block")?;
             Ok(block.number() as u64)
-        }).await
+        })
+        .await
     }
 
     // ──────── Network Params ────────
@@ -496,7 +548,8 @@ impl Client {
             let addr = api::storage().balances().total_issuance();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
             Ok(Balance::from_rao(val.unwrap_or(0) as u64))
-        }).await
+        })
+        .await
     }
 
     /// Total staked TAO.
@@ -506,7 +559,8 @@ impl Client {
             let addr = api::storage().subtensor_module().total_stake();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
             Ok(Balance::from_rao(val.unwrap_or(0)))
-        }).await
+        })
+        .await
     }
 
     /// Total number of subnets.
@@ -516,7 +570,8 @@ impl Client {
             let addr = api::storage().subtensor_module().total_networks();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
             Ok(val.unwrap_or(0))
-        }).await
+        })
+        .await
     }
 
     /// Block emission rate.
@@ -526,7 +581,8 @@ impl Client {
             let addr = api::storage().subtensor_module().block_emission();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
             Ok(Balance::from_rao(val.unwrap_or(0)))
-        }).await
+        })
+        .await
     }
 
     // ──────── Block Hash Pinning ────────
@@ -549,11 +605,20 @@ impl Client {
     /// Get TAO balance for an SS58 address using a pinned block hash.
     /// More efficient than get_balance_ss58() when making multiple queries
     /// because it avoids a redundant at_latest() RPC call per query.
-    pub async fn get_balance_at_hash(&self, ss58: &str, block_hash: subxt::utils::H256) -> Result<Balance> {
+    pub async fn get_balance_at_hash(
+        &self,
+        ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Balance> {
         let pk = crate::wallet::keypair::from_ss58(ss58)?;
         let account_id = Self::to_account_id(&pk);
         let addr = api::storage().system().account(&account_id);
-        let info = self.inner.storage().at(block_hash).fetch(&addr).await
+        let info = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         match info {
             Some(info) => Ok(Balance::from_rao(info.data.free)),
@@ -586,7 +651,12 @@ impl Client {
     /// Total TAO issuance at a pinned block hash.
     pub async fn get_total_issuance_at(&self, hash: subxt::utils::H256) -> Result<Balance> {
         let addr = api::storage().balances().total_issuance();
-        let val = self.inner.storage().at(hash).fetch(&addr).await
+        let val = self
+            .inner
+            .storage()
+            .at(hash)
+            .fetch(&addr)
+            .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         Ok(Balance::from_rao(val.unwrap_or(0) as u64))
     }
@@ -594,7 +664,12 @@ impl Client {
     /// Total staked TAO at a pinned block hash.
     pub async fn get_total_stake_at(&self, hash: subxt::utils::H256) -> Result<Balance> {
         let addr = api::storage().subtensor_module().total_stake();
-        let val = self.inner.storage().at(hash).fetch(&addr).await
+        let val = self
+            .inner
+            .storage()
+            .at(hash)
+            .fetch(&addr)
+            .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         Ok(Balance::from_rao(val.unwrap_or(0)))
     }
@@ -602,7 +677,12 @@ impl Client {
     /// Total number of subnets at a pinned block hash.
     pub async fn get_total_networks_at(&self, hash: subxt::utils::H256) -> Result<u16> {
         let addr = api::storage().subtensor_module().total_networks();
-        let val = self.inner.storage().at(hash).fetch(&addr).await
+        let val = self
+            .inner
+            .storage()
+            .at(hash)
+            .fetch(&addr)
+            .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         Ok(val.unwrap_or(0))
     }
@@ -610,7 +690,12 @@ impl Client {
     /// Block emission rate at a pinned block hash.
     pub async fn get_block_emission_at(&self, hash: subxt::utils::H256) -> Result<Balance> {
         let addr = api::storage().subtensor_module().block_emission();
-        let val = self.inner.storage().at(hash).fetch(&addr).await
+        let val = self
+            .inner
+            .storage()
+            .at(hash)
+            .fetch(&addr)
+            .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         Ok(Balance::from_rao(val.unwrap_or(0)))
     }
@@ -621,7 +706,11 @@ impl Client {
     pub async fn get_network_overview(&self) -> Result<(u64, Balance, u16, Balance, Balance)> {
         let hash = self.pin_latest_block().await?;
         // Block number comes from the pinned block itself
-        let block = self.inner.blocks().at(hash).await
+        let block = self
+            .inner
+            .blocks()
+            .at(hash)
+            .await
             .context("Failed to fetch pinned block")?;
         let block_number = block.number() as u64;
         let (stake, networks, issuance, emission) = tokio::try_join!(
@@ -761,8 +850,7 @@ mod tests {
 
     #[tokio::test]
     async fn retry_succeeds_immediately() {
-        let result = retry_on_transient("test", 3, || async { Ok::<_, anyhow::Error>(99) })
-            .await;
+        let result = retry_on_transient("test", 3, || async { Ok::<_, anyhow::Error>(99) }).await;
         assert_eq!(result.unwrap(), 99);
     }
 
@@ -770,7 +858,10 @@ mod tests {
     fn batch_balance_result_order() {
         // Unit test for the ordering guarantee of get_balances_multi
         // (The actual chain test is in integration tests)
-        let addrs = ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"];
+        let addrs = [
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB",
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        ];
         assert_eq!(addrs.len(), 2, "batch addresses should preserve count");
     }
 
@@ -779,7 +870,11 @@ mod tests {
         let err = subxt::Error::Other("SubnetLocked: cannot modify".to_string());
         let result = format_dispatch_error(err);
         let msg = format!("{:#}", result);
-        assert!(msg.contains("immunity period"), "should mention immunity: {}", msg);
+        assert!(
+            msg.contains("immunity period"),
+            "should mention immunity: {}",
+            msg
+        );
     }
 
     #[test]
@@ -787,7 +882,11 @@ mod tests {
         let err = subxt::Error::Other("InvalidTransaction proxy check failed".to_string());
         let result = format_dispatch_error(err);
         let msg = format!("{:#}", result);
-        assert!(msg.contains("Proxy transaction"), "should mention proxy: {}", msg);
+        assert!(
+            msg.contains("Proxy transaction"),
+            "should mention proxy: {}",
+            msg
+        );
     }
 
     #[test]
@@ -795,7 +894,11 @@ mod tests {
         let err = subxt::Error::Other("SomeTotallyNewError".to_string());
         let result = format_dispatch_error(err);
         let msg = format!("{:#}", result);
-        assert!(msg.contains("Transaction failed on chain"), "unknown errors get generic message: {}", msg);
+        assert!(
+            msg.contains("Transaction failed on chain"),
+            "unknown errors get generic message: {}",
+            msg
+        );
     }
 
     #[test]
@@ -803,7 +906,11 @@ mod tests {
         let err = subxt::Error::Other("Priority is too low".to_string());
         let result = format_submit_error(err);
         let msg = format!("{:#}", result);
-        assert!(msg.contains("conflicting transaction"), "should mention conflict: {}", msg);
+        assert!(
+            msg.contains("conflicting transaction"),
+            "should mention conflict: {}",
+            msg
+        );
     }
 
     #[test]
@@ -811,7 +918,11 @@ mod tests {
         let err = subxt::Error::Other("Inability to pay some fees".to_string());
         let result = format_submit_error(err);
         let msg = format!("{:#}", result);
-        assert!(msg.contains("Insufficient balance"), "should mention balance: {}", msg);
+        assert!(
+            msg.contains("Insufficient balance"),
+            "should mention balance: {}",
+            msg
+        );
     }
 
     #[test]

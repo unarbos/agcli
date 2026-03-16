@@ -27,8 +27,7 @@ pub fn save(metagraph: &Metagraph) -> Result<PathBuf> {
     let filename = format!("block-{}.json", metagraph.block);
     let path = dir.join(&filename);
 
-    let json = serde_json::to_string(metagraph)
-        .context("Failed to serialize metagraph")?;
+    let json = serde_json::to_string(metagraph).context("Failed to serialize metagraph")?;
     std::fs::write(&path, json.as_bytes())
         .with_context(|| format!("Failed to write {}", path.display()))?;
 
@@ -271,7 +270,13 @@ mod tests {
     use crate::types::chain_data::NeuronInfoLite;
     use crate::types::network::NetUid;
 
-    fn make_neuron(uid: u16, hotkey: &str, netuid: u16, stake_tao: f64, incentive: f64) -> NeuronInfoLite {
+    fn make_neuron(
+        uid: u16,
+        hotkey: &str,
+        netuid: u16,
+        stake_tao: f64,
+        incentive: f64,
+    ) -> NeuronInfoLite {
         NeuronInfoLite {
             hotkey: hotkey.to_string(),
             coldkey: "5Cold".to_string(),
@@ -364,16 +369,23 @@ mod tests {
         let new = make_metagraph(
             vec![
                 make_neuron(0, "5HotA", netuid, 150.0, 0.5), // stake changed by 50 TAO
-                make_neuron(2, "5HotC", netuid, 50.0, 0.1),   // new neuron
+                make_neuron(2, "5HotC", netuid, 50.0, 0.1),  // new neuron
             ],
             netuid,
             1100,
         );
 
         let deltas = diff(&old, &new);
-        assert!(deltas.iter().any(|d| matches!(&d.kind, DeltaKind::Deregistered) && d.hotkey == "5HotB"));
-        assert!(deltas.iter().any(|d| matches!(&d.kind, DeltaKind::Registered) && d.hotkey == "5HotC"));
-        assert!(deltas.iter().any(|d| matches!(&d.kind, DeltaKind::Changed { field, .. } if field == "stake") && d.hotkey == "5HotA"));
+        assert!(deltas
+            .iter()
+            .any(|d| matches!(&d.kind, DeltaKind::Deregistered) && d.hotkey == "5HotB"));
+        assert!(deltas
+            .iter()
+            .any(|d| matches!(&d.kind, DeltaKind::Registered) && d.hotkey == "5HotC"));
+        assert!(deltas.iter().any(
+            |d| matches!(&d.kind, DeltaKind::Changed { field, .. } if field == "stake")
+                && d.hotkey == "5HotA"
+        ));
     }
 
     #[test]

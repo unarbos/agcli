@@ -67,7 +67,6 @@ impl Network {
             Network::Custom(url) => vec![url.as_str()],
         }
     }
-
 }
 
 impl fmt::Display for Network {

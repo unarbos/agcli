@@ -229,7 +229,10 @@ pub async fn subscribe_events_filtered(
         let mut block_sub = match sub_result {
             Ok(s) => {
                 if reconnect_attempts > 0 {
-                    tracing::info!("Event subscription reconnected after {} attempts", reconnect_attempts);
+                    tracing::info!(
+                        "Event subscription reconnected after {} attempts",
+                        reconnect_attempts
+                    );
                     if !json_output {
                         eprintln!("Reconnected to block stream.");
                     }
@@ -242,7 +245,8 @@ pub async fn subscribe_events_filtered(
                 if reconnect_attempts > MAX_RECONNECT_ATTEMPTS {
                     return Err(anyhow::anyhow!(
                         "Event subscription failed after {} reconnection attempts: {}",
-                        MAX_RECONNECT_ATTEMPTS, e
+                        MAX_RECONNECT_ATTEMPTS,
+                        e
                     ));
                 }
                 let delay = std::time::Duration::from_secs(1 << reconnect_attempts.min(5));
@@ -253,7 +257,11 @@ pub async fn subscribe_events_filtered(
                     "Event subscription failed, reconnecting"
                 );
                 if !json_output {
-                    eprintln!("Warning: subscription failed ({}), retrying in {}s...", e, delay.as_secs());
+                    eprintln!(
+                        "Warning: subscription failed ({}), retrying in {}s...",
+                        e,
+                        delay.as_secs()
+                    );
                 }
                 tokio::time::sleep(delay).await;
                 continue;
@@ -268,7 +276,10 @@ pub async fn subscribe_events_filtered(
                     // Transient stream errors: log and break to reconnect
                     tracing::warn!(error = %msg, "Block stream error, will reconnect");
                     if !json_output {
-                        eprintln!("Warning: block stream interrupted ({}), reconnecting...", msg);
+                        eprintln!(
+                            "Warning: block stream interrupted ({}), reconnecting...",
+                            msg
+                        );
                     }
                     break; // break inner loop to reconnect
                 }
@@ -281,7 +292,10 @@ pub async fn subscribe_events_filtered(
                 Err(e) => {
                     tracing::warn!(block = block_number, error = %e, "Failed to decode events, skipping block");
                     if !json_output {
-                        eprintln!("Warning: failed to decode events in block #{}: {}", block_number, e);
+                        eprintln!(
+                            "Warning: failed to decode events in block #{}: {}",
+                            block_number, e
+                        );
                     }
                     continue;
                 }
@@ -368,9 +382,16 @@ pub async fn subscribe_events_filtered(
             ));
         }
         let delay = std::time::Duration::from_secs(1 << reconnect_attempts.min(5));
-        tracing::warn!(attempt = reconnect_attempts, delay_secs = delay.as_secs(), "Block stream ended, reconnecting");
+        tracing::warn!(
+            attempt = reconnect_attempts,
+            delay_secs = delay.as_secs(),
+            "Block stream ended, reconnecting"
+        );
         if !json_output {
-            eprintln!("Block stream ended, reconnecting in {}s...", delay.as_secs());
+            eprintln!(
+                "Block stream ended, reconnecting in {}s...",
+                delay.as_secs()
+            );
         }
         tokio::time::sleep(delay).await;
     }
@@ -400,12 +421,17 @@ pub async fn subscribe_blocks(
                 if reconnect_attempts > MAX_RECONNECT_ATTEMPTS {
                     return Err(anyhow::anyhow!(
                         "Block subscription failed after {} reconnection attempts: {}",
-                        MAX_RECONNECT_ATTEMPTS, e
+                        MAX_RECONNECT_ATTEMPTS,
+                        e
                     ));
                 }
                 let delay = std::time::Duration::from_secs(1 << reconnect_attempts.min(5));
                 if !json_output {
-                    eprintln!("Warning: subscription failed ({}), retrying in {}s...", e, delay.as_secs());
+                    eprintln!(
+                        "Warning: subscription failed ({}), retrying in {}s...",
+                        e,
+                        delay.as_secs()
+                    );
                 }
                 tokio::time::sleep(delay).await;
                 continue;
@@ -455,9 +481,11 @@ pub async fn subscribe_blocks(
         }
         let delay = std::time::Duration::from_secs(1 << reconnect_attempts.min(5));
         if !json_output {
-            eprintln!("Block stream ended, reconnecting in {}s...", delay.as_secs());
+            eprintln!(
+                "Block stream ended, reconnecting in {}s...",
+                delay.as_secs()
+            );
         }
         tokio::time::sleep(delay).await;
     }
 }
-

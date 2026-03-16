@@ -109,7 +109,11 @@ pub(super) async fn handle_config(cmd: ConfigCommands) -> Result<()> {
                     total_bytes += size;
                     println!("  {} ({:.1}KB)", key, size as f64 / 1024.0);
                 }
-                println!("Total: {} entries, {:.1}KB", keys.len(), total_bytes as f64 / 1024.0);
+                println!(
+                    "Total: {} entries, {:.1}KB",
+                    keys.len(),
+                    total_bytes as f64 / 1024.0
+                );
             }
             Ok(())
         }
@@ -197,7 +201,7 @@ pub(super) fn handle_explain(topic: Option<&str>, output: OutputFormat, full: bo
                     anyhow::bail!("Unknown topic '{}'", t);
                 }
             }
-        },
+        }
         None => {
             if full {
                 return list_full_docs(output);
@@ -258,8 +262,11 @@ fn load_full_doc(topic: &str, output: OutputFormat) -> Result<()> {
     if !path.exists() {
         // Try common aliases: if topic matches a command group, use that
         let aliases = [
-            ("cr", "weights"), ("dtao", "subnet"), ("amm", "subnet"),
-            ("nominate", "delegate"), ("delegation", "delegate"),
+            ("cr", "weights"),
+            ("dtao", "subnet"),
+            ("amm", "subnet"),
+            ("nominate", "delegate"),
+            ("delegation", "delegate"),
         ];
         for (alias, target) in &aliases {
             if normalized == *alias {
@@ -277,7 +284,10 @@ fn load_full_doc(topic: &str, output: OutputFormat) -> Result<()> {
                 "message": format!("No full doc for '{}'. Available: {}", topic, available.join(", ")),
             }));
         } else {
-            eprintln!("No full documentation for '{}'. Available doc files:", topic);
+            eprintln!(
+                "No full documentation for '{}'. Available doc files:",
+                topic
+            );
             for name in &available {
                 eprintln!("  {}", name);
             }
@@ -317,8 +327,8 @@ fn list_doc_files(dir: &std::path::Path) -> Vec<String> {
 
 /// List all available full doc files.
 fn list_full_docs(output: OutputFormat) -> Result<()> {
-    let docs_dir = find_docs_dir()
-        .ok_or_else(|| anyhow::anyhow!("docs/commands/ directory not found."))?;
+    let docs_dir =
+        find_docs_dir().ok_or_else(|| anyhow::anyhow!("docs/commands/ directory not found."))?;
     let names = list_doc_files(&docs_dir);
     if output.is_json() {
         print_json(&serde_json::json!(names));
@@ -364,8 +374,8 @@ pub(super) async fn handle_utils(
             Ok(())
         }
         UtilsCommands::Latency { extra, pings } => {
-            use std::time::Instant;
             use crate::chain::Client;
+            use std::time::Instant;
 
             let mut endpoints: Vec<(String, String)> = Vec::new();
             // Add standard network endpoints
@@ -387,7 +397,11 @@ pub(super) async fn handle_utils(
                 anyhow::bail!("No endpoints to test");
             }
 
-            println!("Testing {} endpoint(s) with {} pings each...\n", endpoints.len(), pings);
+            println!(
+                "Testing {} endpoint(s) with {} pings each...\n",
+                endpoints.len(),
+                pings
+            );
 
             #[derive(serde::Serialize)]
             struct EndpointResult {
@@ -444,7 +458,11 @@ pub(super) async fn handle_utils(
                             });
                             if !output.is_json() {
                                 println!("{:<12} {}", label, url);
-                                let fail_note = if failures > 0 { format!(" ({} failed)", failures) } else { String::new() };
+                                let fail_note = if failures > 0 {
+                                    format!(" ({} failed)", failures)
+                                } else {
+                                    String::new()
+                                };
                                 println!(
                                     "  Connect: {}ms | avg: {}ms | min: {}ms | max: {}ms{}\n",
                                     connect_ms, avg, min, max, fail_note
@@ -603,7 +621,16 @@ pub(super) async fn handle_doctor(
 
     // 2. Network
     let urls = network.ws_urls();
-    checks.push(("Network", format!("{} ({} endpoint{})", network, urls.len(), if urls.len() > 1 { "s" } else { "" }), true));
+    checks.push((
+        "Network",
+        format!(
+            "{} ({} endpoint{})",
+            network,
+            urls.len(),
+            if urls.len() > 1 { "s" } else { "" }
+        ),
+        true,
+    ));
 
     // 3. Connectivity test
     let conn_start = Instant::now();
@@ -612,7 +639,11 @@ pub(super) async fn handle_doctor(
 
     match &client_result {
         Ok(_) => {
-            checks.push(("Connection", format!("OK ({:.0}ms)", conn_elapsed.as_millis()), true));
+            checks.push((
+                "Connection",
+                format!("OK ({:.0}ms)", conn_elapsed.as_millis()),
+                true,
+            ));
         }
         Err(e) => {
             checks.push(("Connection", format!("FAILED: {}", e), false));
@@ -625,7 +656,11 @@ pub(super) async fn handle_doctor(
         let t = Instant::now();
         match client.get_block_number().await {
             Ok(block) => {
-                checks.push(("Block height", format!("{} ({:.0}ms)", block, t.elapsed().as_millis()), true));
+                checks.push((
+                    "Block height",
+                    format!("{} ({:.0}ms)", block, t.elapsed().as_millis()),
+                    true,
+                ));
             }
             Err(e) => {
                 checks.push(("Block height", format!("FAILED: {}", e), false));
@@ -636,7 +671,11 @@ pub(super) async fn handle_doctor(
         let t = Instant::now();
         match client.get_total_networks().await {
             Ok(n) => {
-                checks.push(("Subnets", format!("{} ({:.0}ms)", n, t.elapsed().as_millis()), true));
+                checks.push((
+                    "Subnets",
+                    format!("{} ({:.0}ms)", n, t.elapsed().as_millis()),
+                    true,
+                ));
             }
             Err(e) => {
                 checks.push(("Subnets", format!("FAILED: {}", e), false));
@@ -654,13 +693,25 @@ pub(super) async fn handle_doctor(
             }
         }
         if latencies.is_empty() {
-            checks.push(("Latency (3 pings)", format!("FAILED: all {} RPC calls failed", rpc_failures), false));
+            checks.push((
+                "Latency (3 pings)",
+                format!("FAILED: all {} RPC calls failed", rpc_failures),
+                false,
+            ));
         } else {
             let avg: u128 = latencies.iter().sum::<u128>() / latencies.len() as u128;
             let min = latencies.iter().min().copied().unwrap_or_default();
             let max = latencies.iter().max().copied().unwrap_or_default();
-            let fail_note = if rpc_failures > 0 { format!("  ({} failed)", rpc_failures) } else { String::new() };
-            checks.push(("Latency (3 pings)", format!("avg {avg}ms  min {min}ms  max {max}ms{fail_note}"), rpc_failures == 0));
+            let fail_note = if rpc_failures > 0 {
+                format!("  ({} failed)", rpc_failures)
+            } else {
+                String::new()
+            };
+            checks.push((
+                "Latency (3 pings)",
+                format!("avg {avg}ms  min {min}ms  max {max}ms{fail_note}"),
+                rpc_failures == 0,
+            ));
         }
     }
 
@@ -668,7 +719,11 @@ pub(super) async fn handle_doctor(
     let cache_keys = crate::queries::disk_cache::list_keys();
     let cache_path = crate::queries::disk_cache::path();
     if cache_keys.is_empty() {
-        checks.push(("Disk cache", format!("empty ({})", cache_path.display()), true));
+        checks.push((
+            "Disk cache",
+            format!("empty ({})", cache_path.display()),
+            true,
+        ));
     } else {
         // Calculate total size
         let mut total_bytes: u64 = 0;
@@ -679,10 +734,16 @@ pub(super) async fn handle_doctor(
             }
         }
         let size_kb = total_bytes as f64 / 1024.0;
-        checks.push(("Disk cache", format!(
-            "{} entries, {:.1}KB ({})",
-            cache_keys.len(), size_kb, cache_path.display()
-        ), true));
+        checks.push((
+            "Disk cache",
+            format!(
+                "{} entries, {:.1}KB ({})",
+                cache_keys.len(),
+                size_kb,
+                cache_path.display()
+            ),
+            true,
+        ));
     }
 
     // 6. Wallet check
@@ -691,15 +752,23 @@ pub(super) async fn handle_doctor(
         Ok(w) => {
             let has_coldkey = w.coldkey_ss58().is_some();
             let hotkeys = w.list_hotkeys().unwrap_or_default();
-            checks.push(("Wallet", format!(
-                "'{}' (coldkey: {}, hotkeys: {})",
-                wallet_name,
-                if has_coldkey { "present" } else { "missing" },
-                hotkeys.len()
-            ), has_coldkey));
+            checks.push((
+                "Wallet",
+                format!(
+                    "'{}' (coldkey: {}, hotkeys: {})",
+                    wallet_name,
+                    if has_coldkey { "present" } else { "missing" },
+                    hotkeys.len()
+                ),
+                has_coldkey,
+            ));
         }
         Err(_) => {
-            checks.push(("Wallet", format!("'{}' not found at {}", wallet_name, wallet_path), false));
+            checks.push((
+                "Wallet",
+                format!("'{}' not found at {}", wallet_name, wallet_path),
+                false,
+            ));
         }
     }
 
@@ -707,9 +776,9 @@ pub(super) async fn handle_doctor(
     if output.is_json() {
         let items: Vec<serde_json::Value> = checks
             .iter()
-            .map(|(name, detail, ok)| {
-                serde_json::json!({"check": name, "detail": detail, "ok": ok})
-            })
+            .map(
+                |(name, detail, ok)| serde_json::json!({"check": name, "detail": detail, "ok": ok}),
+            )
             .collect();
         print_json(&serde_json::json!({"doctor": items}));
     } else {

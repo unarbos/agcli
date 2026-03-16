@@ -88,7 +88,10 @@ pub async fn live_dynamic(client: &Client, interval_secs: u64) -> Result<()> {
         let curr = match client.get_all_dynamic_info().await {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Warning: poll #{} failed: {} (retrying next interval)", poll_count, e);
+                eprintln!(
+                    "Warning: poll #{} failed: {} (retrying next interval)",
+                    poll_count, e
+                );
                 continue;
             }
         };
@@ -151,7 +154,10 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
         let curr_neurons = match client.get_neurons_lite(netuid).await {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Warning: poll #{} failed: {} (retrying next interval)", poll_count, e);
+                eprintln!(
+                    "Warning: poll #{} failed: {} (retrying next interval)",
+                    poll_count, e
+                );
                 continue;
             }
         };
@@ -232,7 +238,10 @@ pub async fn live_portfolio(client: &Client, coldkey_ss58: &str, interval_secs: 
         let curr = match crate::queries::portfolio::fetch_portfolio(client, coldkey_ss58).await {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Warning: poll #{} failed: {} (retrying next interval)", poll_count, e);
+                eprintln!(
+                    "Warning: poll #{} failed: {} (retrying next interval)",
+                    poll_count, e
+                );
                 continue;
             }
         };

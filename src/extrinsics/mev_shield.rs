@@ -32,15 +32,14 @@ pub fn encrypt_for_mev_shield(
     let commitment: [u8; 32] = hasher.finalize().into();
 
     // 2. Deserialize the ML-KEM-768 encapsulation key from bytes
-    let ek_encoded: &ml_kem::Encoded<
-        <MlKem768 as KemCore>::EncapsulationKey,
-    > = ml_kem_public_key.try_into().map_err(|_| {
-        anyhow::anyhow!(
-            "Invalid ML-KEM-768 public key: expected {} bytes, got {}",
-            std::mem::size_of::<ml_kem::Encoded<<MlKem768 as KemCore>::EncapsulationKey>>(),
-            ml_kem_public_key.len()
-        )
-    })?;
+    let ek_encoded: &ml_kem::Encoded<<MlKem768 as KemCore>::EncapsulationKey> =
+        ml_kem_public_key.try_into().map_err(|_| {
+            anyhow::anyhow!(
+                "Invalid ML-KEM-768 public key: expected {} bytes, got {}",
+                std::mem::size_of::<ml_kem::Encoded<<MlKem768 as KemCore>::EncapsulationKey>>(),
+                ml_kem_public_key.len()
+            )
+        })?;
     let ek = <MlKem768 as KemCore>::EncapsulationKey::from_bytes(ek_encoded);
 
     // 3. ML-KEM-768 encapsulation: derive shared secret + KEM ciphertext

@@ -2135,7 +2135,10 @@ fn parse_diff_with_archive_network() {
     ]);
     assert!(cli.is_ok());
     let cli = cli.unwrap();
-    assert!(matches!(cli.resolve_network(), agcli::types::network::Network::Archive));
+    assert!(matches!(
+        cli.resolve_network(),
+        agcli::types::network::Network::Archive
+    ));
 }
 
 #[test]
@@ -2179,13 +2182,7 @@ fn explain_diff_via_compare_alias() {
 
 #[test]
 fn parse_subnet_commits() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli",
-        "subnet",
-        "commits",
-        "--netuid",
-        "1",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "commits", "--netuid", "1"]);
     assert!(cli.is_ok(), "should parse subnet commits: {:?}", cli.err());
 }
 
@@ -2209,18 +2206,8 @@ fn parse_subnet_commits_with_hotkey() {
 
 #[test]
 fn parse_weights_status() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli",
-        "weights",
-        "status",
-        "--netuid",
-        "1",
-    ]);
-    assert!(
-        cli.is_ok(),
-        "should parse weights status: {:?}",
-        cli.err()
-    );
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "weights", "status", "--netuid", "1"]);
+    assert!(cli.is_ok(), "should parse weights status: {:?}", cli.err());
 }
 
 // ──── Sprint 4: --timeout and --time flags ────
@@ -2264,18 +2251,18 @@ fn parse_time_flag_absent_defaults_false() {
 
 #[test]
 fn parse_timeout_with_subcommand() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--timeout", "60", "subnet", "list",
-    ]);
-    assert!(cli.is_ok(), "should parse --timeout with subnet list: {:?}", cli.err());
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--timeout", "60", "subnet", "list"]);
+    assert!(
+        cli.is_ok(),
+        "should parse --timeout with subnet list: {:?}",
+        cli.err()
+    );
     assert_eq!(cli.unwrap().timeout, Some(60));
 }
 
 #[test]
 fn parse_time_and_timeout_together() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--time", "--timeout", "120", "balance",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--time", "--timeout", "120", "balance"]);
     assert!(cli.is_ok());
     let cli = cli.unwrap();
     assert!(cli.time);
@@ -2287,8 +2274,17 @@ fn parse_time_and_timeout_together() {
 #[test]
 fn parse_liquidity_add() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "add", "--netuid", "1", "--price-low", "0.5",
-        "--price-high", "2.0", "--amount", "1000000",
+        "agcli",
+        "liquidity",
+        "add",
+        "--netuid",
+        "1",
+        "--price-low",
+        "0.5",
+        "--price-high",
+        "2.0",
+        "--amount",
+        "1000000",
     ]);
     assert!(cli.is_ok(), "should parse liquidity add: {:?}", cli.err());
 }
@@ -2296,88 +2292,167 @@ fn parse_liquidity_add() {
 #[test]
 fn parse_liquidity_add_with_hotkey() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "add", "--netuid", "1", "--price-low", "0.1",
-        "--price-high", "10.0", "--amount", "500000", "--hotkey", "5GhostHotkey",
+        "agcli",
+        "liquidity",
+        "add",
+        "--netuid",
+        "1",
+        "--price-low",
+        "0.1",
+        "--price-high",
+        "10.0",
+        "--amount",
+        "500000",
+        "--hotkey",
+        "5GhostHotkey",
     ]);
-    assert!(cli.is_ok(), "should parse liquidity add with hotkey: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse liquidity add with hotkey: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_liquidity_remove() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "remove", "--netuid", "1", "--position-id", "42",
+        "agcli",
+        "liquidity",
+        "remove",
+        "--netuid",
+        "1",
+        "--position-id",
+        "42",
     ]);
-    assert!(cli.is_ok(), "should parse liquidity remove: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse liquidity remove: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_liquidity_modify() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "modify", "--netuid", "1", "--position-id", "42",
+        "agcli",
+        "liquidity",
+        "modify",
+        "--netuid",
+        "1",
+        "--position-id",
+        "42",
         "--delta=-500",
     ]);
-    assert!(cli.is_ok(), "should parse liquidity modify: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse liquidity modify: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_liquidity_modify_positive() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "modify", "--netuid", "1", "--position-id", "42",
-        "--delta", "1000",
+        "agcli",
+        "liquidity",
+        "modify",
+        "--netuid",
+        "1",
+        "--position-id",
+        "42",
+        "--delta",
+        "1000",
     ]);
-    assert!(cli.is_ok(), "should parse liquidity modify positive: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse liquidity modify positive: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_liquidity_toggle() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "liquidity", "toggle", "--netuid", "1", "--enable",
+        "agcli",
+        "liquidity",
+        "toggle",
+        "--netuid",
+        "1",
+        "--enable",
     ]);
-    assert!(cli.is_ok(), "should parse liquidity toggle: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse liquidity toggle: {:?}",
+        cli.err()
+    );
 }
 
 // ──── Sprint 5: Auto-stake ────
 
 #[test]
 fn parse_stake_set_auto() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "set-auto", "--netuid", "1",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "set-auto", "--netuid", "1"]);
     assert!(cli.is_ok(), "should parse stake set-auto: {:?}", cli.err());
 }
 
 #[test]
 fn parse_stake_set_auto_with_hotkey() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "set-auto", "--netuid", "1", "--hotkey", "5GhostHotkey",
+        "agcli",
+        "stake",
+        "set-auto",
+        "--netuid",
+        "1",
+        "--hotkey",
+        "5GhostHotkey",
     ]);
-    assert!(cli.is_ok(), "should parse stake set-auto with hotkey: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse stake set-auto with hotkey: {:?}",
+        cli.err()
+    );
 }
 
 // ──── Sprint 5: Root claim ────
 
 #[test]
 fn parse_stake_set_claim_swap() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "set-claim", "--claim-type", "swap",
-    ]);
-    assert!(cli.is_ok(), "should parse stake set-claim swap: {:?}", cli.err());
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "stake", "set-claim", "--claim-type", "swap"]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake set-claim swap: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_stake_set_claim_keep() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "set-claim", "--claim-type", "keep",
-    ]);
-    assert!(cli.is_ok(), "should parse stake set-claim keep: {:?}", cli.err());
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "stake", "set-claim", "--claim-type", "keep"]);
+    assert!(
+        cli.is_ok(),
+        "should parse stake set-claim keep: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_stake_set_claim_keep_subnets() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "set-claim", "--claim-type", "keep-subnets", "--subnets", "1,3,5",
+        "agcli",
+        "stake",
+        "set-claim",
+        "--claim-type",
+        "keep-subnets",
+        "--subnets",
+        "1,3,5",
     ]);
-    assert!(cli.is_ok(), "should parse stake set-claim keep-subnets: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse stake set-claim keep-subnets: {:?}",
+        cli.err()
+    );
 }
 
 // ──── Sprint 5: Crowdloan expanded commands ────
@@ -2385,60 +2460,123 @@ fn parse_stake_set_claim_keep_subnets() {
 #[test]
 fn parse_crowdloan_create() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "create", "--deposit", "10.0", "--min-contribution", "0.1",
-        "--cap", "1000.0", "--end-block", "5000000",
+        "agcli",
+        "crowdloan",
+        "create",
+        "--deposit",
+        "10.0",
+        "--min-contribution",
+        "0.1",
+        "--cap",
+        "1000.0",
+        "--end-block",
+        "5000000",
     ]);
-    assert!(cli.is_ok(), "should parse crowdloan create: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan create: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_create_with_target() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "create", "--deposit", "10.0", "--min-contribution", "0.1",
-        "--cap", "1000.0", "--end-block", "5000000", "--target", "5GhostTarget",
+        "agcli",
+        "crowdloan",
+        "create",
+        "--deposit",
+        "10.0",
+        "--min-contribution",
+        "0.1",
+        "--cap",
+        "1000.0",
+        "--end-block",
+        "5000000",
+        "--target",
+        "5GhostTarget",
     ]);
-    assert!(cli.is_ok(), "should parse crowdloan create with target: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan create with target: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_refund() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "refund", "--crowdloan-id", "42",
-    ]);
-    assert!(cli.is_ok(), "should parse crowdloan refund: {:?}", cli.err());
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "crowdloan", "refund", "--crowdloan-id", "42"]);
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan refund: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_dissolve() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "dissolve", "--crowdloan-id", "42",
-    ]);
-    assert!(cli.is_ok(), "should parse crowdloan dissolve: {:?}", cli.err());
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "crowdloan", "dissolve", "--crowdloan-id", "42"]);
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan dissolve: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_update_cap() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "update-cap", "--crowdloan-id", "42", "--cap", "2000.0",
+        "agcli",
+        "crowdloan",
+        "update-cap",
+        "--crowdloan-id",
+        "42",
+        "--cap",
+        "2000.0",
     ]);
-    assert!(cli.is_ok(), "should parse crowdloan update-cap: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan update-cap: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_update_end() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "update-end", "--crowdloan-id", "42", "--end-block", "6000000",
+        "agcli",
+        "crowdloan",
+        "update-end",
+        "--crowdloan-id",
+        "42",
+        "--end-block",
+        "6000000",
     ]);
-    assert!(cli.is_ok(), "should parse crowdloan update-end: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan update-end: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_crowdloan_update_min_contribution() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "crowdloan", "update-min-contribution", "--crowdloan-id", "42",
-        "--min-contribution", "0.5",
+        "agcli",
+        "crowdloan",
+        "update-min-contribution",
+        "--crowdloan-id",
+        "42",
+        "--min-contribution",
+        "0.5",
     ]);
-    assert!(cli.is_ok(), "should parse crowdloan update-min-contribution: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse crowdloan update-min-contribution: {:?}",
+        cli.err()
+    );
 }
 
 // ──── Sprint 6: --mev flag tests ────
@@ -2455,7 +2593,11 @@ fn parse_mev_flag_with_stake_add() {
     let cli = agcli::cli::Cli::try_parse_from([
         "agcli", "--mev", "stake", "add", "--amount", "1.0", "--netuid", "1",
     ]);
-    assert!(cli.is_ok(), "should parse --mev with stake add: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse --mev with stake add: {:?}",
+        cli.err()
+    );
     let cli = cli.unwrap();
     assert!(cli.mev);
 }
@@ -2465,7 +2607,11 @@ fn parse_mev_flag_with_stake_remove() {
     let cli = agcli::cli::Cli::try_parse_from([
         "agcli", "--mev", "stake", "remove", "--amount", "1.0", "--netuid", "1",
     ]);
-    assert!(cli.is_ok(), "should parse --mev with stake remove: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse --mev with stake remove: {:?}",
+        cli.err()
+    );
     assert!(cli.unwrap().mev);
 }
 
@@ -2479,10 +2625,23 @@ fn parse_mev_flag_default_false() {
 #[test]
 fn parse_mev_combined_with_other_flags() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--mev", "--yes", "--verbose", "--time", "stake", "add",
-        "--amount", "1.0", "--netuid", "1",
+        "agcli",
+        "--mev",
+        "--yes",
+        "--verbose",
+        "--time",
+        "stake",
+        "add",
+        "--amount",
+        "1.0",
+        "--netuid",
+        "1",
     ]);
-    assert!(cli.is_ok(), "should parse multiple flags together: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "should parse multiple flags together: {:?}",
+        cli.err()
+    );
     let cli = cli.unwrap();
     assert!(cli.mev);
     assert!(cli.yes);
@@ -2494,71 +2653,69 @@ fn parse_mev_combined_with_other_flags() {
 
 #[test]
 fn parse_stake_add_missing_netuid_error() {
-    let result = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "add", "--amount", "1.0",
-    ]);
+    let result = agcli::cli::Cli::try_parse_from(["agcli", "stake", "add", "--amount", "1.0"]);
     assert!(result.is_err(), "missing --netuid should error");
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("netuid"), "error should mention netuid: {}", err);
+    assert!(
+        err.contains("netuid"),
+        "error should mention netuid: {}",
+        err
+    );
 }
 
 #[test]
 fn parse_stake_add_missing_amount_error() {
-    let result = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "add", "--netuid", "1",
-    ]);
+    let result = agcli::cli::Cli::try_parse_from(["agcli", "stake", "add", "--netuid", "1"]);
     assert!(result.is_err(), "missing --amount should error");
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("amount"), "error should mention amount: {}", err);
+    assert!(
+        err.contains("amount"),
+        "error should mention amount: {}",
+        err
+    );
 }
 
 #[test]
 fn parse_transfer_missing_dest_error() {
-    let result = agcli::cli::Cli::try_parse_from([
-        "agcli", "transfer", "--amount", "1.0",
-    ]);
+    let result = agcli::cli::Cli::try_parse_from(["agcli", "transfer", "--amount", "1.0"]);
     assert!(result.is_err(), "missing --dest should error");
 }
 
 #[test]
 fn parse_transfer_missing_amount_error() {
     let result = agcli::cli::Cli::try_parse_from([
-        "agcli", "transfer", "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "agcli",
+        "transfer",
+        "--dest",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ]);
     assert!(result.is_err(), "missing --amount should error");
 }
 
 #[test]
 fn parse_subnet_metagraph_missing_netuid_error() {
-    let result = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "metagraph",
-    ]);
+    let result = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "metagraph"]);
     assert!(result.is_err(), "missing --netuid should error");
 }
 
 #[test]
 fn parse_invalid_network_string_still_parses() {
     // Custom/unknown network strings are accepted and treated as Custom
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--network", "ws://custom:9944", "balance",
-    ]);
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "--network", "ws://custom:9944", "balance"]);
     assert!(cli.is_ok(), "custom network string should parse");
 }
 
 #[test]
 fn parse_timeout_zero_is_valid() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--timeout", "0", "balance",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--timeout", "0", "balance"]);
     assert!(cli.is_ok());
     assert_eq!(cli.unwrap().timeout, Some(0));
 }
 
 #[test]
 fn parse_timeout_large_value() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--timeout", "3600", "balance",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--timeout", "3600", "balance"]);
     assert!(cli.is_ok());
     assert_eq!(cli.unwrap().timeout, Some(3600));
 }
@@ -2568,31 +2725,71 @@ fn parse_timeout_large_value() {
 #[test]
 fn parse_subnet_set_param() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "tempo", "--value", "100",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--netuid",
+        "1",
+        "--param",
+        "tempo",
+        "--value",
+        "100",
     ]);
-    assert!(cli.is_ok(), "subnet set-param should parse: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "subnet set-param should parse: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_subnet_set_param_bool_value() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--netuid", "5", "--param", "registration_allowed", "--value", "false",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--netuid",
+        "5",
+        "--param",
+        "registration_allowed",
+        "--value",
+        "false",
     ]);
-    assert!(cli.is_ok(), "subnet set-param bool should parse: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "subnet set-param bool should parse: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_subnet_set_param_list_mode() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "list",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--netuid",
+        "1",
+        "--param",
+        "list",
     ]);
-    assert!(cli.is_ok(), "subnet set-param list should parse: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "subnet set-param list should parse: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
 fn parse_subnet_set_param_requires_netuid() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--param", "tempo", "--value", "100",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--param",
+        "tempo",
+        "--value",
+        "100",
     ]);
     assert!(cli.is_err(), "subnet set-param should require --netuid");
 }
@@ -2600,7 +2797,13 @@ fn parse_subnet_set_param_requires_netuid() {
 #[test]
 fn parse_subnet_set_param_requires_param() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--netuid", "1", "--value", "100",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--netuid",
+        "1",
+        "--value",
+        "100",
     ]);
     assert!(cli.is_err(), "subnet set-param should require --param");
 }
@@ -2609,7 +2812,13 @@ fn parse_subnet_set_param_requires_param() {
 fn parse_subnet_set_param_value_is_optional() {
     // --value is optional (for list mode)
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-param", "--netuid", "1", "--param", "tempo",
+        "agcli",
+        "subnet",
+        "set-param",
+        "--netuid",
+        "1",
+        "--param",
+        "tempo",
     ]);
     assert!(cli.is_ok(), "subnet set-param without --value should parse");
 }
@@ -2677,39 +2886,46 @@ fn parse_stake_transfer_stake_requires_amount() {
 #[test]
 fn parse_subnet_trim() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "trim", "--netuid", "1", "--max-uids", "256",
+        "agcli",
+        "subnet",
+        "trim",
+        "--netuid",
+        "1",
+        "--max-uids",
+        "256",
     ]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_subnet_check_start() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "check-start", "--netuid", "1",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "check-start", "--netuid", "1"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_subnet_start() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "start", "--netuid", "1",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "start", "--netuid", "1"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_subnet_mechanism_count() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "mechanism-count", "--netuid", "1",
-    ]);
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "subnet", "mechanism-count", "--netuid", "1"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_subnet_set_mechanism_count() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-mechanism-count", "--netuid", "1", "--count", "2",
+        "agcli",
+        "subnet",
+        "set-mechanism-count",
+        "--netuid",
+        "1",
+        "--count",
+        "2",
     ]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
@@ -2717,32 +2933,33 @@ fn parse_subnet_set_mechanism_count() {
 #[test]
 fn parse_subnet_set_emission_split() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "set-emission-split", "--netuid", "1", "--weights", "50,50",
+        "agcli",
+        "subnet",
+        "set-emission-split",
+        "--netuid",
+        "1",
+        "--weights",
+        "50,50",
     ]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_serve_reset() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "serve", "reset", "--netuid", "1",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "serve", "reset", "--netuid", "1"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_stake_process_claim() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "process-claim",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "process-claim"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_stake_process_claim_with_netuids() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "stake", "process-claim", "--netuids", "1,2,3",
-    ]);
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "stake", "process-claim", "--netuids", "1,2,3"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
@@ -2756,24 +2973,27 @@ fn parse_utils_convert_to_rao() {
 
 #[test]
 fn parse_utils_convert_to_tao() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "utils", "convert", "--amount", "1500000000",
-    ]);
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "utils", "convert", "--amount", "1500000000"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_utils_latency() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "utils", "latency",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "utils", "latency"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
 
 #[test]
 fn parse_utils_latency_with_extra() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "utils", "latency", "--extra", "wss://custom.node:9944", "--pings", "3",
+        "agcli",
+        "utils",
+        "latency",
+        "--extra",
+        "wss://custom.node:9944",
+        "--pings",
+        "3",
     ]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
@@ -2782,9 +3002,7 @@ fn parse_utils_latency_with_extra() {
 
 #[test]
 fn parse_explain_full_flag() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "explain", "--topic", "stake", "--full",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "explain", "--topic", "stake", "--full"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
     if let agcli::cli::Commands::Explain { topic, full } = &cli.unwrap().command {
         assert_eq!(topic.as_deref(), Some("stake"));
@@ -2831,7 +3049,11 @@ fn explain_all_topics_have_content() {
     for (key, _desc) in agcli::utils::explain::list_topics() {
         let content = agcli::utils::explain::explain(key);
         assert!(content.is_some(), "explain('{}') returned None", key);
-        assert!(!content.unwrap().is_empty(), "explain('{}') returned empty string", key);
+        assert!(
+            !content.unwrap().is_empty(),
+            "explain('{}') returned empty string",
+            key
+        );
     }
 }
 
@@ -2849,7 +3071,10 @@ fn explain_topic_descriptions_unique() {
 fn explain_fuzzy_matching_works() {
     // Substring matching: "cold" should match "coldkey-swap"
     let result = agcli::utils::explain::explain("cold");
-    assert!(result.is_some(), "fuzzy match for 'cold' should find coldkey-swap");
+    assert!(
+        result.is_some(),
+        "fuzzy match for 'cold' should find coldkey-swap"
+    );
 }
 
 #[test]

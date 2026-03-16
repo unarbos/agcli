@@ -50,7 +50,12 @@ pub fn get<T: DeserializeOwned>(key: &str, ttl: Duration) -> Option<T> {
     };
     let age = now_secs().saturating_sub(entry.written_at);
     if ttl.is_zero() || age > ttl.as_secs() {
-        tracing::debug!(key, age_secs = age, ttl_secs = ttl.as_secs(), "disk cache: expired");
+        tracing::debug!(
+            key,
+            age_secs = age,
+            ttl_secs = ttl.as_secs(),
+            "disk cache: expired"
+        );
         return None;
     }
     tracing::debug!(key, age_secs = age, "disk cache: hit");
@@ -67,8 +72,7 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
         written_at: now_secs(),
         data,
     };
-    let json = serde_json::to_string(&entry)
-        .context("Failed to serialize cache entry")?;
+    let json = serde_json::to_string(&entry).context("Failed to serialize cache entry")?;
 
     // Atomic write: temp file in same dir, then rename
     let tmp = dir.join(format!(".{}-{}.tmp", key, std::process::id()));
@@ -76,14 +80,22 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
         .with_context(|| format!("Failed to write cache temp file: {}", tmp.display()))?;
 
     let target = dir.join(format!("{}.json", key));
-    std::fs::rename(&tmp, &target)
-        .with_context(|| format!("Failed to rename cache file: {} -> {}", tmp.display(), target.display()))?;
+    std::fs::rename(&tmp, &target).with_context(|| {
+        format!(
+            "Failed to rename cache file: {} -> {}",
+            tmp.display(),
+            target.display()
+        )
+    })?;
 
     tracing::debug!(key, "disk cache: written");
     // Prune roughly every 10 writes (probabilistic, avoids filesystem scan overhead).
     // Uses a global counter instead of checking disk every time.
     static WRITE_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    if WRITE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed).is_multiple_of(10) {
+    if WRITE_COUNT
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        .is_multiple_of(10)
+    {
         prune_if_needed();
     }
     Ok(())
@@ -128,7 +140,9 @@ const MAX_CACHE_ENTRIES: usize = 100;
 /// Removes entries by oldest modification time first.
 pub fn prune_if_needed() {
     let dir = cache_dir();
-    let Ok(entries) = std::fs::read_dir(&dir) else { return };
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return;
+    };
     let mut files: Vec<(PathBuf, std::time::SystemTime)> = entries
         .filter_map(|e| {
             let e = e.ok()?;
@@ -150,7 +164,11 @@ pub fn prune_if_needed() {
         tracing::debug!(path = %path.display(), "disk cache: pruning old entry");
         let _ = std::fs::remove_file(path);
     }
-    tracing::info!(removed = to_remove, remaining = MAX_CACHE_ENTRIES, "disk cache: pruned");
+    tracing::info!(
+        removed = to_remove,
+        remaining = MAX_CACHE_ENTRIES,
+        "disk cache: pruned"
+    );
 }
 
 /// Get the cache directory path (for display/diagnostics).
@@ -296,7 +314,12 @@ mod tests {
         // Verify we have 110 files
         let count_before = std::fs::read_dir(&cache)
             .unwrap()
-            .filter(|e| e.as_ref().ok().and_then(|e| e.path().extension().map(|s| s == "json")).unwrap_or(false))
+            .filter(|e| {
+                e.as_ref()
+                    .ok()
+                    .and_then(|e| e.path().extension().map(|s| s == "json"))
+                    .unwrap_or(false)
+            })
             .count();
         assert_eq!(count_before, 110);
 
