@@ -266,14 +266,13 @@ pub fn decrypt_nacl_keyfile_data(data: &[u8], password: &str) -> Result<String> 
         data
     };
 
-    // Derive key using Argon2i (matching Python bittensor-wallet:
-    //   opslimit = pwhash.argon2i.OPSLIMIT_SENSITIVE = 8
-    //   memlimit = pwhash.argon2i.MEMLIMIT_SENSITIVE = 512 MiB = 524288 KiB
-    // NOTE: argon2i SENSITIVE differs from argon2id SENSITIVE (which is 4/1GiB).
+    // Derive key using Argon2i (matching Python bittensor-wallet / libsodium:
+    //   opslimit = pwhash.argon2i.OPSLIMIT_SENSITIVE = 4
+    //   memlimit = pwhash.argon2i.MEMLIMIT_SENSITIVE = 1 GiB = 1048576 KiB
     let argon2_params = argon2::Params::new(
-        524_288, // 512 MiB in KiB (argon2i MEMLIMIT_SENSITIVE)
-        8,       // t_cost (argon2i OPSLIMIT_SENSITIVE)
-        1,       // p_cost (parallelism)
+        1_048_576, // 1 GiB in KiB (argon2i MEMLIMIT_SENSITIVE)
+        4,         // t_cost (argon2i OPSLIMIT_SENSITIVE)
+        1,         // p_cost (parallelism)
         Some(KEY_LEN),
     )
     .map_err(|e| anyhow::anyhow!("argon2 params error: {}", e))?;
