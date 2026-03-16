@@ -22,6 +22,8 @@ Registration cost         → agcli subnet cost --netuid 1
 Subnet health check       → agcli subnet health --netuid 1
 Subnet liquidity/AMM      → agcli subnet liquidity --netuid 1
 Live tempo countdown      → agcli subnet watch --netuid 1
+Snipe registration slot   → agcli subnet snipe --netuid 97 --fast --max-cost 2.0
+Monitor registration      → agcli subnet snipe --netuid 97 --watch --max-cost 1.5
 Monitor subnet UIDs       → agcli subnet monitor --netuid 1 --json
 Per-UID emissions         → agcli subnet emissions --netuid 1
 Pending weight commits    → agcli subnet commits --netuid 1
@@ -98,7 +100,7 @@ Detailed per-command docs: `docs/commands/*.md` (on-chain behavior, pallet refs,
 | Balance | [balance.md](commands/balance.md) | balance, --watch, --threshold |
 | Transfer | [transfer.md](commands/transfer.md) | transfer, transfer-all |
 | Stake | [stake.md](commands/stake.md) | add, remove, move, swap, list, wizard, limits, childkeys |
-| Subnet | [subnet.md](commands/subnet.md) | list, show, metagraph, register, hyperparams, watch, monitor, health, emissions, cost, liquidity, set-param |
+| Subnet | [subnet.md](commands/subnet.md) | list, show, metagraph, register, snipe, hyperparams, watch, monitor, health, emissions, cost, liquidity, set-param |
 | Weights | [weights.md](commands/weights.md) | set, commit, reveal, commit-reveal, status |
 | Commitment | [commitment.md](commands/commitment.md) | set, get, list |
 | View | [view.md](commands/view.md) | portfolio, dynamic, network, neuron, validators, account, swap-sim, analytics |
@@ -187,6 +189,7 @@ agcli config set --key spending_limit.* --value 500.0     # Global max
 - `subnet set-param --netuid N --param NAME --value V` — set hyperparam (owner)
 - `subnet set-symbol --netuid N --symbol "SYM"` — set token symbol (owner)
 - `subnet probe --netuid N [--uids "0,1,2"]` — axon TCP health check
+- `subnet snipe --netuid N [--fast] [--watch] [--all-hotkeys] [--max-cost TAO] [--max-attempts N]` — block-level registration sniper
 - `subnet cache-list/cache-load/cache-diff/cache-prune` — metagraph snapshots
 
 ### Weights

@@ -92,6 +92,51 @@ Registration cost, difficulty, and burn range for a subnet.
 agcli subnet cost --netuid 1
 ```
 
+### subnet snipe
+Hyper-optimized registration sniper. Subscribes to blocks and fires burn registration the instant each block arrives. Includes pre-flight checks (subnet exists, registration enabled, balance sufficient, burn within budget) and smart error classification.
+
+```bash
+# Basic: subscribe to finalized blocks, single hotkey
+agcli subnet snipe --netuid 97
+
+# Fast mode: best (non-finalized) blocks for ~50% lower latency
+agcli subnet snipe --netuid 97 --fast
+
+# Watch-only: monitor slots and burn cost without registering (no wallet needed)
+agcli subnet snipe --netuid 97 --watch
+
+# Watch with alert: highlights "SNIPE WINDOW" when burn ≤ max-cost
+agcli subnet snipe --netuid 97 --watch --max-cost 1.5
+
+# Register all hotkeys in the wallet sequentially
+agcli subnet snipe --netuid 97 --all-hotkeys
+
+# Full combo: fast + all hotkeys + budget cap + attempt limit
+agcli subnet snipe --netuid 97 --fast --all-hotkeys --max-cost 2.0 --max-attempts 50
+```
+
+**Flags:**
+| Flag | Description |
+|------|-------------|
+| `--netuid N` | Subnet UID to register on (required) |
+| `--max-cost TAO` | Maximum burn cost in TAO; aborts if burn exceeds this |
+| `--max-attempts N` | Maximum block attempts before giving up |
+| `--fast` | Subscribe to best (non-finalized) blocks for lower latency |
+| `--watch` | Monitor-only mode, no registration attempts |
+| `--all-hotkeys` | Register every hotkey in the wallet sequentially |
+
+**Error handling:**
+- `AlreadyRegistered` → exits cleanly (hotkey already on subnet)
+- `TooManyRegistrationsThisBlock` → waits for next block (not fixed 12s sleep)
+- `MaxAllowedUIDs` → waits for slot to open (pruning)
+- `InvalidNetuid` → aborts immediately
+- Transient errors → retries on next block
+- Block stream disconnection → automatic reconnection
+
+**On-chain**: Uses `SubtensorModule::burned_register(origin, netuid, hotkey)` each block.
+
+**Pre-flight checks**: Subnet existence, `registration_allowed`, `balance ≥ burn`, `burn ≤ max_cost`.
+
 ### subnet commits
 Show pending weight commits on a subnet.
 
@@ -220,7 +265,7 @@ agcli subnet set-emission-split --netuid 1 --weights "50,50"
 | `SubNetRegistrationDisabled` | Subnet has registration off | Check hyperparams |
 
 ## Source Code
-**agcli handler**: [`src/cli/subnet_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/subnet_cmds.rs) — `handle_subnet()` at L9, subcommands: List L17, Show L115, Hyperparams L182, Metagraph L264, Register L472, RegisterNeuron L480, Pow L492, Dissolve L540, Watch L561, Monitor L567, Health L572, Emissions L573, Cost L576, Commits L721, SetParam L724, SetSymbol L738, Trim L768, Start L821, CheckStart L796, EmissionSplit L748, MechanismCount L836, SetMechanismCount L846, SetEmissionSplit L864, CacheLoad L577, CacheList L635, CacheDiff L660, CachePrune L704, Probe L713, Liquidity L564
+**agcli handler**: [`src/cli/subnet_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/subnet_cmds.rs) — `handle_subnet()` at L9, subcommands: List L17, Show L115, Hyperparams L182, Metagraph L264, Register L472, RegisterNeuron L480, Pow L492, Dissolve L540, Watch L561, Monitor L567, Health L572, Emissions L573, Cost L576, Commits L721, SetParam L724, SetSymbol L738, Trim L768, Start L821, CheckStart L796, EmissionSplit L748, MechanismCount L836, SetMechanismCount L846, SetEmissionSplit L864, CacheLoad L577, CacheList L635, CacheDiff L660, CachePrune L704, Probe L713, Liquidity L564, Snipe L959 (handle_snipe L1064, handle_snipe_watch L1310)
 
 **Subtensor pallet**:
 - [`subnets/registration.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/subnets/registration.rs) — `register_network`, `burned_register`, `register` (PoW)
