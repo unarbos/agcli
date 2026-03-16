@@ -44,35 +44,35 @@ impl OutputFormat {
 #[command(name = "agcli", version, about, long_about = None)]
 pub struct Cli {
     /// Network to connect to
-    #[arg(long, short, default_value = "finney", env = "AGCLI_NETWORK")]
+    #[arg(long, short, global = true, default_value = "finney", env = "AGCLI_NETWORK")]
     pub network: String,
 
     /// Custom chain endpoint (overrides --network)
-    #[arg(long, env = "AGCLI_ENDPOINT")]
+    #[arg(long, global = true, env = "AGCLI_ENDPOINT")]
     pub endpoint: Option<String>,
 
     /// Wallet directory
-    #[arg(long, default_value = "~/.bittensor/wallets", env = "AGCLI_WALLET_DIR")]
+    #[arg(long, global = true, default_value = "~/.bittensor/wallets", env = "AGCLI_WALLET_DIR")]
     pub wallet_dir: String,
 
     /// Wallet name
-    #[arg(long, short, default_value = "default", env = "AGCLI_WALLET")]
+    #[arg(long, short, global = true, default_value = "default", env = "AGCLI_WALLET")]
     pub wallet: String,
 
     /// Hotkey name
-    #[arg(long, default_value = "default", env = "AGCLI_HOTKEY")]
+    #[arg(long, global = true, default_value = "default", env = "AGCLI_HOTKEY")]
     pub hotkey: String,
 
     /// Output format
-    #[arg(long, default_value = "table", value_enum)]
+    #[arg(long, global = true, default_value = "table", value_enum)]
     pub output: OutputFormat,
 
     /// Enable live polling mode (interval in seconds, default 12)
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub live: Option<Option<u64>>,
 
     /// Proxy account SS58 — wrap all extrinsics through Proxy.proxy
-    #[arg(long, env = "AGCLI_PROXY")]
+    #[arg(long, global = true, env = "AGCLI_PROXY")]
     pub proxy: Option<String>,
 
     /// Skip all confirmation prompts (for non-interactive / agent use)
