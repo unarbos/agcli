@@ -676,36 +676,68 @@ General:
 const HYPERPARAMS: &str = "\
 SUBNET HYPERPARAMETERS
 ======================
-Each subnet has a set of hyperparameters that control its behavior. Subnet owners
-can propose changes; some require governance approval.
+Each subnet has ~32 tunable parameters stored on-chain. Some are owner-settable,
+others require the chain sudo key (root governance). Full reference: `agcli docs/hyperparameters.md`
 
 View them: `agcli subnet hyperparams <netuid>`
 
-Key parameters:
-- rho/kappa: Yuma consensus sensitivity parameters. Higher rho → more aggressive
-  ranking; kappa controls the consensus threshold.
-- tempo: blocks between evaluation rounds (e.g., 360 blocks ≈ 72 min).
-- immunity_period: blocks a new neuron is protected from deregistration.
-- min_allowed_weights / max_weights_limit: bounds on weight vector size.
-- weights_rate_limit: minimum blocks between weight-set calls.
-- weights_version: version key validators must match when setting weights.
-- min_difficulty / max_difficulty: PoW registration difficulty bounds.
-- adjustment_interval / target_regs_per_interval: controls burn auto-adjustment.
-- min_burn / max_burn: floor and ceiling for burn registration cost.
-- bonds_moving_avg: smoothing factor for bond calculations.
-- max_regs_per_block: cap on registrations per block.
-- serving_rate_limit: minimum blocks between axon info updates.
-- max_validators: maximum validators with permits on this subnet.
-- adjustment_alpha: learning rate for difficulty adjustment.
-- commit_reveal_weights_enabled: whether two-phase weight submission is active.
-- commit_reveal_interval: blocks between commit and reveal phases.
-- liquid_alpha_enabled: whether liquid alpha token trading is active.
+EPOCH & TIMING
+- tempo (u16, sudo): blocks per epoch. Default 360 (~72 min). Controls evaluation frequency.
+- activity_cutoff (u16): blocks of inactivity before deregistration. Default ~5000.
+- immunity_period (u16): blocks a new neuron is immune. Default ~4096.
+
+CONSENSUS (deep protocol — change with caution)
+- rho (u16, sudo): emission adjustment parameter. Default 10. Higher = more aggressive ranking.
+- kappa (u16, sudo): consensus threshold. Default 32767 (≈50%). Higher = stricter agreement needed.
+- yuma (bool, sudo): enable/disable Yuma consensus entirely.
+
+WEIGHTS
+- min_allowed_weights (u16): minimum UIDs per weight vector. Prevents narrow evaluation.
+- max_weight_limit (u16): cap per-UID weight. 65535 = no cap, lower = forced distribution.
+- weights_version (u64): validators must match this version or weight-set is rejected.
+- weights_rate_limit (u64): min blocks between weight-set calls. 0 = unlimited.
+
+COMMIT-REVEAL (anti-copying protection)
+- commit_reveal_weights_enabled (bool): require two-phase weight submission.
+- commit_reveal_weights_interval (u64): blocks between commit and reveal.
+- commit_reveal_version (u64): protocol version for commit-reveal.
+
+REGISTRATION & DIFFICULTY (feedback loop controls)
+- registration_allowed (bool): master switch for new registrations.
+- pow_registration_allowed (bool): allow PoW registration specifically.
+- difficulty (u64): current PoW difficulty (usually auto-adjusted).
+- min_difficulty / max_difficulty (u64): bounds for auto-adjustment.
+- target_regs_per_interval (u16): target registrations per adjustment window.
+- adjustment_interval (u16): blocks between difficulty recalculations.
+- adjustment_alpha (u64): EMA smoothing — high = slow adjustment, low = volatile.
+- min_burn / max_burn (u64): floor/ceiling for TAO burn cost (in RAO, 1 TAO = 10^9 RAO).
+- max_regs_per_block (u16): hard cap on registrations per block.
+
+NETWORK SIZE
+- max_allowed_uids (u16, sudo): max neurons on subnet. Default 256.
+- min_allowed_uids (u16, sudo): min neurons on subnet.
+- max_allowed_validators (u16, sudo): max validator permit slots. Default 128.
+- min_non_immune_uids (u16, sudo): ensures N neurons are always deregistration-eligible.
+
+BONDS & DIVIDENDS
+- bonds_moving_average (u64): smoothing for bond calcs. Higher = more historical weight.
+- bonds_penalty (u16): penalizes validators deviating from consensus weights.
+- bonds_reset_enabled (bool): allow periodic bond zeroing (prevents entrenchment).
+- liquid_alpha_enabled (bool): dynamic bond alpha based on validator agreement.
+
+SERVING
+- serving_rate_limit (u64): min blocks between serve_axon (IP update) calls.
+
+HOW THEY INTERACT
+- Registration: target_regs + adjustment_interval + alpha + min/max burn/difficulty form a
+  feedback loop that auto-tunes registration cost every adjustment_interval blocks.
+- Deregistration: requires immunity expired + inactive > cutoff + subnet full + new registrant.
+- Emissions: weights → Yuma consensus (rho, kappa) → bonds (moving avg, penalty, liquid alpha) → dividends.
 
 Changing hyperparams:
-- Subnet owners set params with: `agcli subnet set-param --netuid <N> --param <name> --value <val>`
-- List all params: `agcli subnet set-param --netuid 1 --param list`
-- Some params (like tempo, max_validators) may need root governance approval.
-- Changes take effect at the next tempo boundary after being applied.";
+- Owner: `agcli subnet set-param --netuid <N> --param <name> --value <val>`
+- Sudo: `agcli admin set-tempo --netuid <N> --tempo <val> --sudo-key //Alice`
+- List all: `agcli subnet set-param --netuid 1 --param list` or `agcli admin list`";
 
 const AXON: &str = "\
 AXON (SERVING ENDPOINT)

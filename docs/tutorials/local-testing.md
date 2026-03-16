@@ -206,14 +206,15 @@ Alice has sudo privileges and can call AdminUtils to configure subnet hyperparam
 
 ### Known Limitations
 
-Some runtime features behave differently on localnet:
+Some runtime features require configuration on localnet:
 
-| Feature | Status | Workaround |
-|---------|--------|------------|
-| Staking (subtoken) | May return `SubtokenDisabled` | Use a newer localnet image, or test staking on testnet |
-| Commit-reveal weights | Enabled by default | Disable via `agcli admin set-commit-reveal --netuid N --enabled false` or scaffold config |
+| Feature | Default | Fix |
+|---------|---------|-----|
+| Staking (subtoken) | Disabled per-subnet | Enable via sudo: `AdminUtils::sudo_set_subtoken_enabled(netuid, true)`. The scaffold command does this automatically. |
+| Commit-reveal weights | Enabled per-subnet | Disable via sudo: `AdminUtils::sudo_set_commit_reveal_weights_enabled(netuid, false)`. Scaffold sets this. |
+| Rate limits | Non-zero defaults | Zero out via sudo: `AdminUtils::sudo_set_weights_set_rate_limit(netuid, 0)` etc. Scaffold handles this. |
 | State pruning | Fast blocks prune old state quickly | Query recent blocks only; use `--at-block` with recent block numbers |
-| Crowdloan pallet | Not available | Test crowdloan features on testnet |
+| RPC stability | Fast blocks can cause WebSocket drops | Use `Client::reconnect()` in Rust SDK, or retry failed RPC calls |
 
 ## Testing Workflow
 

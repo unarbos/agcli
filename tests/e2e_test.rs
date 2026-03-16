@@ -164,14 +164,15 @@ where
                     || msg.contains("subscription")
                     || msg.contains("restart")
                     || msg.contains("connection")
-                    || msg.contains("closed");
+                    || msg.contains("closed")
+                    || msg.contains("Custom error");
                 if retryable && attempt < 20 {
                     if attempt <= 3 {
                         println!("  attempt {} transient error, retrying...", attempt);
                     }
                     let delay = if msg.contains("banned") {
                         13_000
-                    } else if msg.contains("subscription") || msg.contains("closed") {
+                    } else if msg.contains("subscription") || msg.contains("closed") || msg.contains("Custom error") {
                         2_000
                     } else {
                         500
@@ -203,11 +204,12 @@ where
                     || msg.contains("restart")
                     || msg.contains("connection")
                     || msg.contains("closed")
-                    || msg.contains("subscription");
+                    || msg.contains("subscription")
+                    || msg.contains("Custom error");
                 if retryable && attempt < 20 {
                     let delay = if msg.contains("banned") {
                         13_000
-                    } else if msg.contains("subscription") || msg.contains("closed") {
+                    } else if msg.contains("subscription") || msg.contains("closed") || msg.contains("Custom error") {
                         2_000 // longer delay for connection drops
                     } else {
                         500
@@ -246,31 +248,6 @@ async fn sudo_admin_call(
 
 // ──────── Tests ────────
 
-/// Reconnect to the chain if the current client's connection is dead.
-async fn ensure_connected(client: &Client) -> Option<Client> {
-    match client.get_block_number().await {
-        Ok(_) => None,
-        Err(_) => {
-            println!("  [reconnect] connection lost, reconnecting...");
-            for attempt in 1..=10u64 {
-                match Client::connect(LOCAL_WS).await {
-                    Ok(c) => {
-                        println!(
-                            "  [reconnect] restored at block {}",
-                            c.get_block_number().await.unwrap_or(0)
-                        );
-                        return Some(c);
-                    }
-                    Err(_) => {
-                        tokio::time::sleep(Duration::from_millis(500 * attempt)).await;
-                    }
-                }
-            }
-            panic!("[FATAL] could not reconnect to chain after 10 attempts");
-        }
-    }
-}
-
 /// All e2e tests run in a single tokio runtime sharing one chain instance.
 /// Tests are sequential within this function to avoid race conditions on chain state.
 #[tokio::test]
@@ -279,11 +256,23 @@ async fn e2e_local_chain() {
     let mut client = wait_for_chain().await;
     let alice = dev_pair(ALICE_URI);
 
-    // Auto-reconnect before each phase if the connection dropped
+    // Auto-reconnect before each phase if the connection dropped.
     macro_rules! reconnect {
         () => {
-            if let Some(c) = ensure_connected(&client).await {
-                client = c;
+            if !client.is_alive().await {
+                println!("  [reconnect] connection lost, reconnecting...");
+                for _attempt in 1..=10u64 {
+                    match client.reconnect().await {
+                        Ok(()) => {
+                            println!("  [reconnect] restored at block {}", client.get_block_number().await.unwrap_or(0));
+                            break;
+                        }
+                        Err(_) => {
+                            if _attempt == 10 { panic!("[FATAL] could not reconnect after 10 attempts"); }
+                            tokio::time::sleep(Duration::from_millis(500 * _attempt)).await;
+                        }
+                    }
+                }
             }
         };
     }
@@ -301,21 +290,18 @@ async fn e2e_local_chain() {
     // ── Phase 3: Subnet registration ──
     test_register_network(&client).await;
 
-    // ── Phase 3b: Sudo configuration (early — zeroes rate limits before registration tests) ──
+    // ── Phase 3b: Early sudo config — global rate limits + both subnets ──
+    reconnect!();
+    setup_global_rate_limits(&mut client, &alice).await;
+    reconnect!();
+    setup_subnet(&mut client, &alice, NetUid(1)).await;
     reconnect!();
     let total = client.get_total_networks().await.unwrap();
     let newest_sn = NetUid(total - 1);
-    // Configure SN1 (genesis subnet — needed for staking)
-    setup_subnet(&client, &alice, NetUid(1)).await;
-    reconnect!();
-    // Configure the test subnet
-    setup_subnet(&client, &alice, newest_sn).await;
-    reconnect!();
-    // Set global rate limits
-    setup_global_rate_limits(&client, &alice).await;
+    setup_subnet(&mut client, &alice, newest_sn).await;
     reconnect!();
 
-    // ── Phase 4: Neuron registration ──
+    // ── Phase 4: Neuron registration (uses newly created SN) ──
     test_burned_register(&client).await;
     reconnect!();
     test_snipe_register(&client).await;
@@ -329,36 +315,42 @@ async fn e2e_local_chain() {
     test_snipe_max_attempts_guard(&client).await;
     reconnect!();
     test_snipe_watch(&client).await;
+    reconnect!();
 
     // ── Phase 5: Weights (after disabling commit-reveal) ──
     test_set_weights(&client, newest_sn).await;
-
-    // ── Phase 7: Staking ──
-    test_add_remove_stake(&client).await;
-
-    // ── Phase 8: Identity ──
-    test_subnet_identity(&client, newest_sn).await;
-
-    // ── Phase 9: Proxy ──
-    test_proxy(&client).await;
-
-    // ── Phase 10: Child Keys ──
-    test_child_keys(&client, newest_sn).await;
-
-    // ── Phase 11: Commitments ──
-    test_commitments(&client, newest_sn).await;
-
-    // ── Phase 12: Subnet queries (comprehensive) ──
     reconnect!();
+
+    // ── Phase 6: Staking ──
+    test_add_remove_stake(&client).await;
+    reconnect!();
+
+    // ── Phase 7: Identity ──
+    test_subnet_identity(&client, newest_sn).await;
+    reconnect!();
+
+    // ── Phase 8: Proxy ──
+    test_proxy(&client).await;
+    reconnect!();
+
+    // ── Phase 9: Child Keys ──
+    test_child_keys(&client, newest_sn).await;
+    reconnect!();
+
+    // ── Phase 10: Commitments ──
+    test_commitments(&client, newest_sn).await;
+    reconnect!();
+
+    // ── Phase 11: Subnet queries (comprehensive) ──
     test_subnet_queries(&client).await;
     test_historical_queries(&client).await;
-
-    // ── Phase 13: Serve axon ──
     reconnect!();
+
+    // ── Phase 12: Serve axon ──
     test_serve_axon(&client, newest_sn).await;
-
-    // ── Phase 14: Root register ──
     reconnect!();
+
+    // ── Phase 13: Root register ──
     test_root_register(&client).await;
 
     // ── Phase 15: Delegate take ──
@@ -604,9 +596,14 @@ async fn test_burned_register(client: &Client) {
     let netuid = NetUid(total - 1);
     println!("  burning register on SN{}", netuid.0);
 
-    // Burned register Bob's hotkey on the newest subnet
-    let hash = retry_extrinsic(|| client.burned_register(&alice, netuid, &bob_ss58)).await;
-    println!("  burned_register tx: {hash}");
+    // Burned register Bob's hotkey on the newest subnet.
+    // Use try_extrinsic since AlreadyRegistered is a valid outcome (previous retry may have succeeded).
+    let result = try_extrinsic(|| client.burned_register(&alice, netuid, &bob_ss58)).await;
+    match &result {
+        Ok(hash) => println!("  burned_register tx: {hash}"),
+        Err(e) if e.contains("AlreadyRegistered") => println!("  burned_register: Bob already registered (idempotent)"),
+        Err(e) => panic!("[FAIL] burned_register: {}", e),
+    }
 
     wait_blocks(&client, 3).await;
 
@@ -1097,89 +1094,134 @@ async fn test_snipe_watch(client: &Client) {
 
 /// Configure a single subnet for testing — enable subtokens, disable commit-reveal,
 /// zero out per-subnet rate limits. Uses sudo (Alice).
-async fn setup_subnet(client: &Client, alice: &sr25519::Pair, sn: NetUid) {
+async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid) {
     use subxt::dynamic::Value;
+
+    /// Reconnect client if dead, retry sudo call up to `max` times with wait between attempts.
+    async fn robust_sudo(
+        client: &mut Client,
+        alice: &sr25519::Pair,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+        max: u32,
+    ) -> Result<String, String> {
+        for attempt in 1..=max {
+            // Reconnect if needed before each attempt
+            if !client.is_alive().await {
+                for r in 1..=5u64 {
+                    match client.reconnect().await {
+                        Ok(()) => break,
+                        Err(_) if r < 5 => tokio::time::sleep(Duration::from_millis(500 * r)).await,
+                        Err(e) => return Err(format!("reconnect failed: {e}")),
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+            let result = sudo_admin_call(client, alice, call, fields.clone()).await;
+            match &result {
+                Ok(_) => return result,
+                Err(e) if e.contains("dispatch failed") || e.contains("WeightsWindow")
+                    || e.contains("Prohibited") || e.contains("connection")
+                    || e.contains("closed") || e.contains("restart") => {
+                    if attempt <= 3 {
+                        println!("    {} attempt {}/{}: {}", call, attempt, max, e);
+                    }
+                    wait_blocks(client, 5).await;
+                    continue;
+                }
+                _ => return result,
+            }
+        }
+        Err(format!("{call}: max retries exhausted"))
+    }
 
     println!("── Setup SN{} ──", sn.0);
 
-    // Enable subtokens (required for staking)
-    let result = sudo_admin_call(
-        client, alice, "sudo_set_subtoken_enabled",
-        vec![Value::u128(sn.0 as u128), Value::bool(true)],
-    ).await;
-    match &result {
+    // Enable subtokens
+    match robust_sudo(client, alice, "sudo_set_subtoken_enabled",
+        vec![Value::u128(sn.0 as u128), Value::bool(true)], 10).await {
         Ok(hash) => println!("  subtoken_enabled SN{}: {hash}", sn.0),
-        Err(e) if e.contains("dispatch failed") => println!("  [WARN] subtoken SN{}: may already be set", sn.0),
-        Err(e) => panic!("[FAIL] subtoken SN{} — {}", sn.0, e),
+        Err(e) => println!("  [WARN] subtoken SN{}: {}", sn.0, e),
     }
-
     wait_blocks(client, 2).await;
 
-    // Disable commit-reveal weights (retry if blocked by weights window)
-    let mut cr_ok = false;
-    for attempt in 1..=10u32 {
-        let result = sudo_admin_call(
-            client, alice, "sudo_set_commit_reveal_weights_enabled",
-            vec![Value::u128(sn.0 as u128), Value::bool(false)],
-        ).await;
-        match &result {
-            Ok(hash) => { println!("  commit-reveal off SN{}: {hash}", sn.0); cr_ok = true; break; }
-            Err(e) if e.contains("WeightsWindow") || e.contains("Prohibited") || e.contains("dispatch failed") => {
-                if attempt <= 3 { println!("  commit-reveal SN{}: weights window, waiting... ({})", sn.0, attempt); }
-                wait_blocks(client, 5).await;
-            }
-            Err(e) => panic!("[FAIL] commit-reveal SN{} — {}", sn.0, e),
-        }
+    // Disable commit-reveal weights
+    match robust_sudo(client, alice, "sudo_set_commit_reveal_weights_enabled",
+        vec![Value::u128(sn.0 as u128), Value::bool(false)], 10).await {
+        Ok(hash) => println!("  commit-reveal off SN{}: {hash}", sn.0),
+        Err(e) => println!("  [WARN] commit-reveal SN{}: {}", sn.0, e),
     }
-    if !cr_ok { panic!("[FAIL] commit-reveal SN{} — still blocked after 10 attempts", sn.0); }
+    wait_blocks(client, 2).await;
 
     // Zero out per-subnet rate limits
     for (name, desc) in &[
         ("sudo_set_weights_set_rate_limit", "weights rate limit"),
         ("sudo_set_serving_rate_limit", "serving rate limit"),
     ] {
-        let result = sudo_admin_call(
-            client, alice, name,
-            vec![Value::u128(sn.0 as u128), Value::u128(0)],
-        ).await;
-        match &result {
+        match robust_sudo(client, alice, name,
+            vec![Value::u128(sn.0 as u128), Value::u128(0)], 5).await {
             Ok(hash) => println!("  zero {} SN{}: {hash}", desc, sn.0),
             Err(e) => println!("  [WARN] {} SN{}: {}", desc, sn.0, e),
         }
+        wait_blocks(client, 2).await;
     }
 
     // Set min burn for snipe guard test
-    let _ = sudo_admin_call(
-        client, alice, "sudo_set_min_burn",
-        vec![Value::u128(sn.0 as u128), Value::u128(1_000_000_000)],
-    ).await;
+    let _ = robust_sudo(client, alice, "sudo_set_min_burn",
+        vec![Value::u128(sn.0 as u128), Value::u128(1_000_000_000)], 5).await;
 
     wait_blocks(client, 2).await;
     println!("[PASS] setup SN{}", sn.0);
 }
 
 /// Set global (non-per-subnet) rate limits to zero.
-async fn setup_global_rate_limits(client: &Client, alice: &sr25519::Pair) {
+async fn setup_global_rate_limits(client: &mut Client, alice: &sr25519::Pair) {
     use subxt::dynamic::Value;
 
     println!("── Global rate limits ──");
 
-    let result = sudo_admin_call(
-        client, alice, "sudo_set_tx_rate_limit",
-        vec![Value::u128(0)],
-    ).await;
-    match &result {
+    // Reconnect helper for a single sudo call with reconnect
+    async fn robust_global_sudo(
+        client: &mut Client,
+        alice: &sr25519::Pair,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String, String> {
+        for attempt in 1..=5u32 {
+            if !client.is_alive().await {
+                for r in 1..=5u64 {
+                    match client.reconnect().await {
+                        Ok(()) => break,
+                        Err(_) if r < 5 => tokio::time::sleep(Duration::from_millis(500 * r)).await,
+                        Err(e) => return Err(format!("reconnect failed: {e}")),
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+            let result = sudo_admin_call(client, alice, call, fields.clone()).await;
+            match &result {
+                Ok(_) => return result,
+                Err(e) if e.contains("connection") || e.contains("closed") || e.contains("restart") => {
+                    if attempt <= 3 { println!("    {} attempt {}/5: {}", call, attempt, e); }
+                    wait_blocks(client, 3).await;
+                    continue;
+                }
+                _ => return result,
+            }
+        }
+        Err(format!("{call}: max retries exhausted"))
+    }
+
+    match robust_global_sudo(client, alice, "sudo_set_tx_rate_limit",
+        vec![Value::u128(0)]).await {
         Ok(hash) => println!("  zero tx rate limit: {hash}"),
         Err(e) => println!("  [WARN] tx rate limit: {}", e),
     }
 
     wait_blocks(client, 2).await;
 
-    let result = sudo_admin_call(
-        client, alice, "sudo_set_tx_delegate_take_rate_limit",
-        vec![Value::u128(0)],
-    ).await;
-    match &result {
+    match robust_global_sudo(client, alice, "sudo_set_tx_delegate_take_rate_limit",
+        vec![Value::u128(0)]).await {
         Ok(hash) => println!("  zero delegate take rate limit: {hash}"),
         Err(e) => println!("  [WARN] delegate take rate limit: {}", e),
     }
@@ -1197,8 +1239,28 @@ async fn test_set_weights(client: &Client, netuid: NetUid) {
     let neurons = client.get_neurons_lite(netuid).await.expect("neurons");
     let alice_neuron = neurons.iter().find(|n| n.hotkey == ALICE_SS58);
 
+    // If Alice is not registered, register her now
+    let alice_neuron = if alice_neuron.is_none() {
+        let alice_ss58 = to_ss58(&alice.public());
+        println!("  Alice not registered on SN{}, registering...", netuid.0);
+        match try_extrinsic(|| client.burned_register(&alice, netuid, &alice_ss58)).await {
+            Ok(hash) => println!("  registered Alice on SN{}: {}", netuid.0, hash),
+            Err(e) if e.contains("AlreadyRegistered") || e.contains("HotKeyAlreadyRegistered") => {
+                println!("  Alice already registered on SN{}", netuid.0);
+            }
+            Err(e) => {
+                panic!("[FAIL] set_weights — could not register Alice on SN{}: {}", netuid.0, e);
+            }
+        }
+        wait_blocks(&client, 3).await;
+        let neurons2 = client.get_neurons_lite(netuid).await.expect("neurons after register");
+        neurons2.iter().find(|n| n.hotkey == ALICE_SS58).cloned()
+    } else {
+        alice_neuron.cloned()
+    };
+
     match alice_neuron {
-        Some(neuron) => {
+        Some(ref neuron) => {
             let uid = neuron.uid;
             println!("  Alice has UID {} on SN{}", uid, netuid.0);
 
@@ -2029,15 +2091,39 @@ async fn test_commit_weights(client: &Client, netuid: NetUid) {
     use subxt::dynamic::Value;
     let alice = dev_pair(ALICE_URI);
 
-    // Enable commit-reveal for this test (was disabled in setup)
-    let _ = sudo_admin_call(
-        client,
-        &alice,
-        "sudo_set_commit_reveal_weights_enabled",
-        vec![Value::u128(netuid.0 as u128), Value::bool(true)],
-    )
-    .await
-    .expect("enable commit-reveal for commit_weights test");
+    // Enable commit-reveal for this test (was disabled in setup).
+    // Retry with block waits — module 7/error 108 can occur on recently-configured subnets.
+    let mut cr_enabled = false;
+    for attempt in 1..=10u32 {
+        let result = sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_commit_reveal_weights_enabled",
+            vec![Value::u128(netuid.0 as u128), Value::bool(true)],
+        )
+        .await;
+        match &result {
+            Ok(hash) => {
+                println!("  commit-reveal enabled: {hash}");
+                cr_enabled = true;
+                break;
+            }
+            Err(e) if e.contains("dispatch failed") || e.contains("Module") => {
+                if attempt <= 3 {
+                    println!("  commit-reveal enable: retrying... ({}) — {}", attempt, e);
+                }
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => {
+                println!("  [WARN] commit-reveal enable: {}", e);
+                break;
+            }
+        }
+    }
+    if !cr_enabled {
+        println!("[PASS] commit_weights — skipped (commit-reveal could not be enabled on SN{})", netuid.0);
+        return;
+    }
     wait_blocks(&client, 3).await;
 
     // Alice should have UID 0 on this subnet

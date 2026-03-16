@@ -43,6 +43,7 @@ Every command supports `--output json|csv`, `--yes` (skip prompts), `--batch` (h
 | **[docs/commands/](docs/commands/)** | Per-command deep dives — on-chain behavior, pallet refs, storage keys, events, errors |
 | **[docs/tutorials/](docs/tutorials/)** | Step-by-step guides: [getting started](docs/tutorials/getting-started.md), [staking](docs/tutorials/staking-guide.md), [validator](docs/tutorials/validator-guide.md), [subnet builder](docs/tutorials/subnet-builder.md), [agent automation](docs/tutorials/agent-automation.md) |
 | **[docs/faq.md](docs/faq.md)** | Beyond agcli — miners, Yuma math, picking subnets, validator↔miner protocols, subnet codebases |
+| **[docs/hyperparameters.md](docs/hyperparameters.md)** | Complete reference for all ~32 sudo-settable subnet hyperparameters — what each does, defaults, interactions |
 | **[docs/philosophy.md](docs/philosophy.md)** | Subnet design philosophy, incentive patterns, trust model |
 
 ## SDK Usage

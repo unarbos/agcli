@@ -94,6 +94,7 @@ pub struct Client {
     rpc: LegacyRpcMethods<SubtensorConfig>,
     cache: QueryCache,
     dry_run: bool,
+    url: String,
 }
 
 impl Client {
@@ -122,7 +123,23 @@ impl Client {
             rpc,
             cache: QueryCache::new(),
             dry_run: false,
+            url: url.to_string(),
         })
+    }
+
+    /// Reconnect to the same endpoint. Creates a fresh RPC connection while preserving settings.
+    /// Useful when the subxt background task dies (e.g. on fast-block devnets).
+    pub async fn reconnect(&mut self) -> Result<()> {
+        let fresh = Self::connect_once(&self.url).await?;
+        self.inner = fresh.inner;
+        self.rpc = fresh.rpc;
+        self.cache = QueryCache::new();
+        Ok(())
+    }
+
+    /// Check if the connection is still alive by attempting a lightweight RPC call.
+    pub async fn is_alive(&self) -> bool {
+        self.inner.blocks().at_latest().await.is_ok()
     }
 
     /// Connect to a subtensor node with retry + exponential backoff.
