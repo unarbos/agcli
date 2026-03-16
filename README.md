@@ -77,7 +77,7 @@ agcli/
 │   │   ├── extrinsics.rs    # Transaction builders
 │   │   └── rpc_types.rs     # Type conversions
 │   ├── cli/
-│   │   ├── mod.rs           # Clap parser: 18 command groups, 80+ subcommands
+│   │   ├── mod.rs           # Clap parser: 20 command groups, 90+ subcommands
 │   │   ├── commands.rs      # Main dispatcher
 │   │   ├── helpers.rs       # Shared CLI helpers
 │   │   ├── subnet_cmds.rs   # Subnet operations
@@ -87,7 +87,12 @@ agcli/
 │   │   ├── wallet_cmds.rs   # Wallet management
 │   │   ├── block_cmds.rs    # Block explorer
 │   │   ├── network_cmds.rs  # Network queries + commitment commands
+│   │   ├── localnet_cmds.rs # Local chain lifecycle + scaffold
+│   │   ├── admin_cmds.rs    # AdminUtils sudo hyperparam setters
 │   │   └── system_cmds.rs   # Config, proxy, delegate, identity
+│   ├── localnet.rs           # SDK: Docker chain start/stop/status/reset/logs
+│   ├── admin.rs              # SDK: 13 AdminUtils functions + raw_admin_call
+│   ├── scaffold.rs           # SDK: Declarative test environment orchestration
 │   ├── wallet/              # Key management (Python wallet compat)
 │   ├── types/               # Balance, NeuronInfo, SubnetInfo, etc.
 │   ├── queries/             # Cache layer (Moka + disk)
@@ -95,8 +100,10 @@ agcli/
 │   └── utils/               # Explain, format, POW solver
 ├── docs/
 │   ├── llm.txt              # Agent-optimized reference
-│   ├── commands/             # 22 per-command docs
+│   ├── commands/             # 24 per-command docs
 │   └── tutorials/            # 5 step-by-step guides
+├── examples/
+│   └── scaffold.toml         # Example scaffold configuration
 ├── tests/                    # 7 integration test files
 ├── build.rs                  # Compile-time chain metadata fetch
 └── Cargo.toml

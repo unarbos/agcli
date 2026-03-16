@@ -50,6 +50,20 @@ Set commitment (miner)    → agcli commitment set --netuid 1 --data "endpoint:h
 Read commitments          → agcli --output json commitment get --netuid 1 --hotkey 5H...
 All commitments on SN     → agcli --output json commitment list --netuid 1
 Set hyperparam (owner)    → agcli subnet set-param --netuid 1 --param tempo --value 100
+Start local chain         → agcli localnet start --output json
+Stop local chain          → agcli localnet stop
+Local chain status        → agcli localnet status --output json
+Reset local chain         → agcli localnet reset
+Local chain logs          → agcli localnet logs --tail 100
+Scaffold test env         → agcli localnet scaffold --output json
+Scaffold with config      → agcli localnet scaffold --config scaffold.toml --output json
+Set tempo (sudo)          → agcli admin set-tempo --netuid 1 --tempo 100 --sudo-key //Alice --network local
+Set max validators (sudo) → agcli admin set-max-validators --netuid 1 --max 8 --sudo-key //Alice --network local
+Set min weights (sudo)    → agcli admin set-min-weights --netuid 1 --min 1 --sudo-key //Alice --network local
+Set weights rate (sudo)   → agcli admin set-weights-rate-limit --netuid 1 --limit 0 --sudo-key //Alice --network local
+Disable commit-reveal     → agcli admin set-commit-reveal --netuid 1 --enabled false --sudo-key //Alice --network local
+Generic admin call        → agcli admin raw --call sudo_set_bonds_moving_average --args '[1, 900000]' --sudo-key //Alice --network local
+List admin params         → agcli admin list --output json
 ```
 
 ### Global Flags
@@ -117,6 +131,8 @@ Detailed per-command docs: `docs/commands/*.md` (on-chain behavior, pallet refs,
 | Batch | [batch.md](commands/batch.md) | --file (atomic/non-atomic) |
 | Swap | [swap.md](commands/swap.md) | hotkey, coldkey |
 | Crowdloan | [crowdloan.md](commands/crowdloan.md) | contribute, withdraw, finalize |
+| Localnet | [localnet.md](commands/localnet.md) | start, stop, status, reset, logs, scaffold |
+| Admin | [admin.md](commands/admin.md) | set-tempo, set-max-validators, set-max-uids, set-min-weights, set-weights-rate-limit, set-commit-reveal, raw, list |
 | Utils | [utils.md](commands/utils.md) | convert (alpha↔TAO), latency, completions, update, doctor |
 | Explain | [explain.md](commands/explain.md) | 33 built-in topics |
 
@@ -242,6 +258,31 @@ agcli config set --key spending_limit.* --value 500.0     # Global max
 - `doctor` — diagnostic checks
 - `explain [--topic T]` — 33 built-in concept explanations
 
+### Localnet (Local Chain Management)
+- `localnet start [--image TAG] [--port N] [--container NAME] [--wait false] [--timeout 120]` → `{"status","container_name","container_id","image","endpoint","port","block_height","dev_accounts"}`
+- `localnet stop [--container NAME]` → `{"status":"stopped","container_name"}`
+- `localnet status [--container NAME] [--port N]` → `{"running","container_name","container_id","image","endpoint","block_height"}`
+- `localnet reset [--image TAG] [--port N] [--timeout 120]` → `{"status":"reset","container_name","endpoint","block_height"}`
+- `localnet logs [--container NAME] [--tail N]`
+- `localnet scaffold [--config scaffold.toml] [--image TAG] [--port N] [--no-start]` — one-command test env: start chain + register subnets + fund accounts + set hyperparams + register neurons → JSON manifest
+  - Default: 1 subnet (tempo=100, max_val=8), 3 neurons (validator1@1000 TAO, miner1@100 TAO, miner2@100 TAO)
+  - Uses TOML config with `[chain]`, `[[subnet]]`, `[[subnet.neuron]]` sections
+  - Output: `{"endpoint","container","block_height","subnets":[{"netuid","hyperparams","neurons":[{"name","ss58","seed","uid","balance_tao"}]}]}`
+
+### Admin (Sudo AdminUtils)
+- `admin set-tempo --netuid N --tempo T [--sudo-key //Alice] [--network local]`
+- `admin set-max-validators --netuid N --max M [--sudo-key //Alice]`
+- `admin set-max-uids --netuid N --max M [--sudo-key //Alice]`
+- `admin set-immunity-period --netuid N --period P [--sudo-key //Alice]`
+- `admin set-min-weights --netuid N --min M [--sudo-key //Alice]`
+- `admin set-max-weight-limit --netuid N --limit L [--sudo-key //Alice]`
+- `admin set-weights-rate-limit --netuid N --limit L [--sudo-key //Alice]`
+- `admin set-commit-reveal --netuid N --enabled true|false [--sudo-key //Alice]`
+- `admin set-difficulty --netuid N --difficulty D [--sudo-key //Alice]`
+- `admin set-activity-cutoff --netuid N --cutoff C [--sudo-key //Alice]`
+- `admin raw --call EXTRINSIC --args '[N, V]' [--sudo-key //Alice]` — generic escape hatch
+- `admin list` → all known AdminUtils parameters with descriptions and arg types
+
 ### Live Mode
 ```bash
 agcli --live view dynamic          # poll prices with delta tracking
@@ -277,7 +318,24 @@ let client = Client::connect("wss://entrypoint-finney.opentensor.ai:443").await?
 let balance = client.get_balance_ss58("5Gx...").await?;
 let subnets = client.get_all_subnets().await?;
 let metagraph = client.get_metagraph(1.into()).await?;
-// See docs/commands/ for full SDK API
+
+// Localnet SDK
+use agcli::localnet::{self, LocalnetConfig};
+let info = localnet::start(&LocalnetConfig::default()).await?;  // start Docker chain
+let status = localnet::status("agcli_localnet", 9944).await?;   // check status
+localnet::stop("agcli_localnet")?;                               // stop chain
+
+// Scaffold SDK — one call for full test environment
+use agcli::scaffold::{self, ScaffoldConfig};
+let result = scaffold::run(&ScaffoldConfig::default()).await?;
+// result.endpoint, result.subnets[0].netuid, result.subnets[0].neurons[0].ss58
+
+// Admin SDK
+use agcli::admin;
+let alice = sp_core::sr25519::Pair::from_string("//Alice", None)?;
+admin::set_tempo(&client, &alice, 1, 100).await?;
+admin::set_max_allowed_validators(&client, &alice, 1, 8).await?;
+admin::raw_admin_call(&client, &alice, "sudo_set_bonds_moving_average", vec![Value::u128(1), Value::u128(900000)]).await?;
 ```
 
 ### Networks

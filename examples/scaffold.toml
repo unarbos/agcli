@@ -1,0 +1,83 @@
+# Example scaffold configuration for `agcli localnet scaffold --config scaffold.toml`
+#
+# All fields are optional — sensible defaults are used when omitted.
+# Default (no config): 1 subnet, 3 neurons (1 validator + 2 miners), standard hyperparams.
+
+[chain]
+# Docker image for the localnet
+image = "ghcr.io/opentensor/subtensor-localnet:devnet-ready"
+# Container name (change to run multiple chains simultaneously)
+container = "agcli_localnet"
+# Host port for WebSocket RPC
+port = 9944
+# Set to false to connect to an already-running chain
+start = true
+# Seconds to wait for chain readiness
+timeout = 120
+
+# ── Subnet 1: Validator/Miner test network ──────────────────────────────────
+
+[[subnet]]
+tempo = 100                  # Blocks per epoch
+max_allowed_validators = 8   # Max validator slots
+min_allowed_weights = 1      # Min weights a validator must set
+weights_rate_limit = 0       # 0 = no rate limit
+commit_reveal = false        # Disable commit-reveal for simpler testing
+# immunity_period = 100      # Uncomment to set immunity period
+# max_allowed_uids = 256     # Uncomment to set max UIDs
+# max_weight_limit = 65535   # Uncomment to set max weight value
+# activity_cutoff = 5000     # Uncomment to set activity cutoff
+
+[[subnet.neuron]]
+name = "validator1"
+fund_tao = 1000.0       # Fund 1000 TAO from Alice
+register = true          # Register on the subnet
+
+[[subnet.neuron]]
+name = "miner1"
+fund_tao = 100.0
+register = true
+
+[[subnet.neuron]]
+name = "miner2"
+fund_tao = 100.0
+register = true
+
+# ── Subnet 2: Large network with many miners (uncomment to use) ─────────────
+
+# [[subnet]]
+# tempo = 50
+# max_allowed_validators = 16
+# min_allowed_weights = 4
+# weights_rate_limit = 0
+# commit_reveal = false
+#
+# [[subnet.neuron]]
+# name = "validator1"
+# fund_tao = 2000.0
+# register = true
+#
+# [[subnet.neuron]]
+# name = "validator2"
+# fund_tao = 1000.0
+# register = true
+#
+# [[subnet.neuron]]
+# name = "miner1"
+# fund_tao = 50.0
+# register = true
+#
+# [[subnet.neuron]]
+# name = "miner2"
+# fund_tao = 50.0
+# register = true
+#
+# [[subnet.neuron]]
+# name = "miner3"
+# fund_tao = 50.0
+# register = true
+#
+# [[subnet.neuron]]
+# name = "miner4"
+# fund_tao = 50.0
+# register = true
