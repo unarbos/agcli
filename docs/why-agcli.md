@@ -261,6 +261,100 @@ No browser, no docs site, no context switching. The knowledge is in the binary.
 
 ---
 
+## Philosophy: Subnets, incentives, and why tooling matters
+
+Bittensor is not a blockchain with a token bolted on — it is an **incentive machine** where subnets define games, validators referee them, and miners compete to win. Understanding this changes how you think about the tools you use.
+
+The ideas below draw from the [Chi subnet knowledge base](https://github.com/unconst/Chi), the operational patterns of production subnets, and the design principles embedded in agcli itself.
+
+### Subnets are incentive games, not applications
+
+A subnet is a single measurable question: *"Who can produce the best reasoning traces?"* or *"Who can serve inference fastest at the lowest cost?"* If the answer contains "and," the subnet is unfocused. Every subnet must answer what it measures in **one sentence** — this forces ruthless clarity in mechanism design.
+
+The chain doesn't care what the game is. It only cares about the weight matrix validators submit. Yuma consensus aggregates those weights, rewards agreement, penalizes outliers, and distributes emissions. The game lives entirely in the validator's scoring logic.
+
+This is why agcli embeds `explain yuma`, `explain tempo`, `explain emissions`, and 28 other topics directly in the binary — operators need to understand the incentive mechanics they are participating in, not just the CLI flags they are typing.
+
+### Validators define the game; miners figure out how to play
+
+Chi's most distinctive doctrine: **only write the validator**. The validator defines what gets measured and how it gets scored. Miners infer how to win. Publishing miner reference implementations constrains the solution space and stifles innovation.
+
+This has a direct operational consequence: validators are the critical infrastructure. They need:
+- **Speed** — weight-setting within tempo windows, not minutes of Python startup overhead
+- **Reliability** — stale-while-error caching and endpoint fallback so a chain hiccup doesn't break scoring
+- **Auditability** — `diff subnet`, `audit`, and `--at-block` queries to detect anomalies across blocks
+- **Safety** — spending limits and `--dry-run` to prevent costly mistakes in automated pipelines
+
+agcli was built for this role. A validator that invokes the CLI 500 times per day saves 20+ minutes on startup alone. Request coalescing means 10 concurrent metagraph queries become 1 RPC call. Batch mode guarantees the pipeline never hangs waiting for input.
+
+### Trust no single validator
+
+A central axiom from Chi: **validators are NOT individually trustworthy**. Any individual validator can share evaluation data with their own miners, bias scores, or collude. What prevents this is *stake-weighted consensus* — Yuma clips outlier weights and rewards agreement across the full validator set. No single actor can dominate.
+
+This is why agcli's `subscribe events` and `diff subnet` commands matter. They give operators real-time and historical visibility into weight distributions, emission flows, and metagraph changes. If a validator is gaming scores, you can see it in the data.
+
+### Secret eval sets always fail
+
+If a validator holds a secret set of test cases and scores miners against it, that secret **will leak** — the validator can simply tell their own miners the answers. Chi marks this pattern as FORBIDDEN.
+
+Trustworthy ground truth comes from:
+- **Deterministic synthetic generation** — tasks generated from public seeds, reproducible by any validator
+- **External ground truth after deadlines** — real-world data that becomes available only after miners commit answers
+- **Adversarial competition** — one team generates challenges, another solves them; truth emerges from competition
+- **Hardware attestation** — TEE cryptographic proofs that can't be faked
+
+agcli's commit-reveal support (`weights commit-reveal --wait --mev`) ties directly into this. Weight submission itself is a trust problem — if weights are visible in the mempool, other validators can copy them. Commit-reveal with ML-KEM-768 encryption ensures your weights stay private until the reveal window.
+
+### Coldkeys are not sybil-proof; economics are
+
+Anyone can create unlimited coldkeys. The common mistake of "one best hotkey per coldkey" does nothing — the attacker just creates more coldkeys. The actual sybil protection is **economic**: 256 UID slots per subnet with dynamic registration costs that rise as slots fill. Registration cost approximates expected reward per slot, creating equilibrium.
+
+This is why agcli surfaces `subnet cost` (registration cost), `view dynamic` (pool economics), and `diff network` (issuance tracking). Operators need to see the economic pressure in real time to understand whether their subnet's incentive structure is sound.
+
+### Eight canonical subnet patterns
+
+Chi defines eight design patterns based on what commodity the subnet produces:
+
+| Pattern | What miners do | Ground truth | Example |
+|---|---|---|---|
+| **Compute Auction** | Serve fungible compute, compete on price | Benchmark latency & throughput | Targon (SN4) |
+| **Capacity Market** | Provide always-on infrastructure | Usage-based verification | Chutes (SN64) |
+| **Data Indexing** | Curate unique datasets | Sample verification | Data Universe (SN13) |
+| **Prediction Market** | Predict future outcomes | Delayed real-world resolution | Synth Subnet |
+| **Time-Series Forecasting** | Sequential predictions | Baseline comparison (CRPS) | Zeus (SN18) |
+| **External Activity** | Perform third-party platform actions | API verification after deadline | Gittensor (SN74) |
+| **Adversarial Red/Blue** | Generate challenges + solve them | Truth emerges from competition | BitMind (SN34) |
+| **Container Execution** | Compete on code/model quality | Deterministic benchmarks | Affine (SN120) |
+
+Every pattern has different trust assumptions, scoring mechanisms, and operational requirements. agcli's `explain` topics cover the underlying primitives (Yuma consensus, emissions, AMM, commit-reveal) that all eight patterns build on. The `subnet health`, `subnet emissions`, and `subnet monitor` commands give operators pattern-agnostic visibility into any subnet's behavior.
+
+### Push compute to miners, not validators
+
+Validators should be cheap to run. Expensive validators cause centralization — only well-funded operators can afford to validate, reducing the validator set and weakening consensus. Miners already have infrastructure incentives; push compute costs to them.
+
+This principle drives agcli's design. A validator using agcli doesn't need a beefy machine just to interact with the chain. The CLI itself is a ~10 MB static binary. Three-layer caching minimizes RPC calls. Parallel queries across subnets use Tokio's work-stealing scheduler efficiently across whatever cores are available.
+
+### The knowledge is in the binary
+
+Bittensor has deep mechanics — AMM math, emission curves, consensus algorithms, governance structures — and operators often need to understand them while working in a terminal on a remote server. Opening a browser and searching docs breaks flow.
+
+agcli embeds 31 educational topics directly in the CLI:
+
+```bash
+agcli explain amm              # Constant-product AMM, slippage, pool depth
+agcli explain yuma             # Consensus mechanics, trust, rank, incentive
+agcli explain commit-reveal    # Two-phase weight submission
+agcli explain emissions        # Block emission → subnet split → validator/miner distribution
+agcli explain alpha            # Alpha tokens, staking, recycling, burning
+agcli explain registration     # Burn vs PoW, immunity period, UID recycling
+agcli explain governance       # Proposals, voting, senate/triumvirate
+agcli explain mev              # MEV protection, commit-reveal, sandwich prevention
+```
+
+Between the `explain` command, the `doctor` diagnostics, the `audit` security checks, and the three tiers of documentation (llm.txt for agents, command docs for developers, tutorials for newcomers), agcli tries to make Bittensor legible — not just usable.
+
+---
+
 ## Real-world scenarios
 
 ### Scenario: Validator automation
