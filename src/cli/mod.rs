@@ -964,6 +964,15 @@ pub enum SubnetCommands {
         /// Maximum number of attempts before giving up (default: unlimited)
         #[arg(long)]
         max_attempts: Option<u64>,
+        /// Register all hotkeys in the wallet sequentially
+        #[arg(long)]
+        all_hotkeys: bool,
+        /// Subscribe to best (non-finalized) blocks for lower latency (~50% faster)
+        #[arg(long)]
+        fast: bool,
+        /// Watch-only mode — monitor slots and burn cost without attempting registration
+        #[arg(long)]
+        watch: bool,
     },
 }
 

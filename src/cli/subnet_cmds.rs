@@ -960,11 +960,88 @@ pub(super) async fn handle_subnet(
             netuid,
             max_cost,
             max_attempts,
+            all_hotkeys,
+            fast,
+            watch,
         } => {
-            let (pair, hk) =
-                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             let max_burn = max_cost.map(Balance::from_tao);
-            handle_snipe(client, &pair, &hk, netuid, max_burn, max_attempts, output).await
+            if watch {
+                // Watch-only mode: no wallet needed
+                handle_snipe_watch(client, netuid, max_burn).await
+            } else if all_hotkeys {
+                // Multi-hotkey mode: register every hotkey in the wallet
+                let mut wallet = crate::cli::helpers::open_wallet(wallet_dir, wallet_name)?;
+                crate::cli::helpers::unlock_coldkey(&mut wallet, password)?;
+                let pair = wallet.coldkey()?.clone();
+                let hotkey_names = wallet.list_hotkeys()?;
+                if hotkey_names.is_empty() {
+                    anyhow::bail!("No hotkeys found in wallet '{}'.", wallet_name);
+                }
+                println!(
+                    "Found {} hotkeys to register: {}",
+                    hotkey_names.len(),
+                    hotkey_names.join(", ")
+                );
+                println!();
+                let mut registered = 0u32;
+                for hk_name in &hotkey_names {
+                    wallet.load_hotkey(hk_name)?;
+                    let hk_ss58 = wallet
+                        .hotkey_ss58()
+                        .map(|s| s.to_string())
+                        .ok_or_else(|| anyhow::anyhow!("Could not resolve hotkey '{}'", hk_name))?;
+                    println!(
+                        "── Registering hotkey: {} ({}) ──",
+                        hk_name,
+                        crate::utils::short_ss58(&hk_ss58)
+                    );
+                    match handle_snipe(
+                        client,
+                        &pair,
+                        &hk_ss58,
+                        netuid,
+                        max_burn,
+                        max_attempts,
+                        fast,
+                        output,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            registered += 1;
+                        }
+                        Err(e) => {
+                            eprintln!("  ✗ Failed for hotkey '{}': {}", hk_name, e);
+                            eprintln!("  Continuing with remaining hotkeys...");
+                        }
+                    }
+                    println!();
+                }
+                println!(
+                    "Registered {}/{} hotkeys on SN{}.",
+                    registered,
+                    hotkey_names.len(),
+                    netuid
+                );
+                if registered == 0 {
+                    anyhow::bail!("No hotkeys were successfully registered.");
+                }
+                Ok(())
+            } else {
+                let (pair, hk) =
+                    unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+                handle_snipe(
+                    client,
+                    &pair,
+                    &hk,
+                    netuid,
+                    max_burn,
+                    max_attempts,
+                    fast,
+                    output,
+                )
+                .await
+            }
         }
     }
 }
@@ -983,6 +1060,7 @@ pub(super) async fn handle_subnet(
 /// On `TooManyRegistrationsThisBlock`, waits for the very next block instead of
 /// sleeping a fixed 12 seconds. On permanent errors (`AlreadyRegistered`,
 /// `InvalidNetuid`, etc.) it aborts immediately.
+#[allow(clippy::too_many_arguments)]
 async fn handle_snipe(
     client: &Client,
     pair: &sp_core::sr25519::Pair,
@@ -990,6 +1068,7 @@ async fn handle_snipe(
     netuid: u16,
     max_burn: Option<Balance>,
     max_attempts: Option<u64>,
+    fast: bool,
     output: crate::cli::OutputFormat,
 ) -> Result<()> {
     use std::io::Write;
@@ -1011,10 +1090,13 @@ async fn handle_snipe(
     }
 
     let balance = client.get_balance_ss58(&coldkey_ss58).await?;
-    let burn = info.burn.clone();
+    let burn = info.burn;
 
     println!("╔══════════════════════════════════════════════════════╗");
-    println!("║           REGISTRATION SNIPER — SN{}               ║", netuid);
+    println!(
+        "║           REGISTRATION SNIPER — SN{}               ║",
+        netuid
+    );
     println!("╚══════════════════════════════════════════════════════╝");
     println!();
     println!("  Hotkey:    {}", short_hk);
@@ -1027,6 +1109,9 @@ async fn handle_snipe(
     }
     if let Some(max) = max_attempts {
         println!("  Max tries: {}", max);
+    }
+    if fast {
+        println!("  Mode:      FAST (best-block, ~50% lower latency)");
     }
     println!();
 
@@ -1048,10 +1133,22 @@ async fn handle_snipe(
         );
     }
 
-    // ── Subscribe to finalized blocks ──
-    println!("Subscribing to blocks... (Ctrl+C to abort)\n");
+    // ── Subscribe to blocks ──
+    let mode_label = if fast {
+        "best (non-finalized)"
+    } else {
+        "finalized"
+    };
+    println!(
+        "Subscribing to {} blocks... (Ctrl+C to abort)\n",
+        mode_label
+    );
     let subxt_client = client.subxt();
-    let mut block_sub = subxt_client.blocks().subscribe_finalized().await?;
+    let mut block_sub = if fast {
+        subxt_client.blocks().subscribe_best().await?
+    } else {
+        subxt_client.blocks().subscribe_finalized().await?
+    };
     let mut attempt: u64 = 0;
     let start = std::time::Instant::now();
 
@@ -1061,7 +1158,11 @@ async fn handle_snipe(
             Err(e) => {
                 eprintln!("  ⚠ Block stream error: {}. Reconnecting...", e);
                 // Reconnect
-                block_sub = subxt_client.blocks().subscribe_finalized().await?;
+                block_sub = if fast {
+                    subxt_client.blocks().subscribe_best().await?
+                } else {
+                    subxt_client.blocks().subscribe_finalized().await?
+                };
                 continue;
             }
         };
@@ -1093,7 +1194,10 @@ async fn handle_snipe(
         };
 
         if !info.registration_allowed {
-            print!("\r  Block #{}: Registration disabled, waiting...          ", block_num);
+            print!(
+                "\r  Block #{}: Registration disabled, waiting...          ",
+                block_num
+            );
             std::io::stderr().flush().ok();
             continue;
         }
@@ -1169,7 +1273,10 @@ async fn handle_snipe(
                 // Classify the error
                 if msg.contains("AlreadyRegistered") || msg.contains("HotKeyAlreadyRegistered") {
                     println!();
-                    println!("\n  ✓ Hotkey {} is already registered on SN{}.", short_hk, netuid);
+                    println!(
+                        "\n  ✓ Hotkey {} is already registered on SN{}.",
+                        short_hk, netuid
+                    );
                     return Ok(());
                 } else if msg.contains("InvalidNetuid") || msg.contains("NetworkDoesNotExist") {
                     println!();
@@ -1191,6 +1298,117 @@ async fn handle_snipe(
                 }
             }
         }
+    }
+
+    anyhow::bail!("Block subscription ended unexpectedly.")
+}
+
+// ──────── Snipe Watch (monitor-only) ────────
+
+/// Watch a subnet's registration state without attempting to register.
+/// Streams block-by-block updates: slot count, burn cost, registration status.
+async fn handle_snipe_watch(client: &Client, netuid: u16, max_burn: Option<Balance>) -> Result<()> {
+    use std::io::Write;
+    let nuid = NetUid(netuid);
+
+    let info = client
+        .get_subnet_info(nuid)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Subnet SN{} does not exist", netuid))?;
+
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!(
+        "║          REGISTRATION MONITOR — SN{}               ║",
+        netuid
+    );
+    println!("╚══════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Mode:      WATCH ONLY (no registration attempts)");
+    println!("  Capacity:  {}/{}", info.n, info.max_n);
+    println!("  Burn cost: {}", info.burn.display_tao());
+    println!(
+        "  Reg open:  {}",
+        if info.registration_allowed {
+            "yes"
+        } else {
+            "no"
+        }
+    );
+    if let Some(ref cap) = max_burn {
+        println!("  Alert if:  burn ≤ {}", cap.display_tao());
+    }
+    println!();
+    println!("Subscribing to finalized blocks... (Ctrl+C to stop)\n");
+
+    let subxt_client = client.subxt();
+    let mut block_sub = subxt_client.blocks().subscribe_finalized().await?;
+    let mut prev_n = info.n;
+    let mut prev_burn = info.burn.rao();
+
+    while let Some(block_result) = block_sub.next().await {
+        let block = match block_result {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("  ⚠ Block stream error: {}. Reconnecting...", e);
+                block_sub = subxt_client.blocks().subscribe_finalized().await?;
+                continue;
+            }
+        };
+        let block_num = block.number();
+
+        let info_opt = client.get_subnet_info(nuid).await?;
+        let info = match info_opt {
+            Some(i) => i,
+            None => {
+                eprintln!("  ⚠ Block #{}: Subnet SN{} disappeared!", block_num, netuid);
+                continue;
+            }
+        };
+
+        // Detect changes
+        let slot_delta = info.n as i32 - prev_n as i32;
+        let burn_delta = info.burn.rao() as i64 - prev_burn as i64;
+        let slots_open = info.max_n.saturating_sub(info.n);
+        let reg_label = if info.registration_allowed {
+            "OPEN"
+        } else {
+            "CLOSED"
+        };
+
+        let mut alerts = Vec::new();
+        if slot_delta != 0 {
+            alerts.push(format!("slots Δ{:+}", slot_delta));
+        }
+        if burn_delta != 0 {
+            let tao_delta = burn_delta as f64 / 1_000_000_000.0;
+            alerts.push(format!("burn Δ{:+.4}τ", tao_delta));
+        }
+        if let Some(ref cap) = max_burn {
+            if info.burn.rao() <= cap.rao() && info.registration_allowed && slots_open > 0 {
+                alerts.push("★ SNIPE WINDOW".to_string());
+            }
+        }
+
+        let alert_str = if alerts.is_empty() {
+            String::new()
+        } else {
+            format!("  [{}]", alerts.join(", "))
+        };
+
+        print!(
+            "\r  #{} | {}/{} slots ({} free) | burn {} | reg {} {}          ",
+            block_num,
+            info.n,
+            info.max_n,
+            slots_open,
+            info.burn.display_tao(),
+            reg_label,
+            alert_str,
+        );
+        std::io::stdout().flush().ok();
+
+        prev_n = info.n;
+        prev_burn = info.burn.rao();
     }
 
     anyhow::bail!("Block subscription ended unexpectedly.")

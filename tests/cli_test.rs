@@ -3291,16 +3291,20 @@ fn parse_utils_convert_tao_to_rao() {
 
 #[test]
 fn parse_subnet_snipe_basic() {
-    let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "snipe", "--netuid", "97",
-    ]);
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subnet", "snipe", "--netuid", "97"]);
     assert!(cli.is_ok(), "subnet snipe: {:?}", cli.err());
 }
 
 #[test]
 fn parse_subnet_snipe_with_max_cost() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "snipe", "--netuid", "97", "--max-cost", "1.5",
+        "agcli",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "97",
+        "--max-cost",
+        "1.5",
     ]);
     assert!(cli.is_ok(), "subnet snipe --max-cost: {:?}", cli.err());
 }
@@ -3308,7 +3312,13 @@ fn parse_subnet_snipe_with_max_cost() {
 #[test]
 fn parse_subnet_snipe_with_max_attempts() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "subnet", "snipe", "--netuid", "1", "--max-attempts", "100",
+        "agcli",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "1",
+        "--max-attempts",
+        "100",
     ]);
     assert!(cli.is_ok(), "subnet snipe --max-attempts: {:?}", cli.err());
 }
@@ -3316,8 +3326,87 @@ fn parse_subnet_snipe_with_max_attempts() {
 #[test]
 fn parse_subnet_snipe_all_opts() {
     let cli = agcli::cli::Cli::try_parse_from([
-        "agcli", "--password", "test", "--batch", "subnet", "snipe",
-        "--netuid", "97", "--max-cost", "0.5", "--max-attempts", "50",
+        "agcli",
+        "--password",
+        "test",
+        "--batch",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "97",
+        "--max-cost",
+        "0.5",
+        "--max-attempts",
+        "50",
     ]);
     assert!(cli.is_ok(), "subnet snipe all opts: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_snipe_fast_mode() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "subnet", "snipe", "--netuid", "97", "--fast"]);
+    assert!(cli.is_ok(), "subnet snipe --fast: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_snipe_watch_mode() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "subnet", "snipe", "--netuid", "1", "--watch"]);
+    assert!(cli.is_ok(), "subnet snipe --watch: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_snipe_watch_with_max_cost() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "1",
+        "--watch",
+        "--max-cost",
+        "2.0",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "subnet snipe --watch --max-cost: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_subnet_snipe_all_hotkeys() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--password",
+        "test",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "97",
+        "--all-hotkeys",
+    ]);
+    assert!(cli.is_ok(), "subnet snipe --all-hotkeys: {:?}", cli.err());
+}
+
+#[test]
+fn parse_subnet_snipe_fast_with_all_opts() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--password",
+        "test",
+        "--batch",
+        "subnet",
+        "snipe",
+        "--netuid",
+        "97",
+        "--fast",
+        "--max-cost",
+        "1.0",
+        "--max-attempts",
+        "25",
+        "--all-hotkeys",
+    ]);
+    assert!(cli.is_ok(), "subnet snipe full combo: {:?}", cli.err());
 }
