@@ -5633,3 +5633,151 @@ fn parse_transfer_large_amount() {
     ]);
     assert!(cli.is_ok(), "transfer 21M TAO: {:?}", cli.err());
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// Wallet name CLI parsing tests (edge cases for --name, --wallet, --hotkey)
+// ══════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_wallet_create_valid_names() {
+    for name in &["default", "my-wallet", "wallet_1", "Alice", "test123"] {
+        let cli = agcli::cli::Cli::try_parse_from([
+            "agcli", "wallet", "create", "--name", name, "--password", "test",
+        ]);
+        assert!(cli.is_ok(), "valid name '{}' should parse: {:?}", name, cli.err());
+    }
+}
+
+#[test]
+fn parse_wallet_create_empty_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "create", "--name", "", "--password", "test",
+    ]);
+    // clap accepts empty string, but validate_name will reject it at runtime
+    assert!(cli.is_ok(), "empty name should parse (validation is runtime)");
+}
+
+#[test]
+fn parse_wallet_create_long_name() {
+    let long_name = "a".repeat(100);
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "create", "--name", &long_name, "--password", "test",
+    ]);
+    // clap accepts any string, runtime validation catches length
+    assert!(cli.is_ok(), "long name should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_global_wallet_flag() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--wallet", "my-wallet", "balance",
+    ]);
+    assert!(cli.is_ok());
+    let cli = cli.unwrap();
+    assert_eq!(cli.wallet, "my-wallet");
+}
+
+#[test]
+fn parse_wallet_global_wallet_short() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "-w", "custom", "balance",
+    ]);
+    assert!(cli.is_ok());
+    let cli = cli.unwrap();
+    assert_eq!(cli.wallet, "custom");
+}
+
+#[test]
+fn parse_wallet_global_hotkey_flag() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--hotkey", "miner1", "balance",
+    ]);
+    assert!(cli.is_ok());
+    let cli = cli.unwrap();
+    assert_eq!(cli.hotkey, "miner1");
+}
+
+#[test]
+fn parse_wallet_new_hotkey_valid_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "new-hotkey", "--name", "validator-1",
+    ]);
+    assert!(cli.is_ok(), "valid hotkey name: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_new_hotkey_empty_name_fails() {
+    // --name is required for new-hotkey, clap should enforce this
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "new-hotkey",
+    ]);
+    assert!(cli.is_err(), "new-hotkey without --name should fail");
+}
+
+#[test]
+fn parse_wallet_import_with_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "import",
+        "--name", "imported-wallet",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "--password", "test",
+    ]);
+    assert!(cli.is_ok(), "import with name: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_regen_hotkey_with_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-hotkey",
+        "--name", "hot-1",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    ]);
+    assert!(cli.is_ok(), "regen-hotkey with name: {:?}", cli.err());
+}
+
+// Additional serve IP validation tests (runtime validation tests)
+
+#[test]
+fn parse_serve_axon_max_port_value() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "serve", "axon",
+        "--netuid", "1",
+        "--ip", "8.8.8.8",
+        "--port", "65535",
+    ]);
+    assert!(cli.is_ok(), "max port 65535: {:?}", cli.err());
+}
+
+#[test]
+fn parse_serve_axon_negative_port() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "serve", "axon",
+        "--netuid", "1",
+        "--ip", "1.2.3.4",
+        "--port", "-1",
+    ]);
+    assert!(cli.is_err(), "negative port should fail u16 parse");
+}
+
+#[test]
+fn parse_serve_axon_non_numeric_port() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "serve", "axon",
+        "--netuid", "1",
+        "--ip", "1.2.3.4",
+        "--port", "abc",
+    ]);
+    assert!(cli.is_err(), "non-numeric port should fail");
+}
+
+#[test]
+fn parse_serve_axon_protocol_overflow() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "serve", "axon",
+        "--netuid", "1",
+        "--ip", "1.2.3.4",
+        "--port", "8080",
+        "--protocol", "256",
+    ]);
+    assert!(cli.is_err(), "protocol 256 should overflow u8");
+}

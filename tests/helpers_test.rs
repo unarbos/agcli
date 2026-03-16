@@ -3,7 +3,8 @@
 
 use agcli::cli::helpers::{
     parse_children, parse_weight_pairs, validate_amount, validate_delegate_take,
-    validate_emission_weights, validate_max_cost, validate_symbol, validate_take_pct,
+    validate_emission_weights, validate_ipv4, validate_max_cost, validate_name, validate_symbol,
+    validate_take_pct,
 };
 use agcli::utils::explain;
 
@@ -1147,4 +1148,252 @@ fn validate_delegate_take_nan_rejects() {
 fn validate_delegate_take_way_over_rejects() {
     let result = validate_delegate_take(100.0);
     assert!(result.is_err(), "100% take should fail");
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// validate_name tests (wallet/hotkey name validation)
+// ══════════════════════════════════════════════════════════════════════
+
+#[test]
+fn validate_name_valid_simple() {
+    assert!(validate_name("default", "wallet").is_ok());
+    assert!(validate_name("my_wallet", "wallet").is_ok());
+    assert!(validate_name("wallet-1", "wallet").is_ok());
+    assert!(validate_name("Alice", "hotkey").is_ok());
+    assert!(validate_name("test123", "wallet").is_ok());
+}
+
+#[test]
+fn validate_name_valid_boundary() {
+    // Max length (64 chars)
+    let name = "a".repeat(64);
+    assert!(validate_name(&name, "wallet").is_ok());
+}
+
+#[test]
+fn validate_name_empty_rejects() {
+    let result = validate_name("", "wallet");
+    assert!(result.is_err(), "empty name should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("cannot be empty"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_name_whitespace_only_rejects() {
+    let result = validate_name("   ", "wallet");
+    assert!(result.is_err(), "whitespace-only should fail");
+}
+
+#[test]
+fn validate_name_too_long_rejects() {
+    let name = "a".repeat(65);
+    let result = validate_name(&name, "wallet");
+    assert!(result.is_err(), "65-char name should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("too long"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_name_path_traversal_dotdot_rejects() {
+    let result = validate_name("../etc/passwd", "wallet");
+    assert!(result.is_err(), "path traversal should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("path separators"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_name_path_traversal_slash_rejects() {
+    assert!(validate_name("foo/bar", "wallet").is_err());
+    assert!(validate_name("foo\\bar", "wallet").is_err());
+}
+
+#[test]
+fn validate_name_absolute_path_rejects() {
+    assert!(validate_name("/etc/passwd", "wallet").is_err());
+    assert!(validate_name("\\\\server\\share", "wallet").is_err());
+}
+
+#[test]
+fn validate_name_hidden_file_rejects() {
+    let result = validate_name(".hidden", "wallet");
+    assert!(result.is_err(), "hidden name should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("starts with a dot"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_name_special_chars_rejects() {
+    assert!(validate_name("wallet name", "wallet").is_err(), "spaces should fail");
+    assert!(validate_name("wallet@home", "wallet").is_err(), "@ should fail");
+    assert!(validate_name("wallet#1", "wallet").is_err(), "# should fail");
+    assert!(validate_name("wallet$", "wallet").is_err(), "$ should fail");
+    assert!(validate_name("wallet!", "wallet").is_err(), "! should fail");
+    assert!(validate_name("wallet&more", "wallet").is_err(), "& should fail");
+    assert!(validate_name("wallet;rm -rf /", "wallet").is_err(), "; injection should fail");
+}
+
+#[test]
+fn validate_name_unicode_rejects() {
+    assert!(validate_name("wället", "wallet").is_err(), "umlaut should fail");
+    assert!(validate_name("钱包", "wallet").is_err(), "CJK should fail");
+    assert!(validate_name("wallet🔑", "wallet").is_err(), "emoji should fail");
+}
+
+#[test]
+fn validate_name_reserved_windows_rejects() {
+    assert!(validate_name("CON", "wallet").is_err(), "CON reserved");
+    assert!(validate_name("con", "wallet").is_err(), "con reserved (case-insensitive)");
+    assert!(validate_name("PRN", "wallet").is_err(), "PRN reserved");
+    assert!(validate_name("NUL", "wallet").is_err(), "NUL reserved");
+    assert!(validate_name("COM1", "wallet").is_err(), "COM1 reserved");
+    assert!(validate_name("LPT1", "wallet").is_err(), "LPT1 reserved");
+    assert!(validate_name("AUX", "wallet").is_err(), "AUX reserved");
+}
+
+#[test]
+fn validate_name_hyphens_underscores_ok() {
+    assert!(validate_name("my-wallet", "wallet").is_ok());
+    assert!(validate_name("my_wallet", "wallet").is_ok());
+    assert!(validate_name("my-wallet_2", "wallet").is_ok());
+    assert!(validate_name("_leading", "wallet").is_ok());
+    assert!(validate_name("-leading", "wallet").is_ok());
+}
+
+#[test]
+fn validate_name_numbers_ok() {
+    assert!(validate_name("123", "wallet").is_ok());
+    assert!(validate_name("0", "wallet").is_ok());
+    assert!(validate_name("wallet99", "wallet").is_ok());
+}
+
+#[test]
+fn validate_name_label_in_error() {
+    let result = validate_name("../bad", "hotkey");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("hotkey"), "error should mention 'hotkey': {}", msg);
+
+    let result = validate_name("../bad", "wallet");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("wallet"), "error should mention 'wallet': {}", msg);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// validate_ipv4 tests
+// ══════════════════════════════════════════════════════════════════════
+
+#[test]
+fn validate_ipv4_valid_public() {
+    assert!(validate_ipv4("1.2.3.4").is_ok());
+    assert!(validate_ipv4("8.8.8.8").is_ok());
+    assert!(validate_ipv4("203.0.113.1").is_ok());
+    assert!(validate_ipv4("100.64.0.1").is_ok());
+}
+
+#[test]
+fn validate_ipv4_returns_correct_u128() {
+    let result = validate_ipv4("1.2.3.4").unwrap();
+    let expected: u128 = (1 << 24) | (2 << 16) | (3 << 8) | 4;
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn validate_ipv4_max_octets() {
+    let result = validate_ipv4("254.254.254.254").unwrap();
+    assert!(result > 0);
+}
+
+#[test]
+fn validate_ipv4_rejects_zeroes() {
+    let result = validate_ipv4("0.0.0.0");
+    assert!(result.is_err(), "all-zeros should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("unspecified"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_ipv4_rejects_broadcast() {
+    let result = validate_ipv4("255.255.255.255");
+    assert!(result.is_err(), "broadcast should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("broadcast"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_ipv4_rejects_loopback() {
+    let result = validate_ipv4("127.0.0.1");
+    assert!(result.is_err(), "loopback should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("loopback"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_ipv4_rejects_loopback_range() {
+    assert!(validate_ipv4("127.0.0.1").is_err());
+    assert!(validate_ipv4("127.255.255.254").is_err());
+    assert!(validate_ipv4("127.1.2.3").is_err());
+}
+
+#[test]
+fn validate_ipv4_warns_private_but_allows() {
+    // Private ranges should succeed (just warn to stderr)
+    assert!(validate_ipv4("10.0.0.1").is_ok());
+    assert!(validate_ipv4("10.255.255.255").is_ok());
+    assert!(validate_ipv4("172.16.0.1").is_ok());
+    assert!(validate_ipv4("172.31.255.255").is_ok());
+    assert!(validate_ipv4("192.168.0.1").is_ok());
+    assert!(validate_ipv4("192.168.255.255").is_ok());
+}
+
+#[test]
+fn validate_ipv4_rejects_too_few_octets() {
+    assert!(validate_ipv4("1.2.3").is_err());
+    assert!(validate_ipv4("1.2").is_err());
+    assert!(validate_ipv4("1").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_too_many_octets() {
+    assert!(validate_ipv4("1.2.3.4.5").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_octet_overflow() {
+    assert!(validate_ipv4("256.0.0.1").is_err());
+    assert!(validate_ipv4("1.2.3.999").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_non_numeric() {
+    assert!(validate_ipv4("abc.def.ghi.jkl").is_err());
+    assert!(validate_ipv4("1.2.3.x").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_empty() {
+    assert!(validate_ipv4("").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_leading_zeros() {
+    let result = validate_ipv4("01.02.03.04");
+    assert!(result.is_err(), "leading zeros should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("leading zeros"), "msg: {}", msg);
+}
+
+#[test]
+fn validate_ipv4_rejects_negative() {
+    assert!(validate_ipv4("-1.0.0.1").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_spaces() {
+    assert!(validate_ipv4("1.2.3. 4").is_err());
+    assert!(validate_ipv4(" 1.2.3.4").is_err());
+}
+
+#[test]
+fn validate_ipv4_rejects_hostname() {
+    assert!(validate_ipv4("example.com").is_err());
+    assert!(validate_ipv4("localhost").is_err());
 }

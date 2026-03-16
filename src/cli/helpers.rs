@@ -56,6 +56,7 @@ pub fn spinner(msg: &str) -> indicatif::ProgressBar {
 }
 
 pub fn open_wallet(wallet_dir: &str, wallet_name: &str) -> Result<Wallet> {
+    validate_name(wallet_name, "wallet")?;
     let raw = format!("{}/{}", wallet_dir, wallet_name);
     // Expand ~ so the existence check works outside a shell context.
     let path = if let Some(rest) = raw.strip_prefix("~/") {
@@ -202,6 +203,127 @@ pub fn validate_max_cost(max_cost: f64) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// Validate a wallet or hotkey name. Rejects path traversal, special characters,
+/// and names that would be unsafe as directory/file names.
+pub fn validate_name(name: &str, label: &str) -> Result<()> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Invalid {} name: cannot be empty.\n  Tip: use a simple alphanumeric name like \"default\" or \"mywallet\".",
+            label
+        );
+    }
+    if trimmed.len() > 64 {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" is too long ({} chars, max 64).",
+            label, trimmed, trimmed.len()
+        );
+    }
+    // Path traversal
+    if trimmed.contains("..") || trimmed.contains('/') || trimmed.contains('\\') {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" contains path separators or traversal sequences.\n  Tip: use a simple name without '/', '\\', or '..'.",
+            label, trimmed
+        );
+    }
+    // Absolute paths (Unix or Windows)
+    if trimmed.starts_with('/') || trimmed.starts_with('\\') || (trimmed.len() >= 2 && trimmed.as_bytes()[1] == b':') {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" looks like an absolute path. Use a simple name.",
+            label, trimmed
+        );
+    }
+    // Reserved or hidden names
+    if trimmed.starts_with('.') {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" starts with a dot (hidden file).\n  Tip: use a name that starts with a letter or number.",
+            label, trimmed
+        );
+    }
+    // Only allow alphanumeric, hyphens, underscores
+    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" contains invalid characters.\n  Tip: use only letters, numbers, hyphens, and underscores.",
+            label, trimmed
+        );
+    }
+    // OS reserved names (Windows)
+    let upper = trimmed.to_uppercase();
+    let reserved = ["CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+    if reserved.contains(&upper.as_str()) {
+        anyhow::bail!(
+            "Invalid {} name: \"{}\" is a reserved system name.",
+            label, trimmed
+        );
+    }
+    Ok(())
+}
+
+/// Validate an IPv4 address string and return the numeric representation.
+/// Rejects broadcast (255.255.255.255), unspecified (0.0.0.0), and warns on private ranges.
+pub fn validate_ipv4(ip: &str) -> Result<u128> {
+    let parts: Vec<&str> = ip.split('.').collect();
+    if parts.len() != 4 {
+        anyhow::bail!(
+            "Invalid IPv4 address: \"{}\". Expected format: A.B.C.D (e.g., 1.2.3.4).",
+            ip
+        );
+    }
+    let mut octets = [0u8; 4];
+    for (i, part) in parts.iter().enumerate() {
+        // Reject leading zeros (ambiguous: octal vs decimal)
+        if part.len() > 1 && part.starts_with('0') {
+            anyhow::bail!(
+                "Invalid IPv4 address: \"{}\" — octet {} has leading zeros. Use {} instead.",
+                ip, i + 1, part.trim_start_matches('0')
+            );
+        }
+        octets[i] = part.parse::<u8>().map_err(|_| {
+            anyhow::anyhow!(
+                "Invalid IPv4 address: \"{}\" — octet {} ('{}') is not a valid number (0–255).",
+                ip, i + 1, part
+            )
+        })?;
+    }
+    // Reject all-zeros
+    if octets == [0, 0, 0, 0] {
+        anyhow::bail!(
+            "Invalid IP address: 0.0.0.0 (unspecified). Use your actual public IP address."
+        );
+    }
+    // Reject broadcast
+    if octets == [255, 255, 255, 255] {
+        anyhow::bail!(
+            "Invalid IP address: 255.255.255.255 (broadcast). Use your actual public IP address."
+        );
+    }
+    // Reject loopback
+    if octets[0] == 127 {
+        anyhow::bail!(
+            "Invalid IP address: {} (loopback). Use your public IP address for serving on the network.",
+            ip
+        );
+    }
+    // Warn on private ranges (print warning but allow)
+    let is_private = matches!(
+        (octets[0], octets[1]),
+        (10, _) | (172, 16..=31) | (192, 168)
+    );
+    if is_private {
+        eprintln!(
+            "Warning: {} is a private IP address. Other nodes on the public network won't be able to reach you.\n  Tip: use your public IP address for serving.",
+            ip
+        );
+    }
+    let ip_u128 = ((octets[0] as u128) << 24)
+        | ((octets[1] as u128) << 16)
+        | ((octets[2] as u128) << 8)
+        | (octets[3] as u128);
+    Ok(ip_u128)
 }
 
 /// Validate a delegate take percentage is in the allowed range [0, 18].

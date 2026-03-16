@@ -19,6 +19,7 @@ pub async fn handle_wallet(
             password: cmd_password,
             no_mnemonic,
         } => {
+            crate::cli::helpers::validate_name(&name, "wallet")?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             let (wallet, coldkey_mnemonic, hotkey_mnemonic) =
@@ -193,6 +194,7 @@ pub async fn handle_wallet(
             mnemonic: cmd_mnemonic,
             password: cmd_password,
         } => {
+            crate::cli::helpers::validate_name(&name, "wallet")?;
             let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
@@ -234,6 +236,7 @@ pub async fn handle_wallet(
             name,
             mnemonic: cmd_mnemonic,
         } => {
+            crate::cli::helpers::validate_name(&name, "hotkey")?;
             let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let pair = crate::wallet::keypair::pair_from_mnemonic(&mnemonic)?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
@@ -256,6 +259,7 @@ pub async fn handle_wallet(
             Ok(())
         }
         WalletCommands::NewHotkey { name } => {
+            crate::cli::helpers::validate_name(&name, "hotkey")?;
             let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             let hotkey_path = std::path::PathBuf::from(wallet_dir)

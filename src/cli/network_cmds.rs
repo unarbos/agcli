@@ -954,19 +954,9 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
             protocol,
             version,
         } => {
+            let ip_u128 = crate::cli::helpers::validate_ipv4(&ip)?;
             let (pair, _hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
-            let ip_u128: u128 = {
-                let parts: Vec<u8> = ip.split('.').filter_map(|p| p.parse().ok()).collect();
-                if parts.len() == 4 {
-                    ((parts[0] as u128) << 24)
-                        | ((parts[1] as u128) << 16)
-                        | ((parts[2] as u128) << 8)
-                        | (parts[3] as u128)
-                } else {
-                    anyhow::bail!("Invalid IPv4 address: {}", ip);
-                }
-            };
             let axon = crate::types::chain_data::AxonInfo {
                 block: 0,
                 version,
@@ -1007,17 +997,8 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
                 let protocol = entry["protocol"].as_u64().unwrap_or(4) as u8;
                 let version = entry["version"].as_u64().unwrap_or(0) as u32;
 
-                let ip_u128: u128 = {
-                    let parts: Vec<u8> = ip.split('.').filter_map(|p| p.parse().ok()).collect();
-                    if parts.len() == 4 {
-                        ((parts[0] as u128) << 24)
-                            | ((parts[1] as u128) << 16)
-                            | ((parts[2] as u128) << 8)
-                            | (parts[3] as u128)
-                    } else {
-                        anyhow::bail!("Entry {}: invalid IPv4 address: {}", i, ip);
-                    }
-                };
+                let ip_u128 = crate::cli::helpers::validate_ipv4(ip)
+                    .map_err(|e| anyhow::anyhow!("Entry {}: {}", i, e))?;
 
                 let axon = crate::types::chain_data::AxonInfo {
                     block: 0,
