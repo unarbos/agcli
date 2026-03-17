@@ -222,7 +222,7 @@ pub async fn handle_wallet(
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             crate::cli::helpers::validate_password_strength(&password);
-            let wallet = Wallet::import_from_mnemonic(wallet_dir, "default", &mnemonic, &password)?;
+            let wallet = Wallet::import_from_mnemonic(wallet_dir, wallet_name, &mnemonic, &password)?;
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "coldkey": wallet.coldkey_ss58().unwrap_or(""),
@@ -244,7 +244,7 @@ pub async fn handle_wallet(
             let pair = crate::wallet::keypair::pair_from_mnemonic(&mnemonic)?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             let hotkey_path = std::path::PathBuf::from(wallet_dir)
-                .join("default")
+                .join(wallet_name)
                 .join("hotkeys")
                 .join(&name);
             if let Some(parent) = hotkey_path.parent() {
@@ -266,7 +266,7 @@ pub async fn handle_wallet(
             let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             let hotkey_path = std::path::PathBuf::from(wallet_dir)
-                .join("default")
+                .join(wallet_name)
                 .join("hotkeys")
                 .join(&name);
             if let Some(parent) = hotkey_path.parent() {

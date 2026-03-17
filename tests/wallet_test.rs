@@ -1479,3 +1479,144 @@ fn wallet_import_then_unlock_then_sign() {
     let sig = pair.sign(b"flow test");
     assert!(sr25519::Pair::verify(&sig, b"flow test", &pair.public()));
 }
+
+// ──── Regression tests: wallet_name passthrough (Bug #wallet-param-audit) ────
+//
+// These tests call handle_wallet() directly with wallet_name != "default" and verify
+// that keys end up in the correct directory — NOT in "default".
+
+#[tokio::test]
+async fn regen_coldkey_respects_wallet_name() {
+    use agcli::cli::wallet_cmds::handle_wallet;
+    use agcli::cli::{OutputFormat, WalletCommands};
+
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    let cmd = WalletCommands::RegenColdkey {
+        mnemonic: Some(mnemonic.to_string()),
+        password: Some("testpass".to_string()),
+    };
+
+    handle_wallet(cmd, base, "TWENTY_EIGHT", Some("testpass"), OutputFormat::Json)
+        .await
+        .unwrap();
+
+    // Coldkey must exist in TWENTY_EIGHT, not default
+    assert!(
+        dir.path().join("TWENTY_EIGHT").join("coldkey").exists(),
+        "coldkey should be in TWENTY_EIGHT/"
+    );
+    assert!(
+        !dir.path().join("default").join("coldkey").exists(),
+        "coldkey must NOT be in default/ — wallet_name was ignored"
+    );
+}
+
+#[tokio::test]
+async fn regen_hotkey_respects_wallet_name() {
+    use agcli::cli::wallet_cmds::handle_wallet;
+    use agcli::cli::{OutputFormat, WalletCommands};
+
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    let cmd = WalletCommands::RegenHotkey {
+        name: "myhot".to_string(),
+        mnemonic: Some(mnemonic.to_string()),
+    };
+
+    handle_wallet(cmd, base, "CUSTOM_WALLET", None, OutputFormat::Json)
+        .await
+        .unwrap();
+
+    // Hotkey must exist in CUSTOM_WALLET, not default
+    assert!(
+        dir.path()
+            .join("CUSTOM_WALLET")
+            .join("hotkeys")
+            .join("myhot")
+            .exists(),
+        "hotkey should be in CUSTOM_WALLET/hotkeys/"
+    );
+    assert!(
+        !dir.path().join("default").join("hotkeys").join("myhot").exists(),
+        "hotkey must NOT be in default/hotkeys/ — wallet_name was ignored"
+    );
+}
+
+#[tokio::test]
+async fn new_hotkey_respects_wallet_name() {
+    use agcli::cli::wallet_cmds::handle_wallet;
+    use agcli::cli::{OutputFormat, WalletCommands};
+
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    let cmd = WalletCommands::NewHotkey {
+        name: "newhot".to_string(),
+    };
+
+    handle_wallet(cmd, base, "MY_WALLET", None, OutputFormat::Json)
+        .await
+        .unwrap();
+
+    // Hotkey must exist in MY_WALLET, not default
+    assert!(
+        dir.path()
+            .join("MY_WALLET")
+            .join("hotkeys")
+            .join("newhot")
+            .exists(),
+        "hotkey should be in MY_WALLET/hotkeys/"
+    );
+    assert!(
+        !dir.path().join("default").join("hotkeys").join("newhot").exists(),
+        "hotkey must NOT be in default/hotkeys/ — wallet_name was ignored"
+    );
+}
+
+#[tokio::test]
+async fn regen_coldkey_does_not_touch_other_wallets() {
+    use agcli::cli::wallet_cmds::handle_wallet;
+    use agcli::cli::{OutputFormat, WalletCommands};
+
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    // Create a "default" wallet first
+    let (_, _, _) = Wallet::create(base, "default", "pw1", "default").unwrap();
+    let default_before =
+        std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
+    let default_mtime = default_before.modified().unwrap();
+
+    // Small delay to ensure mtime would change if file is rewritten
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    // Regen coldkey into a different wallet
+    let cmd = WalletCommands::RegenColdkey {
+        mnemonic: Some(mnemonic.to_string()),
+        password: Some("other_pw".to_string()),
+    };
+    handle_wallet(cmd, base, "other_wallet", Some("other_pw"), OutputFormat::Json)
+        .await
+        .unwrap();
+
+    // default wallet's coldkey should be untouched
+    let default_after =
+        std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
+    assert_eq!(
+        default_mtime,
+        default_after.modified().unwrap(),
+        "default wallet's coldkey was modified — regen-coldkey should not touch other wallets"
+    );
+
+    // other_wallet should have its own coldkey
+    assert!(
+        dir.path().join("other_wallet").join("coldkey").exists(),
+        "other_wallet should have a coldkey"
+    );
+}
