@@ -129,8 +129,9 @@ pub(super) async fn handle_subnet(
                 };
                 (si, di)
             } else {
-                tokio::try_join!(client.get_subnet_info(nuid), async {
-                    Ok::<_, anyhow::Error>(match client.get_dynamic_info(nuid).await {
+                let pin = client.pin_latest_block().await?;
+                tokio::try_join!(client.get_subnet_info_pinned(nuid, pin), async {
+                    Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
                         Ok(v) => v,
                         Err(e) => {
                             tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
@@ -1932,11 +1933,17 @@ async fn handle_subnet_monitor(
 
 async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
+    // Pin a single block to save 3 redundant at_latest() RPC round-trips.
+    let pin = client.pin_latest_block().await?;
     let (neurons, dynamic, hyperparams, block) = tokio::try_join!(
         client.get_neurons_lite(nuid),
-        async { client.get_dynamic_info(nuid).await },
-        async { client.get_subnet_hyperparams(nuid).await },
-        client.get_block_number(),
+        async {
+            Ok::<_, anyhow::Error>(client.get_dynamic_info_at_block(nuid, pin).await?)
+        },
+        async {
+            Ok::<_, anyhow::Error>(client.get_subnet_hyperparams_pinned(nuid, pin).await?)
+        },
+        client.get_block_number_at(pin),
     )?;
 
     let n = neurons.len();
@@ -2049,8 +2056,10 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
 
 async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
+    // Pin a single block to save 1 redundant at_latest() RPC round-trip.
+    let pin = client.pin_latest_block().await?;
     let (neurons, dynamic) = tokio::try_join!(client.get_neurons_lite(nuid), async {
-        Ok::<_, anyhow::Error>(match client.get_dynamic_info(nuid).await {
+        Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
             Ok(v) => v,
             Err(e) => {
                 tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
@@ -2150,10 +2159,12 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFor
 
 async fn handle_subnet_cost(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
+    // Pin a single block to save 2 redundant at_latest() RPC round-trips.
+    let pin = client.pin_latest_block().await?;
     let (info, hyperparams, dynamic) = tokio::try_join!(
-        client.get_subnet_info(nuid),
+        client.get_subnet_info_pinned(nuid, pin),
         async {
-            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams(nuid).await {
+            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams_pinned(nuid, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
@@ -2162,7 +2173,7 @@ async fn handle_subnet_cost(client: &Client, netuid: u16, output: OutputFormat) 
             })
         },
         async {
-            Ok::<_, anyhow::Error>(match client.get_dynamic_info(nuid).await {
+            Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");

@@ -768,10 +768,12 @@ async fn handle_account_explorer(
         return Ok(());
     }
 
+    // Pin a single block for consistency and to save 4 redundant at_latest() RPC round-trips.
+    let pin = client.pin_latest_block().await?;
     let (balance, stakes, identity, dynamic, delegate) = tokio::try_join!(
-        client.get_balance_ss58(address),
-        client.get_stake_for_coldkey(address),
-        client.get_identity(address),
+        client.get_balance_at_hash(address, pin),
+        client.get_stake_for_coldkey_pinned(address, pin),
+        client.get_identity_pinned(address, pin),
         async {
             match client.get_all_dynamic_info().await {
                 Ok(d) => Ok::<_, anyhow::Error>(d),
@@ -782,7 +784,7 @@ async fn handle_account_explorer(
             }
         },
         async {
-            Ok::<_, anyhow::Error>(match client.get_delegate(address).await {
+            Ok::<_, anyhow::Error>(match client.get_delegate_pinned(address, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(error = %e, "get_delegate failed (non-fatal)");
@@ -895,10 +897,12 @@ async fn handle_account_explorer(
 
 async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
+    // Pin a single block for consistency and to save 4 redundant at_latest() RPC round-trips.
+    let pin = client.pin_latest_block().await?;
     let (info, dynamic, neurons, hyperparams, subnet_identity) = tokio::try_join!(
-        client.get_subnet_info(nuid),
+        client.get_subnet_info_pinned(nuid, pin),
         async {
-            Ok::<_, anyhow::Error>(match client.get_dynamic_info(nuid).await {
+            Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
@@ -908,7 +912,7 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         },
         client.get_neurons_lite(nuid),
         async {
-            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams(nuid).await {
+            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams_pinned(nuid, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
@@ -917,7 +921,7 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
             })
         },
         async {
-            Ok::<_, anyhow::Error>(match client.get_subnet_identity(nuid).await {
+            Ok::<_, anyhow::Error>(match client.get_subnet_identity_pinned(nuid, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_identity failed (non-fatal)");
@@ -1399,13 +1403,15 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
 
 /// Full security audit of an account: proxies, delegates, stake exposure, permissions.
 pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) -> Result<()> {
+    // Pin a single block for consistency and to save 6 redundant at_latest() RPC round-trips.
+    let pin = client.pin_latest_block().await?;
     let (balance, stakes, identity, proxies, delegate, dynamic, coldkey_swap) = tokio::try_join!(
-        client.get_balance_ss58(address),
-        client.get_stake_for_coldkey(address),
-        client.get_identity(address),
-        client.list_proxies(address),
+        client.get_balance_at_hash(address, pin),
+        client.get_stake_for_coldkey_pinned(address, pin),
+        client.get_identity_pinned(address, pin),
+        client.list_proxies_pinned(address, pin),
         async {
-            Ok::<_, anyhow::Error>(match client.get_delegate(address).await {
+            Ok::<_, anyhow::Error>(match client.get_delegate_pinned(address, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(error = %e, "get_delegate failed (non-fatal)");
@@ -1423,7 +1429,7 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
             }
         },
         async {
-            Ok::<_, anyhow::Error>(match client.get_coldkey_swap_scheduled(address).await {
+            Ok::<_, anyhow::Error>(match client.get_coldkey_swap_scheduled_pinned(address, pin).await {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::debug!(error = %e, "get_coldkey_swap_scheduled failed (non-fatal)");
@@ -1434,7 +1440,7 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
 
-    // Query childkey delegations + pending childkey changes for each stake position (parallel)
+    // Query childkey delegations + pending childkey changes at same pinned block (parallel)
     let child_key_futures: Vec<_> = stakes
         .iter()
         .map(|s| {
@@ -1444,12 +1450,12 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
                 let (children, pending) = tokio::join!(
                     async {
                         client
-                            .get_child_keys(&hotkey, netuid)
+                            .get_child_keys_pinned(&hotkey, netuid, pin)
                             .await
                             .unwrap_or_default()
                     },
                     async {
-                        match client.get_pending_child_keys(&hotkey, netuid).await {
+                        match client.get_pending_child_keys_pinned(&hotkey, netuid, pin).await {
                             Ok(v) => v,
                             Err(e) => {
                                 tracing::debug!(hotkey = %crate::utils::short_ss58(&hotkey), netuid = netuid.0, error = %e, "Failed to fetch pending child keys");

@@ -23,12 +23,12 @@ pub struct Ctx<'a> {
 /// Escape a value for RFC 4180 CSV output.
 /// If the value contains a comma, double-quote, or newline, wrap it in double-quotes
 /// and escape any internal double-quotes by doubling them.
-pub fn csv_escape(val: &str) -> String {
+pub fn csv_escape(val: &str) -> std::borrow::Cow<'_, str> {
     if val.contains(',') || val.contains('"') || val.contains('\n') || val.contains('\r') {
         let escaped = val.replace('"', "\"\"");
-        format!("\"{}\"", escaped)
+        std::borrow::Cow::Owned(format!("\"{}\"", escaped))
     } else {
-        val.to_string()
+        std::borrow::Cow::Borrowed(val)
     }
 }
 
@@ -877,12 +877,7 @@ pub fn render_rows<T: serde::Serialize>(
             println!("{}", text);
         }
         let mut table = comfy_table::Table::new();
-        table.set_header(
-            table_headers
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>(),
-        );
+        table.set_header(table_headers.iter().copied());
         for item in data {
             table.add_row(table_row(item));
         }

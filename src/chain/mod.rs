@@ -734,6 +734,18 @@ impl Client {
         Ok(Balance::from_rao(val.unwrap_or(0)))
     }
 
+    /// Get the block number for a pinned block hash.
+    /// Useful when you pin a block and also need its number without an extra at_latest().
+    pub async fn get_block_number_at(&self, hash: subxt::utils::H256) -> Result<u64> {
+        let block = self
+            .inner
+            .blocks()
+            .at(hash)
+            .await
+            .context("Failed to fetch block at pinned hash")?;
+        Ok(block.number() as u64)
+    }
+
     /// Fetch all network overview stats using a single pinned block.
     /// Returns (block_number, total_stake, total_networks, total_issuance, emission).
     /// Saves 4 redundant `at_latest()` RPC round-trips compared to individual queries.

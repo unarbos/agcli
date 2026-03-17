@@ -42,6 +42,27 @@ impl Client {
         Ok(stakes)
     }
 
+    /// Get all stakes for a coldkey at a pinned block hash (via runtime API).
+    /// Use with `pin_latest_block()` to avoid redundant `at_latest()` calls.
+    pub async fn get_stake_for_coldkey_pinned(
+        &self,
+        coldkey_ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Vec<StakeInfo>> {
+        let account_id = Self::ss58_to_account_id(coldkey_ss58)?;
+        let payload = api::apis()
+            .stake_info_runtime_api()
+            .get_stake_info_for_coldkey(account_id);
+        let result = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.into_iter().map(StakeInfo::from).collect())
+    }
+
     // ──────── Subnet Queries ────────
 
     /// List all subnets (via runtime API, cached for 30s).
@@ -109,6 +130,44 @@ impl Client {
             Ok(r)
         })
         .await?;
+        Ok(result.map(|h| SubnetHyperparameters::from_gen(h, netuid)))
+    }
+
+    /// Get info for a specific subnet at a pinned block hash.
+    pub async fn get_subnet_info_pinned(
+        &self,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<SubnetInfo>> {
+        let payload = api::apis()
+            .subnet_info_runtime_api()
+            .get_subnet_info(netuid.0);
+        let result = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(SubnetInfo::from))
+    }
+
+    /// Get subnet hyperparameters at a pinned block hash.
+    pub async fn get_subnet_hyperparams_pinned(
+        &self,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<SubnetHyperparameters>> {
+        let payload = api::apis()
+            .subnet_info_runtime_api()
+            .get_subnet_hyperparams(netuid.0);
+        let result = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
         Ok(result.map(|h| SubnetHyperparameters::from_gen(h, netuid)))
     }
 
@@ -319,6 +378,183 @@ impl Client {
             discord: String::from_utf8_lossy(&id.discord).into_owned(),
             description: String::from_utf8_lossy(&id.description).into_owned(),
             additional: String::from_utf8_lossy(&id.additional).into_owned(),
+        }))
+    }
+
+    /// Get on-chain identity at a pinned block hash.
+    pub async fn get_identity_pinned(
+        &self,
+        ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<ChainIdentity>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage().registry().identity_of(&account_id);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(|reg| chain_identity_from_registration(reg.info)))
+    }
+
+    /// Get subnet identity at a pinned block hash.
+    pub async fn get_subnet_identity_pinned(
+        &self,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<SubnetIdentity>> {
+        let nid = netuid.0;
+        let addr = api::storage().subtensor_module().subnet_identities_v3(nid);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(|id| SubnetIdentity {
+            subnet_name: String::from_utf8_lossy(&id.subnet_name).into_owned(),
+            github_repo: String::from_utf8_lossy(&id.github_repo).into_owned(),
+            subnet_contact: String::from_utf8_lossy(&id.subnet_contact).into_owned(),
+            subnet_url: String::from_utf8_lossy(&id.subnet_url).into_owned(),
+            discord: String::from_utf8_lossy(&id.discord).into_owned(),
+            description: String::from_utf8_lossy(&id.description).into_owned(),
+            additional: String::from_utf8_lossy(&id.additional).into_owned(),
+        }))
+    }
+
+    /// Get delegate info at a pinned block hash.
+    pub async fn get_delegate_pinned(
+        &self,
+        hotkey_ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<DelegateInfo>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let payload = api::apis()
+            .delegate_info_runtime_api()
+            .get_delegate(account_id);
+        let result = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(DelegateInfo::from))
+    }
+
+    /// List proxy accounts at a pinned block hash.
+    pub async fn list_proxies_pinned(
+        &self,
+        ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Vec<(String, String, u32)>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage().proxy().proxies(&account_id);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        match result {
+            Some((proxies, _deposit)) => Ok(proxies
+                .0
+                .into_iter()
+                .map(|p| {
+                    let delegate_ss58 =
+                        sp_core::crypto::AccountId32::from(p.delegate.0).to_string();
+                    let proxy_type = format!("{:?}", p.proxy_type);
+                    (delegate_ss58, proxy_type, p.delay)
+                })
+                .collect()),
+            None => Ok(vec![]),
+        }
+    }
+
+    /// Check if a coldkey has a scheduled swap at a pinned block hash.
+    pub async fn get_coldkey_swap_scheduled_pinned(
+        &self,
+        ss58: &str,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<(u32, String)>> {
+        let account_id = Self::ss58_to_account_id(ss58)?;
+        let addr = api::storage()
+            .subtensor_module()
+            .coldkey_swap_scheduled(&account_id);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(|(block, new_coldkey)| {
+            let new_ss58 = sp_core::crypto::AccountId32::from(new_coldkey.0).to_string();
+            (block, new_ss58)
+        }))
+    }
+
+    /// Get child keys at a pinned block hash.
+    pub async fn get_child_keys_pinned(
+        &self,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Vec<(u64, String)>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let nid = netuid.0;
+        let addr = api::storage()
+            .subtensor_module()
+            .child_keys(&account_id, nid);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(proportion, child)| {
+                let child_ss58 = sp_core::crypto::AccountId32::from(child.0).to_string();
+                (proportion, child_ss58)
+            })
+            .collect())
+    }
+
+    /// Get pending child keys at a pinned block hash.
+    pub async fn get_pending_child_keys_pinned(
+        &self,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<Option<(Vec<(u64, String)>, u64)>> {
+        let account_id = Self::ss58_to_account_id(hotkey_ss58)?;
+        let nid = netuid.0;
+        let addr = api::storage()
+            .subtensor_module()
+            .pending_child_keys(nid, &account_id);
+        let result = self
+            .inner
+            .storage()
+            .at(block_hash)
+            .fetch(&addr)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(result.map(|(children, cooldown_block)| {
+            let children_parsed: Vec<(u64, String)> = children
+                .into_iter()
+                .map(|(proportion, child)| {
+                    let child_ss58 = sp_core::crypto::AccountId32::from(child.0).to_string();
+                    (proportion, child_ss58)
+                })
+                .collect();
+            (children_parsed, cooldown_block)
         }))
     }
 
@@ -1435,4 +1671,73 @@ fn decode_identity_data(data: &api::runtime_types::pallet_registry::types::Data)
         Raw14, Raw15, Raw16, Raw17, Raw18, Raw19, Raw20, Raw21, Raw22, Raw23, Raw24, Raw25, Raw26,
         Raw27, Raw28, Raw29, Raw30, Raw31, Raw32
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::balance::Balance;
+    use crate::types::network::NetUid;
+
+    // ── Module compilation smoke test ──
+
+    #[test]
+    fn module_compiles() {
+        // If this test runs, the queries module compiles successfully.
+    }
+
+    // ── Balance helper tests (used throughout query return values) ──
+
+    #[test]
+    fn balance_from_rao_round_trip() {
+        let b = Balance::from_rao(1_000_000_000);
+        assert_eq!(b.rao(), 1_000_000_000);
+        assert!((b.tao() - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn balance_from_tao_round_trip() {
+        let b = Balance::from_tao(2.5);
+        assert_eq!(b.rao(), 2_500_000_000);
+        assert!((b.tao() - 2.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn balance_zero_rao() {
+        let b = Balance::from_rao(0);
+        assert_eq!(b.rao(), 0);
+        assert!((b.tao()).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn balance_max_rao() {
+        let b = Balance::from_rao(u64::MAX);
+        assert_eq!(b.rao(), u64::MAX);
+        assert!(b.tao() > 0.0);
+    }
+
+    // ── NetUid tests (used as query parameter throughout) ──
+
+    #[test]
+    fn netuid_construction() {
+        let n = NetUid(1);
+        assert_eq!(n.0, 1);
+    }
+
+    #[test]
+    fn netuid_root_is_zero() {
+        let root = NetUid(0);
+        assert_eq!(root.0, 0);
+    }
+
+    #[test]
+    fn netuid_equality() {
+        assert_eq!(NetUid(5), NetUid(5));
+        assert_ne!(NetUid(1), NetUid(2));
+    }
+
+    #[test]
+    fn netuid_ordering() {
+        assert!(NetUid(0) < NetUid(1));
+        assert!(NetUid(100) > NetUid(99));
+    }
 }
