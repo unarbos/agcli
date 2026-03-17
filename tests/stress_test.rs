@@ -1054,15 +1054,20 @@ fn weight_pair_parsing_edge_cases() {
 fn children_pair_parsing() {
     use agcli::cli::helpers::parse_children;
 
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
     // Valid
-    let result = parse_children("50000:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").unwrap();
+    let result = parse_children(&format!("50000:{}", alice)).unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].0, 50000);
 
-    // Invalid: missing proportion
-    assert!(parse_children("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").is_err());
+    // Invalid: missing proportion (no colon)
+    assert!(parse_children(alice).is_err());
     // Invalid: non-numeric proportion
-    assert!(parse_children("abc:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKv3gB").is_err());
+    assert!(parse_children(&format!("abc:{}", alice)).is_err());
+    // Invalid: zero proportion
+    assert!(parse_children(&format!("0:{}", alice)).is_err());
+    // Invalid: bad SS58 address
+    assert!(parse_children("50000:5NotAValidAddress").is_err());
 }
 
 /// Parallel error classification with all error types simultaneously.

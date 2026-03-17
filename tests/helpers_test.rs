@@ -3,8 +3,8 @@
 
 use agcli::cli::helpers::{
     parse_children, parse_weight_pairs, validate_amount, validate_delegate_take,
-    validate_emission_weights, validate_ipv4, validate_max_cost, validate_name, validate_symbol,
-    validate_take_pct,
+    validate_emission_weights, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_name, validate_symbol, validate_take_pct,
 };
 use agcli::utils::explain;
 
@@ -49,7 +49,7 @@ fn parse_children_basic() {
 
 #[test]
 fn parse_children_multiple() {
-    let result = parse_children("500:5Abc,500:5Def").unwrap();
+    let result = parse_children("500:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,500:5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty").unwrap();
     assert_eq!(result.len(), 2);
     assert_eq!(result[0].0, 500);
     assert_eq!(result[1].0, 500);
@@ -287,17 +287,18 @@ fn parse_weight_pairs_max_u16_values() {
 #[test]
 fn parse_children_empty_hotkey() {
     let result = parse_children("1000:");
-    // Should produce a child with empty hotkey string (not an error from parsing)
-    assert!(result.is_ok());
-    let children = result.unwrap();
-    assert_eq!(children[0].1, "");
+    // Empty hotkey should now fail SS58 validation
+    assert!(result.is_err(), "empty hotkey should fail SS58 validation");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("empty") || msg.contains("address"), "error msg: {}", msg);
 }
 
 #[test]
 fn parse_children_zero_proportion() {
     let result = parse_children("0:5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
-    assert!(result.is_ok(), "zero proportion should be allowed");
-    assert_eq!(result.unwrap()[0].0, 0);
+    assert!(result.is_err(), "zero proportion should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("non-zero"), "error msg: {}", msg);
 }
 
 #[test]
@@ -788,22 +789,25 @@ fn parse_children_whitespace_around_colons() {
 
 #[test]
 fn parse_children_whitespace_around_commas() {
-    let result = parse_children("500:5Abc , 500:5Def");
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let bob = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty";
+    let result = parse_children(&format!("500:{} , 500:{}", alice, bob));
     assert!(result.is_ok(), "whitespace around commas: {:?}", result.err());
     assert_eq!(result.unwrap().len(), 2);
 }
 
 #[test]
 fn parse_children_large_proportion() {
-    // u64::MAX should be valid
-    let result = parse_children(&format!("{}:5Abc", u64::MAX));
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let result = parse_children(&format!("{}:{}", u64::MAX, alice));
     assert!(result.is_ok(), "u64 max proportion: {:?}", result.err());
     assert_eq!(result.unwrap()[0].0, u64::MAX);
 }
 
 #[test]
 fn parse_children_negative_proportion() {
-    let result = parse_children("-1:5Abc");
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let result = parse_children(&format!("-1:{}", alice));
     assert!(result.is_err(), "negative proportion should fail");
     let msg = result.unwrap_err().to_string();
     assert!(msg.contains("Invalid proportion"), "error msg: {}", msg);
@@ -811,21 +815,22 @@ fn parse_children_negative_proportion() {
 
 #[test]
 fn parse_children_float_proportion() {
-    let result = parse_children("1.5:5Abc");
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let result = parse_children(&format!("1.5:{}", alice));
     assert!(result.is_err(), "float proportion should fail");
 }
 
 #[test]
 fn parse_children_multiple_colons() {
+    // With first-colon split, "1000:5Abc:extra" parses proportion=1000, hotkey="5Abc:extra"
+    // The hotkey "5Abc:extra" should fail SS58 validation
     let result = parse_children("1000:5Abc:extra");
-    assert!(result.is_err(), "multiple colons should fail");
+    assert!(result.is_err(), "garbage hotkey should fail SS58 validation");
 }
 
 #[test]
 fn parse_children_only_commas() {
     let result = parse_children(",,,");
-    // This should either error or produce empty results
-    // The function splits on comma, each empty part will fail the colon split
     assert!(result.is_err(), "comma-only input should fail");
 }
 
@@ -834,6 +839,24 @@ fn parse_children_single_colon_only() {
     let result = parse_children(":");
     // proportion is empty → parse error
     assert!(result.is_err(), "colon-only should fail");
+}
+
+#[test]
+fn parse_children_invalid_ss58_hotkey() {
+    let result = parse_children("1000:5NotAValidAddress");
+    assert!(result.is_err(), "invalid SS58 hotkey should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("child hotkey") || msg.contains("SS58") || msg.contains("checksum"),
+        "error should mention hotkey validation: {}", msg);
+}
+
+#[test]
+fn parse_children_ethereum_address_as_hotkey() {
+    let result = parse_children("1000:0x742d35Cc6634C0532925a3b844BcEfe0390a94e0");
+    assert!(result.is_err(), "Ethereum address should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("Ethereum") || msg.contains("0x"),
+        "error should hint about Ethereum address: {}", msg);
 }
 
 // ──── Balance edge case tests ────
@@ -1717,4 +1740,343 @@ fn validate_batch_axon_json_entry_not_object_rejects() {
 fn validate_batch_axon_json_string_entry_rejects() {
     let err = validate_batch_axon_json(r#"["hello"]"#).unwrap_err().to_string();
     assert!(err.contains("not a JSON object"), "msg: {}", err);
+}
+
+// ──── validate_mnemonic tests ────
+
+#[test]
+fn validate_mnemonic_valid_12_words() {
+    // Generate a valid 12-word mnemonic using bip39 crate
+    let mnemonic = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 16]).unwrap();
+    assert!(validate_mnemonic(&mnemonic.to_string()).is_ok());
+}
+
+#[test]
+fn validate_mnemonic_valid_24_words() {
+    let mnemonic = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 32]).unwrap();
+    let phrase = mnemonic.to_string();
+    let words: Vec<&str> = phrase.split_whitespace().collect();
+    assert_eq!(words.len(), 24);
+    assert!(validate_mnemonic(&phrase).is_ok());
+}
+
+#[test]
+fn validate_mnemonic_valid_15_words() {
+    let mnemonic = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 20]).unwrap();
+    let phrase = mnemonic.to_string();
+    let words: Vec<&str> = phrase.split_whitespace().collect();
+    assert_eq!(words.len(), 15);
+    assert!(validate_mnemonic(&phrase).is_ok());
+}
+
+#[test]
+fn validate_mnemonic_empty_rejects() {
+    let err = validate_mnemonic("").unwrap_err().to_string();
+    assert!(err.contains("empty"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_whitespace_only_rejects() {
+    let err = validate_mnemonic("   \t  ").unwrap_err().to_string();
+    assert!(err.contains("empty"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_wrong_word_count_rejects() {
+    let err = validate_mnemonic("abandon abandon abandon").unwrap_err().to_string();
+    assert!(err.contains("3 words"), "msg: {}", err);
+    assert!(err.contains("12, 15, 18, 21, or 24"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_11_words_rejects() {
+    let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon").unwrap_err().to_string();
+    assert!(err.contains("11 words"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_13_words_rejects() {
+    let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap_err().to_string();
+    assert!(err.contains("13 words"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_invalid_word_rejects() {
+    // 12 words but one is not BIP-39
+    let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon xylophone").unwrap_err().to_string();
+    assert!(err.contains("xylophone"), "should mention bad word: {}", err);
+    assert!(err.contains("BIP-39"), "should mention BIP-39: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_bad_checksum_rejects() {
+    // 12 valid BIP-39 words but wrong checksum
+    let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon").unwrap_err().to_string();
+    assert!(err.contains("checksum"), "should mention checksum: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_extra_spaces_ok() {
+    // Valid mnemonic with extra whitespace should be accepted
+    let mnemonic = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 16]).unwrap();
+    let phrase = mnemonic.to_string();
+    let with_spaces = format!("  {}  ", phrase.replace(' ', "  "));
+    assert!(validate_mnemonic(&with_spaces).is_ok(), "extra whitespace should be tolerated");
+}
+
+#[test]
+fn validate_mnemonic_misspelled_word_suggests() {
+    // "abandn" is close to "abandon"
+    let err = validate_mnemonic("abandn abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap_err().to_string();
+    assert!(err.contains("abandn"), "should mention misspelled word: {}", err);
+    assert!(err.contains("BIP-39"), "should mention BIP-39: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_numbers_reject() {
+    let err = validate_mnemonic("1 2 3 4 5 6 7 8 9 10 11 12").unwrap_err().to_string();
+    assert!(err.contains("BIP-39") || err.contains("not in"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_single_word_rejects() {
+    let err = validate_mnemonic("abandon").unwrap_err().to_string();
+    assert!(err.contains("1 words") || err.contains("1 word"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_passphrase_not_mnemonic() {
+    // Common mistake: entering a password instead of mnemonic
+    let err = validate_mnemonic("MySecretPassword123!").unwrap_err().to_string();
+    assert!(err.contains("1 word") || err.contains("expected"), "msg: {}", err);
+}
+
+#[test]
+fn validate_mnemonic_25_words_rejects() {
+    // More than 24 words
+    let mnemonic24 = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 32]).unwrap();
+    let phrase = format!("{} abandon", mnemonic24);
+    let err = validate_mnemonic(&phrase).unwrap_err().to_string();
+    assert!(err.contains("25 words"), "msg: {}", err);
+}
+
+// ──── Error message quality tests ────
+// Verify that all user-facing errors contain actionable tips
+
+#[test]
+fn error_quality_validate_amount_zero_has_tip() {
+    let err = validate_amount(0.0, "stake").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "zero amount error should have tip: {}", err);
+    assert!(err.contains("RAO"), "should mention RAO minimum: {}", err);
+}
+
+#[test]
+fn error_quality_validate_name_empty_has_tip() {
+    let err = validate_name("", "wallet").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "empty name error should have tip: {}", err);
+    assert!(err.contains("alphanumeric") || err.contains("mywallet"), "should suggest valid name: {}", err);
+}
+
+#[test]
+fn error_quality_validate_name_path_traversal_has_tip() {
+    let err = validate_name("../../../etc/passwd", "wallet").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "path traversal error should have tip: {}", err);
+}
+
+#[test]
+fn error_quality_validate_ss58_empty_has_tip() {
+    let err = agcli::cli::helpers::validate_ss58("", "destination").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "empty SS58 error should have tip: {}", err);
+    assert!(err.contains("48"), "should mention address length: {}", err);
+}
+
+#[test]
+fn error_quality_validate_ss58_ethereum_has_tip() {
+    let err = agcli::cli::helpers::validate_ss58("0x742d35Cc6634C0532925a3b844BcEfe0390a94e0", "destination").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "Ethereum address error should have tip: {}", err);
+    assert!(err.contains("Ethereum") || err.contains("SS58"), "should explain format: {}", err);
+}
+
+#[test]
+fn error_quality_validate_ipv4_loopback_has_tip() {
+    let err = validate_ipv4("127.0.0.1").unwrap_err().to_string();
+    assert!(err.contains("public"), "loopback error should suggest public IP: {}", err);
+}
+
+#[test]
+fn error_quality_validate_take_over_max_has_tip() {
+    let err = validate_take_pct(20.0).unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "over-max take error should have tip: {}", err);
+    assert!(err.contains("18"), "should mention maximum: {}", err);
+}
+
+#[test]
+fn error_quality_validate_port_zero_has_tip() {
+    let err = agcli::cli::helpers::validate_port(0, "axon").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "port zero error should have tip: {}", err);
+    assert!(err.contains("8091") || err.contains("443"), "should suggest common ports: {}", err);
+}
+
+#[test]
+fn error_quality_validate_netuid_zero_has_tip() {
+    let err = agcli::cli::helpers::validate_netuid(0).unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "netuid zero error should have tip: {}", err);
+    assert!(err.contains("netuid 1"), "should mention subnets start at 1: {}", err);
+}
+
+#[test]
+fn error_quality_validate_symbol_empty_has_tip() {
+    let err = validate_symbol("").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "empty symbol error should have tip: {}", err);
+    assert!(err.contains("ALPHA") || err.contains("SN1"), "should suggest example: {}", err);
+}
+
+#[test]
+fn error_quality_validate_mnemonic_wrong_count_has_tip() {
+    let err = validate_mnemonic("abandon abandon abandon").unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "wrong word count error should have tip: {}", err);
+}
+
+#[test]
+fn error_quality_validate_mnemonic_bad_word_has_tip() {
+    let err = validate_mnemonic("xylophone abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap_err().to_string();
+    assert!(err.contains("BIP-39") || err.contains("dictionary"), "bad word error should mention BIP-39: {}", err);
+}
+
+#[test]
+fn error_quality_parse_weight_invalid_has_format() {
+    let err = parse_weight_pairs("bad").unwrap_err().to_string();
+    assert!(err.contains("uid:weight") || err.contains("Format:"), "should show format: {}", err);
+}
+
+#[test]
+fn error_quality_parse_children_invalid_has_format() {
+    let err = parse_children("bad").unwrap_err().to_string();
+    assert!(err.contains("proportion:hotkey") || err.contains("Format:"), "should show format: {}", err);
+}
+
+#[test]
+fn error_quality_validate_max_cost_negative_mentions_value() {
+    let err = validate_max_cost(-5.0).unwrap_err().to_string();
+    assert!(err.contains("-5"), "should show the invalid value: {}", err);
+    assert!(err.contains("negative"), "should explain why invalid: {}", err);
+}
+
+#[test]
+fn error_quality_validate_delegate_take_over_max_has_tip() {
+    let err = validate_delegate_take(25.0).unwrap_err().to_string();
+    assert!(err.contains("Tip:"), "over-max delegate take should have tip: {}", err);
+    assert!(err.contains("18"), "should mention maximum: {}", err);
+}
+
+// ──── Dry-run related parse tests ────
+// These verify --dry-run flag is parseable across different command positions
+
+#[test]
+fn dry_run_flag_parses_with_transfer() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "transfer", "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "--amount", "1.0"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run before subcommand: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_flag_parses_after_subcommand() {
+    use clap::Parser;
+    let args = vec!["agcli", "transfer", "--dry-run", "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "--amount", "1.0"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run after subcommand: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_flag_absent_means_false() {
+    use clap::Parser;
+    // When --dry-run is not passed and no env var, should be false
+    // Note: clean env for this test
+    let saved = std::env::var("AGCLI_DRY_RUN").ok();
+    std::env::remove_var("AGCLI_DRY_RUN");
+    let args = vec!["agcli", "balance"];
+    let cli = agcli::cli::Cli::try_parse_from(args).unwrap();
+    assert!(!cli.dry_run, "dry_run should be false when flag absent");
+    // Restore
+    if let Some(v) = saved {
+        std::env::set_var("AGCLI_DRY_RUN", v);
+    }
+}
+
+#[test]
+fn dry_run_with_stake_add() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "stake", "add", "--netuid", "1", "--amount", "1.0"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with stake add: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_with_subnet_register() {
+    use clap::Parser;
+    // subnet register takes no args — it creates a new network
+    let args = vec!["agcli", "--dry-run", "subnet", "register"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with subnet register: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_with_weights_set() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "weights", "set", "--netuid", "1", "--weights", "0:100,1:200"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with weights set: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_with_delegate_increase() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "delegate", "increase-take", "--take", "10.0"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with delegate increase-take: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_with_proxy_add() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "proxy", "add", "--delegate", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with proxy add: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn dry_run_with_serve_axon() {
+    use clap::Parser;
+    let args = vec!["agcli", "--dry-run", "serve", "axon",
+        "--netuid", "1", "--ip", "1.2.3.4", "--port", "8091"];
+    let cli = agcli::cli::Cli::try_parse_from(args);
+    assert!(cli.is_ok(), "--dry-run with serve axon: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+// ──── parse_children enhanced edge cases ────
+
+#[test]
+fn parse_children_trailing_comma_ok() {
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let result = parse_children(&format!("1000:{},", alice));
+    assert!(result.is_ok(), "trailing comma should be tolerated: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 1);
+}
+
+#[test]
+fn parse_children_duplicate_hotkeys_allowed() {
+    let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+    let result = parse_children(&format!("500:{},500:{}", alice, alice));
+    // Duplicate hotkeys should still parse — the chain will reject if needed
+    assert!(result.is_ok(), "duplicate hotkeys: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 2);
 }

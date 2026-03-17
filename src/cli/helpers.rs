@@ -730,23 +730,46 @@ pub fn parse_weight_pairs(weights_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
 }
 
 pub fn parse_children(children_str: &str) -> Result<Vec<(u64, String)>> {
+    let trimmed = children_str.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Children list cannot be empty.\n  Format: 'proportion:hotkey_ss58' (e.g., '50000:5Cai...,50000:5Dqw...')"
+        );
+    }
     let mut result = Vec::new();
-    for pair in children_str.split(',') {
-        let parts: Vec<&str> = pair.trim().split(':').collect();
-        if parts.len() != 2 {
-            anyhow::bail!(
-                "Invalid child pair '{}'. Format: 'proportion:hotkey_ss58' (e.g., '50000:5Cai...')",
-                pair
-            );
+    for pair in trimmed.split(',') {
+        let pair_trimmed = pair.trim();
+        if pair_trimmed.is_empty() {
+            continue; // skip trailing commas
         }
-        let proportion = parts[0].trim().parse::<u64>().map_err(|_| {
+        // SS58 addresses contain colons in some edge cases, so split on first colon only
+        let colon_pos = pair_trimmed.find(':').ok_or_else(|| {
             anyhow::anyhow!(
-                "Invalid proportion '{}' — must be a positive integer (u64)",
-                parts[0].trim()
+                "Invalid child pair '{}'. Format: 'proportion:hotkey_ss58' (e.g., '50000:5Cai...')",
+                pair_trimmed
             )
         })?;
-        let hotkey = parts[1].trim().to_string();
-        result.push((proportion, hotkey));
+        let proportion_str = &pair_trimmed[..colon_pos].trim();
+        let hotkey_str = &pair_trimmed[colon_pos + 1..].trim();
+        let proportion = proportion_str.parse::<u64>().map_err(|_| {
+            anyhow::anyhow!(
+                "Invalid proportion '{}' — must be a positive integer (u64)",
+                proportion_str
+            )
+        })?;
+        if proportion == 0 {
+            anyhow::bail!(
+                "Invalid proportion: 0. Each child must have a non-zero proportion."
+            );
+        }
+        // Validate the hotkey is a valid SS58 address
+        validate_ss58(hotkey_str, "child hotkey")?;
+        result.push((proportion, hotkey_str.to_string()));
+    }
+    if result.is_empty() {
+        anyhow::bail!(
+            "No valid children provided.\n  Format: 'proportion:hotkey_ss58' (e.g., '50000:5Cai...')"
+        );
     }
     Ok(result)
 }
@@ -798,10 +821,60 @@ pub fn build_dynamic_map(
     dynamic.iter().map(|d| (d.netuid.0, d)).collect()
 }
 
+/// Validate a mnemonic phrase. Checks word count (12, 15, 18, 21, or 24 words)
+/// and verifies all words are in the BIP-39 English dictionary with checksum validation.
+/// Returns Ok(()) on success, or a helpful error message.
+pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
+    let trimmed = mnemonic.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Mnemonic phrase cannot be empty.\n  Tip: a BIP-39 mnemonic is 12, 15, 18, 21, or 24 English words."
+        );
+    }
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
+    let valid_counts = [12, 15, 18, 21, 24];
+    if !valid_counts.contains(&words.len()) {
+        anyhow::bail!(
+            "Invalid mnemonic: {} words found, expected 12, 15, 18, 21, or 24.\n  Tip: check for missing or extra words. Most wallets use 12-word mnemonics.",
+            words.len()
+        );
+    }
+    // Check each word is in the BIP-39 English wordlist
+    let wordlist = bip39::Language::English.word_list();
+    for (i, word) in words.iter().enumerate() {
+        if wordlist.binary_search(word).is_err() {
+            // Try to suggest a close match
+            let suggestion = wordlist
+                .iter()
+                .filter(|w| w.starts_with(&word[..word.len().min(3)]))
+                .next();
+            let tip = if let Some(s) = suggestion {
+                format!("  Did you mean \"{}\"?", s)
+            } else {
+                String::from("  Check spelling — all words must be from the BIP-39 English wordlist.")
+            };
+            anyhow::bail!(
+                "Invalid mnemonic: word {} (\"{}\") is not in the BIP-39 dictionary.\n{}",
+                i + 1, word, tip
+            );
+        }
+    }
+    // Full checksum validation via bip39 crate
+    use bip39::Mnemonic;
+    Mnemonic::parse_in(bip39::Language::English, trimmed).map_err(|e| {
+        anyhow::anyhow!(
+            "Invalid mnemonic checksum: {}.\n  Tip: the last word encodes a checksum. Make sure all words are correct and in the right order.",
+            e
+        )
+    })?;
+    Ok(())
+}
+
 /// Require a mnemonic phrase: use `provided` if Some, else prompt interactively (or error in batch mode).
+/// Validates the mnemonic format and dictionary words before returning.
 pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
-    match provided {
-        Some(m) => Ok(m),
+    let mnemonic = match provided {
+        Some(m) => m,
         None => {
             if is_batch_mode() {
                 anyhow::bail!("Mnemonic required in batch mode. Pass --mnemonic <phrase>.");
@@ -809,9 +882,11 @@ pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
             dialoguer::Input::<String>::new()
                 .with_prompt("Enter mnemonic phrase")
                 .interact_text()
-                .map_err(anyhow::Error::from)
+                .map_err(anyhow::Error::from)?
         }
-    }
+    };
+    validate_mnemonic(&mnemonic)?;
+    Ok(mnemonic)
 }
 
 /// Require a password: use `cmd_password` (command-level), `global_password` (global flag), or prompt.
