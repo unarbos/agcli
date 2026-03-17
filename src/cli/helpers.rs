@@ -110,7 +110,8 @@ pub fn validate_amount(amount: f64, label: &str) -> Result<()> {
     if amount < 0.0 {
         anyhow::bail!(
             "Invalid {}: {:.9}. Amount cannot be negative.",
-            label, amount
+            label,
+            amount
         );
     }
     if amount == 0.0 {
@@ -122,7 +123,8 @@ pub fn validate_amount(amount: f64, label: &str) -> Result<()> {
     if !amount.is_finite() {
         anyhow::bail!(
             "Invalid {}: amount must be a finite number (got {}).",
-            label, amount
+            label,
+            amount
         );
     }
     Ok(())
@@ -218,7 +220,9 @@ pub fn validate_name(name: &str, label: &str) -> Result<()> {
     if trimmed.len() > 64 {
         anyhow::bail!(
             "Invalid {} name: \"{}\" is too long ({} chars, max 64).",
-            label, trimmed, trimmed.len()
+            label,
+            trimmed,
+            trimmed.len()
         );
     }
     // Path traversal
@@ -229,10 +233,14 @@ pub fn validate_name(name: &str, label: &str) -> Result<()> {
         );
     }
     // Absolute paths (Unix or Windows)
-    if trimmed.starts_with('/') || trimmed.starts_with('\\') || (trimmed.len() >= 2 && trimmed.as_bytes()[1] == b':') {
+    if trimmed.starts_with('/')
+        || trimmed.starts_with('\\')
+        || (trimmed.len() >= 2 && trimmed.as_bytes()[1] == b':')
+    {
         anyhow::bail!(
             "Invalid {} name: \"{}\" looks like an absolute path. Use a simple name.",
-            label, trimmed
+            label,
+            trimmed
         );
     }
     // Reserved or hidden names
@@ -243,7 +251,10 @@ pub fn validate_name(name: &str, label: &str) -> Result<()> {
         );
     }
     // Only allow alphanumeric, hyphens, underscores
-    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         anyhow::bail!(
             "Invalid {} name: \"{}\" contains invalid characters.\n  Tip: use only letters, numbers, hyphens, and underscores.",
             label, trimmed
@@ -251,13 +262,15 @@ pub fn validate_name(name: &str, label: &str) -> Result<()> {
     }
     // OS reserved names (Windows)
     let upper = trimmed.to_uppercase();
-    let reserved = ["CON", "PRN", "AUX", "NUL",
-        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+    let reserved = [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
     if reserved.contains(&upper.as_str()) {
         anyhow::bail!(
             "Invalid {} name: \"{}\" is a reserved system name.",
-            label, trimmed
+            label,
+            trimmed
         );
     }
     Ok(())
@@ -279,13 +292,17 @@ pub fn validate_ipv4(ip: &str) -> Result<u128> {
         if part.len() > 1 && part.starts_with('0') {
             anyhow::bail!(
                 "Invalid IPv4 address: \"{}\" — octet {} has leading zeros. Use {} instead.",
-                ip, i + 1, part.trim_start_matches('0')
+                ip,
+                i + 1,
+                part.trim_start_matches('0')
             );
         }
         octets[i] = part.parse::<u8>().map_err(|_| {
             anyhow::anyhow!(
                 "Invalid IPv4 address: \"{}\" — octet {} ('{}') is not a valid number (0–255).",
-                ip, i + 1, part
+                ip,
+                i + 1,
+                part
             )
         })?;
     }
@@ -389,9 +406,9 @@ pub fn validate_ss58(address: &str, label: &str) -> Result<()> {
         );
     }
     // Base58 character set check (1-9, A-H, J-N, P-Z, a-k, m-z — no 0, I, O, l)
-    if let Some(bad) = trimmed.chars().find(|c| {
-        !matches!(c, '1'..='9' | 'A'..='H' | 'J'..='N' | 'P'..='Z' | 'a'..='k' | 'm'..='z')
-    }) {
+    if let Some(bad) = trimmed.chars().find(
+        |c| !matches!(c, '1'..='9' | 'A'..='H' | 'J'..='N' | 'P'..='Z' | 'a'..='k' | 'm'..='z'),
+    ) {
         anyhow::bail!(
             "Invalid {} address '{}': character '{}' is not valid Base58.\n  Tip: SS58 addresses use Base58 encoding (no 0, I, O, or l).",
             label, crate::utils::short_ss58(trimmed), bad
@@ -438,9 +455,21 @@ pub fn validate_password_strength(password: &str) {
     }
     // Check for common weak passwords
     let common = [
-        "password", "12345678", "123456789", "1234567890", "qwerty",
-        "abc123", "letmein", "welcome", "monkey", "dragon",
-        "master", "login", "princess", "football", "shadow",
+        "password",
+        "12345678",
+        "123456789",
+        "1234567890",
+        "qwerty",
+        "abc123",
+        "letmein",
+        "welcome",
+        "monkey",
+        "dragon",
+        "master",
+        "login",
+        "princess",
+        "football",
+        "shadow",
     ];
     if common.contains(&password.to_lowercase().as_str()) {
         eprintln!(
@@ -500,51 +529,84 @@ pub fn validate_batch_axon_json(json_str: &str) -> Result<Vec<serde_json::Value>
             anyhow::anyhow!("Batch-axon entry {}: missing required field 'netuid'.", i)
         })?;
         let netuid_val = netuid.as_u64().ok_or_else(|| {
-            anyhow::anyhow!("Batch-axon entry {}: 'netuid' must be a positive integer (got {}).", i, netuid)
+            anyhow::anyhow!(
+                "Batch-axon entry {}: 'netuid' must be a positive integer (got {}).",
+                i,
+                netuid
+            )
         })?;
         if netuid_val > 65535 {
-            anyhow::bail!("Batch-axon entry {}: 'netuid' {} exceeds maximum (65535).", i, netuid_val);
+            anyhow::bail!(
+                "Batch-axon entry {}: 'netuid' {} exceeds maximum (65535).",
+                i,
+                netuid_val
+            );
         }
         // Required: ip
         let ip = obj.get("ip").ok_or_else(|| {
             anyhow::anyhow!("Batch-axon entry {}: missing required field 'ip'.", i)
         })?;
         let ip_str = ip.as_str().ok_or_else(|| {
-            anyhow::anyhow!("Batch-axon entry {}: 'ip' must be a string (got {}).", i, ip)
+            anyhow::anyhow!(
+                "Batch-axon entry {}: 'ip' must be a string (got {}).",
+                i,
+                ip
+            )
         })?;
-        validate_ipv4(ip_str).map_err(|e| {
-            anyhow::anyhow!("Batch-axon entry {}: {}", i, e)
-        })?;
+        validate_ipv4(ip_str).map_err(|e| anyhow::anyhow!("Batch-axon entry {}: {}", i, e))?;
         // Required: port
         let port = obj.get("port").ok_or_else(|| {
             anyhow::anyhow!("Batch-axon entry {}: missing required field 'port'.", i)
         })?;
         let port_val = port.as_u64().ok_or_else(|| {
-            anyhow::anyhow!("Batch-axon entry {}: 'port' must be a positive integer (got {}).", i, port)
+            anyhow::anyhow!(
+                "Batch-axon entry {}: 'port' must be a positive integer (got {}).",
+                i,
+                port
+            )
         })?;
         if port_val == 0 || port_val > 65535 {
-            anyhow::bail!("Batch-axon entry {}: 'port' {} is out of range (1–65535).", i, port_val);
+            anyhow::bail!(
+                "Batch-axon entry {}: 'port' {} is out of range (1–65535).",
+                i,
+                port_val
+            );
         }
         // Optional: protocol (u8, default 4)
         if let Some(proto) = obj.get("protocol") {
             let proto_val = proto.as_u64().ok_or_else(|| {
-                anyhow::anyhow!("Batch-axon entry {}: 'protocol' must be a number (got {}).", i, proto)
+                anyhow::anyhow!(
+                    "Batch-axon entry {}: 'protocol' must be a number (got {}).",
+                    i,
+                    proto
+                )
             })?;
             if proto_val > 255 {
-                anyhow::bail!("Batch-axon entry {}: 'protocol' {} exceeds maximum (255).", i, proto_val);
+                anyhow::bail!(
+                    "Batch-axon entry {}: 'protocol' {} exceeds maximum (255).",
+                    i,
+                    proto_val
+                );
             }
         }
         // Optional: version (u32)
         if let Some(ver) = obj.get("version") {
             ver.as_u64().ok_or_else(|| {
-                anyhow::anyhow!("Batch-axon entry {}: 'version' must be a number (got {}).", i, ver)
+                anyhow::anyhow!(
+                    "Batch-axon entry {}: 'version' must be a number (got {}).",
+                    i,
+                    ver
+                )
             })?;
         }
         // Warn on unknown fields
         let known = ["netuid", "ip", "port", "protocol", "version"];
         for key in obj.keys() {
             if !known.contains(&key.as_str()) {
-                eprintln!("Warning: batch-axon entry {}: unknown field '{}' (ignored).", i, key);
+                eprintln!(
+                    "Warning: batch-axon entry {}: unknown field '{}' (ignored).",
+                    i, key
+                );
             }
         }
     }
@@ -760,9 +822,7 @@ pub fn parse_children(children_str: &str) -> Result<Vec<(u64, String)>> {
             )
         })?;
         if proportion == 0 {
-            anyhow::bail!(
-                "Invalid proportion: 0. Each child must have a non-zero proportion."
-            );
+            anyhow::bail!("Invalid proportion: 0. Each child must have a non-zero proportion.");
         }
         // Validate the hotkey is a valid SS58 address
         validate_ss58(hotkey_str, "child hotkey")?;
@@ -853,11 +913,15 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
             let tip = if let Some(s) = suggestion {
                 format!("  Did you mean \"{}\"?", s)
             } else {
-                String::from("  Check spelling — all words must be from the BIP-39 English wordlist.")
+                String::from(
+                    "  Check spelling — all words must be from the BIP-39 English wordlist.",
+                )
             };
             anyhow::bail!(
                 "Invalid mnemonic: word {} (\"{}\") is not in the BIP-39 dictionary.\n{}",
-                i + 1, word, tip
+                i + 1,
+                word,
+                tip
             );
         }
     }
@@ -976,9 +1040,7 @@ pub fn require_password(
 pub fn validate_multisig_json_args(json_str: &str) -> Result<Vec<serde_json::Value>> {
     let trimmed = json_str.trim();
     if trimmed.is_empty() {
-        anyhow::bail!(
-            "Empty JSON args.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'."
-        );
+        anyhow::bail!("Empty JSON args.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'.");
     }
     let parsed: serde_json::Value = serde_json::from_str(trimmed).map_err(|e| {
         anyhow::anyhow!(
@@ -1024,9 +1086,7 @@ pub fn validate_multisig_json_args(json_str: &str) -> Result<Vec<serde_json::Val
             }
             serde_json::Value::Number(n) => {
                 if n.as_f64().map_or(false, |f| f.is_nan() || f.is_infinite()) {
-                    anyhow::bail!(
-                        "NaN/Infinity not allowed in args.\n  Tip: use a finite number."
-                    );
+                    anyhow::bail!("NaN/Infinity not allowed in args.\n  Tip: use a finite number.");
                 }
             }
             serde_json::Value::Array(inner) => {
@@ -1044,9 +1104,7 @@ pub fn validate_multisig_json_args(json_str: &str) -> Result<Vec<serde_json::Val
         Ok(())
     }
     for (i, elem) in arr.iter().enumerate() {
-        check_depth(elem, 0).map_err(|e| {
-            anyhow::anyhow!("Invalid arg at index {}: {}", i, e)
-        })?;
+        check_depth(elem, 0).map_err(|e| anyhow::anyhow!("Invalid arg at index {}: {}", i, e))?;
     }
     Ok(arr)
 }
@@ -1061,7 +1119,10 @@ pub fn validate_evm_address(address: &str, label: &str) -> Result<()> {
             label
         );
     }
-    let hex_str = trimmed.strip_prefix("0x").or_else(|| trimmed.strip_prefix("0X")).unwrap_or(trimmed);
+    let hex_str = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
     if hex_str.is_empty() {
         anyhow::bail!(
             "Invalid {} EVM address: empty after '0x' prefix.\n  Tip: provide 40 hex characters after '0x'.",
@@ -1101,7 +1162,10 @@ pub fn validate_hex_data(data: &str, label: &str) -> Result<()> {
             label
         );
     }
-    let hex_str = trimmed.strip_prefix("0x").or_else(|| trimmed.strip_prefix("0X")).unwrap_or(trimmed);
+    let hex_str = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
     // "0x" alone is valid (empty data)
     if hex_str.is_empty() {
         return Ok(());
@@ -1136,7 +1200,9 @@ pub fn validate_pallet_call(name: &str, label: &str) -> Result<()> {
         let preview: String = trimmed.chars().take(32).collect();
         anyhow::bail!(
             "Invalid {}: '{}' is too long ({} chars, max 128).",
-            label, preview, trimmed.len()
+            label,
+            preview,
+            trimmed.len()
         );
     }
     // Must start with a letter (PascalCase for pallets, snake_case for calls)
@@ -1147,7 +1213,10 @@ pub fn validate_pallet_call(name: &str, label: &str) -> Result<()> {
         );
     }
     // Only allow alphanumeric and underscore (covers PascalCase + snake_case)
-    if let Some(bad) = trimmed.chars().find(|c| !c.is_ascii_alphanumeric() && *c != '_') {
+    if let Some(bad) = trimmed
+        .chars()
+        .find(|c| !c.is_ascii_alphanumeric() && *c != '_')
+    {
         anyhow::bail!(
             "Invalid {}: character '{}' is not allowed.\n  Tip: use only letters, numbers, and underscores.",
             label, bad
@@ -1185,7 +1254,8 @@ pub fn validate_crowdloan_amount(amount: f64, label: &str) -> Result<()> {
     if amount < 0.0 {
         anyhow::bail!(
             "Invalid {}: {:.9} TAO. Amount cannot be negative.\n  Tip: use a positive TAO amount.",
-            label, amount
+            label,
+            amount
         );
     }
     if amount == 0.0 {
@@ -1234,7 +1304,14 @@ pub fn validate_commitment_data(data: &str) -> Result<()> {
 /// Validate a subscribe event filter category.
 /// Valid values: all, staking, registration, transfer, weights, subnet.
 pub fn validate_event_filter(filter: &str) -> Result<()> {
-    const VALID_FILTERS: &[&str] = &["all", "staking", "registration", "transfer", "weights", "subnet"];
+    const VALID_FILTERS: &[&str] = &[
+        "all",
+        "staking",
+        "registration",
+        "transfer",
+        "weights",
+        "subnet",
+    ];
     let lower = filter.trim().to_lowercase();
     if !VALID_FILTERS.contains(&lower.as_str()) {
         anyhow::bail!(
@@ -1450,7 +1527,8 @@ pub fn validate_view_limit(limit: usize, label: &str) -> Result<()> {
     Ok(())
 }
 
-/// Validate admin raw call name. Must be a valid Rust identifier (snake_case).
+/// Validate admin raw call name. Must be a valid Rust identifier (snake_case)
+/// and should match a known AdminUtils call from `admin::known_params()`.
 pub fn validate_admin_call_name(name: &str) -> Result<()> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
@@ -1462,7 +1540,8 @@ pub fn validate_admin_call_name(name: &str) -> Result<()> {
         let preview: String = trimmed.chars().take(32).collect();
         anyhow::bail!(
             "Admin call name '{}...' is too long ({} chars, max 128).",
-            preview, trimmed.len()
+            preview,
+            trimmed.len()
         );
     }
     if !trimmed.chars().next().unwrap().is_ascii_alphabetic() {
@@ -1471,13 +1550,64 @@ pub fn validate_admin_call_name(name: &str) -> Result<()> {
             trimmed
         );
     }
-    if let Some(bad) = trimmed.chars().find(|c| !c.is_ascii_alphanumeric() && *c != '_') {
+    if let Some(bad) = trimmed
+        .chars()
+        .find(|c| !c.is_ascii_alphanumeric() && *c != '_')
+    {
         anyhow::bail!(
             "Admin call name contains invalid character '{}'.\n  Tip: use only letters, numbers, and underscores.",
             bad
         );
     }
+    // Check against known AdminUtils calls
+    let known = crate::admin::known_params();
+    let known_names: Vec<&str> = known.iter().map(|(n, _, _)| *n).collect();
+    if !known_names.contains(&trimmed) {
+        // Find closest match for helpful suggestion
+        let suggestion = known_names
+            .iter()
+            .filter(|n| {
+                n.contains(trimmed) || trimmed.contains(**n) || levenshtein_close(n, trimmed)
+            })
+            .copied()
+            .next();
+        let mut msg = format!(
+            "Unknown admin call '{}'. Run `agcli admin list` to see available calls.",
+            trimmed
+        );
+        if let Some(closest) = suggestion {
+            msg.push_str(&format!("\n  Did you mean '{}'?", closest));
+        }
+        eprintln!("Warning: {}", msg);
+        tracing::warn!(
+            call = trimmed,
+            "Unknown admin call name — proceeding anyway (may be a new chain call)"
+        );
+    }
     Ok(())
+}
+
+/// Simple Levenshtein-like check: true if edit distance <= 2.
+fn levenshtein_close(a: &str, b: &str) -> bool {
+    let a_bytes = a.as_bytes();
+    let b_bytes = b.as_bytes();
+    let (la, lb) = (a_bytes.len(), b_bytes.len());
+    if la.abs_diff(lb) > 2 {
+        return false;
+    }
+    let max_len = la.max(lb);
+    if max_len == 0 {
+        return true;
+    }
+    // Simple: count mismatches at aligned positions
+    let mut diffs = 0u32;
+    for i in 0..la.min(lb) {
+        if a_bytes[i] != b_bytes[i] {
+            diffs += 1;
+        }
+    }
+    diffs += la.abs_diff(lb) as u32;
+    diffs <= 2
 }
 
 /// Validate a thread count for CPU-bound operations (e.g. POW mining).
@@ -1511,7 +1641,8 @@ pub fn validate_url(url: &str, label: &str) -> Result<()> {
     if trimmed.len() > 2048 {
         anyhow::bail!(
             "{} URL is too long ({} chars, max 2048).",
-            label, trimmed.len()
+            label,
+            trimmed.len()
         );
     }
     if !trimmed.starts_with("http://") && !trimmed.starts_with("https://") {
@@ -1533,10 +1664,7 @@ pub fn validate_url(url: &str, label: &str) -> Result<()> {
         &trimmed[7..]
     };
     if after_scheme.is_empty() || after_scheme.starts_with('/') || after_scheme.starts_with('?') {
-        anyhow::bail!(
-            "{} URL is missing a host name.",
-            label
-        );
+        anyhow::bail!("{} URL is missing a host name.", label);
     }
     Ok(())
 }
@@ -1547,22 +1675,22 @@ pub fn validate_url(url: &str, label: &str) -> Result<()> {
 pub fn validate_subnet_name(name: &str, label: &str) -> Result<()> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
-        anyhow::bail!(
-            "{} cannot be empty.",
-            label
-        );
+        anyhow::bail!("{} cannot be empty.", label);
     }
     if trimmed.len() > 256 {
         let preview: String = trimmed.chars().take(32).collect();
         anyhow::bail!(
             "{} '{}...' is too long ({} chars, max 256).",
-            label, preview, trimmed.len()
+            label,
+            preview,
+            trimmed.len()
         );
     }
     if let Some(bad) = trimmed.chars().find(|c| c.is_control()) {
         anyhow::bail!(
             "{} contains control character (U+{:04X}). Use only printable characters.",
-            label, bad as u32
+            label,
+            bad as u32
         );
     }
     Ok(())
@@ -1593,7 +1721,10 @@ pub fn validate_github_repo(repo: &str) -> Result<()> {
     }
     // Both parts: alphanumeric + hyphens + underscores + dots
     for part in &parts {
-        if let Some(bad) = part.chars().find(|c| !c.is_ascii_alphanumeric() && *c != '-' && *c != '_' && *c != '.') {
+        if let Some(bad) = part
+            .chars()
+            .find(|c| !c.is_ascii_alphanumeric() && *c != '-' && *c != '_' && *c != '.')
+        {
             anyhow::bail!(
                 "GitHub repo '{}' contains invalid character '{}'. Use only letters, numbers, hyphens, underscores, and dots.",
                 trimmed, bad
@@ -1608,15 +1739,34 @@ pub fn validate_github_repo(repo: &str) -> Result<()> {
 /// dangerous silent default-to-"Any" (most permissive) on typos.
 pub fn validate_proxy_type(s: &str) -> Result<()> {
     const KNOWN: &[&str] = &[
-        "any", "owner", "nontransfer", "non_transfer", "staking",
-        "noncritical", "non_critical", "triumvirate", "governance",
-        "senate", "nonfungible", "non_fungible", "registration",
-        "transfer", "smalltransfer", "small_transfer", "rootweights",
-        "root_weights", "childkeys", "child_keys",
-        "sudouncheckedsetcode", "sudo_unchecked_set_code",
-        "swaphotkey", "swap_hotkey",
-        "subnetleasebeneficiary", "subnet_lease_beneficiary",
-        "rootclaim", "root_claim",
+        "any",
+        "owner",
+        "nontransfer",
+        "non_transfer",
+        "staking",
+        "noncritical",
+        "non_critical",
+        "triumvirate",
+        "governance",
+        "senate",
+        "nonfungible",
+        "non_fungible",
+        "registration",
+        "transfer",
+        "smalltransfer",
+        "small_transfer",
+        "rootweights",
+        "root_weights",
+        "childkeys",
+        "child_keys",
+        "sudouncheckedsetcode",
+        "sudo_unchecked_set_code",
+        "swaphotkey",
+        "swap_hotkey",
+        "subnetleasebeneficiary",
+        "subnet_lease_beneficiary",
+        "rootclaim",
+        "root_claim",
     ];
     if s.is_empty() {
         anyhow::bail!("Proxy type cannot be empty. Valid types: Any, Owner, Staking, Transfer, NonTransfer, NonCritical, Governance, Senate, Registration, NonFungible, SmallTransfer, RootWeights, ChildKeys, Triumvirate");
@@ -1624,10 +1774,23 @@ pub fn validate_proxy_type(s: &str) -> Result<()> {
     if !KNOWN.contains(&s.to_lowercase().as_str()) {
         // Build display names (deduplicated, friendly)
         let display = &[
-            "Any", "Owner", "Staking", "Transfer", "NonTransfer",
-            "NonCritical", "Governance", "Senate", "Registration",
-            "NonFungible", "SmallTransfer", "RootWeights", "ChildKeys",
-            "Triumvirate", "SwapHotkey", "SubnetLeaseBeneficiary", "RootClaim",
+            "Any",
+            "Owner",
+            "Staking",
+            "Transfer",
+            "NonTransfer",
+            "NonCritical",
+            "Governance",
+            "Senate",
+            "Registration",
+            "NonFungible",
+            "SmallTransfer",
+            "RootWeights",
+            "ChildKeys",
+            "Triumvirate",
+            "SwapHotkey",
+            "SubnetLeaseBeneficiary",
+            "RootClaim",
             "SudoUncheckedSetCode",
         ];
         anyhow::bail!(
@@ -1698,16 +1861,10 @@ pub fn validate_spending_limit(value: f64, netuid_str: &str) -> Result<()> {
         )
     })?;
     if value.is_nan() || value.is_infinite() {
-        anyhow::bail!(
-            "Spending limit must be a finite number, got: {}",
-            value
-        );
+        anyhow::bail!("Spending limit must be a finite number, got: {}", value);
     }
     if value < 0.0 {
-        anyhow::bail!(
-            "Spending limit cannot be negative, got: {}",
-            value
-        );
+        anyhow::bail!("Spending limit cannot be negative, got: {}", value);
     }
     Ok(())
 }

@@ -35,6 +35,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             tempo,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_tempo(client, &pair, netuid, tempo).await?;
             print_tx_result(
@@ -50,6 +51,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             max,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_max_allowed_validators(client, &pair, netuid, max).await?;
             print_tx_result(
@@ -65,6 +67,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             max,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_max_allowed_uids(client, &pair, netuid, max).await?;
             print_tx_result(
@@ -80,6 +83,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             period,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_immunity_period(client, &pair, netuid, period).await?;
             print_tx_result(
@@ -95,6 +99,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             min,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_min_allowed_weights(client, &pair, netuid, min).await?;
             print_tx_result(
@@ -110,6 +115,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             limit,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_max_weight_limit(client, &pair, netuid, limit).await?;
             print_tx_result(
@@ -125,6 +131,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             limit,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_weights_set_rate_limit(client, &pair, netuid, limit).await?;
             print_tx_result(
@@ -140,6 +147,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             enabled,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash =
                 admin::set_commit_reveal_weights_enabled(client, &pair, netuid, enabled).await?;
@@ -157,6 +165,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             difficulty,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_difficulty(client, &pair, netuid, difficulty).await?;
             print_tx_result(
@@ -172,6 +181,7 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             cutoff,
             sudo_key,
         } => {
+            validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_activity_cutoff(client, &pair, netuid, cutoff).await?;
             print_tx_result(

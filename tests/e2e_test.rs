@@ -1746,14 +1746,20 @@ async fn test_stake_move(client: &mut Client) {
     // Try to register a new subnet for the move target, or use SN2 if it exists.
     let total = client.get_total_networks().await.unwrap_or(2);
     if total < 2 {
-        println!("  [SKIP] stake move — need at least 2 subnets, have {}", total);
+        println!(
+            "  [SKIP] stake move — need at least 2 subnets, have {}",
+            total
+        );
         return;
     }
     let from_netuid = NetUid(1);
     let to_netuid = NetUid(total - 1); // Use the newest subnet
 
     // First, ensure Alice has some stake on SN1→Bob
-    let stakes = client.get_stake_for_coldkey(ALICE_SS58).await.expect("get stakes");
+    let stakes = client
+        .get_stake_for_coldkey(ALICE_SS58)
+        .await
+        .expect("get stakes");
     let existing_stake = stakes
         .iter()
         .find(|s| s.hotkey == bob_ss58 && s.netuid == from_netuid)
@@ -1784,7 +1790,10 @@ async fn test_stake_move(client: &mut Client) {
     wait_blocks(client, 2).await;
 
     // Get stake on target subnet before move
-    let stakes_before = client.get_stake_for_coldkey(ALICE_SS58).await.expect("stakes before move");
+    let stakes_before = client
+        .get_stake_for_coldkey(ALICE_SS58)
+        .await
+        .expect("stakes before move");
     let target_before = stakes_before
         .iter()
         .find(|s| s.hotkey == bob_ss58 && s.netuid == to_netuid)
@@ -1801,7 +1810,10 @@ async fn test_stake_move(client: &mut Client) {
             println!("  move_stake tx: {}", hash);
             wait_blocks(client, 3).await;
 
-            let stakes_after = client.get_stake_for_coldkey(ALICE_SS58).await.expect("stakes after move");
+            let stakes_after = client
+                .get_stake_for_coldkey(ALICE_SS58)
+                .await
+                .expect("stakes after move");
             let target_after = stakes_after
                 .iter()
                 .find(|s| s.hotkey == bob_ss58 && s.netuid == to_netuid)
@@ -1811,7 +1823,8 @@ async fn test_stake_move(client: &mut Client) {
             assert!(
                 target_after > target_before,
                 "target subnet stake should increase: before={}, after={}",
-                target_before, target_after
+                target_before,
+                target_after
             );
             println!(
                 "[PASS] move_stake — SN{}→SN{}: target {} → {} RAO",
@@ -1837,8 +1850,13 @@ async fn test_stake_unstake_all(client: &mut Client) {
     let netuid = NetUid(1);
 
     // Ensure there's some stake to unstake
-    let stakes = client.get_stake_for_coldkey(ALICE_SS58).await.expect("get stakes");
-    let has_stake = stakes.iter().any(|s| s.hotkey == bob_ss58 && s.stake.rao() > 0);
+    let stakes = client
+        .get_stake_for_coldkey(ALICE_SS58)
+        .await
+        .expect("get stakes");
+    let has_stake = stakes
+        .iter()
+        .any(|s| s.hotkey == bob_ss58 && s.stake.rao() > 0);
     if !has_stake {
         // Add a small amount to unstake
         let hash = retry_extrinsic!(
@@ -1855,7 +1873,10 @@ async fn test_stake_unstake_all(client: &mut Client) {
             println!("  unstake_all tx: {}", hash);
             wait_blocks(client, 3).await;
 
-            let stakes_after = client.get_stake_for_coldkey(ALICE_SS58).await.expect("stakes after unstake_all");
+            let stakes_after = client
+                .get_stake_for_coldkey(ALICE_SS58)
+                .await
+                .expect("stakes after unstake_all");
             let remaining = stakes_after
                 .iter()
                 .filter(|s| s.hotkey == bob_ss58)
@@ -1870,10 +1891,7 @@ async fn test_stake_unstake_all(client: &mut Client) {
         }
         Err(e) => {
             // unstake_all might fail if already at 0
-            println!(
-                "[PASS] unstake_all — attempted, chain response: {}",
-                e
-            );
+            println!("[PASS] unstake_all — attempted, chain response: {}", e);
         }
     }
 }
@@ -1884,7 +1902,11 @@ async fn test_stake_queries(client: &mut Client) {
 
     // Query Alice's stakes
     let stakes = client.get_stake_for_coldkey(ALICE_SS58).await;
-    assert!(stakes.is_ok(), "get_stake_for_coldkey should succeed: {:?}", stakes.err());
+    assert!(
+        stakes.is_ok(),
+        "get_stake_for_coldkey should succeed: {:?}",
+        stakes.err()
+    );
     let stakes = stakes.unwrap();
     println!("  Alice has {} stake entries", stakes.len());
 
@@ -1906,12 +1928,16 @@ async fn test_stake_queries(client: &mut Client) {
 
     // Query total network stake
     let total = client.get_total_stake().await;
-    assert!(total.is_ok(), "get_total_stake should succeed: {:?}", total.err());
+    assert!(
+        total.is_ok(),
+        "get_total_stake should succeed: {:?}",
+        total.err()
+    );
     println!("  total network stake: {} RAO", total.unwrap().rao());
 
     // Query with empty/invalid address (should return empty, not error)
     let empty_stakes = client
-        .get_stake_for_coldkey("5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM")  // empty dev account
+        .get_stake_for_coldkey("5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM") // empty dev account
         .await;
     assert!(
         empty_stakes.is_ok(),
@@ -1964,9 +1990,7 @@ async fn test_stake_childkey_take(client: &mut Client) {
             );
         }
         Err(e) => {
-            println!(
-                "[PASS] set_childkey_take(0%) — attempted: {}", e
-            );
+            println!("[PASS] set_childkey_take(0%) — attempted: {}", e);
         }
     }
 }
@@ -1979,21 +2003,17 @@ async fn test_stake_set_auto(client: &mut Client) {
     let netuid = NetUid(1);
 
     // Set auto-stake to Alice's own hotkey on SN1
-    match try_extrinsic!(
-        client,
-        client.set_auto_stake(&alice, netuid, &alice_ss58)
-    ) {
+    match try_extrinsic!(client, client.set_auto_stake(&alice, netuid, &alice_ss58)) {
         Ok(hash) => {
             println!(
                 "[PASS] set_auto_stake — SN{} → {}: tx {}",
-                netuid.0, &alice_ss58[..8], hash
+                netuid.0,
+                &alice_ss58[..8],
+                hash
             );
         }
         Err(e) => {
-            println!(
-                "[PASS] set_auto_stake — attempted on SN{}: {}",
-                netuid.0, e
-            );
+            println!("[PASS] set_auto_stake — attempted on SN{}: {}", netuid.0, e);
         }
     }
     wait_blocks(client, 2).await;
@@ -2003,7 +2023,8 @@ async fn test_stake_set_auto(client: &mut Client) {
         Ok(Some(hotkey)) => {
             println!(
                 "[PASS] get_auto_stake_hotkey — SN{}: {}",
-                netuid.0, &hotkey[..8.min(hotkey.len())]
+                netuid.0,
+                &hotkey[..8.min(hotkey.len())]
             );
         }
         Ok(None) => {
@@ -2013,10 +2034,7 @@ async fn test_stake_set_auto(client: &mut Client) {
             );
         }
         Err(e) => {
-            println!(
-                "[PASS] get_auto_stake_hotkey — query attempted: {}",
-                e
-            );
+            println!("[PASS] get_auto_stake_hotkey — query attempted: {}", e);
         }
     }
 }
@@ -2027,10 +2045,7 @@ async fn test_stake_set_claim(client: &mut Client) {
     let alice = dev_pair(ALICE_URI);
 
     // Test "swap" claim type
-    match try_extrinsic!(
-        client,
-        client.set_root_claim_type(&alice, "swap", None)
-    ) {
+    match try_extrinsic!(client, client.set_root_claim_type(&alice, "swap", None)) {
         Ok(hash) => {
             println!("[PASS] set_root_claim_type(swap): tx {}", hash);
         }
@@ -2041,10 +2056,7 @@ async fn test_stake_set_claim(client: &mut Client) {
     wait_blocks(client, 2).await;
 
     // Test "keep" claim type
-    match try_extrinsic!(
-        client,
-        client.set_root_claim_type(&alice, "keep", None)
-    ) {
+    match try_extrinsic!(client, client.set_root_claim_type(&alice, "keep", None)) {
         Ok(hash) => {
             println!("[PASS] set_root_claim_type(keep): tx {}", hash);
         }
@@ -2063,7 +2075,10 @@ async fn test_stake_set_claim(client: &mut Client) {
             println!("[PASS] set_root_claim_type(keep-subnets [1]): tx {}", hash);
         }
         Err(e) => {
-            println!("[PASS] set_root_claim_type(keep-subnets) — attempted: {}", e);
+            println!(
+                "[PASS] set_root_claim_type(keep-subnets) — attempted: {}",
+                e
+            );
         }
     }
 }
@@ -2078,10 +2093,7 @@ async fn test_stake_edge_cases(client: &mut Client) {
 
     // Edge case 1: Stake very small amount (1 RAO)
     let tiny = Balance::from_rao(1);
-    match try_extrinsic!(
-        client,
-        client.add_stake(&alice, &bob_ss58, netuid, tiny)
-    ) {
+    match try_extrinsic!(client, client.add_stake(&alice, &bob_ss58, netuid, tiny)) {
         Ok(hash) => println!("  tiny stake (1 RAO): tx {}", hash),
         Err(e) => println!("  tiny stake (1 RAO): {}", e),
     }
@@ -2089,10 +2101,7 @@ async fn test_stake_edge_cases(client: &mut Client) {
 
     // Edge case 2: Remove more than we have (should fail gracefully)
     let huge = Balance::from_tao(999999.0);
-    match try_extrinsic!(
-        client,
-        client.remove_stake(&alice, &bob_ss58, netuid, huge)
-    ) {
+    match try_extrinsic!(client, client.remove_stake(&alice, &bob_ss58, netuid, huge)) {
         Ok(hash) => println!("  remove > balance: tx {} (unexpected success)", hash),
         Err(e) => println!("  remove > balance: correctly rejected — {}", e),
     }
@@ -2121,10 +2130,7 @@ async fn test_stake_edge_cases(client: &mut Client) {
         .map(|s| s.stake.rao())
         .unwrap_or(0);
 
-    match try_extrinsic!(
-        client,
-        client.add_stake(&alice, &bob_ss58, netuid, exact)
-    ) {
+    match try_extrinsic!(client, client.add_stake(&alice, &bob_ss58, netuid, exact)) {
         Ok(_) => {
             wait_blocks(client, 3).await;
             match try_extrinsic!(

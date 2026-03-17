@@ -34,12 +34,18 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             netuid,
             uid,
             at_block,
-        } => handle_neuron(client, netuid, uid, at_block).await,
+        } => {
+            validate_netuid(netuid)?;
+            handle_neuron(client, netuid, uid, at_block).await
+        }
         ViewCommands::Validators {
             netuid,
             limit,
             at_block,
         } => {
+            if let Some(n) = netuid {
+                validate_netuid(n)?;
+            }
             validate_view_limit(limit, "validators --limit")?;
             handle_validators(client, output, netuid, limit, at_block).await
         }
@@ -53,6 +59,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             handle_account_explorer(client, &addr, output, at_block).await
         }
         ViewCommands::SubnetAnalytics { netuid } => {
+            validate_netuid(netuid)?;
             handle_subnet_analytics(client, netuid, output).await
         }
         ViewCommands::StakingAnalytics { address } => {
@@ -60,6 +67,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             handle_staking_analytics(client, &addr, output).await
         }
         ViewCommands::SwapSim { netuid, tao, alpha } => {
+            validate_netuid(netuid)?;
             if let Some(t) = tao {
                 validate_amount(t, "swap --tao")?;
             }
@@ -80,6 +88,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             since_block,
             limit,
         } => {
+            validate_netuid(netuid)?;
             if let Some(lim) = limit {
                 validate_view_limit(lim, "metagraph --limit")?;
             }
@@ -93,6 +102,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             uid,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             if let Some(ref hk) = hotkey {
                 validate_ss58(hk, "axon --hotkey")?;
             }
@@ -103,9 +113,11 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             tcp_check,
             probe_timeout_ms,
         } => {
+            validate_netuid(netuid)?;
             handle_subnet_health(client, NetUid(netuid), tcp_check, probe_timeout_ms, output).await
         }
         ViewCommands::Emissions { netuid, limit } => {
+            validate_netuid(netuid)?;
             if let Some(lim) = limit {
                 validate_view_limit(lim, "emissions --limit")?;
             }

@@ -104,6 +104,7 @@ pub(super) async fn handle_weights(
             hotkey,
             limit,
         } => {
+            validate_netuid(netuid)?;
             if let Some(ref hk) = hotkey {
                 validate_ss58(hk, "hotkey")?;
             }
@@ -118,6 +119,7 @@ pub(super) async fn handle_weights(
             version_key,
             dry_run,
         } => {
+            validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let (uids, wts) = resolve_weights(&weights)?;
 
@@ -194,7 +196,13 @@ pub(super) async fn handle_weights(
             let hash = client
                 .set_weights(wallet.hotkey()?, NetUid(netuid), &uids, &wts, version_key)
                 .await?;
-            println!("Weights set on SN{} ({} UIDs, version_key={}).\n  Tx: {}", netuid, uids.len(), version_key, hash);
+            println!(
+                "Weights set on SN{} ({} UIDs, version_key={}).\n  Tx: {}",
+                netuid,
+                uids.len(),
+                version_key,
+                hash
+            );
             Ok(())
         }
         WeightCommands::Commit {
@@ -202,6 +210,7 @@ pub(super) async fn handle_weights(
             weights,
             salt,
         } => {
+            validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
@@ -226,7 +235,10 @@ pub(super) async fn handle_weights(
             let hash = client
                 .commit_weights(wallet.hotkey()?, NetUid(netuid), hash_out)
                 .await?;
-            println!("Weights committed on SN{}. Save your salt for reveal: {}\n  Tx: {}", netuid, salt_str, hash);
+            println!(
+                "Weights committed on SN{}. Save your salt for reveal: {}\n  Tx: {}",
+                netuid, salt_str, hash
+            );
             Ok(())
         }
         WeightCommands::Reveal {
@@ -235,6 +247,7 @@ pub(super) async fn handle_weights(
             salt,
             version_key,
         } => {
+            validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
@@ -265,7 +278,12 @@ pub(super) async fn handle_weights(
                     version_key,
                 )
                 .await?;
-            println!("Weights revealed on SN{} ({} UIDs).\n  Tx: {}", netuid, uids.len(), hash);
+            println!(
+                "Weights revealed on SN{} ({} UIDs).\n  Tx: {}",
+                netuid,
+                uids.len(),
+                hash
+            );
             Ok(())
         }
         WeightCommands::CommitReveal {
@@ -274,6 +292,7 @@ pub(super) async fn handle_weights(
             version_key,
             wait,
         } => {
+            validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
@@ -396,6 +415,7 @@ pub(super) async fn handle_weights(
             Ok(())
         }
         WeightCommands::Status { netuid } => {
+            validate_netuid(netuid)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;

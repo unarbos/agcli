@@ -9,15 +9,15 @@
 use proptest::prelude::*;
 
 use agcli::cli::helpers::{
-    json_to_subxt_value, parse_children, parse_json_args, parse_weight_pairs,
-    validate_amount, validate_batch_axon_json, validate_call_hash, validate_commitment_data,
+    json_to_subxt_value, parse_children, parse_json_args, parse_weight_pairs, validate_amount,
+    validate_batch_axon_json, validate_call_hash, validate_commitment_data,
     validate_config_network, validate_crowdloan_amount, validate_delegate_take,
-    validate_derive_input, validate_emission_weights, validate_event_filter,
-    validate_evm_address, validate_hex_data, validate_ipv4, validate_max_cost,
-    validate_mnemonic, validate_multisig_json_args, validate_name, validate_netuid,
-    validate_pallet_call, validate_password_strength, validate_port, validate_price,
-    validate_proxy_type, validate_schedule_id, validate_spending_limit, validate_ss58,
-    validate_symbol, validate_take_pct,
+    validate_derive_input, validate_emission_weights, validate_event_filter, validate_evm_address,
+    validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_multisig_json_args, validate_name, validate_netuid, validate_pallet_call,
+    validate_password_strength, validate_port, validate_price, validate_proxy_type,
+    validate_schedule_id, validate_spending_limit, validate_ss58, validate_symbol,
+    validate_take_pct,
 };
 
 // ──── validate_amount: never panics, valid amounts always accepted ────

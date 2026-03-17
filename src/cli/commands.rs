@@ -302,7 +302,11 @@ pub async fn execute(cli: Cli) -> Result<()> {
             print_tx_result(
                 ctx.output,
                 &hash,
-                &format!("Transferred {} to {}", balance.display_tao(), crate::utils::short_ss58(&dest)),
+                &format!(
+                    "Transferred {} to {}",
+                    balance.display_tao(),
+                    crate::utils::short_ss58(&dest)
+                ),
             );
             Ok(())
         }
@@ -332,7 +336,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
             print_tx_result(
                 ctx.output,
                 &hash,
-                &format!("All balance transferred to {}", crate::utils::short_ss58(&dest)),
+                &format!(
+                    "All balance transferred to {}",
+                    crate::utils::short_ss58(&dest)
+                ),
             );
             Ok(())
         }

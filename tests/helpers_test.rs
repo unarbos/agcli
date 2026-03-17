@@ -4,12 +4,11 @@
 use agcli::cli::helpers::{
     json_to_subxt_value, parse_children, parse_weight_pairs, validate_admin_call_name,
     validate_amount, validate_batch_file, validate_call_hash, validate_config_network,
-    validate_delegate_take, validate_derive_input, validate_emission_weights,
-    validate_evm_address, validate_gas_limit, validate_github_repo, validate_hex_data,
-    validate_ipv4, validate_max_cost, validate_mnemonic, validate_multisig_json_args,
-    validate_name, validate_pallet_call, validate_schedule_id, validate_subnet_name,
-    validate_symbol, validate_take_pct, validate_threads, validate_url, validate_view_limit,
-    validate_wasm_file, validate_weight_input,
+    validate_delegate_take, validate_derive_input, validate_emission_weights, validate_evm_address,
+    validate_gas_limit, validate_github_repo, validate_hex_data, validate_ipv4, validate_max_cost,
+    validate_mnemonic, validate_multisig_json_args, validate_name, validate_pallet_call,
+    validate_schedule_id, validate_subnet_name, validate_symbol, validate_take_pct,
+    validate_threads, validate_url, validate_view_limit, validate_wasm_file, validate_weight_input,
 };
 use agcli::utils::explain;
 
@@ -295,7 +294,11 @@ fn parse_children_empty_hotkey() {
     // Empty hotkey should now fail SS58 validation
     assert!(result.is_err(), "empty hotkey should fail SS58 validation");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("empty") || msg.contains("address"), "error msg: {}", msg);
+    assert!(
+        msg.contains("empty") || msg.contains("address"),
+        "error msg: {}",
+        msg
+    );
 }
 
 #[test]
@@ -720,7 +723,11 @@ fn validate_amount_negative_rejects() {
     assert!(result.is_err());
     let msg = result.unwrap_err().to_string();
     assert!(msg.contains("negative"), "error msg: {}", msg);
-    assert!(msg.contains("stake amount"), "should include label: {}", msg);
+    assert!(
+        msg.contains("stake amount"),
+        "should include label: {}",
+        msg
+    );
 }
 
 #[test]
@@ -787,7 +794,11 @@ fn validate_take_very_large_rejects() {
 #[test]
 fn parse_children_whitespace_around_colons() {
     let result = parse_children("1000 : 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY");
-    assert!(result.is_ok(), "whitespace around colon: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "whitespace around colon: {:?}",
+        result.err()
+    );
     let children = result.unwrap();
     assert_eq!(children[0].0, 1000);
 }
@@ -797,7 +808,11 @@ fn parse_children_whitespace_around_commas() {
     let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
     let bob = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty";
     let result = parse_children(&format!("500:{} , 500:{}", alice, bob));
-    assert!(result.is_ok(), "whitespace around commas: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "whitespace around commas: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().len(), 2);
 }
 
@@ -830,7 +845,10 @@ fn parse_children_multiple_colons() {
     // With first-colon split, "1000:5Abc:extra" parses proportion=1000, hotkey="5Abc:extra"
     // The hotkey "5Abc:extra" should fail SS58 validation
     let result = parse_children("1000:5Abc:extra");
-    assert!(result.is_err(), "garbage hotkey should fail SS58 validation");
+    assert!(
+        result.is_err(),
+        "garbage hotkey should fail SS58 validation"
+    );
 }
 
 #[test]
@@ -851,8 +869,11 @@ fn parse_children_invalid_ss58_hotkey() {
     let result = parse_children("1000:5NotAValidAddress");
     assert!(result.is_err(), "invalid SS58 hotkey should be rejected");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("child hotkey") || msg.contains("SS58") || msg.contains("checksum"),
-        "error should mention hotkey validation: {}", msg);
+    assert!(
+        msg.contains("child hotkey") || msg.contains("SS58") || msg.contains("checksum"),
+        "error should mention hotkey validation: {}",
+        msg
+    );
 }
 
 #[test]
@@ -860,8 +881,11 @@ fn parse_children_ethereum_address_as_hotkey() {
     let result = parse_children("1000:0x742d35Cc6634C0532925a3b844BcEfe0390a94e0");
     assert!(result.is_err(), "Ethereum address should be rejected");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("Ethereum") || msg.contains("0x"),
-        "error should hint about Ethereum address: {}", msg);
+    assert!(
+        msg.contains("Ethereum") || msg.contains("0x"),
+        "error should hint about Ethereum address: {}",
+        msg
+    );
 }
 
 // ──── Balance edge case tests ────
@@ -906,7 +930,12 @@ fn balance_roundtrip() {
     let b2 = Balance::from_tao(tao);
     // May lose precision due to f64, but should be close
     let diff = (b2.rao() as i64 - original_rao as i64).unsigned_abs();
-    assert!(diff <= 1, "roundtrip error too large: {} vs {}", b2.rao(), original_rao);
+    assert!(
+        diff <= 1,
+        "roundtrip error too large: {} vs {}",
+        b2.rao(),
+        original_rao
+    );
 }
 
 #[test]
@@ -1045,7 +1074,7 @@ fn validate_symbol_max_length_ok() {
 
 #[test]
 fn validate_symbol_non_ascii_rejects() {
-    let result = validate_symbol("ΑΛΦΑ");  // Greek letters
+    let result = validate_symbol("ΑΛΦΑ"); // Greek letters
     assert!(result.is_err(), "non-ASCII should fail");
     let msg = result.unwrap_err().to_string();
     assert!(msg.contains("non-ASCII"), "message: {}", msg);
@@ -1054,7 +1083,10 @@ fn validate_symbol_non_ascii_rejects() {
 #[test]
 fn validate_symbol_with_spaces() {
     // Leading/trailing spaces: the trim handles it, but space inside is ok
-    assert!(validate_symbol("  ALPHA  ").is_ok(), "padded symbol should be ok after trim");
+    assert!(
+        validate_symbol("  ALPHA  ").is_ok(),
+        "padded symbol should be ok after trim"
+    );
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1251,26 +1283,50 @@ fn validate_name_hidden_file_rejects() {
 
 #[test]
 fn validate_name_special_chars_rejects() {
-    assert!(validate_name("wallet name", "wallet").is_err(), "spaces should fail");
-    assert!(validate_name("wallet@home", "wallet").is_err(), "@ should fail");
-    assert!(validate_name("wallet#1", "wallet").is_err(), "# should fail");
+    assert!(
+        validate_name("wallet name", "wallet").is_err(),
+        "spaces should fail"
+    );
+    assert!(
+        validate_name("wallet@home", "wallet").is_err(),
+        "@ should fail"
+    );
+    assert!(
+        validate_name("wallet#1", "wallet").is_err(),
+        "# should fail"
+    );
     assert!(validate_name("wallet$", "wallet").is_err(), "$ should fail");
     assert!(validate_name("wallet!", "wallet").is_err(), "! should fail");
-    assert!(validate_name("wallet&more", "wallet").is_err(), "& should fail");
-    assert!(validate_name("wallet;rm -rf /", "wallet").is_err(), "; injection should fail");
+    assert!(
+        validate_name("wallet&more", "wallet").is_err(),
+        "& should fail"
+    );
+    assert!(
+        validate_name("wallet;rm -rf /", "wallet").is_err(),
+        "; injection should fail"
+    );
 }
 
 #[test]
 fn validate_name_unicode_rejects() {
-    assert!(validate_name("wället", "wallet").is_err(), "umlaut should fail");
+    assert!(
+        validate_name("wället", "wallet").is_err(),
+        "umlaut should fail"
+    );
     assert!(validate_name("钱包", "wallet").is_err(), "CJK should fail");
-    assert!(validate_name("wallet🔑", "wallet").is_err(), "emoji should fail");
+    assert!(
+        validate_name("wallet🔑", "wallet").is_err(),
+        "emoji should fail"
+    );
 }
 
 #[test]
 fn validate_name_reserved_windows_rejects() {
     assert!(validate_name("CON", "wallet").is_err(), "CON reserved");
-    assert!(validate_name("con", "wallet").is_err(), "con reserved (case-insensitive)");
+    assert!(
+        validate_name("con", "wallet").is_err(),
+        "con reserved (case-insensitive)"
+    );
     assert!(validate_name("PRN", "wallet").is_err(), "PRN reserved");
     assert!(validate_name("NUL", "wallet").is_err(), "NUL reserved");
     assert!(validate_name("COM1", "wallet").is_err(), "COM1 reserved");
@@ -1298,11 +1354,19 @@ fn validate_name_numbers_ok() {
 fn validate_name_label_in_error() {
     let result = validate_name("../bad", "hotkey");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("hotkey"), "error should mention 'hotkey': {}", msg);
+    assert!(
+        msg.contains("hotkey"),
+        "error should mention 'hotkey': {}",
+        msg
+    );
 
     let result = validate_name("../bad", "wallet");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("wallet"), "error should mention 'wallet': {}", msg);
+    assert!(
+        msg.contains("wallet"),
+        "error should mention 'wallet': {}",
+        msg
+    );
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1467,19 +1531,33 @@ fn validate_ss58_too_long_rejects() {
 
 #[test]
 fn validate_ss58_ethereum_address_rejects() {
-    let err = validate_ss58("0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18", "destination").unwrap_err().to_string();
-    assert!(err.contains("Ethereum") || err.contains("hex"), "should detect 0x prefix: {}", err);
+    let err = validate_ss58("0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18", "destination")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Ethereum") || err.contains("hex"),
+        "should detect 0x prefix: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_ss58_uppercase_0x_rejects() {
-    let err = validate_ss58("0X742d35Cc6634C0532925a3b844Bc9e7595f2bD18", "test").unwrap_err().to_string();
-    assert!(err.contains("Ethereum") || err.contains("hex"), "msg: {}", err);
+    let err = validate_ss58("0X742d35Cc6634C0532925a3b844Bc9e7595f2bD18", "test")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Ethereum") || err.contains("hex"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_ss58_contains_spaces_rejects() {
-    let err = validate_ss58("5Grwva EF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test").unwrap_err().to_string();
+    let err = validate_ss58("5Grwva EF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test")
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("whitespace"), "msg: {}", err);
 }
 
@@ -1491,28 +1569,48 @@ fn validate_ss58_tabs_rejects() {
 #[test]
 fn validate_ss58_invalid_base58_chars_rejects() {
     // 'O' is not in Base58 (0, I, O, l are excluded)
-    let err = validate_ss58("5GrwvaOF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test").unwrap_err().to_string();
-    assert!(err.contains("Base58") || err.contains("'O'"), "msg: {}", err);
+    let err = validate_ss58("5GrwvaOF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Base58") || err.contains("'O'"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_ss58_zero_char_rejects() {
     // '0' is not valid Base58
-    let err = validate_ss58("50rwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test").unwrap_err().to_string();
-    assert!(err.contains("Base58") || err.contains("'0'"), "msg: {}", err);
+    let err = validate_ss58("50rwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Base58") || err.contains("'0'"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_ss58_lowercase_l_rejects() {
     // 'l' is not valid Base58
-    let err = validate_ss58("5GrwvalF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test").unwrap_err().to_string();
-    assert!(err.contains("Base58") || err.contains("'l'"), "msg: {}", err);
+    let err = validate_ss58("5GrwvalF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "test")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Base58") || err.contains("'l'"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_ss58_bad_checksum_rejects() {
     // Change last char to invalidate checksum
-    let err = validate_ss58("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQZ", "test").unwrap_err().to_string();
+    let err = validate_ss58("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQZ", "test")
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("checksum"), "msg: {}", err);
 }
 
@@ -1524,7 +1622,11 @@ fn validate_ss58_random_string_rejects() {
 #[test]
 fn validate_ss58_label_in_error() {
     let err = validate_ss58("", "my-delegate").unwrap_err().to_string();
-    assert!(err.contains("my-delegate"), "error should include label: {}", err);
+    assert!(
+        err.contains("my-delegate"),
+        "error should include label: {}",
+        err
+    );
 }
 
 #[test]
@@ -1661,78 +1763,96 @@ fn validate_batch_axon_json_not_array_rejects() {
 
 #[test]
 fn validate_batch_axon_json_invalid_json_rejects() {
-    let err = validate_batch_axon_json("not json").unwrap_err().to_string();
+    let err = validate_batch_axon_json("not json")
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("Invalid"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_missing_netuid_rejects() {
     let err = validate_batch_axon_json(r#"[{"ip": "1.2.3.4", "port": 8091}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("netuid"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_missing_ip_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "port": 8091}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("ip"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_missing_port_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": "1.2.3.4"}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("port"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_netuid_not_number_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": "one", "ip": "1.2.3.4", "port": 8091}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("netuid"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_ip_not_string_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": 123, "port": 8091}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("ip"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_port_zero_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": "1.2.3.4", "port": 0}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("port"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_port_too_large_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": "1.2.3.4", "port": 70000}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("port"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_netuid_too_large_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 100000, "ip": "1.2.3.4", "port": 8091}]"#)
-        .unwrap_err().to_string();
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("netuid"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_protocol_overflow_rejects() {
-    let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": "1.2.3.4", "port": 8091, "protocol": 256}]"#)
-        .unwrap_err().to_string();
+    let err = validate_batch_axon_json(
+        r#"[{"netuid": 1, "ip": "1.2.3.4", "port": 8091, "protocol": 256}]"#,
+    )
+    .unwrap_err()
+    .to_string();
     assert!(err.contains("protocol"), "msg: {}", err);
 }
 
 #[test]
 fn validate_batch_axon_json_invalid_ip_rejects() {
     let err = validate_batch_axon_json(r#"[{"netuid": 1, "ip": "127.0.0.1", "port": 8091}]"#)
-        .unwrap_err().to_string();
-    assert!(err.contains("loopback") || err.contains("IP") || err.contains("ip"), "msg: {}", err);
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("loopback") || err.contains("IP") || err.contains("ip"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
@@ -1743,7 +1863,9 @@ fn validate_batch_axon_json_entry_not_object_rejects() {
 
 #[test]
 fn validate_batch_axon_json_string_entry_rejects() {
-    let err = validate_batch_axon_json(r#"["hello"]"#).unwrap_err().to_string();
+    let err = validate_batch_axon_json(r#"["hello"]"#)
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("not a JSON object"), "msg: {}", err);
 }
 
@@ -1788,14 +1910,20 @@ fn validate_mnemonic_whitespace_only_rejects() {
 
 #[test]
 fn validate_mnemonic_wrong_word_count_rejects() {
-    let err = validate_mnemonic("abandon abandon abandon").unwrap_err().to_string();
+    let err = validate_mnemonic("abandon abandon abandon")
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("3 words"), "msg: {}", err);
     assert!(err.contains("12, 15, 18, 21, or 24"), "msg: {}", err);
 }
 
 #[test]
 fn validate_mnemonic_11_words_rejects() {
-    let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon").unwrap_err().to_string();
+    let err = validate_mnemonic(
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon",
+    )
+    .unwrap_err()
+    .to_string();
     assert!(err.contains("11 words"), "msg: {}", err);
 }
 
@@ -1809,7 +1937,11 @@ fn validate_mnemonic_13_words_rejects() {
 fn validate_mnemonic_invalid_word_rejects() {
     // 12 words but one is not BIP-39
     let err = validate_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon xylophone").unwrap_err().to_string();
-    assert!(err.contains("xylophone"), "should mention bad word: {}", err);
+    assert!(
+        err.contains("xylophone"),
+        "should mention bad word: {}",
+        err
+    );
     assert!(err.contains("BIP-39"), "should mention BIP-39: {}", err);
 }
 
@@ -1826,40 +1958,64 @@ fn validate_mnemonic_extra_spaces_ok() {
     let mnemonic = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 16]).unwrap();
     let phrase = mnemonic.to_string();
     let with_spaces = format!("  {}  ", phrase.replace(' ', "  "));
-    assert!(validate_mnemonic(&with_spaces).is_ok(), "extra whitespace should be tolerated");
+    assert!(
+        validate_mnemonic(&with_spaces).is_ok(),
+        "extra whitespace should be tolerated"
+    );
 }
 
 #[test]
 fn validate_mnemonic_misspelled_word_suggests() {
     // "abandn" is close to "abandon"
     let err = validate_mnemonic("abandn abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap_err().to_string();
-    assert!(err.contains("abandn"), "should mention misspelled word: {}", err);
+    assert!(
+        err.contains("abandn"),
+        "should mention misspelled word: {}",
+        err
+    );
     assert!(err.contains("BIP-39"), "should mention BIP-39: {}", err);
 }
 
 #[test]
 fn validate_mnemonic_numbers_reject() {
-    let err = validate_mnemonic("1 2 3 4 5 6 7 8 9 10 11 12").unwrap_err().to_string();
-    assert!(err.contains("BIP-39") || err.contains("not in"), "msg: {}", err);
+    let err = validate_mnemonic("1 2 3 4 5 6 7 8 9 10 11 12")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("BIP-39") || err.contains("not in"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_mnemonic_single_word_rejects() {
     let err = validate_mnemonic("abandon").unwrap_err().to_string();
-    assert!(err.contains("1 words") || err.contains("1 word"), "msg: {}", err);
+    assert!(
+        err.contains("1 words") || err.contains("1 word"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_mnemonic_passphrase_not_mnemonic() {
     // Common mistake: entering a password instead of mnemonic
-    let err = validate_mnemonic("MySecretPassword123!").unwrap_err().to_string();
-    assert!(err.contains("1 word") || err.contains("expected"), "msg: {}", err);
+    let err = validate_mnemonic("MySecretPassword123!")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("1 word") || err.contains("expected"),
+        "msg: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_mnemonic_25_words_rejects() {
     // More than 24 words
-    let mnemonic24 = bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 32]).unwrap();
+    let mnemonic24 =
+        bip39::Mnemonic::from_entropy_in(bip39::Language::English, &[0u8; 32]).unwrap();
     let phrase = format!("{} abandon", mnemonic24);
     let err = validate_mnemonic(&phrase).unwrap_err().to_string();
     assert!(err.contains("25 words"), "msg: {}", err);
@@ -1871,106 +2027,205 @@ fn validate_mnemonic_25_words_rejects() {
 #[test]
 fn error_quality_validate_amount_zero_has_tip() {
     let err = validate_amount(0.0, "stake").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "zero amount error should have tip: {}", err);
+    assert!(
+        err.contains("Tip:"),
+        "zero amount error should have tip: {}",
+        err
+    );
     assert!(err.contains("RAO"), "should mention RAO minimum: {}", err);
 }
 
 #[test]
 fn error_quality_validate_name_empty_has_tip() {
     let err = validate_name("", "wallet").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "empty name error should have tip: {}", err);
-    assert!(err.contains("alphanumeric") || err.contains("mywallet"), "should suggest valid name: {}", err);
+    assert!(
+        err.contains("Tip:"),
+        "empty name error should have tip: {}",
+        err
+    );
+    assert!(
+        err.contains("alphanumeric") || err.contains("mywallet"),
+        "should suggest valid name: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_name_path_traversal_has_tip() {
-    let err = validate_name("../../../etc/passwd", "wallet").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "path traversal error should have tip: {}", err);
+    let err = validate_name("../../../etc/passwd", "wallet")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "path traversal error should have tip: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_ss58_empty_has_tip() {
-    let err = agcli::cli::helpers::validate_ss58("", "destination").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "empty SS58 error should have tip: {}", err);
+    let err = agcli::cli::helpers::validate_ss58("", "destination")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "empty SS58 error should have tip: {}",
+        err
+    );
     assert!(err.contains("48"), "should mention address length: {}", err);
 }
 
 #[test]
 fn error_quality_validate_ss58_ethereum_has_tip() {
-    let err = agcli::cli::helpers::validate_ss58("0x742d35Cc6634C0532925a3b844BcEfe0390a94e0", "destination").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "Ethereum address error should have tip: {}", err);
-    assert!(err.contains("Ethereum") || err.contains("SS58"), "should explain format: {}", err);
+    let err = agcli::cli::helpers::validate_ss58(
+        "0x742d35Cc6634C0532925a3b844BcEfe0390a94e0",
+        "destination",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "Ethereum address error should have tip: {}",
+        err
+    );
+    assert!(
+        err.contains("Ethereum") || err.contains("SS58"),
+        "should explain format: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_ipv4_loopback_has_tip() {
     let err = validate_ipv4("127.0.0.1").unwrap_err().to_string();
-    assert!(err.contains("public"), "loopback error should suggest public IP: {}", err);
+    assert!(
+        err.contains("public"),
+        "loopback error should suggest public IP: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_take_over_max_has_tip() {
     let err = validate_take_pct(20.0).unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "over-max take error should have tip: {}", err);
+    assert!(
+        err.contains("Tip:"),
+        "over-max take error should have tip: {}",
+        err
+    );
     assert!(err.contains("18"), "should mention maximum: {}", err);
 }
 
 #[test]
 fn error_quality_validate_port_zero_has_tip() {
-    let err = agcli::cli::helpers::validate_port(0, "axon").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "port zero error should have tip: {}", err);
-    assert!(err.contains("8091") || err.contains("443"), "should suggest common ports: {}", err);
+    let err = agcli::cli::helpers::validate_port(0, "axon")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "port zero error should have tip: {}",
+        err
+    );
+    assert!(
+        err.contains("8091") || err.contains("443"),
+        "should suggest common ports: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_netuid_zero_has_tip() {
-    let err = agcli::cli::helpers::validate_netuid(0).unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "netuid zero error should have tip: {}", err);
-    assert!(err.contains("netuid 1"), "should mention subnets start at 1: {}", err);
+    let err = agcli::cli::helpers::validate_netuid(0)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "netuid zero error should have tip: {}",
+        err
+    );
+    assert!(
+        err.contains("netuid 1"),
+        "should mention subnets start at 1: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_symbol_empty_has_tip() {
     let err = validate_symbol("").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "empty symbol error should have tip: {}", err);
-    assert!(err.contains("ALPHA") || err.contains("SN1"), "should suggest example: {}", err);
+    assert!(
+        err.contains("Tip:"),
+        "empty symbol error should have tip: {}",
+        err
+    );
+    assert!(
+        err.contains("ALPHA") || err.contains("SN1"),
+        "should suggest example: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_mnemonic_wrong_count_has_tip() {
-    let err = validate_mnemonic("abandon abandon abandon").unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "wrong word count error should have tip: {}", err);
+    let err = validate_mnemonic("abandon abandon abandon")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("Tip:"),
+        "wrong word count error should have tip: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_mnemonic_bad_word_has_tip() {
     let err = validate_mnemonic("xylophone abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap_err().to_string();
-    assert!(err.contains("BIP-39") || err.contains("dictionary"), "bad word error should mention BIP-39: {}", err);
+    assert!(
+        err.contains("BIP-39") || err.contains("dictionary"),
+        "bad word error should mention BIP-39: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_parse_weight_invalid_has_format() {
     let err = parse_weight_pairs("bad").unwrap_err().to_string();
-    assert!(err.contains("uid:weight") || err.contains("Format:"), "should show format: {}", err);
+    assert!(
+        err.contains("uid:weight") || err.contains("Format:"),
+        "should show format: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_parse_children_invalid_has_format() {
     let err = parse_children("bad").unwrap_err().to_string();
-    assert!(err.contains("proportion:hotkey") || err.contains("Format:"), "should show format: {}", err);
+    assert!(
+        err.contains("proportion:hotkey") || err.contains("Format:"),
+        "should show format: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_max_cost_negative_mentions_value() {
     let err = validate_max_cost(-5.0).unwrap_err().to_string();
     assert!(err.contains("-5"), "should show the invalid value: {}", err);
-    assert!(err.contains("negative"), "should explain why invalid: {}", err);
+    assert!(
+        err.contains("negative"),
+        "should explain why invalid: {}",
+        err
+    );
 }
 
 #[test]
 fn error_quality_validate_delegate_take_over_max_has_tip() {
     let err = validate_delegate_take(25.0).unwrap_err().to_string();
-    assert!(err.contains("Tip:"), "over-max delegate take should have tip: {}", err);
+    assert!(
+        err.contains("Tip:"),
+        "over-max delegate take should have tip: {}",
+        err
+    );
     assert!(err.contains("18"), "should mention maximum: {}", err);
 }
 
@@ -1980,7 +2235,15 @@ fn error_quality_validate_delegate_take_over_max_has_tip() {
 #[test]
 fn dry_run_flag_parses_with_transfer() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "transfer", "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "--amount", "1.0"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "transfer",
+        "--dest",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--amount",
+        "1.0",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run before subcommand: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -1989,7 +2252,15 @@ fn dry_run_flag_parses_with_transfer() {
 #[test]
 fn dry_run_flag_parses_after_subcommand() {
     use clap::Parser;
-    let args = vec!["agcli", "transfer", "--dry-run", "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "--amount", "1.0"];
+    let args = vec![
+        "agcli",
+        "transfer",
+        "--dry-run",
+        "--dest",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--amount",
+        "1.0",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run after subcommand: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -2014,7 +2285,16 @@ fn dry_run_flag_absent_means_false() {
 #[test]
 fn dry_run_with_stake_add() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "stake", "add", "--netuid", "1", "--amount", "1.0"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "stake",
+        "add",
+        "--netuid",
+        "1",
+        "--amount",
+        "1.0",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run with stake add: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -2026,14 +2306,27 @@ fn dry_run_with_subnet_register() {
     // subnet register takes no args — it creates a new network
     let args = vec!["agcli", "--dry-run", "subnet", "register"];
     let cli = agcli::cli::Cli::try_parse_from(args);
-    assert!(cli.is_ok(), "--dry-run with subnet register: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "--dry-run with subnet register: {:?}",
+        cli.err()
+    );
     assert!(cli.unwrap().dry_run);
 }
 
 #[test]
 fn dry_run_with_weights_set() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "weights", "set", "--netuid", "1", "--weights", "0:100,1:200"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:100,1:200",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run with weights set: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -2042,16 +2335,34 @@ fn dry_run_with_weights_set() {
 #[test]
 fn dry_run_with_delegate_increase() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "delegate", "increase-take", "--take", "10.0"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "delegate",
+        "increase-take",
+        "--take",
+        "10.0",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
-    assert!(cli.is_ok(), "--dry-run with delegate increase-take: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "--dry-run with delegate increase-take: {:?}",
+        cli.err()
+    );
     assert!(cli.unwrap().dry_run);
 }
 
 #[test]
 fn dry_run_with_proxy_add() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "proxy", "add", "--delegate", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "proxy",
+        "add",
+        "--delegate",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run with proxy add: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -2060,8 +2371,18 @@ fn dry_run_with_proxy_add() {
 #[test]
 fn dry_run_with_serve_axon() {
     use clap::Parser;
-    let args = vec!["agcli", "--dry-run", "serve", "axon",
-        "--netuid", "1", "--ip", "1.2.3.4", "--port", "8091"];
+    let args = vec![
+        "agcli",
+        "--dry-run",
+        "serve",
+        "axon",
+        "--netuid",
+        "1",
+        "--ip",
+        "1.2.3.4",
+        "--port",
+        "8091",
+    ];
     let cli = agcli::cli::Cli::try_parse_from(args);
     assert!(cli.is_ok(), "--dry-run with serve axon: {:?}", cli.err());
     assert!(cli.unwrap().dry_run);
@@ -2073,13 +2394,16 @@ fn dry_run_with_serve_axon() {
 fn parse_children_trailing_comma_ok() {
     let alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
     let result = parse_children(&format!("1000:{},", alice));
-    assert!(result.is_ok(), "trailing comma should be tolerated: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "trailing comma should be tolerated: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().len(), 1);
 }
 
 #[test]
 // ──── validate_derive_input tests ────
-
 #[test]
 fn validate_derive_input_valid_hex_32_bytes() {
     let hex = "0x0000000000000000000000000000000000000000000000000000000000000001";
@@ -2115,7 +2439,9 @@ fn validate_derive_input_hex_empty_after_prefix() {
 
 #[test]
 fn validate_derive_input_hex_odd_length() {
-    let err = validate_derive_input("0x012345678901234567890123456789012345678901234567890123456789012").unwrap_err();
+    let err =
+        validate_derive_input("0x012345678901234567890123456789012345678901234567890123456789012")
+            .unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("odd length"), "got: {}", msg);
 }
@@ -2129,14 +2455,19 @@ fn validate_derive_input_hex_too_short() {
 
 #[test]
 fn validate_derive_input_hex_too_long() {
-    let err = validate_derive_input("0x00000000000000000000000000000000000000000000000000000000000000000000").unwrap_err();
+    let err = validate_derive_input(
+        "0x00000000000000000000000000000000000000000000000000000000000000000000",
+    )
+    .unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("32 bytes"), "got: {}", msg);
 }
 
 #[test]
 fn validate_derive_input_hex_invalid_chars() {
-    let err = validate_derive_input("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG").unwrap_err();
+    let err =
+        validate_derive_input("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
+            .unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("Invalid hex character"), "got: {}", msg);
 }
@@ -2147,14 +2478,21 @@ fn validate_derive_input_hex_uppercase_0X() {
     let err = validate_derive_input("0X0123").unwrap_err();
     // Should treat as hex path and reject for wrong length
     let msg = err.to_string();
-    assert!(msg.contains("odd length") || msg.contains("32 bytes"), "got: {}", msg);
+    assert!(
+        msg.contains("odd length") || msg.contains("32 bytes"),
+        "got: {}",
+        msg
+    );
 }
 
 #[test]
 fn validate_derive_input_hex_with_spaces() {
     // Hex with trailing spaces — trimmed first
     let hex = "0x0000000000000000000000000000000000000000000000000000000000000001  ";
-    assert!(validate_derive_input(hex).is_ok(), "trailing spaces should be trimmed");
+    assert!(
+        validate_derive_input(hex).is_ok(),
+        "trailing spaces should be trimmed"
+    );
 }
 
 #[test]
@@ -2162,7 +2500,11 @@ fn validate_derive_input_invalid_mnemonic() {
     // Something that's not hex but also not a valid mnemonic
     let err = validate_derive_input("not a valid mnemonic at all").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("mnemonic") || msg.contains("word"), "got: {}", msg);
+    assert!(
+        msg.contains("mnemonic") || msg.contains("word"),
+        "got: {}",
+        msg
+    );
 }
 
 // ──── validate_multisig_json_args tests ────
@@ -2182,7 +2524,9 @@ fn validate_multisig_json_args_valid_hex_bytes() {
 
 #[test]
 fn validate_multisig_json_args_valid_nested_object() {
-    let result = validate_multisig_json_args(r#"[{"Id": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}, 1000]"#);
+    let result = validate_multisig_json_args(
+        r#"[{"Id": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}, 1000]"#,
+    );
     assert!(result.is_ok());
 }
 
@@ -2205,7 +2549,11 @@ fn validate_multisig_json_args_json_object_not_array() {
     let err = validate_multisig_json_args(r#"{"key": "value"}"#).unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("Expected a JSON array"), "got: {}", msg);
-    assert!(msg.contains("object"), "should say it got an object: {}", msg);
+    assert!(
+        msg.contains("object"),
+        "should say it got an object: {}",
+        msg
+    );
 }
 
 #[test]
@@ -2227,7 +2575,11 @@ fn validate_multisig_json_args_null_element() {
     let err = validate_multisig_json_args("[1, null, 3]").unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("null"), "got: {}", msg);
-    assert!(msg.contains("index 1"), "should identify the index: {}", msg);
+    assert!(
+        msg.contains("index 1"),
+        "should identify the index: {}",
+        msg
+    );
 }
 
 #[test]
@@ -2249,14 +2601,22 @@ fn validate_multisig_json_args_long_string() {
 #[test]
 fn validate_multisig_json_args_empty_array() {
     let result = validate_multisig_json_args("[]");
-    assert!(result.is_ok(), "empty array should be valid: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "empty array should be valid: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().len(), 0);
 }
 
 #[test]
 fn validate_multisig_json_args_whitespace_around() {
     let result = validate_multisig_json_args("  [1, 2]  ");
-    assert!(result.is_ok(), "whitespace should be trimmed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "whitespace should be trimmed: {:?}",
+        result.err()
+    );
 }
 
 #[test]
@@ -2401,7 +2761,8 @@ fn evm_address_too_short() {
 
 #[test]
 fn evm_address_too_long() {
-    let err = validate_evm_address("0x1234567890abcdef1234567890abcdef1234567800", "target").unwrap_err();
+    let err =
+        validate_evm_address("0x1234567890abcdef1234567890abcdef1234567800", "target").unwrap_err();
     assert!(err.to_string().contains("20 bytes"), "got: {}", err);
 }
 
@@ -2413,7 +2774,8 @@ fn evm_address_odd_length() {
 
 #[test]
 fn evm_address_invalid_hex_char() {
-    let err = validate_evm_address("0x1234567890abcdef1234567890abcdef1234567g", "src").unwrap_err();
+    let err =
+        validate_evm_address("0x1234567890abcdef1234567890abcdef1234567g", "src").unwrap_err();
     assert!(err.to_string().contains("not valid hex"), "got: {}", err);
 }
 
@@ -2437,14 +2799,19 @@ fn evm_address_19_bytes() {
 
 #[test]
 fn evm_address_21_bytes() {
-    let err = validate_evm_address("0x1234567890abcdef1234567890abcdef123456789a", "test").unwrap_err();
+    let err =
+        validate_evm_address("0x1234567890abcdef1234567890abcdef123456789a", "test").unwrap_err();
     assert!(err.to_string().contains("20 bytes"), "got: {}", err);
 }
 
 #[test]
 fn evm_address_error_includes_tip() {
     let err = validate_evm_address("", "source").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 #[test]
@@ -2469,7 +2836,11 @@ fn hex_data_valid_short() {
 
 #[test]
 fn hex_data_valid_long() {
-    assert!(validate_hex_data("0x0000000000000000000000000000000000000000000000000000000000000001", "test").is_ok());
+    assert!(validate_hex_data(
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "test"
+    )
+    .is_ok());
 }
 
 #[test]
@@ -2514,7 +2885,11 @@ fn hex_data_single_byte() {
 #[test]
 fn hex_data_error_includes_tip() {
     let err = validate_hex_data("0xabc", "salt").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2561,13 +2936,21 @@ fn pallet_call_spaces_only() {
 #[test]
 fn pallet_call_starts_with_number() {
     let err = validate_pallet_call("1System", "pallet").unwrap_err();
-    assert!(err.to_string().contains("must start with a letter"), "got: {}", err);
+    assert!(
+        err.to_string().contains("must start with a letter"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn pallet_call_starts_with_underscore() {
     let err = validate_pallet_call("_private", "call").unwrap_err();
-    assert!(err.to_string().contains("must start with a letter"), "got: {}", err);
+    assert!(
+        err.to_string().contains("must start with a letter"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -2610,7 +2993,11 @@ fn pallet_call_unicode() {
 #[test]
 fn pallet_call_error_includes_tip() {
     let err = validate_pallet_call("", "pallet").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2653,7 +3040,11 @@ fn schedule_id_with_special_chars() {
 #[test]
 fn schedule_id_error_includes_tip() {
     let err = validate_schedule_id("").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2680,7 +3071,11 @@ fn crowdloan_amount_valid_one() {
 #[test]
 fn crowdloan_amount_zero_rejected() {
     let err = validate_crowdloan_amount(0.0, "deposit").unwrap_err();
-    assert!(err.to_string().contains("greater than zero"), "got: {}", err);
+    assert!(
+        err.to_string().contains("greater than zero"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -2716,13 +3111,21 @@ fn crowdloan_amount_tiny_valid() {
 #[test]
 fn crowdloan_amount_error_includes_tip() {
     let err = validate_crowdloan_amount(0.0, "deposit").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 #[test]
 fn crowdloan_amount_negative_error_includes_tip() {
     let err = validate_crowdloan_amount(-5.0, "cap").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2784,7 +3187,11 @@ fn price_tiny_valid() {
 #[test]
 fn price_error_includes_tip() {
     let err = validate_price(0.0, "price-low").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2836,7 +3243,11 @@ fn commitment_data_single_char_valid() {
 #[test]
 fn commitment_data_error_includes_tip() {
     let err = validate_commitment_data("").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2897,7 +3308,11 @@ fn event_filter_empty_rejected() {
 #[test]
 fn event_filter_nonsense_rejected() {
     let err = validate_event_filter("foobar").unwrap_err();
-    assert!(err.to_string().contains("Invalid event filter"), "got: {}", err);
+    assert!(
+        err.to_string().contains("Invalid event filter"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -2909,7 +3324,11 @@ fn event_filter_with_spaces() {
 #[test]
 fn event_filter_error_includes_tip() {
     let err = validate_event_filter("bad").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -2941,7 +3360,11 @@ fn wasm_file_too_small() {
 fn wasm_file_bad_magic() {
     let data = vec![0x7f, 0x45, 0x4c, 0x46, 0x01, 0x00, 0x00, 0x00]; // ELF magic
     let err = validate_wasm_file(&data, "not.wasm").unwrap_err();
-    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+    assert!(
+        err.to_string().contains("not a WASM module"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -2949,7 +3372,11 @@ fn wasm_file_pdf_magic() {
     let mut data = b"%PDF-1.4 ".to_vec();
     data.extend_from_slice(&[0u8; 100]);
     let err = validate_wasm_file(&data, "doc.pdf").unwrap_err();
-    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+    assert!(
+        err.to_string().contains("not a WASM module"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -2972,13 +3399,21 @@ fn wasm_file_exactly_max_size() {
 fn wasm_file_error_includes_tip() {
     let data = vec![0xff; 100];
     let err = validate_wasm_file(&data, "bad.wasm").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 #[test]
 fn wasm_file_error_shows_filename() {
     let err = validate_wasm_file(&[], "my_contract.wasm").unwrap_err();
-    assert!(err.to_string().contains("my_contract.wasm"), "error should include filename: {}", err);
+    assert!(
+        err.to_string().contains("my_contract.wasm"),
+        "error should include filename: {}",
+        err
+    );
 }
 
 #[test]
@@ -2986,7 +3421,11 @@ fn wasm_file_json_bytes() {
     // Someone passes a JSON file instead of WASM
     let data = b"[{\"pallet\":\"Test\"}]";
     let err = validate_wasm_file(data, "calls.json").unwrap_err();
-    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+    assert!(
+        err.to_string().contains("not a WASM module"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3032,13 +3471,21 @@ fn gas_limit_zero_rejected() {
 #[test]
 fn gas_limit_zero_error_includes_tip() {
     let err = validate_gas_limit(0, "gas limit").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 #[test]
 fn gas_limit_error_includes_label() {
     let err = validate_gas_limit(0, "my gas").unwrap_err();
-    assert!(err.to_string().contains("my gas"), "error should include label: {}", err);
+    assert!(
+        err.to_string().contains("my gas"),
+        "error should include label: {}",
+        err
+    );
 }
 
 // =====================================================================
@@ -3122,7 +3569,11 @@ fn batch_file_invalid_json() {
 fn batch_file_missing_pallet() {
     let json = r#"[{"call":"transfer","args":[]}]"#;
     let err = validate_batch_file(json, "test.json").unwrap_err();
-    assert!(err.to_string().contains("missing \"pallet\""), "got: {}", err);
+    assert!(
+        err.to_string().contains("missing \"pallet\""),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3192,21 +3643,33 @@ fn batch_file_element_not_object_array() {
 fn batch_file_error_shows_index() {
     let json = r#"[{"pallet":"OK","call":"ok","args":[]},{"pallet":"Bad","args":[]}]"#;
     let err = validate_batch_file(json, "test.json").unwrap_err();
-    assert!(err.to_string().contains("#1"), "error should show index: {}", err);
+    assert!(
+        err.to_string().contains("#1"),
+        "error should show index: {}",
+        err
+    );
 }
 
 #[test]
 fn batch_file_error_includes_tip() {
     let json = r#"[{"pallet":"X","call":"y"}]"#;
     let err = validate_batch_file(json, "test.json").unwrap_err();
-    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+    assert!(
+        err.to_string().contains("Tip:"),
+        "error should include Tip: {}",
+        err
+    );
 }
 
 #[test]
 fn batch_file_error_shows_filename() {
     let json = "not-json";
     let err = validate_batch_file(json, "my_batch.json").unwrap_err();
-    assert!(err.to_string().contains("my_batch.json"), "error should include filename: {}", err);
+    assert!(
+        err.to_string().contains("my_batch.json"),
+        "error should include filename: {}",
+        err
+    );
 }
 
 #[test]
@@ -3225,7 +3688,11 @@ fn batch_file_exactly_1000_calls() {
     let calls: Vec<&str> = (0..1000).map(|_| call).collect();
     let json = format!("[{}]", calls.join(","));
     let result = validate_batch_file(&json, "max.json");
-    assert!(result.is_ok(), "1000 calls should be ok: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "1000 calls should be ok: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().len(), 1000);
 }
 
@@ -3240,7 +3707,8 @@ fn batch_file_mixed_valid_invalid() {
 #[test]
 fn batch_file_extra_fields_ok() {
     // Extra fields besides pallet/call/args should be tolerated
-    let json = r#"[{"pallet":"System","call":"remark","args":[],"comment":"my note","priority":1}]"#;
+    let json =
+        r#"[{"pallet":"System","call":"remark","args":[],"comment":"my note","priority":1}]"#;
     assert!(validate_batch_file(json, "test.json").is_ok());
 }
 
@@ -3304,7 +3772,11 @@ fn weight_input_missing_colon() {
 #[test]
 fn weight_input_trailing_comma() {
     let err = validate_weight_input("0:100,").unwrap_err();
-    assert!(err.to_string().contains("Empty weight pair"), "got: {}", err);
+    assert!(
+        err.to_string().contains("Empty weight pair"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3316,13 +3788,21 @@ fn weight_input_double_colon() {
 #[test]
 fn weight_input_leading_comma() {
     let err = validate_weight_input(",0:100").unwrap_err();
-    assert!(err.to_string().contains("Empty weight pair"), "got: {}", err);
+    assert!(
+        err.to_string().contains("Empty weight pair"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn weight_input_middle_empty() {
     let err = validate_weight_input("0:100,,1:200").unwrap_err();
-    assert!(err.to_string().contains("Empty weight pair"), "got: {}", err);
+    assert!(
+        err.to_string().contains("Empty weight pair"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3363,7 +3843,11 @@ fn view_limit_max_boundary() {
 #[test]
 fn view_limit_label_in_error() {
     let err = validate_view_limit(0, "validators --limit").unwrap_err();
-    assert!(err.to_string().contains("validators --limit"), "got: {}", err);
+    assert!(
+        err.to_string().contains("validators --limit"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3399,25 +3883,41 @@ fn admin_call_whitespace_only() {
 #[test]
 fn admin_call_starts_with_number() {
     let err = validate_admin_call_name("1set_tempo").unwrap_err();
-    assert!(err.to_string().contains("must start with a letter"), "got: {}", err);
+    assert!(
+        err.to_string().contains("must start with a letter"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn admin_call_starts_with_underscore() {
     let err = validate_admin_call_name("_hidden").unwrap_err();
-    assert!(err.to_string().contains("must start with a letter"), "got: {}", err);
+    assert!(
+        err.to_string().contains("must start with a letter"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn admin_call_special_chars() {
     let err = validate_admin_call_name("sudo.set.tempo").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "got: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn admin_call_spaces() {
     let err = validate_admin_call_name("sudo set tempo").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "got: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3436,13 +3936,22 @@ fn admin_call_exact_max_length() {
 #[test]
 fn admin_call_with_hyphen() {
     let err = validate_admin_call_name("sudo-set-tempo").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "got: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
 fn admin_call_unicode() {
     let err = validate_admin_call_name("südö_set").unwrap_err();
-    assert!(err.to_string().contains("must start with a letter") || err.to_string().contains("invalid character"), "got: {}", err);
+    assert!(
+        err.to_string().contains("must start with a letter")
+            || err.to_string().contains("invalid character"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3722,19 +4231,31 @@ fn validate_subnet_name_too_long() {
 #[test]
 fn validate_subnet_name_control_chars() {
     let err = validate_subnet_name("My\x00Subnet", "name").unwrap_err();
-    assert!(err.to_string().contains("control character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("control character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_subnet_name_newline_rejected() {
     let err = validate_subnet_name("My\nSubnet", "name").unwrap_err();
-    assert!(err.to_string().contains("control character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("control character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_subnet_name_tab_rejected() {
     let err = validate_subnet_name("My\tSubnet", "name").unwrap_err();
-    assert!(err.to_string().contains("control character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("control character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
@@ -3812,13 +4333,21 @@ fn validate_github_repo_too_many_slashes() {
 #[test]
 fn validate_github_repo_special_chars() {
     let err = validate_github_repo("user@/repo").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_github_repo_spaces_in_name() {
     let err = validate_github_repo("my org/my repo").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
@@ -3831,13 +4360,21 @@ fn validate_github_repo_too_long() {
 #[test]
 fn validate_github_repo_unicode_rejected() {
     let err = validate_github_repo("日本/語").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_github_repo_hash_character() {
     let err = validate_github_repo("user/repo#1").unwrap_err();
-    assert!(err.to_string().contains("invalid character"), "err: {}", err);
+    assert!(
+        err.to_string().contains("invalid character"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
@@ -3970,39 +4507,67 @@ fn validate_proxy_type_empty_rejected() {
 #[test]
 fn validate_proxy_type_typo_rejected() {
     let err = validate_proxy_type("Stakking").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
-    assert!(err.to_string().contains("Staking"), "should suggest valid types: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
+    assert!(
+        err.to_string().contains("Staking"),
+        "should suggest valid types: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_proxy_type_random_string_rejected() {
     let err = validate_proxy_type("foobar123").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_proxy_type_numeric_rejected() {
     let err = validate_proxy_type("42").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_proxy_type_whitespace_rejected() {
     let err = validate_proxy_type("  ").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_proxy_type_partial_match_rejected() {
     // "stake" is not a valid type — must be "staking"
     let err = validate_proxy_type("stake").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
 }
 
 #[test]
 fn validate_proxy_type_special_chars_rejected() {
     let err = validate_proxy_type("any;drop").unwrap_err();
-    assert!(err.to_string().contains("Unknown proxy type"), "err: {}", err);
+    assert!(
+        err.to_string().contains("Unknown proxy type"),
+        "err: {}",
+        err
+    );
 }
 
 // ── validate_spending_limit ──
@@ -4192,7 +4757,10 @@ fn validate_call_hash_one_byte_long_rejected() {
 #[test]
 fn validate_call_hash_spaces_around_hash() {
     let hash = "  0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890  ";
-    assert!(validate_call_hash(hash, "test").is_ok(), "should trim whitespace");
+    assert!(
+        validate_call_hash(hash, "test").is_ok(),
+        "should trim whitespace"
+    );
 }
 
 #[test]

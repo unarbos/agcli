@@ -26,7 +26,11 @@ pub(super) async fn handle_root(cmd: RootCommands, client: &Client, ctx: &Ctx<'_
             );
             let hash = client.root_register(&pair, &hk).await?;
             tracing::info!(tx = %hash, "Root registration complete");
-            println!("Registered on root network with hotkey {}.\n  Tx: {}", crate::utils::short_ss58(&hk), hash);
+            println!(
+                "Registered on root network with hotkey {}.\n  Tx: {}",
+                crate::utils::short_ss58(&hk),
+                hash
+            );
             Ok(())
         }
         RootCommands::Weights { weights } => {
@@ -244,7 +248,10 @@ pub(super) async fn handle_identity(
                 .set_subnet_identity(wallet.coldkey()?, NetUid(netuid), &identity)
                 .await?;
             tracing::info!(tx = %hash, netuid = netuid, "Subnet identity set");
-            println!("Subnet identity set for SN{} (name: '{}').\n  Tx: {}", netuid, name, hash);
+            println!(
+                "Subnet identity set for SN{} (name: '{}').\n  Tx: {}",
+                netuid, name, hash
+            );
             Ok(())
         }
     }
@@ -279,7 +286,12 @@ pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_
                 .swap_hotkey(wallet.coldkey()?, &old_hotkey, &new_hotkey)
                 .await?;
             tracing::info!(tx = %hash, "Hotkey swapped");
-            println!("Hotkey swapped: {} → {}.\n  Tx: {}", crate::utils::short_ss58(&old_hotkey), crate::utils::short_ss58(&new_hotkey), hash);
+            println!(
+                "Hotkey swapped: {} → {}.\n  Tx: {}",
+                crate::utils::short_ss58(&old_hotkey),
+                crate::utils::short_ss58(&new_hotkey),
+                hash
+            );
             Ok(())
         }
         SwapCommands::Coldkey { new_coldkey } => {
@@ -310,7 +322,12 @@ pub(super) async fn handle_subscribe(
     _batch: bool,
 ) -> Result<()> {
     // Validate inputs before connecting
-    if let SubscribeCommands::Events { ref filter, ref account, .. } = cmd {
+    if let SubscribeCommands::Events {
+        ref filter,
+        ref account,
+        ..
+    } = cmd
+    {
         validate_event_filter(filter)?;
         if let Some(ref acct) = account {
             validate_ss58(acct, "account")?;
@@ -419,7 +436,14 @@ pub(super) async fn handle_multisig(
                     fields,
                 )
                 .await?;
-            println!("Multisig call submitted: {}.{} (threshold {}/{}).\n  Tx: {}", pallet, call, threshold, other_ids.len() + 1, hash);
+            println!(
+                "Multisig call submitted: {}.{} (threshold {}/{}).\n  Tx: {}",
+                pallet,
+                call,
+                threshold,
+                other_ids.len() + 1,
+                hash
+            );
             Ok(())
         }
         MultisigCommands::Approve {
@@ -445,7 +469,12 @@ pub(super) async fn handle_multisig(
             let tx_hash = client
                 .approve_multisig(wallet.coldkey()?, &other_ids, threshold, hash_bytes)
                 .await?;
-            println!("Multisig approval submitted (threshold {}/{}).\n  Tx: {}", threshold, other_ids.len() + 1, tx_hash);
+            println!(
+                "Multisig approval submitted (threshold {}/{}).\n  Tx: {}",
+                threshold,
+                other_ids.len() + 1,
+                tx_hash
+            );
             Ok(())
         }
         MultisigCommands::Execute {
@@ -488,7 +517,14 @@ pub(super) async fn handle_multisig(
                     fields,
                 )
                 .await?;
-            println!("Multisig call executed: {}.{} (threshold {}/{}).\n  Tx: {}", pallet, call, threshold, other_ids.len() + 1, tx_hash);
+            println!(
+                "Multisig call executed: {}.{} (threshold {}/{}).\n  Tx: {}",
+                pallet,
+                call,
+                threshold,
+                other_ids.len() + 1,
+                tx_hash
+            );
             Ok(())
         }
         MultisigCommands::Cancel {
@@ -522,7 +558,12 @@ pub(super) async fn handle_multisig(
                     hash_bytes,
                 )
                 .await?;
-            println!("Multisig call cancelled (threshold {}/{}).\n  Tx: {}", threshold, other_ids.len() + 1, tx_hash);
+            println!(
+                "Multisig call cancelled (threshold {}/{}).\n  Tx: {}",
+                threshold,
+                other_ids.len() + 1,
+                tx_hash
+            );
             Ok(())
         }
         MultisigCommands::List { address } => {
@@ -599,7 +640,10 @@ pub(super) async fn handle_scheduler(
                     fields,
                 )
                 .await?;
-            println!("Call scheduled: {}.{} at block {} (priority {}).\n  Tx: {}", pallet, call, when, priority, tx_hash);
+            println!(
+                "Call scheduled: {}.{} at block {} (priority {}).\n  Tx: {}",
+                pallet, call, when, priority, tx_hash
+            );
             Ok(())
         }
         SchedulerCommands::ScheduleNamed {
@@ -641,7 +685,10 @@ pub(super) async fn handle_scheduler(
                     fields,
                 )
                 .await?;
-            println!("Named call '{}' scheduled: {}.{} at block {}.\n  Tx: {}", id, pallet, call, when, tx_hash);
+            println!(
+                "Named call '{}' scheduled: {}.{} at block {}.\n  Tx: {}",
+                id, pallet, call, when, tx_hash
+            );
             Ok(())
         }
         SchedulerCommands::Cancel { when, index } => {
@@ -654,7 +701,10 @@ pub(super) async fn handle_scheduler(
             let tx_hash = client
                 .cancel_scheduled(wallet.coldkey()?, when, index)
                 .await?;
-            println!("Scheduled task at block {} index {} cancelled.\n  Tx: {}", when, index, tx_hash);
+            println!(
+                "Scheduled task at block {} index {} cancelled.\n  Tx: {}",
+                when, index, tx_hash
+            );
             Ok(())
         }
         SchedulerCommands::CancelNamed { id } => {
@@ -664,7 +714,10 @@ pub(super) async fn handle_scheduler(
             let tx_hash = client
                 .cancel_named_scheduled(wallet.coldkey()?, id.as_bytes())
                 .await?;
-            println!("Named scheduled task '{}' cancelled.\n  Tx: {}", id, tx_hash);
+            println!(
+                "Named scheduled task '{}' cancelled.\n  Tx: {}",
+                id, tx_hash
+            );
             Ok(())
         }
     }
@@ -688,7 +741,13 @@ pub(super) async fn handle_preimage(
             let (tx_hash, preimage_hash) = client
                 .note_preimage(wallet.coldkey()?, &pallet, &call, fields)
                 .await?;
-            println!("Preimage stored for {}.{}.\n  Hash: 0x{}\n  Tx: {}", pallet, call, hex::encode(preimage_hash), tx_hash);
+            println!(
+                "Preimage stored for {}.{}.\n  Hash: 0x{}\n  Tx: {}",
+                pallet,
+                call,
+                hex::encode(preimage_hash),
+                tx_hash
+            );
             Ok(())
         }
         PreimageCommands::Unnote { hash } => {
@@ -1010,7 +1069,10 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
                 netuid, ip, port, protocol, version
             );
             let hash = client.serve_axon(&pair, NetUid(netuid), &axon).await?;
-            println!("Axon served on SN{}: {}:{} (proto={}, ver={}).\n  Tx: {}", netuid, ip, port, protocol, version, hash);
+            println!(
+                "Axon served on SN{}: {}:{} (proto={}, ver={}).\n  Tx: {}",
+                netuid, ip, port, protocol, version, hash
+            );
             Ok(())
         }
         ServeCommands::BatchAxon { file } => {
@@ -1064,7 +1126,12 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
                 protocol: 0,
             };
             let hash = client.serve_axon(&pair, NetUid(netuid), &axon).await?;
-            println!("Axon reset for {} on SN{}.\n  Tx: {}", crate::utils::short_ss58(&hk), netuid, hash);
+            println!(
+                "Axon reset for {} on SN{}.\n  Tx: {}",
+                crate::utils::short_ss58(&hk),
+                netuid,
+                hash
+            );
             Ok(())
         }
     }
@@ -1210,7 +1277,11 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             let tx_hash = client
                 .proxy_announce(wallet.coldkey()?, &real, hash_bytes)
                 .await?;
-            println!("Proxy announcement submitted for {}.\n  Tx: {}", crate::utils::short_ss58(&real), tx_hash);
+            println!(
+                "Proxy announcement submitted for {}.\n  Tx: {}",
+                crate::utils::short_ss58(&real),
+                tx_hash
+            );
             Ok(())
         }
         ProxyCommands::ProxyAnnounced {
@@ -1249,7 +1320,14 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
                     fields,
                 )
                 .await?;
-            println!("Announced proxy call executed: {}.{} (delegate={}, real={}).\n  Tx: {}", pallet, call, crate::utils::short_ss58(&delegate), crate::utils::short_ss58(&real), tx_hash);
+            println!(
+                "Announced proxy call executed: {}.{} (delegate={}, real={}).\n  Tx: {}",
+                pallet,
+                call,
+                crate::utils::short_ss58(&delegate),
+                crate::utils::short_ss58(&real),
+                tx_hash
+            );
             Ok(())
         }
         ProxyCommands::RejectAnnouncement {
@@ -1271,7 +1349,11 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             let tx_hash = client
                 .proxy_reject_announcement(wallet.coldkey()?, &delegate, hash_bytes)
                 .await?;
-            println!("Announcement from {} rejected.\n  Tx: {}", crate::utils::short_ss58(&delegate), tx_hash);
+            println!(
+                "Announcement from {} rejected.\n  Tx: {}",
+                crate::utils::short_ss58(&delegate),
+                tx_hash
+            );
             Ok(())
         }
         ProxyCommands::ListAnnouncements { address } => {
@@ -1465,7 +1547,13 @@ pub(super) async fn handle_crowdloan(
 
     // Validate write-command inputs before wallet unlock
     match &cmd {
-        CrowdloanCommands::Create { deposit, min_contribution, cap, target, .. } => {
+        CrowdloanCommands::Create {
+            deposit,
+            min_contribution,
+            cap,
+            target,
+            ..
+        } => {
             validate_crowdloan_amount(*deposit, "deposit")?;
             validate_crowdloan_amount(*min_contribution, "min-contribution")?;
             validate_crowdloan_amount(*cap, "cap")?;
@@ -1491,7 +1579,9 @@ pub(super) async fn handle_crowdloan(
         CrowdloanCommands::UpdateCap { cap, .. } => {
             validate_crowdloan_amount(*cap, "cap")?;
         }
-        CrowdloanCommands::UpdateMinContribution { min_contribution, .. } => {
+        CrowdloanCommands::UpdateMinContribution {
+            min_contribution, ..
+        } => {
             validate_crowdloan_amount(*min_contribution, "min-contribution")?;
         }
         _ => {} // ID-only commands validated by clap (u32)
@@ -1652,7 +1742,13 @@ pub(super) async fn handle_liquidity(
 ) -> Result<()> {
     // Validate inputs before wallet unlock
     match &cmd {
-        LiquidityCommands::Add { netuid, price_low, price_high, amount, hotkey } => {
+        LiquidityCommands::Add {
+            netuid,
+            price_low,
+            price_high,
+            amount,
+            hotkey,
+        } => {
             validate_netuid(*netuid)?;
             validate_price(*price_low, "price-low")?;
             validate_price(*price_high, "price-high")?;
@@ -1669,7 +1765,12 @@ pub(super) async fn handle_liquidity(
                 validate_ss58(hk, "hotkey")?;
             }
         }
-        LiquidityCommands::Modify { netuid, delta, hotkey, .. } => {
+        LiquidityCommands::Modify {
+            netuid,
+            delta,
+            hotkey,
+            ..
+        } => {
             validate_netuid(*netuid)?;
             if *delta == 0 {
                 anyhow::bail!("Invalid liquidity delta: cannot be zero.\n  Tip: use a positive value to add or negative to remove liquidity.");
@@ -1713,7 +1814,10 @@ pub(super) async fn handle_liquidity(
             let hash = client
                 .add_liquidity(pair, &hk, NetUid(netuid), tick_low, tick_high, amount)
                 .await?;
-            println!("Liquidity added on SN{}: {} RAO in range [{:.6}, {:.6}].\n  Tx: {}", netuid, amount, price_low, price_high, hash);
+            println!(
+                "Liquidity added on SN{}: {} RAO in range [{:.6}, {:.6}].\n  Tx: {}",
+                netuid, amount, price_low, price_high, hash
+            );
         }
         LiquidityCommands::Remove {
             netuid,
@@ -1729,7 +1833,10 @@ pub(super) async fn handle_liquidity(
             let hash = client
                 .remove_liquidity(pair, &hk, NetUid(netuid), position_id)
                 .await?;
-            println!("Liquidity position {} removed from SN{}.\n  Tx: {}", position_id, netuid, hash);
+            println!(
+                "Liquidity position {} removed from SN{}.\n  Tx: {}",
+                position_id, netuid, hash
+            );
         }
         LiquidityCommands::Modify {
             netuid,
@@ -1750,7 +1857,14 @@ pub(super) async fn handle_liquidity(
             let hash = client
                 .modify_liquidity(pair, &hk, NetUid(netuid), position_id, delta)
                 .await?;
-            println!("Position {} modified on SN{}: {} {} RAO.\n  Tx: {}", position_id, netuid, action.to_lowercase(), delta.unsigned_abs(), hash);
+            println!(
+                "Position {} modified on SN{}: {} {} RAO.\n  Tx: {}",
+                position_id,
+                netuid,
+                action.to_lowercase(),
+                delta.unsigned_abs(),
+                hash
+            );
         }
         LiquidityCommands::Toggle { netuid, enable } => {
             let pair = wallet.coldkey()?;

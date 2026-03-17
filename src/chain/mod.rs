@@ -934,7 +934,10 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
     // If the error is a raw "Custom error: N", decode it so the named-error matchers below work.
     // The decoded description provides the user-friendly explanation.
     let (msg, decoded_desc) = if let Some(decoded) = decode_custom_error(&raw_msg) {
-        (format!("{} [{}]", raw_msg, decoded.name), Some(decoded.desc))
+        (
+            format!("{} [{}]", raw_msg, decoded.name),
+            Some(decoded.desc),
+        )
     } else {
         (raw_msg, None)
     };
@@ -1209,10 +1212,15 @@ mod tests {
         // Verify every error code 0-132 has a non-empty description
         for i in 0..=132u32 {
             let msg = format!("Custom error: {}", i);
-            let d = decode_custom_error(&msg)
-                .unwrap_or_else(|| panic!("error {} should decode", i));
+            let d =
+                decode_custom_error(&msg).unwrap_or_else(|| panic!("error {} should decode", i));
             assert!(!d.name.is_empty(), "error {} should have a name", i);
-            assert!(!d.desc.is_empty(), "error {} ({}) should have a description", i, d.name);
+            assert!(
+                !d.desc.is_empty(),
+                "error {} ({}) should have a description",
+                i,
+                d.name
+            );
         }
     }
 

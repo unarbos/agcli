@@ -99,6 +99,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             hotkey,
             max_slippage,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "stake amount")?;
             // Spending limit check
             check_spending_limit(netuid, amount)?;
@@ -143,6 +144,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             hotkey,
             max_slippage,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "unstake amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
@@ -173,6 +175,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             to,
             hotkey,
         } => {
+            validate_netuid(from)?;
+            validate_netuid(to)?;
             validate_amount(amount, "move amount")?;
             if from == to {
                 anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
@@ -186,13 +190,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                     "moved",
                     &hk,
                     client
-                        .move_stake(
-                            &pair,
-                            &hk,
-                            NetUid(from),
-                            NetUid(to),
-                            bal,
-                        )
+                        .move_stake(&pair, &hk, NetUid(from), NetUid(to), bal)
                         .await,
                     &format!("Moved {} from SN{} to SN{}", bal.display_tao(), from, to),
                 )
@@ -204,11 +202,14 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             from_hotkey,
             to_hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "swap amount")?;
             validate_ss58(&from_hotkey, "stake swap from-hotkey")?;
             validate_ss58(&to_hotkey, "stake swap to-hotkey")?;
             if from_hotkey == to_hotkey {
-                anyhow::bail!("Source and destination hotkeys are the same. Use different hotkeys for swap.");
+                anyhow::bail!(
+                    "Source and destination hotkeys are the same. Use different hotkeys for swap."
+                );
             }
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
@@ -231,7 +232,9 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 .await?;
             println!(
                 "Stake swapped. {} moved between hotkeys on SN{}\n  Tx: {}",
-                bal.display_tao(), netuid, hash
+                bal.display_tao(),
+                netuid,
+                hash
             );
             Ok(())
         }
@@ -247,6 +250,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             )
         }
         StakeCommands::ClaimRoot { hotkey: _, netuid } => {
+            validate_netuid(netuid)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             let hash = client.claim_root(wallet.coldkey()?, &[netuid]).await?;
@@ -260,6 +264,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "limit stake amount")?;
             validate_amount(price, "limit price")?;
             let (pair, hk) =
@@ -278,7 +283,11 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 .await?;
             println!(
                 "Limit stake order placed. {} at price {:.4} on SN{} (partial={})\n  Tx: {}",
-                bal.display_tao(), price, netuid, partial, hash
+                bal.display_tao(),
+                price,
+                netuid,
+                partial,
+                hash
             );
             Ok(())
         }
@@ -289,6 +298,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "limit unstake amount")?;
             validate_amount(price, "limit price")?;
             let (pair, hk) =
@@ -313,6 +323,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_take_pct(take)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
@@ -333,6 +344,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             Ok(())
         }
         StakeCommands::SetChildren { netuid, children } => {
+            validate_netuid(netuid)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             let children_parsed = parse_children(&children)?;
@@ -347,7 +359,9 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 .await?;
             println!(
                 "{} children set on SN{}.\n  Tx: {}",
-                children_parsed.len(), netuid, hash
+                children_parsed.len(),
+                netuid,
+                hash
             );
             Ok(())
         }
@@ -356,6 +370,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "recycle alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
@@ -385,6 +400,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             netuid,
             hotkey,
         } => {
+            validate_netuid(netuid)?;
             validate_amount(amount, "burn alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
@@ -395,7 +411,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 client
                     .burn_alpha(&pair, &hk, (amount * 1e9) as u64, NetUid(netuid))
                     .await,
-                &format!("Burned {:.4} alpha on SN{} (permanently destroyed)", amount, netuid),
+                &format!(
+                    "Burned {:.4} alpha on SN{} (permanently destroyed)",
+                    amount, netuid
+                ),
             )
         }
         StakeCommands::SwapLimit {
@@ -406,6 +425,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             partial,
             hotkey,
         } => {
+            validate_netuid(from)?;
+            validate_netuid(to)?;
             validate_amount(amount, "swap-limit amount")?;
             validate_amount(price, "swap-limit price")?;
             if from == to {
@@ -429,6 +450,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             Ok(())
         }
         StakeCommands::SetAuto { netuid, hotkey } => {
+            validate_netuid(netuid)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             println!(
@@ -439,7 +461,9 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             let hash = client.set_auto_stake(&pair, NetUid(netuid), &hk).await?;
             println!(
                 "Auto-stake configured. SN{} emissions will auto-stake to {}\n  Tx: {}",
-                netuid, crate::utils::short_ss58(&hk), hash
+                netuid,
+                crate::utils::short_ss58(&hk),
+                hash
             );
             Ok(())
         }
@@ -528,6 +552,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             to,
             hotkey,
         } => {
+            validate_netuid(from)?;
+            validate_netuid(to)?;
             validate_ss58(&dest, "destination")?;
             validate_amount(amount, "transfer stake amount")?;
             let (pair, hk) =
@@ -545,7 +571,11 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 .await?;
             println!(
                 "Stake transferred. {:.4} TAO from SN{} to SN{}, destination: {}\n  Tx: {}",
-                amount, from, to, crate::utils::short_ss58(&dest), hash
+                amount,
+                from,
+                to,
+                crate::utils::short_ss58(&dest),
+                hash
             );
             Ok(())
         }
