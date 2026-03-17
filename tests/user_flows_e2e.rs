@@ -4679,13 +4679,24 @@ async fn flow_drand_randomness_oracle(client: &mut Client) {
 
     let alice = dev_pair(ALICE_URI);
 
-    // Step 1: Try writing a drand pulse (will fail — needs valid drand signature)
+    // Note: drand_write_pulse uses subxt dynamic encoding which can panic with
+    // "WrongLength" if the localnet runtime has a different Drand pallet shape.
+    // Use submit_raw_call to bypass the encoding issue.
+
+    // Step 1: Try writing a drand pulse via submit_raw_call
     ensure_alive(client).await;
-    let fake_payload: Vec<u8> = b"fake_drand_pulse_round_12345".to_vec();
-    let fake_sig: Vec<u8> = vec![0u8; 96]; // BLS signature placeholder
+    use subxt::dynamic::Value;
     let pulse_res = try_extrinsic!(
         client,
-        client.drand_write_pulse(&alice, fake_payload.clone(), fake_sig.clone())
+        client.submit_raw_call(
+            &alice,
+            "Drand",
+            "write_pulse",
+            vec![
+                Value::from_bytes(b"fake_drand_round_12345".to_vec()),
+                Value::from_bytes(vec![0u8; 96]),
+            ],
+        )
     );
     match &pulse_res {
         Ok(hash) => println!("  1. Drand write_pulse (unexpected success): {}", hash),
@@ -4696,9 +4707,17 @@ async fn flow_drand_randomness_oracle(client: &mut Client) {
     }
     wait_blocks(client, 2).await;
 
-    // Step 2: Try with different payload lengths
+    // Step 2: Try with empty payload
     ensure_alive(client).await;
-    let pulse2 = try_extrinsic!(client, client.drand_write_pulse(&alice, vec![], vec![]));
+    let pulse2 = try_extrinsic!(
+        client,
+        client.submit_raw_call(
+            &alice,
+            "Drand",
+            "write_pulse",
+            vec![Value::from_bytes(vec![]), Value::from_bytes(vec![])],
+        )
+    );
     match &pulse2 {
         Ok(hash) => println!("  2. Empty drand pulse: {}", hash),
         Err(e) => println!(
@@ -4711,7 +4730,15 @@ async fn flow_drand_randomness_oracle(client: &mut Client) {
     ensure_alive(client).await;
     let pulse3 = try_extrinsic!(
         client,
-        client.drand_write_pulse(&alice, (0..256).map(|i| i as u8).collect(), vec![0xAA; 48],)
+        client.submit_raw_call(
+            &alice,
+            "Drand",
+            "write_pulse",
+            vec![
+                Value::from_bytes((0..256).map(|i| i as u8).collect::<Vec<_>>()),
+                Value::from_bytes(vec![0xAA; 48]),
+            ],
+        )
     );
     match &pulse3 {
         Ok(hash) => println!("  3. Large drand pulse: {}", hash),
