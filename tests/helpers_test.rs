@@ -3,14 +3,14 @@
 
 use agcli::cli::helpers::{
     json_to_subxt_value, parse_children, parse_weight_pairs, resolve_and_validate_coldkey_address,
-    validate_admin_call_name, validate_amount, validate_batch_file, validate_call_hash,
-    validate_config_network, validate_delegate_take, validate_derive_input,
+    validate_admin_call_name, validate_amount, validate_batch_file, validate_block_number,
+    validate_call_hash, validate_config_network, validate_delegate_take, validate_derive_input,
     validate_emission_weights, validate_evm_address, validate_gas_limit, validate_github_repo,
-    validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_hex_data, validate_ipv4, validate_limit_price, validate_max_cost, validate_mnemonic,
     validate_multisig_json_args, validate_name, validate_netuid, validate_pallet_call,
-    validate_schedule_id, validate_subnet_name, validate_symbol, validate_take_pct,
-    validate_threads, validate_threshold, validate_url, validate_view_limit, validate_wasm_file,
-    validate_weight_input,
+    validate_price_range, validate_repeat_params, validate_schedule_id, validate_subnet_name,
+    validate_symbol, validate_take_pct, validate_threads, validate_threshold, validate_url,
+    validate_view_limit, validate_wasm_file, validate_weight_input,
 };
 use agcli::utils::explain;
 
@@ -5191,4 +5191,174 @@ fn resolve_and_validate_rejects_ethereum_address() {
         "portfolio --address",
     );
     assert!(result.is_err(), "Ethereum address should be rejected");
+}
+
+// ——— validate_limit_price tests ———
+
+#[test]
+fn limit_price_valid_small() {
+    assert!(validate_limit_price(0.001, "test").is_ok());
+}
+
+#[test]
+fn limit_price_valid_one() {
+    assert!(validate_limit_price(1.0, "test").is_ok());
+}
+
+#[test]
+fn limit_price_valid_large_but_safe() {
+    // 1 billion * 1e9 = 1e18, fits in u64 (max ~1.84e19)
+    assert!(validate_limit_price(1_000_000_000.0, "test").is_ok());
+}
+
+#[test]
+fn limit_price_rejects_zero() {
+    let r = validate_limit_price(0.0, "test");
+    assert!(r.is_err());
+    assert!(
+        format!("{}", r.unwrap_err()).contains("must be positive"),
+        "should explain positive requirement"
+    );
+}
+
+#[test]
+fn limit_price_rejects_negative() {
+    let r = validate_limit_price(-1.0, "test");
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("must be positive"));
+}
+
+#[test]
+fn limit_price_rejects_nan() {
+    let r = validate_limit_price(f64::NAN, "test");
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("finite"));
+}
+
+#[test]
+fn limit_price_rejects_infinity() {
+    let r = validate_limit_price(f64::INFINITY, "test");
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("finite"));
+}
+
+#[test]
+fn limit_price_rejects_neg_infinity() {
+    assert!(validate_limit_price(f64::NEG_INFINITY, "test").is_err());
+}
+
+#[test]
+fn limit_price_rejects_overflow() {
+    // 20 billion * 1e9 = 2e19 > u64::MAX (~1.84e19)
+    let r = validate_limit_price(20_000_000_000.0, "test");
+    assert!(r.is_err());
+    assert!(
+        format!("{}", r.unwrap_err()).contains("too large"),
+        "should explain overflow"
+    );
+}
+
+#[test]
+fn limit_price_boundary_just_below_max() {
+    // u64::MAX / 1e9 ≈ 18.446... so 18.0 should be fine
+    assert!(validate_limit_price(18.0, "test").is_ok());
+}
+
+#[test]
+fn limit_price_boundary_just_above_max() {
+    // 18.5e9 > u64::MAX? 18.5 * 1e9 = 1.85e10, fits. But 18_446_744_074.0 * 1e9 > u64::MAX
+    assert!(validate_limit_price(18_446_744_074.0, "test").is_err());
+}
+
+// ——— validate_block_number tests ———
+
+#[test]
+fn block_number_valid() {
+    assert!(validate_block_number(1, "test").is_ok());
+    assert!(validate_block_number(100, "test").is_ok());
+    assert!(validate_block_number(u32::MAX, "test").is_ok());
+}
+
+#[test]
+fn block_number_rejects_zero() {
+    let r = validate_block_number(0, "test");
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("genesis"));
+}
+
+// ——— validate_repeat_params tests ———
+
+#[test]
+fn repeat_params_valid() {
+    assert!(validate_repeat_params(10, 5).is_ok());
+    assert!(validate_repeat_params(1, 1).is_ok());
+    assert!(validate_repeat_params(100, 100).is_ok());
+}
+
+#[test]
+fn repeat_params_rejects_zero_every() {
+    let r = validate_repeat_params(0, 5);
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("cannot be 0"));
+}
+
+#[test]
+fn repeat_params_rejects_zero_count() {
+    let r = validate_repeat_params(10, 0);
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("cannot be 0"));
+}
+
+#[test]
+fn repeat_params_rejects_overflow() {
+    // u32::MAX * u32::MAX overflows u64
+    let r = validate_repeat_params(u32::MAX, u32::MAX);
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("overflow"));
+}
+
+#[test]
+fn repeat_params_large_but_valid() {
+    // 1_000_000 * 1_000 = 1e9, fits in u32::MAX (4.29e9)
+    assert!(validate_repeat_params(1_000_000, 1_000).is_ok());
+}
+
+#[test]
+fn repeat_params_boundary_overflow() {
+    // 65536 * 65536 = 4_294_967_296 > u32::MAX
+    let r = validate_repeat_params(65536, 65536);
+    assert!(r.is_err());
+}
+
+// ——— validate_price_range tests ———
+
+#[test]
+fn price_range_valid() {
+    assert!(validate_price_range(0.001, 1.0).is_ok());
+    assert!(validate_price_range(0.5, 0.6).is_ok());
+}
+
+#[test]
+fn price_range_rejects_equal() {
+    let r = validate_price_range(1.0, 1.0);
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("strictly less"));
+}
+
+#[test]
+fn price_range_rejects_inverted() {
+    let r = validate_price_range(2.0, 1.0);
+    assert!(r.is_err());
+    assert!(format!("{}", r.unwrap_err()).contains("strictly less"));
+}
+
+#[test]
+fn price_range_very_close_values() {
+    // Extremely close but different
+    assert!(validate_price_range(1.0, 1.0 + f64::EPSILON).is_ok());
+}
+
+#[test]
+fn price_range_very_small_low() {
+    assert!(validate_price_range(f64::MIN_POSITIVE, 1.0).is_ok());
 }

@@ -15393,3 +15393,573 @@ fn parse_config_set_proxy_s20() {
     ]);
     assert!(cli.is_ok(), "config set proxy: {:?}", cli.err());
 }
+
+// ====== Step 21: Stake limit price, Scheduler, Liquidity, BatchAxon CLI tests ======
+
+// --- Stake AddLimit / RemoveLimit price tests ---
+
+#[test]
+fn parse_stake_add_limit_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "add-limit",
+        "--amount",
+        "1.0",
+        "--netuid",
+        "1",
+        "--price",
+        "0.5",
+    ]);
+    assert!(cli.is_ok(), "stake add-limit basic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_limit_partial_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "add-limit",
+        "--amount",
+        "10.0",
+        "--netuid",
+        "2",
+        "--price",
+        "1.5",
+        "--partial",
+    ]);
+    assert!(cli.is_ok(), "stake add-limit partial: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_add_limit_with_hotkey_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "add-limit",
+        "--amount",
+        "5.0",
+        "--netuid",
+        "3",
+        "--price",
+        "0.001",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "stake add-limit with hotkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_limit_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "remove-limit",
+        "--amount",
+        "2.0",
+        "--netuid",
+        "1",
+        "--price",
+        "0.8",
+    ]);
+    assert!(cli.is_ok(), "stake remove-limit: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_remove_limit_partial_hotkey_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "remove-limit",
+        "--amount",
+        "3.0",
+        "--netuid",
+        "2",
+        "--price",
+        "1.2",
+        "--partial",
+        "--hotkey",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "stake remove-limit partial+hotkey: {:?}",
+        cli.err()
+    );
+}
+
+// --- Scheduler Schedule tests ---
+
+#[test]
+fn parse_scheduler_schedule_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "scheduler",
+        "schedule",
+        "--when",
+        "1000",
+        "--pallet",
+        "System",
+        "--call",
+        "remark",
+        "--args",
+        "{}",
+    ]);
+    assert!(cli.is_ok(), "scheduler schedule basic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_scheduler_schedule_with_priority_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "scheduler",
+        "schedule",
+        "--when",
+        "2000",
+        "--pallet",
+        "Balances",
+        "--call",
+        "transfer_keep_alive",
+        "--args",
+        "{}",
+        "--priority",
+        "200",
+    ]);
+    assert!(cli.is_ok(), "scheduler schedule priority: {:?}", cli.err());
+}
+
+#[test]
+fn parse_scheduler_schedule_with_repeat_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "scheduler",
+        "schedule",
+        "--when",
+        "500",
+        "--pallet",
+        "System",
+        "--call",
+        "remark",
+        "--args",
+        "{}",
+        "--repeat-every",
+        "100",
+        "--repeat-count",
+        "10",
+    ]);
+    assert!(cli.is_ok(), "scheduler schedule repeat: {:?}", cli.err());
+}
+
+#[test]
+fn parse_scheduler_schedule_named_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "scheduler",
+        "schedule-named",
+        "--id",
+        "my_task",
+        "--when",
+        "3000",
+        "--pallet",
+        "System",
+        "--call",
+        "remark",
+        "--args",
+        "{}",
+    ]);
+    assert!(cli.is_ok(), "scheduler schedule-named: {:?}", cli.err());
+}
+
+#[test]
+fn parse_scheduler_cancel_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "scheduler",
+        "cancel",
+        "--when",
+        "1000",
+        "--index",
+        "0",
+    ]);
+    assert!(cli.is_ok(), "scheduler cancel: {:?}", cli.err());
+}
+
+#[test]
+fn parse_scheduler_cancel_named_s21() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "scheduler", "cancel-named", "--id", "my_task"]);
+    assert!(cli.is_ok(), "scheduler cancel-named: {:?}", cli.err());
+}
+
+// --- Liquidity tests ---
+
+#[test]
+fn parse_liquidity_add_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "add",
+        "--netuid",
+        "1",
+        "--price-low",
+        "0.5",
+        "--price-high",
+        "1.5",
+        "--amount",
+        "1000000",
+    ]);
+    assert!(cli.is_ok(), "liquidity add: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_add_with_hotkey_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "add",
+        "--netuid",
+        "2",
+        "--price-low",
+        "0.1",
+        "--price-high",
+        "0.9",
+        "--amount",
+        "5000000",
+        "--hotkey",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "liquidity add with hotkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_remove_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "remove",
+        "--netuid",
+        "1",
+        "--position-id",
+        "42",
+    ]);
+    assert!(cli.is_ok(), "liquidity remove: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_modify_positive_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "modify",
+        "--netuid",
+        "1",
+        "--position-id",
+        "7",
+        "--delta",
+        "500000",
+    ]);
+    assert!(cli.is_ok(), "liquidity modify positive: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_modify_negative_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "modify",
+        "--netuid",
+        "3",
+        "--position-id",
+        "12",
+        "--delta",
+        "-100000",
+    ]);
+    assert!(cli.is_ok(), "liquidity modify negative: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_toggle_enable_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "liquidity",
+        "toggle",
+        "--netuid",
+        "1",
+        "--enable",
+    ]);
+    assert!(cli.is_ok(), "liquidity toggle enable: {:?}", cli.err());
+}
+
+#[test]
+fn parse_liquidity_toggle_disable_s21() {
+    // Without --enable flag, defaults to false
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "liquidity", "toggle", "--netuid", "5"]);
+    assert!(cli.is_ok(), "liquidity toggle disable: {:?}", cli.err());
+}
+
+// --- Serve BatchAxon tests ---
+
+#[test]
+fn parse_serve_batch_axon_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "serve",
+        "batch-axon",
+        "--file",
+        "/tmp/batch.json",
+    ]);
+    assert!(cli.is_ok(), "serve batch-axon: {:?}", cli.err());
+}
+
+// --- Contracts tests ---
+
+#[test]
+fn parse_contracts_upload_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "contracts",
+        "upload",
+        "--code",
+        "/tmp/contract.wasm",
+    ]);
+    assert!(cli.is_ok(), "contracts upload: {:?}", cli.err());
+}
+
+#[test]
+fn parse_contracts_instantiate_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "contracts",
+        "instantiate",
+        "--code-hash",
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "--data",
+        "0x01",
+        "--value",
+        "0",
+    ]);
+    assert!(cli.is_ok(), "contracts instantiate: {:?}", cli.err());
+}
+
+#[test]
+fn parse_contracts_call_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "contracts",
+        "call",
+        "--contract",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--data",
+        "0x02",
+        "--value",
+        "100",
+    ]);
+    assert!(cli.is_ok(), "contracts call: {:?}", cli.err());
+}
+
+// --- EVM tests ---
+
+#[test]
+fn parse_evm_call_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "evm",
+        "call",
+        "--source",
+        "0x0000000000000000000000000000000000000001",
+        "--target",
+        "0x0000000000000000000000000000000000000002",
+        "--input",
+        "0x01",
+    ]);
+    assert!(cli.is_ok(), "evm call: {:?}", cli.err());
+}
+
+#[test]
+fn parse_evm_withdraw_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "evm",
+        "withdraw",
+        "--address",
+        "0x0000000000000000000000000000000000000001",
+        "--amount",
+        "1000000000",
+    ]);
+    assert!(cli.is_ok(), "evm withdraw: {:?}", cli.err());
+}
+
+// --- Crowdloan tests ---
+
+#[test]
+fn parse_crowdloan_create_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "crowdloan",
+        "create",
+        "--deposit",
+        "10.0",
+        "--cap",
+        "1000.0",
+        "--end-block",
+        "50000",
+        "--min-contribution",
+        "1.0",
+    ]);
+    assert!(cli.is_ok(), "crowdloan create: {:?}", cli.err());
+}
+
+#[test]
+fn parse_crowdloan_contribute_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "crowdloan",
+        "contribute",
+        "--crowdloan-id",
+        "0",
+        "--amount",
+        "5.0",
+    ]);
+    assert!(cli.is_ok(), "crowdloan contribute: {:?}", cli.err());
+}
+
+// --- SafeMode tests ---
+
+#[test]
+fn parse_safe_mode_enter_s21() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "safe-mode", "enter"]);
+    assert!(cli.is_ok(), "safe-mode enter: {:?}", cli.err());
+}
+
+#[test]
+fn parse_safe_mode_extend_s21() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "safe-mode", "extend"]);
+    assert!(cli.is_ok(), "safe-mode extend: {:?}", cli.err());
+}
+
+// --- Multisig tests ---
+
+#[test]
+fn parse_multisig_address_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "multisig",
+        "address",
+        "--signatories",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold",
+        "2",
+    ]);
+    assert!(cli.is_ok(), "multisig address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_submit_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "multisig",
+        "submit",
+        "--others",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold",
+        "2",
+        "--pallet",
+        "System",
+        "--call",
+        "remark",
+        "--args",
+        "{}",
+    ]);
+    assert!(cli.is_ok(), "multisig submit: {:?}", cli.err());
+}
+
+// --- Proxy tests ---
+
+#[test]
+fn parse_proxy_add_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "add",
+        "--delegate",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--proxy-type",
+        "Any",
+    ]);
+    assert!(cli.is_ok(), "proxy add: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_add_with_delay_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "add",
+        "--delegate",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--proxy-type",
+        "Staking",
+        "--delay",
+        "100",
+    ]);
+    assert!(cli.is_ok(), "proxy add with delay: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_remove_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "remove",
+        "--delegate",
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--proxy-type",
+        "Any",
+    ]);
+    assert!(cli.is_ok(), "proxy remove: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_create_pure_s21() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "proxy", "create-pure", "--proxy-type", "Any"]);
+    assert!(cli.is_ok(), "proxy create-pure: {:?}", cli.err());
+}
+
+// --- Drand tests ---
+
+#[test]
+fn parse_drand_write_pulse_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "drand",
+        "write-pulse",
+        "--payload",
+        "0x01020304",
+        "--signature",
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+    ]);
+    assert!(cli.is_ok(), "drand write-pulse: {:?}", cli.err());
+}
+
+// --- Preimage tests ---
+
+#[test]
+fn parse_preimage_note_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "preimage", "note", "--pallet", "System", "--call", "remark", "--args", "{}",
+    ]);
+    assert!(cli.is_ok(), "preimage note: {:?}", cli.err());
+}
+
+#[test]
+fn parse_preimage_unnote_s21() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "preimage",
+        "unnote",
+        "--hash",
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+    ]);
+    assert!(cli.is_ok(), "preimage unnote: {:?}", cli.err());
+}

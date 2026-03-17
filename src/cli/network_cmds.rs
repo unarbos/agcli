@@ -609,16 +609,20 @@ pub(super) async fn handle_scheduler(
         } => {
             validate_pallet_call(&pallet, "pallet")?;
             validate_pallet_call(&call, "call")?;
-            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
-            unlock_coldkey(&mut wallet, ctx.password)?;
-            let fields = parse_json_args(&args)?;
+            validate_block_number(when, "schedule block")?;
             let periodic = match (repeat_every, repeat_count) {
-                (Some(period), Some(count)) => Some((period, count)),
+                (Some(period), Some(count)) => {
+                    validate_repeat_params(period, count)?;
+                    Some((period, count))
+                }
                 (None, None) => None,
                 _ => anyhow::bail!(
                     "Both --repeat-every and --repeat-count must be provided together"
                 ),
             };
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let fields = parse_json_args(&args)?;
             println!(
                 "Scheduling {}.{} at block {} (priority {}{})",
                 pallet,
@@ -659,16 +663,20 @@ pub(super) async fn handle_scheduler(
             validate_schedule_id(&id)?;
             validate_pallet_call(&pallet, "pallet")?;
             validate_pallet_call(&call, "call")?;
-            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
-            unlock_coldkey(&mut wallet, ctx.password)?;
-            let fields = parse_json_args(&args)?;
+            validate_block_number(when, "schedule block")?;
             let periodic = match (repeat_every, repeat_count) {
-                (Some(period), Some(count)) => Some((period, count)),
+                (Some(period), Some(count)) => {
+                    validate_repeat_params(period, count)?;
+                    Some((period, count))
+                }
                 (None, None) => None,
                 _ => anyhow::bail!(
                     "Both --repeat-every and --repeat-count must be provided together"
                 ),
             };
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let fields = parse_json_args(&args)?;
             println!(
                 "Scheduling named task '{}': {}.{} at block {} (priority {})",
                 id, pallet, call, when, priority
@@ -692,6 +700,7 @@ pub(super) async fn handle_scheduler(
             Ok(())
         }
         SchedulerCommands::Cancel { when, index } => {
+            validate_block_number(when, "cancel block")?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             println!(
@@ -708,6 +717,7 @@ pub(super) async fn handle_scheduler(
             Ok(())
         }
         SchedulerCommands::CancelNamed { id } => {
+            validate_schedule_id(&id)?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             println!("Cancelling named scheduled task '{}'", id);
@@ -1085,9 +1095,16 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
 
             println!("Batch serving {} axon updates", entries.len());
             for (i, entry) in entries.iter().enumerate() {
-                let netuid = entry["netuid"].as_u64().unwrap() as u16;
-                let ip = entry["ip"].as_str().unwrap();
-                let port = entry["port"].as_u64().unwrap() as u16;
+                // Fields are validated by validate_batch_axon_json, but use safe access for defense-in-depth
+                let netuid = entry["netuid"].as_u64().ok_or_else(|| {
+                    anyhow::anyhow!("Batch entry {}: missing or invalid 'netuid'", i)
+                })? as u16;
+                let ip = entry["ip"]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("Batch entry {}: missing or invalid 'ip'", i))?;
+                let port = entry["port"].as_u64().ok_or_else(|| {
+                    anyhow::anyhow!("Batch entry {}: missing or invalid 'port'", i)
+                })? as u16;
                 let protocol = entry["protocol"].as_u64().unwrap_or(4) as u8;
                 let version = entry["version"].as_u64().unwrap_or(0) as u32;
 
@@ -1762,6 +1779,7 @@ pub(super) async fn handle_liquidity(
             validate_netuid(*netuid)?;
             validate_price(*price_low, "price-low")?;
             validate_price(*price_high, "price-high")?;
+            validate_price_range(*price_low, *price_high)?;
             if *amount == 0 {
                 anyhow::bail!("Invalid liquidity amount: cannot be zero.\n  Tip: specify a positive RAO amount.");
             }

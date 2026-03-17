@@ -1941,3 +1941,75 @@ pub fn json_to_subxt_value(v: &serde_json::Value) -> subxt::dynamic::Value {
         _ => Value::string(v.to_string()),
     }
 }
+
+/// Validate a stake limit price (f64 → u64 conversion safety).
+/// Price is multiplied by 1e9 to convert TAO to RAO — this can overflow u64 for huge values.
+pub fn validate_limit_price(price: f64, label: &str) -> Result<()> {
+    if !price.is_finite() {
+        anyhow::bail!(
+            "Invalid {}: must be a finite number (got {}).\n  Tip: use a decimal price like 0.001 or 1.5",
+            label, price
+        );
+    }
+    if price <= 0.0 {
+        anyhow::bail!(
+            "Invalid {}: {:.9}. Price must be positive.\n  Tip: use a positive decimal like 0.001",
+            label,
+            price
+        );
+    }
+    // price * 1e9 must fit in u64 (max ~18.44 TAO-equivalent at 1e9 scale = 18_446_744_073 in TAO units)
+    let scaled = price * 1_000_000_000.0;
+    if scaled > u64::MAX as f64 {
+        anyhow::bail!(
+            "Invalid {}: {:.9} is too large. Maximum price is ~{:.2} (u64 overflow after RAO conversion).",
+            label, price, u64::MAX as f64 / 1_000_000_000.0
+        );
+    }
+    Ok(())
+}
+
+/// Validate scheduler block number. Must be > 0 (block 0 is genesis, not schedulable).
+pub fn validate_block_number(block: u32, label: &str) -> Result<()> {
+    if block == 0 {
+        anyhow::bail!(
+            "Invalid {}: block 0 is the genesis block and cannot be targeted.\n  Tip: use a future block number.",
+            label
+        );
+    }
+    Ok(())
+}
+
+/// Validate scheduler repeat parameters. repeat_every must be > 0 to avoid infinite loops.
+pub fn validate_repeat_params(repeat_every: u32, repeat_count: u32) -> Result<()> {
+    if repeat_every == 0 {
+        anyhow::bail!(
+            "Invalid repeat-every: cannot be 0 (would cause infinite scheduling at the same block).\n  Tip: use at least 1 block between repeats."
+        );
+    }
+    if repeat_count == 0 {
+        anyhow::bail!(
+            "Invalid repeat-count: cannot be 0 (no repetitions would execute).\n  Tip: use at least 1, or omit --repeat-every and --repeat-count entirely."
+        );
+    }
+    // Check for potential overflow: when + repeat_every * repeat_count
+    let total_span = (repeat_every as u64).checked_mul(repeat_count as u64);
+    if total_span.is_none() || total_span.unwrap() > u32::MAX as u64 {
+        anyhow::bail!(
+            "Invalid repeat parameters: repeat_every ({}) * repeat_count ({}) overflows the block number space.\n  Tip: reduce the repeat interval or count.",
+            repeat_every, repeat_count
+        );
+    }
+    Ok(())
+}
+
+/// Validate liquidity price range: price_low must be strictly less than price_high.
+pub fn validate_price_range(price_low: f64, price_high: f64) -> Result<()> {
+    if price_low >= price_high {
+        anyhow::bail!(
+            "Invalid price range: price-low ({:.9}) must be strictly less than price-high ({:.9}).\n  Tip: ensure your lower bound is below the upper bound.",
+            price_low, price_high
+        );
+    }
+    Ok(())
+}

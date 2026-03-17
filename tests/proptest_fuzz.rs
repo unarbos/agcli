@@ -11,12 +11,13 @@ use proptest::prelude::*;
 use agcli::cli::helpers::{
     json_to_subxt_value, parse_children, parse_json_args, parse_weight_pairs,
     validate_admin_call_name, validate_amount, validate_batch_axon_json, validate_batch_file,
-    validate_call_hash, validate_commitment_data, validate_config_network,
+    validate_block_number, validate_call_hash, validate_commitment_data, validate_config_network,
     validate_crowdloan_amount, validate_delegate_take, validate_derive_input,
     validate_emission_weights, validate_event_filter, validate_evm_address, validate_gas_limit,
-    validate_github_repo, validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
-    validate_multisig_json_args, validate_name, validate_netuid, validate_pallet_call,
-    validate_password_strength, validate_port, validate_price, validate_proxy_type,
+    validate_github_repo, validate_hex_data, validate_ipv4, validate_limit_price,
+    validate_max_cost, validate_mnemonic, validate_multisig_json_args, validate_name,
+    validate_netuid, validate_pallet_call, validate_password_strength, validate_port,
+    validate_price, validate_price_range, validate_proxy_type, validate_repeat_params,
     validate_schedule_id, validate_spending_limit, validate_ss58, validate_subnet_name,
     validate_symbol, validate_take_pct, validate_threads, validate_threshold, validate_url,
     validate_view_limit, validate_wasm_file, validate_weight_input,
@@ -1505,5 +1506,82 @@ proptest! {
         let full = format!("{}/{}/{}", a, b, c);
         prop_assert!(validate_github_repo(&full).is_err(),
             "repo with extra slashes '{}' should be rejected", full);
+    }
+
+    // ——— Step 21: limit_price fuzz ———
+
+    #[test]
+    fn fuzz_limit_price_positive_finite(price in 0.0001f64..1_000_000_000.0f64) {
+        // All positive finite prices within safe u64 range should pass
+        prop_assert!(validate_limit_price(price, "fuzz").is_ok(),
+            "positive finite price {:.9} should be accepted", price);
+    }
+
+    #[test]
+    fn fuzz_limit_price_huge_overflow(price in 20_000_000_000.0f64..f64::MAX) {
+        // Prices where price*1e9 > u64::MAX should be rejected
+        if price.is_finite() && (price * 1_000_000_000.0) > u64::MAX as f64 {
+            prop_assert!(validate_limit_price(price, "fuzz").is_err(),
+                "huge price {:.2} should overflow", price);
+        }
+    }
+
+    #[test]
+    fn fuzz_limit_price_negative_rejected(price in -1e18f64..-0.0001f64) {
+        prop_assert!(validate_limit_price(price, "fuzz").is_err(),
+            "negative price {:.9} should be rejected", price);
+    }
+
+    // ——— Step 21: block_number fuzz ———
+
+    #[test]
+    fn fuzz_block_number_nonzero_valid(block in 1u32..=u32::MAX) {
+        prop_assert!(validate_block_number(block, "fuzz").is_ok(),
+            "nonzero block {} should be valid", block);
+    }
+
+    // ——— Step 21: repeat_params fuzz ———
+
+    #[test]
+    fn fuzz_repeat_params_valid_range(every in 1u32..1000u32, count in 1u32..1000u32) {
+        // Small values should always be valid
+        prop_assert!(validate_repeat_params(every, count).is_ok(),
+            "repeat every={} count={} should be valid", every, count);
+    }
+
+    #[test]
+    fn fuzz_repeat_params_zero_every_rejected(count in 1u32..100u32) {
+        prop_assert!(validate_repeat_params(0, count).is_err(),
+            "zero every with count={} should be rejected", count);
+    }
+
+    #[test]
+    fn fuzz_repeat_params_zero_count_rejected(every in 1u32..100u32) {
+        prop_assert!(validate_repeat_params(every, 0).is_err(),
+            "every={} with zero count should be rejected", every);
+    }
+
+    // ——— Step 21: price_range fuzz ———
+
+    #[test]
+    fn fuzz_price_range_valid(low in 0.0001f64..100.0f64, gap in 0.0001f64..100.0f64) {
+        let high = low + gap;
+        prop_assert!(validate_price_range(low, high).is_ok(),
+            "range [{:.9}, {:.9}] should be valid", low, high);
+    }
+
+    #[test]
+    fn fuzz_price_range_equal_rejected(v in 0.001f64..1000.0f64) {
+        prop_assert!(validate_price_range(v, v).is_err(),
+            "equal prices {:.9} should be rejected", v);
+    }
+
+    #[test]
+    fn fuzz_price_range_inverted_rejected(
+        low in 0.001f64..100.0f64, gap in 0.001f64..100.0f64,
+    ) {
+        let high = low + gap;
+        prop_assert!(validate_price_range(high, low).is_err(),
+            "inverted range [{:.9}, {:.9}] should be rejected", high, low);
     }
 }

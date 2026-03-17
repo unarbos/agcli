@@ -272,6 +272,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_netuid(netuid)?;
             validate_amount(amount, "limit stake amount")?;
             validate_amount(price, "limit price")?;
+            validate_limit_price(price, "limit price")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
@@ -306,6 +307,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_netuid(netuid)?;
             validate_amount(amount, "limit unstake amount")?;
             validate_amount(price, "limit price")?;
+            validate_limit_price(price, "limit price")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let lp = (price * 1_000_000_000.0) as u64;
