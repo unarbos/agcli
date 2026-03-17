@@ -368,6 +368,7 @@ pub async fn handle_wallet(
             unreachable!("handled in commands.rs")
         }
         WalletCommands::Derive { input } => {
+            crate::cli::helpers::validate_derive_input(&input)?;
             if input.starts_with("0x") {
                 // Public key hex
                 let hex_str = input

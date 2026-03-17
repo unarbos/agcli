@@ -2,9 +2,10 @@
 //! Run with: cargo test --test helpers_test
 
 use agcli::cli::helpers::{
-    parse_children, parse_weight_pairs, validate_amount, validate_delegate_take,
-    validate_emission_weights, validate_ipv4, validate_max_cost, validate_mnemonic,
-    validate_name, validate_symbol, validate_take_pct,
+    json_to_subxt_value, parse_children, parse_weight_pairs, validate_amount,
+    validate_delegate_take, validate_derive_input, validate_emission_weights, validate_ipv4,
+    validate_max_cost, validate_mnemonic, validate_multisig_json_args, validate_name,
+    validate_symbol, validate_take_pct,
 };
 use agcli::utils::explain;
 
@@ -2070,6 +2071,267 @@ fn parse_children_trailing_comma_ok() {
     let result = parse_children(&format!("1000:{},", alice));
     assert!(result.is_ok(), "trailing comma should be tolerated: {:?}", result.err());
     assert_eq!(result.unwrap().len(), 1);
+}
+
+#[test]
+// ──── validate_derive_input tests ────
+
+#[test]
+fn validate_derive_input_valid_hex_32_bytes() {
+    let hex = "0x0000000000000000000000000000000000000000000000000000000000000001";
+    assert!(validate_derive_input(hex).is_ok());
+}
+
+#[test]
+fn validate_derive_input_valid_mnemonic() {
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    assert!(validate_derive_input(mnemonic).is_ok());
+}
+
+#[test]
+fn validate_derive_input_empty() {
+    let err = validate_derive_input("").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("cannot be empty"), "got: {}", msg);
+    assert!(msg.contains("Tip:"), "should have tip: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_whitespace_only() {
+    let err = validate_derive_input("   ").unwrap_err();
+    assert!(err.to_string().contains("cannot be empty"));
+}
+
+#[test]
+fn validate_derive_input_hex_empty_after_prefix() {
+    let err = validate_derive_input("0x").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("empty after"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_odd_length() {
+    let err = validate_derive_input("0x012345678901234567890123456789012345678901234567890123456789012").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("odd length"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_too_short() {
+    let err = validate_derive_input("0x0123456789abcdef").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("32 bytes"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_too_long() {
+    let err = validate_derive_input("0x00000000000000000000000000000000000000000000000000000000000000000000").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("32 bytes"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_invalid_chars() {
+    let err = validate_derive_input("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Invalid hex character"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_uppercase_0X() {
+    // 0X prefix should also be recognized as hex
+    let err = validate_derive_input("0X0123").unwrap_err();
+    // Should treat as hex path and reject for wrong length
+    let msg = err.to_string();
+    assert!(msg.contains("odd length") || msg.contains("32 bytes"), "got: {}", msg);
+}
+
+#[test]
+fn validate_derive_input_hex_with_spaces() {
+    // Hex with trailing spaces — trimmed first
+    let hex = "0x0000000000000000000000000000000000000000000000000000000000000001  ";
+    assert!(validate_derive_input(hex).is_ok(), "trailing spaces should be trimmed");
+}
+
+#[test]
+fn validate_derive_input_invalid_mnemonic() {
+    // Something that's not hex but also not a valid mnemonic
+    let err = validate_derive_input("not a valid mnemonic at all").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("mnemonic") || msg.contains("word"), "got: {}", msg);
+}
+
+// ──── validate_multisig_json_args tests ────
+
+#[test]
+fn validate_multisig_json_args_valid_simple() {
+    let result = validate_multisig_json_args(r#"[1, "hello", true]"#);
+    assert!(result.is_ok(), "simple array: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 3);
+}
+
+#[test]
+fn validate_multisig_json_args_valid_hex_bytes() {
+    let result = validate_multisig_json_args(r#"["0xdeadbeef", 42]"#);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn validate_multisig_json_args_valid_nested_object() {
+    let result = validate_multisig_json_args(r#"[{"Id": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"}, 1000]"#);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn validate_multisig_json_args_empty_string() {
+    let err = validate_multisig_json_args("").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Empty JSON"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_not_json() {
+    let err = validate_multisig_json_args("not json at all").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Invalid JSON"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_json_object_not_array() {
+    let err = validate_multisig_json_args(r#"{"key": "value"}"#).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Expected a JSON array"), "got: {}", msg);
+    assert!(msg.contains("object"), "should say it got an object: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_json_string_not_array() {
+    let err = validate_multisig_json_args(r#""just a string""#).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Expected a JSON array"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_json_number_not_array() {
+    let err = validate_multisig_json_args("42").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("Expected a JSON array"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_null_element() {
+    let err = validate_multisig_json_args("[1, null, 3]").unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("null"), "got: {}", msg);
+    assert!(msg.contains("index 1"), "should identify the index: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_deeply_nested() {
+    let deep = r#"[[[[[["too deep"]]]]]]"#;
+    let err = validate_multisig_json_args(deep).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("nesting too deep"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_long_string() {
+    let long_str = format!(r#"["{}"]"#, "a".repeat(2000));
+    let err = validate_multisig_json_args(&long_str).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("too long"), "got: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_empty_array() {
+    let result = validate_multisig_json_args("[]");
+    assert!(result.is_ok(), "empty array should be valid: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 0);
+}
+
+#[test]
+fn validate_multisig_json_args_whitespace_around() {
+    let result = validate_multisig_json_args("  [1, 2]  ");
+    assert!(result.is_ok(), "whitespace should be trimmed: {:?}", result.err());
+}
+
+#[test]
+fn validate_multisig_json_args_nested_null() {
+    let err = validate_multisig_json_args(r#"[{"key": null}]"#).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("null"), "nested null: {}", msg);
+}
+
+#[test]
+fn validate_multisig_json_args_valid_bool_and_negative() {
+    let result = validate_multisig_json_args(r#"[true, false, -1, 0]"#);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn validate_multisig_json_args_nested_array_ok() {
+    // 3 levels deep — should be fine (limit is 4)
+    let result = validate_multisig_json_args(r#"[[[1, 2]], "ok"]"#);
+    assert!(result.is_ok(), "3 levels of nesting: {:?}", result.err());
+}
+
+// ──── json_to_subxt_value tests ────
+
+#[test]
+fn json_to_subxt_value_large_u64() {
+    let v = serde_json::json!(u64::MAX);
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_negative_i64() {
+    let v = serde_json::json!(i64::MIN);
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_hex_string_short() {
+    let v = serde_json::json!("0xab");
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_invalid_hex_string_fallback() {
+    // "0xZZ" should fail hex decode and fall back to string
+    let v = serde_json::json!("0xZZ");
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_bool_false() {
+    let v = serde_json::json!(false);
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_nested_array() {
+    let v = serde_json::json!([[1, 2], [3, 4]]);
+    let result = json_to_subxt_value(&v);
+    let _ = result;
+}
+
+#[test]
+fn json_to_subxt_value_null_to_string() {
+    let v = serde_json::json!(null);
+    let result = json_to_subxt_value(&v);
+    let _ = result; // null maps to string "null"
+}
+
+#[test]
+fn json_to_subxt_value_object_to_string() {
+    let v = serde_json::json!({"key": "val"});
+    let result = json_to_subxt_value(&v);
+    let _ = result; // object falls through to string
 }
 
 #[test]

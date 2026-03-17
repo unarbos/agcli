@@ -6081,6 +6081,283 @@ fn parse_global_debug_mode() {
     assert!(cli.is_ok(), "global --debug flag should parse");
 }
 
+// ──── wallet sign/verify/derive CLI edge cases ────
+
+#[test]
+fn parse_wallet_sign_hex_message() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "sign", "--message", "0xdeadbeef",
+    ]);
+    assert!(cli.is_ok(), "wallet sign hex message: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_sign_empty_message() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "sign", "--message", "",
+    ]);
+    assert!(cli.is_ok(), "wallet sign empty message should parse: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_sign_unicode_message() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "sign", "--message", "Hello 🌐🔑",
+    ]);
+    assert!(cli.is_ok(), "wallet sign unicode: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_sign_long_message() {
+    let long_msg = "a".repeat(10_000);
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "sign", "--message", &long_msg,
+    ]);
+    assert!(cli.is_ok(), "wallet sign long message: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_sign_missing_message() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "wallet", "sign"]);
+    assert!(cli.is_err(), "wallet sign without --message should fail");
+}
+
+#[test]
+fn parse_wallet_sign_with_wallet_flag() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--wallet", "mywallet", "wallet", "sign", "--message", "test",
+    ]);
+    assert!(cli.is_ok(), "wallet sign with --wallet: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_verify_without_signer() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "verify",
+        "--message", "hello",
+        "--signature", "0xabcd1234",
+    ]);
+    assert!(cli.is_ok(), "wallet verify without --signer: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_verify_with_signer() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "verify",
+        "--message", "hello",
+        "--signature", "0xabcd1234",
+        "--signer", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "wallet verify with --signer: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_verify_missing_signature() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "verify",
+        "--message", "hello",
+    ]);
+    assert!(cli.is_err(), "wallet verify without --signature should fail");
+}
+
+#[test]
+fn parse_wallet_verify_missing_message() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "verify",
+        "--signature", "0xabcd1234",
+    ]);
+    assert!(cli.is_err(), "wallet verify without --message should fail");
+}
+
+#[test]
+fn parse_wallet_verify_hex_message() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "verify",
+        "--message", "0xdeadbeef",
+        "--signature", "0x" ,
+    ]);
+    assert!(cli.is_ok(), "wallet verify hex message: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_derive_from_hex() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "derive",
+        "--input", "0x0000000000000000000000000000000000000000000000000000000000000001",
+    ]);
+    assert!(cli.is_ok(), "wallet derive from hex pubkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_derive_from_mnemonic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "derive",
+        "--input", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    ]);
+    assert!(cli.is_ok(), "wallet derive from mnemonic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_derive_missing_input() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "wallet", "derive"]);
+    assert!(cli.is_err(), "wallet derive without --input should fail");
+}
+
+#[test]
+fn parse_wallet_derive_with_output_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "wallet", "derive",
+        "--input", "0x0000000000000000000000000000000000000000000000000000000000000001",
+    ]);
+    assert!(cli.is_ok(), "wallet derive with --output json: {:?}", cli.err());
+}
+
+// ──── multisig JSON args CLI edge cases ────
+
+#[test]
+fn parse_multisig_submit_with_complex_args() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "submit",
+        "--others", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+        "--pallet", "Balances",
+        "--call", "transfer_keep_alive",
+        "--args", r#"[{"Id":"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"},1000000000]"#,
+    ]);
+    assert!(cli.is_ok(), "multisig submit complex args: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_submit_without_args() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "submit",
+        "--others", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+        "--pallet", "System",
+        "--call", "remark",
+    ]);
+    assert!(cli.is_ok(), "multisig submit without --args: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_execute_with_timepoint() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "execute",
+        "--others", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+        "--pallet", "Balances",
+        "--call", "transfer_keep_alive",
+        "--args", "[1000]",
+        "--timepoint-height", "100",
+        "--timepoint-index", "1",
+    ]);
+    assert!(cli.is_ok(), "multisig execute with timepoint: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_execute_missing_pallet() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "execute",
+        "--others", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+        "--call", "transfer_keep_alive",
+    ]);
+    assert!(cli.is_err(), "multisig execute without --pallet should fail");
+}
+
+// ──── wallet new-hotkey / regen-hotkey CLI edge cases ────
+
+#[test]
+fn parse_wallet_new_hotkey_custom_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "new-hotkey", "--name", "miner1",
+    ]);
+    assert!(cli.is_ok(), "wallet new-hotkey with custom name: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_new_hotkey_no_name_arg() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "new-hotkey",
+    ]);
+    assert!(cli.is_err(), "wallet new-hotkey without --name should fail");
+}
+
+#[test]
+fn parse_wallet_regen_hotkey_with_mnemonic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-hotkey",
+        "--name", "recovered",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    ]);
+    assert!(cli.is_ok(), "wallet regen-hotkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_regen_hotkey_default_name() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-hotkey",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    ]);
+    assert!(cli.is_ok(), "wallet regen-hotkey with default name: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_regen_coldkey_with_mnemonic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "regen-coldkey",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "--password", "testpass",
+    ]);
+    assert!(cli.is_ok(), "wallet regen-coldkey: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_show_mnemonic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "show-mnemonic", "--password", "mypass",
+    ]);
+    assert!(cli.is_ok(), "wallet show-mnemonic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_import_with_all_args() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "import",
+        "--name", "imported",
+        "--mnemonic", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "--password", "mypass",
+    ]);
+    assert!(cli.is_ok(), "wallet import with all args: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_create_with_no_mnemonic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "create",
+        "--name", "quiet",
+        "--password", "pw",
+        "--no-mnemonic",
+    ]);
+    assert!(cli.is_ok(), "wallet create with --no-mnemonic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_dev_key() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "dev-key", "--uri", "Alice",
+    ]);
+    assert!(cli.is_ok(), "wallet dev-key: {:?}", cli.err());
+}
+
+#[test]
+fn parse_wallet_dev_key_with_double_slash() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "wallet", "dev-key", "--uri", "//Alice",
+    ]);
+    assert!(cli.is_ok(), "wallet dev-key with //: {:?}", cli.err());
+}
+
 #[test]
 fn parse_proxy_list_ss58_address() {
     let cli = agcli::cli::Cli::try_parse_from([

@@ -870,6 +870,53 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
     Ok(())
 }
 
+/// Validate input for the `wallet derive` command.
+/// Accepts either a 0x-prefixed 32-byte hex public key or a BIP-39 mnemonic phrase.
+/// Rejects: empty input, odd-length hex, wrong-length hex keys, invalid hex chars,
+/// ambiguous inputs that look neither like hex nor like a mnemonic.
+pub fn validate_derive_input(input: &str) -> Result<()> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Derive input cannot be empty.\n  Tip: pass a 0x-prefixed hex public key (64 hex chars) or a BIP-39 mnemonic phrase."
+        );
+    }
+    if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
+        // Hex public key path
+        let hex_str = &trimmed[2..];
+        if hex_str.is_empty() {
+            anyhow::bail!(
+                "Hex public key is empty after '0x' prefix.\n  Tip: provide 64 hex characters, e.g. '0x0123...abcd'."
+            );
+        }
+        if hex_str.len() % 2 != 0 {
+            anyhow::bail!(
+                "Hex has odd length ({} chars). Hex bytes come in pairs.\n  Tip: check for a missing or extra character.",
+                hex_str.len()
+            );
+        }
+        // Validate chars before decode
+        if let Some(pos) = hex_str.find(|c: char| !c.is_ascii_hexdigit()) {
+            let bad_char = hex_str.chars().nth(pos).unwrap();
+            anyhow::bail!(
+                "Invalid hex character '{}' at position {}.\n  Tip: hex values use only 0-9 and a-f.",
+                bad_char, pos + 2
+            );
+        }
+        let byte_len = hex_str.len() / 2;
+        if byte_len != 32 {
+            anyhow::bail!(
+                "Public key must be 32 bytes (64 hex chars), got {} bytes ({} hex chars).\n  Tip: an SR25519 public key is exactly 32 bytes.",
+                byte_len, hex_str.len()
+            );
+        }
+    } else {
+        // Treat as mnemonic
+        validate_mnemonic(trimmed)?;
+    }
+    Ok(())
+}
+
 /// Require a mnemonic phrase: use `provided` if Some, else prompt interactively (or error in batch mode).
 /// Validates the mnemonic format and dictionary words before returning.
 pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
@@ -920,16 +967,94 @@ pub fn require_password(
         })
 }
 
+/// Validate JSON args for multisig batch extrinsics.
+/// Rejects: non-array JSON, null elements, deeply nested structures (depth > 4),
+/// excessively long strings (> 1024 chars), NaN/Infinity floats.
+/// Returns the parsed JSON array on success.
+pub fn validate_multisig_json_args(json_str: &str) -> Result<Vec<serde_json::Value>> {
+    let trimmed = json_str.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Empty JSON args.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'."
+        );
+    }
+    let parsed: serde_json::Value = serde_json::from_str(trimmed).map_err(|e| {
+        anyhow::anyhow!(
+            "Invalid JSON: {}.\n  Tip: args must be a valid JSON array, e.g. '[1, \"0x...\"]'.",
+            e
+        )
+    })?;
+    let arr = match parsed {
+        serde_json::Value::Array(a) => a,
+        other => {
+            anyhow::bail!(
+                "Expected a JSON array, got {}.\n  Tip: wrap your args in square brackets, e.g. '[{}]'.",
+                match &other {
+                    serde_json::Value::Object(_) => "an object",
+                    serde_json::Value::String(_) => "a string",
+                    serde_json::Value::Number(_) => "a number",
+                    serde_json::Value::Bool(_) => "a boolean",
+                    serde_json::Value::Null => "null",
+                    _ => "unknown type",
+                },
+                other
+            );
+        }
+    };
+    // Validate each element
+    fn check_depth(v: &serde_json::Value, depth: usize) -> Result<()> {
+        if depth > 4 {
+            anyhow::bail!(
+                "JSON nesting too deep (>4 levels).\n  Tip: flatten your args structure."
+            );
+        }
+        match v {
+            serde_json::Value::Null => {
+                anyhow::bail!(
+                    "null values not allowed in multisig args.\n  Tip: use 0 or \"\" instead of null."
+                );
+            }
+            serde_json::Value::String(s) if s.len() > 1024 => {
+                anyhow::bail!(
+                    "String arg too long ({} chars, max 1024).\n  Tip: shorten the value or use a different encoding.",
+                    s.len()
+                );
+            }
+            serde_json::Value::Number(n) => {
+                if n.as_f64().map_or(false, |f| f.is_nan() || f.is_infinite()) {
+                    anyhow::bail!(
+                        "NaN/Infinity not allowed in args.\n  Tip: use a finite number."
+                    );
+                }
+            }
+            serde_json::Value::Array(inner) => {
+                for item in inner {
+                    check_depth(item, depth + 1)?;
+                }
+            }
+            serde_json::Value::Object(map) => {
+                for (_k, val) in map {
+                    check_depth(val, depth + 1)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+    for (i, elem) in arr.iter().enumerate() {
+        check_depth(elem, 0).map_err(|e| {
+            anyhow::anyhow!("Invalid arg at index {}: {}", i, e)
+        })?;
+    }
+    Ok(arr)
+}
+
 /// Parse an optional JSON string into a vec of subxt dynamic Values.
+/// Validates the JSON structure before converting.
 pub fn parse_json_args(args: &Option<String>) -> anyhow::Result<Vec<subxt::dynamic::Value>> {
     if let Some(ref args_json) = args {
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(args_json).map_err(|e| {
-            anyhow::anyhow!(
-                "Invalid JSON args '{}'. Expected a JSON array, e.g. '[1, \"0x...\"]'",
-                e
-            )
-        })?;
-        Ok(parsed.iter().map(json_to_subxt_value).collect())
+        let validated = validate_multisig_json_args(args_json)?;
+        Ok(validated.iter().map(json_to_subxt_value).collect())
     } else {
         Ok(vec![])
     }

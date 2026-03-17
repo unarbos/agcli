@@ -616,6 +616,284 @@ fn generated_mnemonic_is_12_words() {
     assert_eq!(words.len(), 12, "Generated mnemonic should be 12 words, got: {}", mnemonic);
 }
 
+// ──────── Sign edge cases ────────
+
+#[test]
+fn sign_empty_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "sign_empty", "pass", "default").unwrap();
+    let pair = wallet.coldkey().unwrap();
+
+    // Empty message should sign and verify fine
+    let sig = pair.sign(b"");
+    assert!(
+        sr25519::Pair::verify(&sig, b"", &pair.public()),
+        "Empty message signature should verify"
+    );
+    // Empty message sig should NOT verify against non-empty message
+    assert!(
+        !sr25519::Pair::verify(&sig, b"x", &pair.public()),
+        "Empty message sig should not verify against 'x'"
+    );
+}
+
+#[test]
+fn sign_large_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "sign_large", "pass", "default").unwrap();
+    let pair = wallet.coldkey().unwrap();
+
+    // 1 MB message — SR25519 should handle any size
+    let large_msg: Vec<u8> = vec![0xAB; 1_048_576];
+    let sig = pair.sign(&large_msg);
+    assert!(
+        sr25519::Pair::verify(&sig, &large_msg, &pair.public()),
+        "Large message (1MB) signature should verify"
+    );
+}
+
+#[test]
+fn sign_binary_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "sign_bin", "pass", "default").unwrap();
+    let pair = wallet.coldkey().unwrap();
+
+    // Binary data with null bytes, max bytes
+    let binary_msg: Vec<u8> = (0..=255).collect();
+    let sig = pair.sign(&binary_msg);
+    assert!(
+        sr25519::Pair::verify(&sig, &binary_msg, &pair.public()),
+        "Binary message (all byte values) signature should verify"
+    );
+}
+
+#[test]
+fn sign_unicode_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "sign_utf8", "pass", "default").unwrap();
+    let pair = wallet.coldkey().unwrap();
+
+    let unicode_msg = "Hello 🌐🔑 Bittensor τ₹₿".as_bytes();
+    let sig = pair.sign(unicode_msg);
+    assert!(
+        sr25519::Pair::verify(&sig, unicode_msg, &pair.public()),
+        "Unicode message signature should verify"
+    );
+}
+
+#[test]
+fn verify_wrong_signer() {
+    let dir = tempfile::tempdir().unwrap();
+    let (w1, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "signer1", "pass", "default").unwrap();
+    let dir2 = tempfile::tempdir().unwrap();
+    let (w2, _, _) =
+        Wallet::create(dir2.path().to_str().unwrap(), "signer2", "pass", "default").unwrap();
+
+    let msg = b"test message";
+    let sig = w1.coldkey().unwrap().sign(msg);
+
+    // Verify with wrong public key should fail
+    assert!(
+        !sr25519::Pair::verify(&sig, msg, &w2.coldkey().unwrap().public()),
+        "Signature from signer1 should not verify with signer2's key"
+    );
+}
+
+#[test]
+fn verify_modified_signature_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "sig_mod", "pass", "default").unwrap();
+    let pair = wallet.coldkey().unwrap();
+
+    let msg = b"test data";
+    let sig = pair.sign(msg);
+    let mut bad_sig = sig.0;
+    bad_sig[0] ^= 0xFF; // flip first byte
+    let bad = sp_core::sr25519::Signature::from_raw(bad_sig);
+    assert!(
+        !sr25519::Pair::verify(&bad, msg, &pair.public()),
+        "Modified signature should fail verification"
+    );
+}
+
+#[test]
+fn sign_with_hotkey() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "hk_sign", "pass", "default").unwrap();
+    wallet.load_hotkey("default").unwrap();
+    let hk_pair = wallet.hotkey().unwrap();
+
+    let msg = b"hotkey signed message";
+    let sig = hk_pair.sign(msg);
+    assert!(
+        sr25519::Pair::verify(&sig, msg, &hk_pair.public()),
+        "Hotkey signature should verify"
+    );
+    // Verify with coldkey should fail (different key)
+    let ck_pair = wallet.coldkey().unwrap();
+    assert!(
+        !sr25519::Pair::verify(&sig, msg, &ck_pair.public()),
+        "Hotkey signature should NOT verify with coldkey"
+    );
+}
+
+// ──────── Derive edge cases ────────
+
+#[test]
+fn derive_from_known_mnemonic_produces_expected_key() {
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let pair1 = keypair::pair_from_mnemonic(mnemonic).unwrap();
+    let ss58_1 = keypair::to_ss58(&pair1.public(), 42);
+
+    // Derive from the same mnemonic should produce same SS58
+    let pair2 = keypair::pair_from_mnemonic(mnemonic).unwrap();
+    let ss58_2 = keypair::to_ss58(&pair2.public(), 42);
+    assert_eq!(ss58_1, ss58_2, "Same mnemonic -> same SS58");
+
+    // Derive from the hex public key of pair1 should produce same SS58
+    let hex_key = format!("0x{}", hex::encode(pair1.public().0));
+    let bytes = hex::decode(&hex_key[2..]).unwrap();
+    let arr: [u8; 32] = bytes.try_into().unwrap();
+    let pub_from_hex = sp_core::sr25519::Public::from_raw(arr);
+    let ss58_from_hex = keypair::to_ss58(&pub_from_hex, 42);
+    assert_eq!(ss58_1, ss58_from_hex, "Derive from hex pubkey -> same SS58");
+}
+
+#[test]
+fn derive_all_zero_pubkey() {
+    // All-zero public key should still produce a valid SS58
+    let zeros = [0u8; 32];
+    let public = sp_core::sr25519::Public::from_raw(zeros);
+    let ss58 = keypair::to_ss58(&public, 42);
+    assert!(ss58.starts_with("5"), "Zero pubkey SS58 should start with 5: {}", ss58);
+    assert!(ss58.len() > 40, "Zero pubkey SS58 should be valid length: {}", ss58);
+}
+
+#[test]
+fn derive_all_ff_pubkey() {
+    // All-FF public key
+    let ff = [0xFFu8; 32];
+    let public = sp_core::sr25519::Public::from_raw(ff);
+    let ss58 = keypair::to_ss58(&public, 42);
+    assert!(ss58.starts_with("5"), "0xFF pubkey SS58 should start with 5: {}", ss58);
+}
+
+// ──────── Concurrent wallet operations ────────
+
+#[test]
+fn concurrent_wallet_create_same_name_one_wins() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap().to_string();
+    let mut handles = Vec::new();
+    for i in 0..4 {
+        let b = base.clone();
+        handles.push(std::thread::spawn(move || {
+            Wallet::create(&b, "race_wallet", &format!("pass{}", i), "default")
+        }));
+    }
+    let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    let successes = results.iter().filter(|r| r.is_ok()).count();
+    let failures = results.iter().filter(|r| r.is_err()).count();
+    // Exactly one should succeed (first to acquire lock), rest should fail with "already exists"
+    assert_eq!(successes, 1, "Exactly one concurrent create should succeed");
+    assert_eq!(failures, 3, "Three should fail with 'already exists'");
+    for result in &results {
+        if let Err(e) = result {
+            let msg = format!("{:#}", e);
+            assert!(
+                msg.contains("already exists"),
+                "Failure should say 'already exists', got: {}",
+                msg
+            );
+        }
+    }
+}
+
+#[test]
+fn concurrent_wallet_import_different_names() {
+    // Multiple wallets with different names should all succeed concurrently
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap().to_string();
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let mut handles = Vec::new();
+    for i in 0..4 {
+        let b = base.clone();
+        let m = mnemonic.to_string();
+        handles.push(std::thread::spawn(move || {
+            Wallet::import_from_mnemonic(&b, &format!("wallet_{}", i), &m, "pass")
+        }));
+    }
+    for h in handles {
+        let result = h.join().unwrap();
+        assert!(result.is_ok(), "Different-name wallets should all create: {:?}", result.err());
+    }
+    let wallets = Wallet::list_wallets(&base).unwrap();
+    assert_eq!(wallets.len(), 4, "All 4 wallets should be listed");
+}
+
+#[test]
+fn concurrent_sign_same_wallet() {
+    // Multiple threads signing with the same keypair should all produce valid signatures
+    use std::sync::Arc;
+    let dir = tempfile::tempdir().unwrap();
+    let (wallet, _, _) =
+        Wallet::create(dir.path().to_str().unwrap(), "conc_sign", "pass", "default").unwrap();
+    let pair = Arc::new(wallet.coldkey().unwrap().clone());
+
+    let mut handles = Vec::new();
+    for i in 0..8 {
+        let p = pair.clone();
+        handles.push(std::thread::spawn(move || {
+            let msg = format!("message {}", i);
+            let sig = p.sign(msg.as_bytes());
+            (msg, sig, p.public())
+        }));
+    }
+    for h in handles {
+        let (msg, sig, public) = h.join().unwrap();
+        assert!(
+            sr25519::Pair::verify(&sig, msg.as_bytes(), &public),
+            "Concurrent sign for '{}' should verify",
+            msg
+        );
+    }
+}
+
+// ──────── Hotkey edge cases ────────
+
+#[test]
+fn new_hotkey_creates_separate_key() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (wallet, _, _) = Wallet::create(base, "hk_test2", "pass", "default").unwrap();
+    let default_ss58 = wallet.hotkey_ss58().unwrap().to_string();
+
+    // Write a second hotkey
+    let hk_path = wallet.path.join("hotkeys").join("miner1");
+    let (pair, mnemonic) = keypair::generate_mnemonic_keypair().unwrap();
+    agcli::wallet::keyfile::write_keyfile(&hk_path, &mnemonic).unwrap();
+    let miner1_ss58 = keypair::to_ss58(&pair.public(), 42);
+
+    // Different hotkeys should have different addresses
+    assert_ne!(default_ss58, miner1_ss58, "Different hotkeys should have different SS58");
+
+    // Load and verify
+    let mut opened = Wallet::open(format!("{}/hk_test2", base)).unwrap();
+    opened.load_hotkey("miner1").unwrap();
+    assert_eq!(
+        keypair::to_ss58(&opened.hotkey().unwrap().public(), 42),
+        miner1_ss58,
+        "Loaded miner1 hotkey should match"
+    );
+}
+
 #[test]
 fn wallet_coldkey_requires_unlock() {
     let dir = tempfile::tempdir().unwrap();

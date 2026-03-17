@@ -378,14 +378,8 @@ pub(super) async fn handle_multisig(
             unlock_coldkey(&mut wallet, password)?;
             let other_ids = parse_sorted_signatories(&others)?;
             let fields: Vec<subxt::dynamic::Value> = if let Some(ref args_json) = args {
-                let parsed: Vec<serde_json::Value> =
-                    serde_json::from_str(args_json).map_err(|e| {
-                        anyhow::anyhow!(
-                            "Invalid JSON args '{}'. Expected a JSON array, e.g. '[1, \"0x...\"]'",
-                            e
-                        )
-                    })?;
-                parsed.iter().map(json_to_subxt_value).collect()
+                let validated = crate::cli::helpers::validate_multisig_json_args(args_json)?;
+                validated.iter().map(json_to_subxt_value).collect()
             } else {
                 vec![]
             };
