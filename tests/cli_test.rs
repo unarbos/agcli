@@ -8671,3 +8671,870 @@ fn parse_swap_hotkey_with_password() {
     ]);
     assert!(cli.is_ok(), "swap hotkey with password: {:?}", cli.err());
 }
+
+// =====================================================================
+// Swap — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_swap_hotkey_missing_arg() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "swap", "hotkey"]);
+    assert!(cli.is_err(), "swap hotkey missing --new-hotkey should fail");
+}
+
+#[test]
+fn parse_swap_coldkey_missing_arg() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "swap", "coldkey"]);
+    assert!(cli.is_err(), "swap coldkey missing --new-coldkey should fail");
+}
+
+#[test]
+fn parse_swap_hotkey_with_dry_run() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run",
+        "swap", "hotkey",
+        "--new-hotkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "swap hotkey dry-run: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn parse_swap_coldkey_with_yes_batch() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "-y", "--batch",
+        "swap", "coldkey",
+        "--new-coldkey", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "swap coldkey yes+batch: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert!(c.yes);
+    assert!(c.batch);
+}
+
+#[test]
+fn parse_swap_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "swap"]);
+    assert!(cli.is_err(), "swap without subcommand should fail");
+}
+
+// =====================================================================
+// Block — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_block_info_large_number() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "block", "info", "--number", "4294967295",
+    ]);
+    assert!(cli.is_ok(), "block info max u32: {:?}", cli.err());
+}
+
+#[test]
+fn parse_block_info_negative() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "block", "info", "--number", "-1",
+    ]);
+    assert!(cli.is_err(), "block info negative should fail");
+}
+
+#[test]
+fn parse_block_latest_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "block", "latest",
+    ]);
+    assert!(cli.is_ok(), "block latest json: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+#[test]
+fn parse_block_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "block"]);
+    assert!(cli.is_err(), "block without subcommand should fail");
+}
+
+#[test]
+fn parse_block_info_with_csv() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "csv", "block", "info", "--number", "50",
+    ]);
+    assert!(cli.is_ok(), "block info csv: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Csv);
+}
+
+// =====================================================================
+// Diff — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_diff_portfolio_missing_block1() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "portfolio", "--block2", "200",
+    ]);
+    assert!(cli.is_err(), "diff portfolio missing block1 should fail");
+}
+
+#[test]
+fn parse_diff_portfolio_missing_block2() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "portfolio", "--block1", "100",
+    ]);
+    assert!(cli.is_err(), "diff portfolio missing block2 should fail");
+}
+
+#[test]
+fn parse_diff_network_same_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "diff", "network", "--block1", "500", "--block2", "500",
+    ]);
+    assert!(cli.is_ok(), "diff network same block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_diff_portfolio_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "diff", "portfolio",
+        "--block1", "100", "--block2", "200",
+    ]);
+    assert!(cli.is_ok(), "diff portfolio json: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+#[test]
+fn parse_diff_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "diff"]);
+    assert!(cli.is_err(), "diff without subcommand should fail");
+}
+
+// =====================================================================
+// Utils — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_utils_convert_from_rao() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "convert", "--amount", "1000000000",
+    ]);
+    assert!(cli.is_ok(), "utils convert from rao: {:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_convert_zero() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "convert", "--amount", "0",
+    ]);
+    assert!(cli.is_ok(), "utils convert zero: {:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_convert_large_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "convert", "--amount", "999999999.999999999",
+    ]);
+    assert!(cli.is_ok(), "utils convert large: {:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_latency_pings_one() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "utils", "latency", "--pings", "1",
+    ]);
+    assert!(cli.is_ok(), "utils latency 1 ping: {:?}", cli.err());
+}
+
+#[test]
+fn parse_utils_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "utils"]);
+    assert!(cli.is_err(), "utils without subcommand should fail");
+}
+
+// =====================================================================
+// Batch — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_batch_default_atomic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "batch", "--file", "/tmp/calls.json",
+    ]);
+    assert!(cli.is_ok(), "batch default: {:?}", cli.err());
+    if let agcli::cli::Commands::Batch { file, no_atomic, force } = &cli.unwrap().command {
+        assert_eq!(file, "/tmp/calls.json");
+        assert!(!no_atomic);
+        assert!(!force);
+    } else {
+        panic!("expected Batch command");
+    }
+}
+
+#[test]
+fn parse_batch_force() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "batch", "--file", "/tmp/calls.json", "--force",
+    ]);
+    assert!(cli.is_ok(), "batch force: {:?}", cli.err());
+    if let agcli::cli::Commands::Batch { force, .. } = &cli.unwrap().command {
+        assert!(force);
+    } else {
+        panic!("expected Batch command");
+    }
+}
+
+#[test]
+fn parse_batch_force_and_no_atomic() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "batch", "--file", "/tmp/calls.json", "--force", "--no-atomic",
+    ]);
+    assert!(cli.is_ok(), "batch force+no-atomic: {:?}", cli.err());
+    if let agcli::cli::Commands::Batch { force, no_atomic, .. } = &cli.unwrap().command {
+        assert!(force);
+        assert!(no_atomic);
+    } else {
+        panic!("expected Batch command");
+    }
+}
+
+#[test]
+fn parse_batch_missing_file() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "batch"]);
+    assert!(cli.is_err(), "batch missing file should fail");
+}
+
+#[test]
+fn parse_batch_with_global_flags() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--network", "test", "--wallet", "mywallet",
+        "--password", "test123", "-y", "--batch",
+        "batch", "--file", "/tmp/calls.json",
+    ]);
+    assert!(cli.is_ok(), "batch with globals: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert!(c.yes);
+    assert!(c.batch);
+    assert_eq!(c.password, Some("test123".to_string()));
+}
+
+#[test]
+fn parse_batch_with_dry_run() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run", "batch", "--file", "/tmp/calls.json",
+    ]);
+    assert!(cli.is_ok(), "batch dry-run: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn parse_batch_with_json_output() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "batch", "--file", "/tmp/calls.json",
+    ]);
+    assert!(cli.is_ok(), "batch json output: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+// =====================================================================
+// Audit — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_audit_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "audit",
+    ]);
+    assert!(cli.is_ok(), "audit json: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+#[test]
+fn parse_audit_csv() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "csv", "audit",
+    ]);
+    assert!(cli.is_ok(), "audit csv: {:?}", cli.err());
+}
+
+#[test]
+fn parse_audit_with_network_wallet() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--network", "test", "--wallet", "mywallet",
+        "audit",
+    ]);
+    assert!(cli.is_ok(), "audit with network: {:?}", cli.err());
+}
+
+// =====================================================================
+// Explain — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_explain_commit_reveal() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "explain", "--topic", "commit-reveal",
+    ]);
+    assert!(cli.is_ok(), "explain commit-reveal: {:?}", cli.err());
+}
+
+#[test]
+fn parse_explain_amm() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "explain", "--topic", "amm",
+    ]);
+    assert!(cli.is_ok(), "explain amm: {:?}", cli.err());
+}
+
+#[test]
+fn parse_explain_full() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "explain", "--topic", "tempo", "--full",
+    ]);
+    assert!(cli.is_ok(), "explain full: {:?}", cli.err());
+}
+
+// =====================================================================
+// Completions — comprehensive tests
+// =====================================================================
+
+#[test]
+fn parse_completions_bash() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "completions", "--shell", "bash",
+    ]);
+    assert!(cli.is_ok(), "completions bash: {:?}", cli.err());
+}
+
+#[test]
+fn parse_completions_zsh() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "completions", "--shell", "zsh",
+    ]);
+    assert!(cli.is_ok(), "completions zsh: {:?}", cli.err());
+}
+
+#[test]
+fn parse_completions_fish() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "completions", "--shell", "fish",
+    ]);
+    assert!(cli.is_ok(), "completions fish: {:?}", cli.err());
+}
+
+#[test]
+fn parse_completions_powershell() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "completions", "--shell", "powershell",
+    ]);
+    assert!(cli.is_ok(), "completions powershell: {:?}", cli.err());
+}
+
+#[test]
+fn parse_completions_invalid_shell() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "completions", "--shell", "tcsh",
+    ]);
+    assert!(cli.is_err(), "completions invalid shell should fail");
+}
+
+#[test]
+fn parse_completions_missing_shell() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "completions"]);
+    assert!(cli.is_err(), "completions missing shell should fail");
+}
+
+// =====================================================================
+// Doctor — tests
+// =====================================================================
+
+#[test]
+fn parse_doctor() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "doctor"]);
+    assert!(cli.is_ok(), "doctor: {:?}", cli.err());
+}
+
+#[test]
+fn parse_doctor_json() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "doctor",
+    ]);
+    assert!(cli.is_ok(), "doctor json: {:?}", cli.err());
+    assert_eq!(cli.unwrap().output, OutputFormat::Json);
+}
+
+// =====================================================================
+// Update — tests
+// =====================================================================
+
+// =====================================================================
+// Balance — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_balance_with_watch() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance", "--watch",
+    ]);
+    assert!(cli.is_ok(), "balance watch: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_with_watch_interval() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance", "--watch", "30",
+    ]);
+    assert!(cli.is_ok(), "balance watch interval: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_with_threshold() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance", "--threshold", "10.5",
+    ]);
+    assert!(cli.is_ok(), "balance threshold: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_with_at_block() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance", "--at-block", "5000000",
+    ]);
+    assert!(cli.is_ok(), "balance at-block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_with_address() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance",
+        "--address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "balance with address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_watch_with_threshold() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "balance", "--watch", "60", "--threshold", "5.0",
+    ]);
+    assert!(cli.is_ok(), "balance watch+threshold: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_all_options() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--output", "json", "balance",
+        "--address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--watch", "10",
+        "--threshold", "1.0",
+        "--at-block", "100",
+    ]);
+    assert!(cli.is_ok(), "balance all options: {:?}", cli.err());
+}
+
+// =====================================================================
+// Transfer — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_transfer_small_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "transfer",
+        "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--amount", "0.000000001",
+    ]);
+    assert!(cli.is_ok(), "transfer tiny: {:?}", cli.err());
+}
+
+#[test]
+fn parse_transfer_missing_dest() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "transfer", "--amount", "1.0",
+    ]);
+    assert!(cli.is_err(), "transfer missing dest should fail");
+}
+
+#[test]
+fn parse_transfer_missing_amount() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "transfer",
+        "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_err(), "transfer missing amount should fail");
+}
+
+#[test]
+fn parse_transfer_all_keep_alive() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "transfer-all",
+        "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--keep-alive",
+    ]);
+    assert!(cli.is_ok(), "transfer-all keep-alive: {:?}", cli.err());
+}
+
+#[test]
+fn parse_transfer_all_no_keep_alive() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "transfer-all",
+        "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "transfer-all no keep: {:?}", cli.err());
+}
+
+#[test]
+fn parse_transfer_all_missing_dest() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "transfer-all"]);
+    assert!(cli.is_err(), "transfer-all missing dest should fail");
+}
+
+#[test]
+fn parse_transfer_with_dry_run_mev() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run", "--mev",
+        "transfer",
+        "--dest", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--amount", "1.0",
+    ]);
+    assert!(cli.is_ok(), "transfer dry+mev: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert!(c.dry_run);
+    assert!(c.mev);
+}
+
+// =====================================================================
+// Global flags — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_global_verbose() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "-v", "balance",
+    ]);
+    assert!(cli.is_ok(), "verbose: {:?}", cli.err());
+    assert!(cli.unwrap().verbose);
+}
+
+#[test]
+fn parse_global_debug() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--debug", "balance",
+    ]);
+    assert!(cli.is_ok(), "debug: {:?}", cli.err());
+    assert!(cli.unwrap().debug);
+}
+
+#[test]
+fn parse_global_timeout() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--timeout", "30", "balance",
+    ]);
+    assert!(cli.is_ok(), "timeout: {:?}", cli.err());
+    assert_eq!(cli.unwrap().timeout, Some(30));
+}
+
+#[test]
+fn parse_global_time() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--time", "balance",
+    ]);
+    assert!(cli.is_ok(), "time: {:?}", cli.err());
+    assert!(cli.unwrap().time);
+}
+
+#[test]
+fn parse_global_best() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--best", "balance",
+    ]);
+    assert!(cli.is_ok(), "best: {:?}", cli.err());
+    assert!(cli.unwrap().best);
+}
+
+#[test]
+fn parse_global_pretty() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--pretty", "--output", "json", "balance",
+    ]);
+    assert!(cli.is_ok(), "pretty: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert!(c.pretty);
+    assert_eq!(c.output, OutputFormat::Json);
+}
+
+#[test]
+fn parse_global_proxy() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--proxy", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "balance",
+    ]);
+    assert!(cli.is_ok(), "proxy: {:?}", cli.err());
+    assert!(cli.unwrap().proxy.is_some());
+}
+
+#[test]
+fn parse_global_endpoint_overrides_network() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--network", "finney",
+        "--endpoint", "ws://custom:9944",
+        "balance",
+    ]);
+    assert!(cli.is_ok(), "endpoint override: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert_eq!(c.endpoint, Some("ws://custom:9944".to_string()));
+}
+
+#[test]
+fn parse_global_all_flags_combined() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--network", "test",
+        "--endpoint", "ws://127.0.0.1:9944",
+        "--wallet", "mywal",
+        "--hotkey", "myhk",
+        "--output", "json",
+        "--pretty",
+        "-v",
+        "--debug",
+        "--time",
+        "--best",
+        "--dry-run",
+        "--mev",
+        "-y",
+        "--batch",
+        "--timeout", "60",
+        "--password", "secret",
+        "--log-file", "/tmp/all.log",
+        "--proxy", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "balance",
+    ]);
+    assert!(cli.is_ok(), "all flags: {:?}", cli.err());
+    let c = cli.unwrap();
+    assert!(c.verbose);
+    assert!(c.debug);
+    assert!(c.time);
+    assert!(c.best);
+    assert!(c.dry_run);
+    assert!(c.mev);
+    assert!(c.yes);
+    assert!(c.batch);
+    assert!(c.pretty);
+    assert_eq!(c.timeout, Some(60));
+    assert_eq!(c.output, OutputFormat::Json);
+}
+
+// =====================================================================
+// Root — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_root_register_dry_run() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run", "root", "register",
+    ]);
+    assert!(cli.is_ok(), "root register dry-run: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn parse_root_register_with_password() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--password", "secret", "root", "register",
+    ]);
+    assert!(cli.is_ok(), "root register with password: {:?}", cli.err());
+}
+
+#[test]
+fn parse_root_weights_multi_pair() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "root", "weights",
+        "--weights", "0:50,1:30,2:20",
+    ]);
+    assert!(cli.is_ok(), "root weights multi: {:?}", cli.err());
+}
+
+#[test]
+fn parse_root_weights_single_pair() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "root", "weights",
+        "--weights", "0:100",
+    ]);
+    assert!(cli.is_ok(), "root weights single: {:?}", cli.err());
+}
+
+#[test]
+fn parse_root_weights_with_dry_run() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--dry-run", "root", "weights",
+        "--weights", "0:50,1:50",
+    ]);
+    assert!(cli.is_ok(), "root weights dry: {:?}", cli.err());
+    assert!(cli.unwrap().dry_run);
+}
+
+#[test]
+fn parse_root_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "root"]);
+    assert!(cli.is_err(), "root without subcommand should fail");
+}
+
+// =====================================================================
+// Config — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_config_set_missing_key() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "config", "set", "--value", "test",
+    ]);
+    assert!(cli.is_err(), "config set missing key should fail");
+}
+
+#[test]
+fn parse_config_set_missing_value() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "config", "set", "--key", "network",
+    ]);
+    assert!(cli.is_err(), "config set missing value should fail");
+}
+
+#[test]
+fn parse_config_unset_missing_key() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "config", "unset",
+    ]);
+    assert!(cli.is_err(), "config unset missing key should fail");
+}
+
+#[test]
+fn parse_config_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "config"]);
+    assert!(cli.is_err(), "config without subcommand should fail");
+}
+
+// =====================================================================
+// EVM — gas limit boundary tests
+// =====================================================================
+
+#[test]
+fn parse_evm_call_custom_gas() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "evm", "call",
+        "--source", "0x0000000000000000000000000000000000000001",
+        "--target", "0x0000000000000000000000000000000000000002",
+        "--gas-limit", "100000",
+    ]);
+    assert!(cli.is_ok(), "evm call custom gas: {:?}", cli.err());
+}
+
+#[test]
+fn parse_evm_call_max_gas() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "evm", "call",
+        "--source", "0x0000000000000000000000000000000000000001",
+        "--target", "0x0000000000000000000000000000000000000002",
+        "--gas-limit", "18446744073709551615",
+    ]);
+    assert!(cli.is_ok(), "evm call max u64 gas: {:?}", cli.err());
+}
+
+#[test]
+fn parse_evm_call_gas_overflow() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "evm", "call",
+        "--source", "0x0000000000000000000000000000000000000001",
+        "--target", "0x0000000000000000000000000000000000000002",
+        "--gas-limit", "18446744073709551616",
+    ]);
+    assert!(cli.is_err(), "evm call gas overflow should fail");
+}
+
+#[test]
+fn parse_evm_call_gas_zero() {
+    // Zero gas parses but will fail at runtime validation
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "evm", "call",
+        "--source", "0x0000000000000000000000000000000000000001",
+        "--target", "0x0000000000000000000000000000000000000002",
+        "--gas-limit", "0",
+    ]);
+    assert!(cli.is_ok(), "evm call gas zero parses: {:?}", cli.err());
+}
+
+// =====================================================================
+// Subscribe — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_subscribe_no_subcommand() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "subscribe"]);
+    assert!(cli.is_err(), "subscribe without subcommand should fail");
+}
+
+// =====================================================================
+// Contracts — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_contracts_upload_with_global() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "--network", "test", "--wallet", "myw",
+        "contracts", "upload",
+        "--code", "/path/to/contract.wasm",
+    ]);
+    assert!(cli.is_ok(), "contracts upload global: {:?}", cli.err());
+}
+
+#[test]
+fn parse_contracts_upload_with_deposit_limit() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "contracts", "upload",
+        "--code", "/path/to/contract.wasm",
+        "--storage-deposit-limit", "1000000000",
+    ]);
+    assert!(cli.is_ok(), "contracts upload deposit: {:?}", cli.err());
+}
+
+// =====================================================================
+// Multisig — extended edge cases
+// =====================================================================
+
+#[test]
+fn parse_multisig_address_threshold_1() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "address",
+        "--signatories", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "1",
+    ]);
+    assert!(cli.is_ok(), "multisig address t=1: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_address_max_threshold() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "address",
+        "--signatories", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+        "--threshold", "2",
+    ]);
+    assert!(cli.is_ok(), "multisig address t=2: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_submit_with_json_args() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "submit",
+        "--others", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--threshold", "2",
+        "--pallet", "Balances",
+        "--call", "transfer_allow_death",
+        "--args", "[\"5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty\", 1000000000]",
+    ]);
+    assert!(cli.is_ok(), "multisig submit args: {:?}", cli.err());
+}
+
+#[test]
+fn parse_multisig_submit_missing_others() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "multisig", "submit",
+        "--threshold", "2",
+        "--pallet", "Balances",
+        "--call", "transfer",
+    ]);
+    assert!(cli.is_err(), "multisig submit missing others should fail");
+}

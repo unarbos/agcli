@@ -1245,6 +1245,150 @@ pub fn validate_event_filter(filter: &str) -> Result<()> {
     Ok(())
 }
 
+/// Validate a WASM file before uploading to the contracts pallet.
+/// Checks magic bytes (\0asm), minimum size, and reasonable maximum size.
+pub fn validate_wasm_file(data: &[u8], path: &str) -> Result<()> {
+    const WASM_MAGIC: &[u8; 4] = b"\0asm";
+    const MAX_WASM_SIZE: usize = 16 * 1024 * 1024; // 16 MB
+
+    if data.is_empty() {
+        anyhow::bail!(
+            "WASM file '{}' is empty.\n  Tip: provide a valid .wasm contract binary.",
+            path
+        );
+    }
+    if data.len() < 8 {
+        anyhow::bail!(
+            "WASM file '{}' is too small ({} bytes). Not a valid WASM module.\n  Tip: a valid WASM file starts with the bytes 00 61 73 6d (\\0asm).",
+            path, data.len()
+        );
+    }
+    if &data[0..4] != WASM_MAGIC {
+        let preview: String = data[0..4.min(data.len())]
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+        anyhow::bail!(
+            "File '{}' is not a WASM module (magic bytes: {}, expected: 00 61 73 6d).\n  Tip: compile your contract to WASM first, e.g. 'cargo contract build'.",
+            path, preview
+        );
+    }
+    if data.len() > MAX_WASM_SIZE {
+        anyhow::bail!(
+            "WASM file '{}' is too large ({:.1} MB, max {} MB).\n  Tip: optimize your contract with 'cargo contract build --release'.",
+            path,
+            data.len() as f64 / (1024.0 * 1024.0),
+            MAX_WASM_SIZE / (1024 * 1024)
+        );
+    }
+    Ok(())
+}
+
+/// Validate gas limit for EVM calls.
+/// Zero gas means the call will always fail. Warns on unusually low values.
+pub fn validate_gas_limit(gas: u64, label: &str) -> Result<()> {
+    if gas == 0 {
+        anyhow::bail!(
+            "Invalid {}: gas limit cannot be zero.\n  Tip: use at least 21000 for a simple transfer, more for contract calls.",
+            label
+        );
+    }
+    Ok(())
+}
+
+/// Validate a batch JSON file before processing.
+/// Reads the file and checks structural validity: must be a JSON array of objects,
+/// each with "pallet", "call", and "args" fields.
+pub fn validate_batch_file(content: &str, path: &str) -> Result<Vec<serde_json::Value>> {
+    let parsed: serde_json::Value = serde_json::from_str(content)
+        .map_err(|e| anyhow::anyhow!(
+            "Invalid JSON in batch file '{}': {}\n  Tip: file must contain a JSON array of call objects.\n  Example: [{{\"pallet\": \"Balances\", \"call\": \"transfer_allow_death\", \"args\": [...]}}]",
+            path, e
+        ))?;
+
+    let arr = parsed.as_array().ok_or_else(|| anyhow::anyhow!(
+        "Batch file '{}' must contain a JSON array, got {}.\n  Tip: wrap your calls in square brackets: [{{}}, {{}}]",
+        path,
+        match &parsed {
+            serde_json::Value::Object(_) => "an object (did you forget to wrap in []?)",
+            serde_json::Value::String(_) => "a string",
+            serde_json::Value::Number(_) => "a number",
+            serde_json::Value::Bool(_) => "a boolean",
+            serde_json::Value::Null => "null",
+            _ => "a non-array value",
+        }
+    ))?;
+
+    if arr.is_empty() {
+        anyhow::bail!(
+            "Batch file '{}' is empty (no calls to submit).\n  Tip: add at least one call object to the array.",
+            path
+        );
+    }
+
+    if arr.len() > 1000 {
+        anyhow::bail!(
+            "Batch file '{}' has too many calls ({}, max 1000).\n  Tip: split into smaller batch files.",
+            path, arr.len()
+        );
+    }
+
+    for (i, call) in arr.iter().enumerate() {
+        let obj = call.as_object().ok_or_else(|| anyhow::anyhow!(
+            "Batch call #{} is not an object (got {}).\n  Tip: each call must be {{\"pallet\": \"...\", \"call\": \"...\", \"args\": [...]}}",
+            i,
+            match call {
+                serde_json::Value::Null => "null".to_string(),
+                serde_json::Value::Bool(b) => format!("boolean {}", b),
+                serde_json::Value::Number(n) => format!("number {}", n),
+                serde_json::Value::String(s) => format!("string {:?}", &s[..s.len().min(50)]),
+                serde_json::Value::Array(_) => "an array".to_string(),
+                _ => "unknown".to_string(),
+            }
+        ))?;
+
+        if !obj.contains_key("pallet") {
+            anyhow::bail!(
+                "Batch call #{}: missing \"pallet\" field.\n  Tip: add \"pallet\": \"SubtensorModule\" (or the target pallet name).",
+                i
+            );
+        }
+        if !obj.get("pallet").and_then(|v| v.as_str()).is_some() {
+            anyhow::bail!(
+                "Batch call #{}: \"pallet\" must be a string.\n  Tip: use the pallet name, e.g. \"SubtensorModule\".",
+                i
+            );
+        }
+        if !obj.contains_key("call") {
+            anyhow::bail!(
+                "Batch call #{}: missing \"call\" field.\n  Tip: add \"call\": \"add_stake\" (the extrinsic name).",
+                i
+            );
+        }
+        if !obj.get("call").and_then(|v| v.as_str()).is_some() {
+            anyhow::bail!(
+                "Batch call #{}: \"call\" must be a string.\n  Tip: use the call name, e.g. \"transfer_allow_death\".",
+                i
+            );
+        }
+        if !obj.contains_key("args") {
+            anyhow::bail!(
+                "Batch call #{}: missing \"args\" field.\n  Tip: add \"args\": [] (even if no arguments are needed).",
+                i
+            );
+        }
+        if !obj.get("args").and_then(|v| v.as_array()).is_some() {
+            anyhow::bail!(
+                "Batch call #{}: \"args\" must be an array.\n  Tip: use \"args\": [arg1, arg2, ...] or \"args\": [] for no arguments.",
+                i
+            );
+        }
+    }
+
+    Ok(arr.clone())
+}
+
 /// Parse an optional JSON string into a vec of subxt dynamic Values.
 /// Validates the JSON structure before converting.
 pub fn parse_json_args(args: &Option<String>) -> anyhow::Result<Vec<subxt::dynamic::Value>> {

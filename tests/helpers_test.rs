@@ -3,10 +3,11 @@
 
 use agcli::cli::helpers::{
     json_to_subxt_value, parse_children, parse_weight_pairs, validate_amount,
-    validate_delegate_take, validate_derive_input, validate_emission_weights,
-    validate_evm_address, validate_hex_data, validate_ipv4, validate_max_cost,
-    validate_mnemonic, validate_multisig_json_args, validate_name, validate_pallet_call,
-    validate_schedule_id, validate_symbol, validate_take_pct,
+    validate_batch_file, validate_delegate_take, validate_derive_input,
+    validate_emission_weights, validate_evm_address, validate_gas_limit,
+    validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_multisig_json_args, validate_name, validate_pallet_call,
+    validate_schedule_id, validate_symbol, validate_take_pct, validate_wasm_file,
 };
 use agcli::utils::explain;
 
@@ -2907,4 +2908,336 @@ fn event_filter_with_spaces() {
 fn event_filter_error_includes_tip() {
     let err = validate_event_filter("bad").unwrap_err();
     assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+}
+
+// =====================================================================
+// validate_wasm_file
+// =====================================================================
+
+#[test]
+fn wasm_file_valid_minimal() {
+    // Minimal valid WASM: magic + version + empty sections
+    let mut data = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
+    data.extend_from_slice(&[0u8; 100]); // padding to make it realistic
+    assert!(validate_wasm_file(&data, "test.wasm").is_ok());
+}
+
+#[test]
+fn wasm_file_empty() {
+    let err = validate_wasm_file(&[], "empty.wasm").unwrap_err();
+    assert!(err.to_string().contains("empty"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_too_small() {
+    let data = vec![0x00, 0x61, 0x73];
+    let err = validate_wasm_file(&data, "tiny.wasm").unwrap_err();
+    assert!(err.to_string().contains("too small"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_bad_magic() {
+    let data = vec![0x7f, 0x45, 0x4c, 0x46, 0x01, 0x00, 0x00, 0x00]; // ELF magic
+    let err = validate_wasm_file(&data, "not.wasm").unwrap_err();
+    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_pdf_magic() {
+    let mut data = b"%PDF-1.4 ".to_vec();
+    data.extend_from_slice(&[0u8; 100]);
+    let err = validate_wasm_file(&data, "doc.pdf").unwrap_err();
+    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_too_large() {
+    // Build just the header for a huge file
+    let mut data = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
+    data.resize(16 * 1024 * 1024 + 1, 0x00); // 16MB + 1
+    let err = validate_wasm_file(&data, "huge.wasm").unwrap_err();
+    assert!(err.to_string().contains("too large"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_exactly_max_size() {
+    let mut data = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
+    data.resize(16 * 1024 * 1024, 0x00); // exactly 16MB
+    assert!(validate_wasm_file(&data, "max.wasm").is_ok());
+}
+
+#[test]
+fn wasm_file_error_includes_tip() {
+    let data = vec![0xff; 100];
+    let err = validate_wasm_file(&data, "bad.wasm").unwrap_err();
+    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+}
+
+#[test]
+fn wasm_file_error_shows_filename() {
+    let err = validate_wasm_file(&[], "my_contract.wasm").unwrap_err();
+    assert!(err.to_string().contains("my_contract.wasm"), "error should include filename: {}", err);
+}
+
+#[test]
+fn wasm_file_json_bytes() {
+    // Someone passes a JSON file instead of WASM
+    let data = b"[{\"pallet\":\"Test\"}]";
+    let err = validate_wasm_file(data, "calls.json").unwrap_err();
+    assert!(err.to_string().contains("not a WASM module"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_7_bytes() {
+    // Edge case: exactly 7 bytes, under minimum 8
+    let data = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00];
+    let err = validate_wasm_file(&data, "short.wasm").unwrap_err();
+    assert!(err.to_string().contains("too small"), "got: {}", err);
+}
+
+#[test]
+fn wasm_file_8_bytes_valid() {
+    // Exactly 8 bytes with valid magic
+    let data = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
+    assert!(validate_wasm_file(&data, "min.wasm").is_ok());
+}
+
+// =====================================================================
+// validate_gas_limit
+// =====================================================================
+
+#[test]
+fn gas_limit_valid_21000() {
+    assert!(validate_gas_limit(21000, "gas limit").is_ok());
+}
+
+#[test]
+fn gas_limit_valid_1() {
+    assert!(validate_gas_limit(1, "gas limit").is_ok());
+}
+
+#[test]
+fn gas_limit_valid_max_u64() {
+    assert!(validate_gas_limit(u64::MAX, "gas limit").is_ok());
+}
+
+#[test]
+fn gas_limit_zero_rejected() {
+    let err = validate_gas_limit(0, "gas limit").unwrap_err();
+    assert!(err.to_string().contains("cannot be zero"), "got: {}", err);
+}
+
+#[test]
+fn gas_limit_zero_error_includes_tip() {
+    let err = validate_gas_limit(0, "gas limit").unwrap_err();
+    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+}
+
+#[test]
+fn gas_limit_error_includes_label() {
+    let err = validate_gas_limit(0, "my gas").unwrap_err();
+    assert!(err.to_string().contains("my gas"), "error should include label: {}", err);
+}
+
+// =====================================================================
+// validate_batch_file
+// =====================================================================
+
+#[test]
+fn batch_file_valid_single_call() {
+    let json = r#"[{"pallet":"Balances","call":"transfer_allow_death","args":["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",1000000000]}]"#;
+    let calls = validate_batch_file(json, "test.json").unwrap();
+    assert_eq!(calls.len(), 1);
+}
+
+#[test]
+fn batch_file_valid_multi_call() {
+    let json = r#"[
+        {"pallet":"Balances","call":"transfer_allow_death","args":["addr1",100]},
+        {"pallet":"SubtensorModule","call":"add_stake","args":["hk",1,100]}
+    ]"#;
+    let calls = validate_batch_file(json, "test.json").unwrap();
+    assert_eq!(calls.len(), 2);
+}
+
+#[test]
+fn batch_file_valid_empty_args() {
+    let json = r#"[{"pallet":"System","call":"remark","args":[]}]"#;
+    assert!(validate_batch_file(json, "test.json").is_ok());
+}
+
+#[test]
+fn batch_file_empty_array() {
+    let json = "[]";
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("empty"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_not_array_object() {
+    let json = r#"{"pallet":"Balances","call":"transfer","args":[]}"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("JSON array"), "got: {}", err);
+    assert!(err.to_string().contains("forget to wrap"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_not_array_string() {
+    let json = r#""hello""#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("JSON array"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_not_array_number() {
+    let json = "42";
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("JSON array"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_not_array_null() {
+    let json = "null";
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("JSON array"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_not_array_bool() {
+    let json = "true";
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("JSON array"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_invalid_json() {
+    let json = "{invalid json";
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("Invalid JSON"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_missing_pallet() {
+    let json = r#"[{"call":"transfer","args":[]}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("missing \"pallet\""), "got: {}", err);
+}
+
+#[test]
+fn batch_file_missing_call() {
+    let json = r#"[{"pallet":"Balances","args":[]}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("missing \"call\""), "got: {}", err);
+}
+
+#[test]
+fn batch_file_missing_args() {
+    let json = r#"[{"pallet":"Balances","call":"transfer"}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("missing \"args\""), "got: {}", err);
+}
+
+#[test]
+fn batch_file_pallet_not_string() {
+    let json = r#"[{"pallet":123,"call":"transfer","args":[]}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("pallet"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_call_not_string() {
+    let json = r#"[{"pallet":"Balances","call":true,"args":[]}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("call"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_args_not_array() {
+    let json = r#"[{"pallet":"Balances","call":"transfer","args":"bad"}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("args"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_element_not_object_null() {
+    let json = r#"[null]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("not an object"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_element_not_object_string() {
+    let json = r#"["hello"]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("not an object"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_element_not_object_number() {
+    let json = r#"[42]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("not an object"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_element_not_object_array() {
+    let json = r#"[[1,2,3]]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("not an object"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_error_shows_index() {
+    let json = r#"[{"pallet":"OK","call":"ok","args":[]},{"pallet":"Bad","args":[]}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("#1"), "error should show index: {}", err);
+}
+
+#[test]
+fn batch_file_error_includes_tip() {
+    let json = r#"[{"pallet":"X","call":"y"}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    assert!(err.to_string().contains("Tip:"), "error should include Tip: {}", err);
+}
+
+#[test]
+fn batch_file_error_shows_filename() {
+    let json = "not-json";
+    let err = validate_batch_file(json, "my_batch.json").unwrap_err();
+    assert!(err.to_string().contains("my_batch.json"), "error should include filename: {}", err);
+}
+
+#[test]
+fn batch_file_too_many_calls() {
+    // Build JSON array with 1001 valid calls
+    let call = r#"{"pallet":"System","call":"remark","args":[]}"#;
+    let calls: Vec<&str> = (0..1001).map(|_| call).collect();
+    let json = format!("[{}]", calls.join(","));
+    let err = validate_batch_file(&json, "huge.json").unwrap_err();
+    assert!(err.to_string().contains("too many calls"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_exactly_1000_calls() {
+    let call = r#"{"pallet":"System","call":"remark","args":[]}"#;
+    let calls: Vec<&str> = (0..1000).map(|_| call).collect();
+    let json = format!("[{}]", calls.join(","));
+    let result = validate_batch_file(&json, "max.json");
+    assert!(result.is_ok(), "1000 calls should be ok: {:?}", result.err());
+    assert_eq!(result.unwrap().len(), 1000);
+}
+
+#[test]
+fn batch_file_mixed_valid_invalid() {
+    let json = r#"[{"pallet":"OK","call":"ok","args":[]},{"not":"a call"}]"#;
+    let err = validate_batch_file(json, "test.json").unwrap_err();
+    // Second element should fail for missing pallet
+    assert!(err.to_string().contains("#1"), "got: {}", err);
+}
+
+#[test]
+fn batch_file_extra_fields_ok() {
+    // Extra fields besides pallet/call/args should be tolerated
+    let json = r#"[{"pallet":"System","call":"remark","args":[],"comment":"my note","priority":1}]"#;
+    assert!(validate_batch_file(json, "test.json").is_ok());
 }

@@ -586,12 +586,7 @@ pub(super) async fn handle_batch(
 ) -> Result<()> {
     let content = std::fs::read_to_string(file_path)
         .map_err(|e| anyhow::anyhow!("Failed to read batch file '{}': {}", file_path, e))?;
-    let calls: Vec<serde_json::Value> = serde_json::from_str(&content)
-        .map_err(|e| anyhow::anyhow!("Invalid JSON in '{}': {}\n  Expected: [{{\n    \"pallet\": \"SubtensorModule\",\n    \"call\": \"add_stake\",\n    \"args\": [\"hotkey_ss58\", 1, 1000000000]\n  }}, ...]", file_path, e))?;
-
-    if calls.is_empty() {
-        anyhow::bail!("Batch file is empty (no calls to submit).");
-    }
+    let calls = validate_batch_file(&content, file_path)?;
 
     let mode_name = if force {
         "force_batch (non-atomic, continues on failure)"

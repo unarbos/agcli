@@ -708,10 +708,11 @@ pub(super) async fn handle_contracts(
             code,
             storage_deposit_limit,
         } => {
-            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
-            unlock_coldkey(&mut wallet, ctx.password)?;
             let wasm = std::fs::read(&code)
                 .map_err(|e| anyhow::anyhow!("Failed to read WASM file '{}': {}", code, e))?;
+            validate_wasm_file(&wasm, &code)?;
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
             println!("Uploading contract code ({} bytes)", wasm.len());
             let tx_hash = client
                 .contracts_upload_code(wallet.coldkey()?, wasm, storage_deposit_limit)
@@ -826,6 +827,7 @@ pub(super) async fn handle_evm(cmd: EvmCommands, client: &Client, ctx: &Ctx<'_>)
             validate_hex_data(&input, "input")?;
             validate_hex_data(&value, "value")?;
             validate_hex_data(&max_fee_per_gas, "max-fee-per-gas")?;
+            validate_gas_limit(gas_limit, "gas limit")?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             let src_hex = source.strip_prefix("0x").unwrap_or(&source);
