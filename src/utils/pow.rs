@@ -24,6 +24,9 @@ pub fn solve_pow_range(
     start_nonce: u64,
     count: u64,
 ) -> Option<(u64, [u8; 32])> {
+    if difficulty == 0 {
+        return None;
+    }
     let target = u64::MAX / difficulty;
 
     for nonce in start_nonce..start_nonce.saturating_add(count) {
@@ -132,5 +135,23 @@ mod tests {
         // target = u64::MAX / 1 = u64::MAX, everything passes
         let result = solve_pow(&block, &hotkey, 1, 1);
         assert!(result.is_some());
+    }
+
+    /// H-13 fix: difficulty=0 should return None, not panic with division by zero.
+    #[test]
+    fn pow_zero_difficulty_returns_none() {
+        let block = [0u8; 32];
+        let hotkey = [1u8; 32];
+        let result = solve_pow(&block, &hotkey, 0, 100);
+        assert!(result.is_none(), "difficulty=0 should return None, not panic");
+    }
+
+    /// H-13 fix: solve_pow_range with difficulty=0 should also return None.
+    #[test]
+    fn pow_range_zero_difficulty_returns_none() {
+        let block = [0u8; 32];
+        let hotkey = [1u8; 32];
+        let result = solve_pow_range(&block, &hotkey, 0, 0, 1000);
+        assert!(result.is_none(), "difficulty=0 should return None, not panic");
     }
 }

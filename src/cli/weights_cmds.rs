@@ -51,16 +51,22 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
     match value {
         serde_json::Value::Array(arr) => {
             for item in arr {
-                let uid = item
+                let uid_val = item
                     .get("uid")
                     .and_then(|v| v.as_u64())
-                    .ok_or_else(|| anyhow::anyhow!("Missing 'uid' field in weight entry"))?
-                    as u16;
-                let weight = item
+                    .ok_or_else(|| anyhow::anyhow!("Missing 'uid' field in weight entry"))?;
+                if uid_val > u16::MAX as u64 {
+                    anyhow::bail!("UID {} exceeds maximum value {} — UIDs must fit in u16", uid_val, u16::MAX);
+                }
+                let uid = uid_val as u16;
+                let weight_val = item
                     .get("weight")
                     .and_then(|v| v.as_u64())
-                    .ok_or_else(|| anyhow::anyhow!("Missing 'weight' field in weight entry"))?
-                    as u16;
+                    .ok_or_else(|| anyhow::anyhow!("Missing 'weight' field in weight entry"))?;
+                if weight_val > u16::MAX as u64 {
+                    anyhow::bail!("Weight {} for UID {} exceeds maximum value {} — weights must fit in u16", weight_val, uid, u16::MAX);
+                }
+                let weight = weight_val as u16;
                 uids.push(uid);
                 weights.push(weight);
             }
@@ -70,10 +76,13 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
                 let uid: u16 = k
                     .parse()
                     .map_err(|_| anyhow::anyhow!("Invalid UID key '{}' — must be 0–65535", k))?;
-                let weight = v
+                let weight_val = v
                     .as_u64()
-                    .ok_or_else(|| anyhow::anyhow!("Invalid weight value for UID {}", uid))?
-                    as u16;
+                    .ok_or_else(|| anyhow::anyhow!("Invalid weight value for UID {}", uid))?;
+                if weight_val > u16::MAX as u64 {
+                    anyhow::bail!("Weight {} for UID {} exceeds maximum value {} — weights must fit in u16", weight_val, uid, u16::MAX);
+                }
+                let weight = weight_val as u16;
                 uids.push(uid);
                 weights.push(weight);
             }
@@ -575,4 +584,70 @@ async fn handle_weights_show(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_json_weights_valid_array() {
+        let input = r#"[{"uid": 0, "weight": 100}, {"uid": 1, "weight": 200}]"#;
+        let (uids, weights) = parse_json_weights(input).unwrap();
+        assert_eq!(uids, vec![0u16, 1u16]);
+        assert_eq!(weights, vec![100u16, 200u16]);
+    }
+
+    #[test]
+    fn parse_json_weights_valid_object() {
+        let input = r#"{"0": 100, "1": 200}"#;
+        let (uids, weights) = parse_json_weights(input).unwrap();
+        assert!(uids.contains(&0u16));
+        assert!(uids.contains(&1u16));
+    }
+
+    /// H-18 fix: UID > 65535 should error, not silently truncate.
+    #[test]
+    fn parse_json_weights_rejects_uid_overflow() {
+        let input = r#"[{"uid": 65536, "weight": 100}]"#;
+        let err = parse_json_weights(input).unwrap_err();
+        assert!(
+            err.to_string().contains("exceeds maximum"),
+            "Expected overflow error, got: {}",
+            err
+        );
+    }
+
+    /// H-18 fix: weight > 65535 should error, not silently truncate.
+    #[test]
+    fn parse_json_weights_rejects_weight_overflow() {
+        let input = r#"[{"uid": 0, "weight": 70000}]"#;
+        let err = parse_json_weights(input).unwrap_err();
+        assert!(
+            err.to_string().contains("exceeds maximum"),
+            "Expected overflow error, got: {}",
+            err
+        );
+    }
+
+    /// H-18 fix: UID 65535 (u16::MAX) should be accepted.
+    #[test]
+    fn parse_json_weights_accepts_max_u16() {
+        let input = r#"[{"uid": 65535, "weight": 65535}]"#;
+        let (uids, weights) = parse_json_weights(input).unwrap();
+        assert_eq!(uids, vec![u16::MAX]);
+        assert_eq!(weights, vec![u16::MAX]);
+    }
+
+    /// H-18 fix: object format weight overflow should also error.
+    #[test]
+    fn parse_json_weights_object_rejects_weight_overflow() {
+        let input = r#"{"0": 70000}"#;
+        let err = parse_json_weights(input).unwrap_err();
+        assert!(
+            err.to_string().contains("exceeds maximum"),
+            "Expected overflow error, got: {}",
+            err
+        );
+    }
 }

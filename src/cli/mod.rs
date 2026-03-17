@@ -590,20 +590,20 @@ pub enum StakeCommands {
         #[arg(long)]
         hotkey: Option<String>,
     },
-    /// Swap stake between hotkeys on same subnet
+    /// Swap stake between subnets for the same hotkey
     Swap {
-        /// Amount
+        /// Amount of TAO
         #[arg(long)]
         amount: f64,
-        /// Subnet UID
+        /// Source subnet
         #[arg(long)]
-        netuid: u16,
-        /// Source hotkey
+        from: u16,
+        /// Destination subnet
         #[arg(long)]
-        from_hotkey: String,
-        /// Destination hotkey
+        to: u16,
+        /// Hotkey SS58
         #[arg(long)]
-        to_hotkey: String,
+        hotkey: Option<String>,
     },
     /// Unstake all from a hotkey
     UnstakeAll {
@@ -613,9 +613,6 @@ pub enum StakeCommands {
     },
     /// Claim root dividends
     ClaimRoot {
-        /// Hotkey SS58
-        #[arg(long)]
-        hotkey: Option<String>,
         /// Subnet UID
         #[arg(long)]
         netuid: u16,
@@ -676,6 +673,9 @@ pub enum StakeCommands {
         /// Children as "proportion:hotkey_ss58" pairs, comma-separated
         #[arg(long)]
         children: String,
+        /// Hotkey SS58 (defaults to wallet hotkey)
+        #[arg(long)]
+        hotkey: Option<String>,
     },
     /// Recycle alpha tokens back to TAO
     RecycleAlpha {

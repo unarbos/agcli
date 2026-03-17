@@ -29,7 +29,7 @@ fn account_to_ss58(a: &AccountId32) -> String {
 
 fn ip_to_string(ip: u128, ip_type: u8) -> String {
     if ip_type == 4 {
-        let ip4 = ip as u32;
+        let ip4 = (ip & 0xFFFF_FFFF) as u32;
         format!(
             "{}.{}.{}.{}",
             (ip4 >> 24) & 0xFF,
@@ -259,5 +259,43 @@ impl From<GenDynamicInfo> for DynamicInfo {
             subnet_volume: d.subnet_volume,
             network_registered_at: d.network_registered_at,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ip_to_string_ipv4_normal() {
+        // 192.168.1.1 = (192 << 24) | (168 << 16) | (1 << 8) | 1
+        let ip: u128 = (192 << 24) | (168 << 16) | (1 << 8) | 1;
+        assert_eq!(ip_to_string(ip, 4), "192.168.1.1");
+    }
+
+    #[test]
+    fn ip_to_string_ipv4_loopback() {
+        let ip: u128 = (127 << 24) | 1;
+        assert_eq!(ip_to_string(ip, 4), "127.0.0.1");
+    }
+
+    #[test]
+    fn ip_to_string_ipv4_truncates_high_bits_safely() {
+        // Issue 742: u128 with bits above u32 range — should mask to lower 32 bits
+        let ip: u128 = (1u128 << 33) | (10 << 24) | (0 << 16) | (0 << 8) | 1;
+        // The high bit (1 << 33) should be masked away, leaving 10.0.0.1
+        assert_eq!(ip_to_string(ip, 4), "10.0.0.1");
+    }
+
+    #[test]
+    fn ip_to_string_ipv4_max_u128_gives_255s() {
+        // All bits set — mask to 0xFFFF_FFFF = 255.255.255.255
+        assert_eq!(ip_to_string(u128::MAX, 4), "255.255.255.255");
+    }
+
+    #[test]
+    fn ip_to_string_ipv6_formats_hex() {
+        let ip: u128 = 0x20010db8000000000000000000000001;
+        assert_eq!(ip_to_string(ip, 6), "20010db8000000000000000000000001");
     }
 }

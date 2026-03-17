@@ -199,7 +199,7 @@ pub fn diff(old: &Metagraph, new: &Metagraph) -> Vec<MetagraphDelta> {
                         },
                     });
                 }
-                let stake_diff = nn.stake.rao() as i64 - on.stake.rao() as i64;
+                let stake_diff = nn.stake.rao() as i128 - on.stake.rao() as i128;
                 if stake_diff.unsigned_abs() > 1_000_000_000 {
                     // > 1 TAO change
                     deltas.push(MetagraphDelta {

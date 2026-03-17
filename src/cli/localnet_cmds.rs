@@ -59,7 +59,7 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
                 println!(
                     "  Container: {} ({})",
                     info.container_name,
-                    &info.container_id[..12]
+                    &info.container_id[..info.container_id.len().min(12)]
                 );
                 println!("  Image:     {}", info.image);
                 println!("  Endpoint:  {}", info.endpoint);
@@ -158,7 +158,7 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
                 println!(
                     "  Container: {} ({})",
                     info.container_name,
-                    &info.container_id[..12]
+                    &info.container_id[..info.container_id.len().min(12)]
                 );
                 println!("  Endpoint:  {}", info.endpoint);
                 println!("  Block:     {}", info.block_height);

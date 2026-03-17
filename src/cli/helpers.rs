@@ -428,9 +428,16 @@ pub fn validate_ss58(address: &str, label: &str) -> Result<()> {
     Ok(())
 }
 
-/// Validate password strength for wallet creation. Returns Ok(()) always, but prints
-/// warnings to stderr for weak passwords. Does NOT reject weak passwords — just warns.
-pub fn validate_password_strength(password: &str) {
+/// Validate password strength for wallet creation. Rejects empty passwords
+/// (which would produce trivially-breakable encryption). Prints warnings for
+/// weak-but-non-empty passwords.
+pub fn validate_password_strength(password: &str) -> Result<()> {
+    if password.is_empty() {
+        anyhow::bail!(
+            "Empty password is not allowed — your wallet encryption would be trivially breakable.\n  \
+             Provide a password with at least 8 characters."
+        );
+    }
     if password.len() < 8 {
         eprintln!(
             "Warning: password is only {} characters. Consider using at least 8 characters for better security.",
@@ -479,6 +486,7 @@ pub fn validate_password_strength(password: &str) {
             "Warning: this is a commonly used password. Choose something unique to protect your wallet."
         );
     }
+    Ok(())
 }
 
 /// Validate a port number is in the valid range [1, 65535].
@@ -753,7 +761,14 @@ pub fn resolve_and_validate_coldkey_address(
     if let Some(ref addr) = address {
         validate_ss58(addr, label)?;
     }
-    Ok(resolve_coldkey_address(address, wallet_dir, wallet_name))
+    let resolved = resolve_coldkey_address(address, wallet_dir, wallet_name);
+    if resolved.is_empty() {
+        anyhow::bail!(
+            "Could not resolve coldkey address from wallet '{}' in {}.\n  Tip: pass --address <ss58> explicitly, or create a wallet with: agcli wallet create",
+            wallet_name, wallet_dir
+        );
+    }
+    Ok(resolved)
 }
 
 pub fn resolve_hotkey_ss58(
@@ -974,7 +989,7 @@ pub fn validate_derive_input(input: &str) -> Result<()> {
         }
         // Validate chars before decode
         if let Some(pos) = hex_str.find(|c: char| !c.is_ascii_hexdigit()) {
-            let bad_char = hex_str.chars().nth(pos).unwrap();
+            let bad_char = hex_str[pos..].chars().next().unwrap();
             anyhow::bail!(
                 "Invalid hex character '{}' at position {}.\n  Tip: hex values use only 0-9 and a-f.",
                 bad_char, pos + 2
@@ -1147,7 +1162,7 @@ pub fn validate_evm_address(address: &str, label: &str) -> Result<()> {
         );
     }
     if let Some(pos) = hex_str.find(|c: char| !c.is_ascii_hexdigit()) {
-        let bad_char = hex_str.chars().nth(pos).unwrap();
+        let bad_char = hex_str[pos..].chars().next().unwrap();
         anyhow::bail!(
             "Invalid {} EVM address: character '{}' at position {} is not valid hex.\n  Tip: use only 0-9 and a-f.",
             label, bad_char, pos
@@ -1188,7 +1203,7 @@ pub fn validate_hex_data(data: &str, label: &str) -> Result<()> {
         );
     }
     if let Some(pos) = hex_str.find(|c: char| !c.is_ascii_hexdigit()) {
-        let bad_char = hex_str.chars().nth(pos).unwrap();
+        let bad_char = hex_str[pos..].chars().next().unwrap();
         anyhow::bail!(
             "Invalid {} hex data: character '{}' at position {} is not valid hex.\n  Tip: use only 0-9 and a-f.",
             label, bad_char, pos
@@ -1854,7 +1869,7 @@ pub fn validate_call_hash(hash: &str, label: &str) -> Result<()> {
         );
     }
     if let Some(pos) = hex_str.find(|c: char| !c.is_ascii_hexdigit()) {
-        let bad_char = hex_str.chars().nth(pos).unwrap();
+        let bad_char = hex_str[pos..].chars().next().unwrap();
         anyhow::bail!(
             "Invalid {} call hash: character '{}' at position {} is not valid hex.\n  Tip: use only 0-9 and a-f.",
             label, bad_char, pos

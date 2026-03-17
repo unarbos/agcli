@@ -186,6 +186,7 @@ pub struct NeuronResult {
     /// SS58 address (coldkey = hotkey for simplicity).
     pub ss58: String,
     /// Secret seed URI (for programmatic use).
+    #[serde(skip)]
     pub seed: String,
     /// UID on the subnet (if registered).
     pub uid: Option<u16>,
@@ -537,4 +538,36 @@ async fn lookup_uid(client: &Client, netuid: NetUid, hotkey_ss58: &str) -> Resul
         }
     }
     bail!("Neuron {} not found on subnet {}", hotkey_ss58, netuid.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// H-61 fix: NeuronResult.seed should be excluded from JSON serialization
+    /// to prevent leaking secret URIs in logs/output.
+    #[test]
+    fn neuron_result_seed_not_serialized() {
+        let nr = NeuronResult {
+            name: "alice".to_string(),
+            ss58: "5GrwvaEF".to_string(),
+            seed: "//Alice".to_string(),
+            uid: Some(0),
+            balance_tao: Some(1000.0),
+        };
+        let json = serde_json::to_string(&nr).unwrap();
+        assert!(
+            !json.contains("//Alice"),
+            "Seed URI should not appear in serialized JSON: {}",
+            json
+        );
+        assert!(
+            !json.contains("seed"),
+            "Seed field should be skipped in serialization: {}",
+            json
+        );
+        // Other fields should still be present
+        assert!(json.contains("alice"));
+        assert!(json.contains("5GrwvaEF"));
+    }
 }

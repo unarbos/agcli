@@ -266,16 +266,14 @@ pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_
             validate_ss58(&new_hotkey, "new hotkey")?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
-            let old_hotkey = match wallet.hotkey_ss58().map(|s| s.to_string()) {
-                Some(hk) => hk,
-                None => {
-                    wallet.load_hotkey("default")?;
-                    wallet
-                        .hotkey_ss58()
-                        .map(|s| s.to_string())
-                        .ok_or_else(|| anyhow::anyhow!("Could not resolve current hotkey"))?
-                }
-            };
+            // Always load the hotkey specified by --hotkey-name / AGCLI_HOTKEY / config.
+            // Wallet::open() pre-loads "default" hotkey SS58, so we must explicitly
+            // load the correct hotkey to respect the user's --hotkey-name flag.
+            wallet.load_hotkey(ctx.hotkey_name)?;
+            let old_hotkey = wallet
+                .hotkey_ss58()
+                .map(|s| s.to_string())
+                .ok_or_else(|| anyhow::anyhow!("Could not resolve current hotkey '{}'. Create one with: agcli wallet new-hotkey --name {}", ctx.hotkey_name, ctx.hotkey_name))?;
             tracing::info!(old = %crate::utils::short_ss58(&old_hotkey), new = %crate::utils::short_ss58(&new_hotkey), "Swapping hotkey");
             println!(
                 "Swapping hotkey {} -> {}",

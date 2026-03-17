@@ -112,6 +112,12 @@ pub fn dev_accounts() -> Vec<DevAccount> {
 /// Kills any stale container on the same port, starts fresh, and optionally
 /// waits for the chain to produce blocks.
 pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
+    if cfg.port == 0 || cfg.port == 65535 {
+        anyhow::bail!(
+            "Invalid localnet port {}. Needs two consecutive ports ({} and {}), both in range 1-65534.",
+            cfg.port, cfg.port, cfg.port.wrapping_add(1)
+        );
+    }
     // Kill stale containers
     let _ = Command::new("docker")
         .args(["rm", "-f", &cfg.container_name])
@@ -140,7 +146,7 @@ pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
             "-p",
             &format!("{}:9944", cfg.port),
             "-p",
-            &format!("{}:9945", cfg.port + 1),
+            &format!("{}:9945", cfg.port.checked_add(1).unwrap_or(cfg.port)),
             &cfg.image,
         ])
         .output()

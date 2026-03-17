@@ -168,7 +168,7 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
 
         for c in curr_neurons.iter() {
             if let Some(p) = prev_map.get(&c.uid) {
-                let stake_diff = c.stake.rao() as i64 - p.stake.rao() as i64;
+                let stake_diff = c.stake.rao() as i128 - p.stake.rao() as i128;
                 let incentive_diff = c.incentive - p.incentive;
                 let emission_diff = c.emission - p.emission;
 
@@ -185,10 +185,14 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
                     ));
                 }
             } else {
+                let hk_prefix = if c.hotkey.len() >= 8 {
+                    &c.hotkey[..8]
+                } else {
+                    &c.hotkey
+                };
                 changes.push(format!(
                     "  UID {:<4} NEW neuron (hotkey: {})",
-                    c.uid,
-                    &c.hotkey[..8]
+                    c.uid, hk_prefix
                 ));
             }
         }
@@ -246,8 +250,8 @@ pub async fn live_portfolio(client: &Client, coldkey_ss58: &str, interval_secs: 
             }
         };
 
-        let free_diff = curr.free_balance.rao() as i64 - prev.free_balance.rao() as i64;
-        let staked_diff = curr.total_staked.rao() as i64 - prev.total_staked.rao() as i64;
+        let free_diff = curr.free_balance.rao() as i128 - prev.free_balance.rao() as i128;
+        let staked_diff = curr.total_staked.rao() as i128 - prev.total_staked.rao() as i128;
 
         if free_diff.unsigned_abs() > 100_000 || staked_diff.unsigned_abs() > 100_000 {
             println!(

@@ -22,7 +22,7 @@ pub async fn handle_wallet(
             crate::cli::helpers::validate_name(&name, "wallet")?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
-            crate::cli::helpers::validate_password_strength(&password);
+            crate::cli::helpers::validate_password_strength(&password)?;
             let (wallet, coldkey_mnemonic, hotkey_mnemonic) =
                 Wallet::create(wallet_dir, &name, &password, "default")?;
             if output.is_json() {
@@ -199,7 +199,7 @@ pub async fn handle_wallet(
             let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
-            crate::cli::helpers::validate_password_strength(&password);
+            crate::cli::helpers::validate_password_strength(&password)?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, &name, &mnemonic, &password)?;
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
@@ -221,7 +221,7 @@ pub async fn handle_wallet(
             let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
-            crate::cli::helpers::validate_password_strength(&password);
+            crate::cli::helpers::validate_password_strength(&password)?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, wallet_name, &mnemonic, &password)?;
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
@@ -416,6 +416,9 @@ pub async fn handle_wallet(
                 };
                 format!("//{}", capitalized)
             };
+            // Validate derived wallet name to prevent path traversal
+            let derived_name = uri.trim_start_matches('/').to_lowercase();
+            crate::cli::helpers::validate_name(&derived_name, "wallet")?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             let wallet = Wallet::create_from_uri(wallet_dir, &uri, &password)?;

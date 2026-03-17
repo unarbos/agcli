@@ -288,13 +288,18 @@ proptest! {
     }
 }
 
-// ──── validate_password_strength: never panics, always returns ────
+// ──── validate_password_strength: never panics, returns Err only for empty ────
 
 proptest! {
     #[test]
     fn fuzz_validate_password_strength_no_panic(s in "\\PC{0,200}") {
-        // validate_password_strength returns () (only prints warnings)
-        validate_password_strength(&s);
+        // validate_password_strength returns Result — Err only for empty password
+        let result = validate_password_strength(&s);
+        if s.is_empty() {
+            prop_assert!(result.is_err(), "Empty password should be rejected");
+        } else {
+            prop_assert!(result.is_ok(), "Non-empty password should be accepted: {:?}", result.err());
+        }
     }
 }
 

@@ -669,7 +669,7 @@ impl Client {
             identity.subnet_name.as_bytes().to_vec(),
             identity.subnet_url.as_bytes().to_vec(),
             identity.github_repo.as_bytes().to_vec(),
-            Vec::new(),
+            identity.subnet_contact.as_bytes().to_vec(),
             identity.discord.as_bytes().to_vec(),
             identity.description.as_bytes().to_vec(),
             identity.additional.as_bytes().to_vec(),
@@ -713,7 +713,7 @@ impl Client {
     ) -> Result<String> {
         use subxt::dynamic::Value;
         let delegate = Self::ss58_to_account_id(delegate_ss58)?;
-        let variant = parse_proxy_type(proxy_type);
+        let variant = parse_proxy_type(proxy_type)?;
         let tx = subxt::dynamic::tx(
             "Proxy",
             call,
@@ -735,7 +735,7 @@ impl Client {
         index: u16,
     ) -> Result<String> {
         use subxt::dynamic::Value;
-        let variant = parse_proxy_type(proxy_type);
+        let variant = parse_proxy_type(proxy_type)?;
         let tx = subxt::dynamic::tx(
             "Proxy",
             "create_pure",
@@ -760,7 +760,7 @@ impl Client {
     ) -> Result<String> {
         use subxt::dynamic::Value;
         let spawner = Self::ss58_to_account_id(spawner_ss58)?;
-        let variant = parse_proxy_type(proxy_type);
+        let variant = parse_proxy_type(proxy_type)?;
         let tx = subxt::dynamic::tx(
             "Proxy",
             "kill_pure",
@@ -1699,7 +1699,7 @@ impl Client {
         let encoded = self.inner.tx().call_data(&inner_call)?;
         let proxy_type = match force_proxy_type {
             Some(pt) => {
-                Value::unnamed_variant("Some", [Value::unnamed_variant(parse_proxy_type(pt), [])])
+                Value::unnamed_variant("Some", [Value::unnamed_variant(parse_proxy_type(pt)?, [])])
             }
             None => Value::unnamed_variant("None", []),
         };
@@ -1988,26 +1988,81 @@ impl Client {
 }
 
 /// Parse a proxy type string to the on-chain variant name.
-pub(crate) fn parse_proxy_type(s: &str) -> &'static str {
+///
+/// Returns an error for unrecognized proxy types instead of silently
+/// defaulting to "Any" (which grants full permissions).
+pub(crate) fn parse_proxy_type(s: &str) -> anyhow::Result<&'static str> {
     match s.to_lowercase().as_str() {
-        "any" => "Any",
-        "owner" => "Owner",
-        "nontransfer" | "non_transfer" => "NonTransfer",
-        "staking" => "Staking",
-        "noncritical" | "non_critical" => "NonCritical",
-        "triumvirate" => "Triumvirate",
-        "governance" => "Governance",
-        "senate" => "Senate",
-        "nonfungible" | "non_fungible" => "NonFungible",
-        "registration" => "Registration",
-        "transfer" => "Transfer",
-        "smalltransfer" | "small_transfer" => "SmallTransfer",
-        "rootweights" | "root_weights" => "RootWeights",
-        "childkeys" | "child_keys" => "ChildKeys",
-        "sudouncheckedsetcode" | "sudo_unchecked_set_code" => "SudoUncheckedSetCode",
-        "swaphotkey" | "swap_hotkey" => "SwapHotkey",
-        "subnetleasebeneficiary" | "subnet_lease_beneficiary" => "SubnetLeaseBeneficiary",
-        "rootclaim" | "root_claim" => "RootClaim",
-        _ => "Any",
+        "any" => Ok("Any"),
+        "owner" => Ok("Owner"),
+        "nontransfer" | "non_transfer" => Ok("NonTransfer"),
+        "staking" => Ok("Staking"),
+        "noncritical" | "non_critical" => Ok("NonCritical"),
+        "triumvirate" => Ok("Triumvirate"),
+        "governance" => Ok("Governance"),
+        "senate" => Ok("Senate"),
+        "nonfungible" | "non_fungible" => Ok("NonFungible"),
+        "registration" => Ok("Registration"),
+        "transfer" => Ok("Transfer"),
+        "smalltransfer" | "small_transfer" => Ok("SmallTransfer"),
+        "rootweights" | "root_weights" => Ok("RootWeights"),
+        "childkeys" | "child_keys" => Ok("ChildKeys"),
+        "sudouncheckedsetcode" | "sudo_unchecked_set_code" => Ok("SudoUncheckedSetCode"),
+        "swaphotkey" | "swap_hotkey" => Ok("SwapHotkey"),
+        "subnetleasebeneficiary" | "subnet_lease_beneficiary" => Ok("SubnetLeaseBeneficiary"),
+        "rootclaim" | "root_claim" => Ok("RootClaim"),
+        _ => anyhow::bail!(
+            "Unknown proxy type '{}'. Valid types: Any, Owner, NonTransfer, Staking, NonCritical, \
+             Triumvirate, Governance, Senate, NonFungible, Registration, Transfer, SmallTransfer, \
+             RootWeights, ChildKeys, SudoUncheckedSetCode, SwapHotkey, SubnetLeaseBeneficiary, RootClaim",
+            s
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_proxy_type_valid_types() {
+        assert_eq!(parse_proxy_type("any").unwrap(), "Any");
+        assert_eq!(parse_proxy_type("Staking").unwrap(), "Staking");
+        assert_eq!(parse_proxy_type("STAKING").unwrap(), "Staking");
+        assert_eq!(parse_proxy_type("non_transfer").unwrap(), "NonTransfer");
+        assert_eq!(parse_proxy_type("nontransfer").unwrap(), "NonTransfer");
+        assert_eq!(parse_proxy_type("owner").unwrap(), "Owner");
+        assert_eq!(parse_proxy_type("governance").unwrap(), "Governance");
+        assert_eq!(parse_proxy_type("RootClaim").unwrap(), "RootClaim");
+    }
+
+    #[test]
+    fn parse_proxy_type_rejects_typo() {
+        // Previously this silently returned "Any" (full permissions)
+        assert!(parse_proxy_type("stking").is_err());
+        assert!(parse_proxy_type("").is_err());
+        assert!(parse_proxy_type("anyyy").is_err());
+        assert!(parse_proxy_type("stakng").is_err());
+        let err = parse_proxy_type("typo").unwrap_err();
+        assert!(err.to_string().contains("Unknown proxy type"));
+        assert!(err.to_string().contains("typo"));
+    }
+
+    #[test]
+    fn parse_proxy_type_all_variants_accepted() {
+        let valid = [
+            "any", "owner", "nontransfer", "staking", "noncritical",
+            "triumvirate", "governance", "senate", "nonfungible",
+            "registration", "transfer", "smalltransfer", "rootweights",
+            "childkeys", "sudouncheckedsetcode", "swaphotkey",
+            "subnetleasebeneficiary", "rootclaim",
+        ];
+        for v in valid {
+            assert!(
+                parse_proxy_type(v).is_ok(),
+                "Expected '{}' to be accepted",
+                v
+            );
+        }
     }
 }

@@ -203,42 +203,40 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
         }
         StakeCommands::Swap {
             amount,
-            netuid,
-            from_hotkey,
-            to_hotkey,
+            from,
+            to,
+            hotkey,
         } => {
-            validate_netuid(netuid)?;
+            validate_netuid(from)?;
+            validate_netuid(to)?;
             validate_amount(amount, "swap amount")?;
-            validate_ss58(&from_hotkey, "stake swap from-hotkey")?;
-            validate_ss58(&to_hotkey, "stake swap to-hotkey")?;
-            if from_hotkey == to_hotkey {
-                anyhow::bail!(
-                    "Source and destination hotkeys are the same. Use different hotkeys for swap."
-                );
+            if from == to {
+                anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
             }
-            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
-            unlock_coldkey(&mut wallet, password)?;
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
             println!(
-                "Swapping stake: {} on SN{} from {} to {}",
+                "Swapping stake: {} from SN{} to SN{} for {}",
                 bal.display_tao(),
-                netuid,
-                crate::utils::short_ss58(&from_hotkey),
-                crate::utils::short_ss58(&to_hotkey)
+                from,
+                to,
+                crate::utils::short_ss58(&hk)
             );
             let hash = client
                 .swap_stake(
-                    wallet.coldkey()?,
-                    &from_hotkey,
-                    NetUid(netuid),
-                    NetUid(netuid),
+                    &pair,
+                    &hk,
+                    NetUid(from),
+                    NetUid(to),
                     bal,
                 )
                 .await?;
             println!(
-                "Stake swapped. {} moved between hotkeys on SN{}\n  Tx: {}",
+                "Stake swapped. {} moved from SN{} to SN{}\n  Tx: {}",
                 bal.display_tao(),
-                netuid,
+                from,
+                to,
                 hash
             );
             Ok(())
@@ -254,7 +252,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 "All stake removed from this hotkey",
             )
         }
-        StakeCommands::ClaimRoot { hotkey: _, netuid } => {
+        StakeCommands::ClaimRoot { netuid } => {
             validate_netuid(netuid)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
@@ -350,10 +348,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             );
             Ok(())
         }
-        StakeCommands::SetChildren { netuid, children } => {
+        StakeCommands::SetChildren { netuid, children, hotkey } => {
             validate_netuid(netuid)?;
             let (pair, hk) =
-                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let children_parsed = parse_children(&children)?;
             println!(
                 "Setting {} children on SN{} for {}",
@@ -602,7 +600,9 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             });
 
             // Fetch stakes to find all netuids where this hotkey has root emissions
-            let coldkey_ss58 = resolve_coldkey_address(None, wallet_dir, wallet_name);
+            let coldkey_ss58 = resolve_and_validate_coldkey_address(
+                None, wallet_dir, wallet_name, "stake process-claim"
+            )?;
             let stakes = client.get_stake_for_coldkey(&coldkey_ss58).await?;
 
             // Filter to netuids where we have stake on this hotkey

@@ -1379,7 +1379,7 @@ async fn handle_snipe_watch(client: &Client, netuid: u16, max_burn: Option<Balan
 
         // Detect changes
         let slot_delta = info.n as i32 - prev_n as i32;
-        let burn_delta = info.burn.rao() as i64 - prev_burn as i64;
+        let burn_delta = info.burn.rao() as i128 - prev_burn as i128;
         let slots_open = info.max_n.saturating_sub(info.n);
         let reg_label = if info.registration_allowed {
             "OPEN"
@@ -2789,7 +2789,8 @@ fn current_param_value(
         "kappa" => h.kappa.to_string(),
         "immunity_period" => h.immunity_period.to_string(),
         "min_allowed_weights" => h.min_allowed_weights.to_string(),
-        "max_allowed_uids" => h.max_weights_limit.to_string(),
+        "max_weights_limit" => h.max_weights_limit.to_string(),
+        "max_allowed_uids" => return None, // not available in SubnetHyperparameters; use SubnetInfo.max_n
         "max_allowed_validators" => h.max_validators.to_string(),
         "min_difficulty" => h.min_difficulty.to_string(),
         "max_difficulty" => h.max_difficulty.to_string(),
@@ -3112,5 +3113,55 @@ mod tests {
                 expected
             );
         }
+    }
+
+    /// H-19 fix: max_allowed_uids should NOT return max_weights_limit (wrong field).
+    /// Since max_allowed_uids is not in SubnetHyperparameters, it should return None.
+    #[test]
+    fn current_param_value_max_allowed_uids_returns_none() {
+        use super::current_param_value;
+        use crate::types::chain_data::SubnetHyperparameters;
+        use crate::types::balance::Balance;
+        use crate::types::network::NetUid;
+        let h = SubnetHyperparameters {
+            netuid: NetUid(1),
+            rho: 10,
+            kappa: 100,
+            immunity_period: 4096,
+            min_allowed_weights: 1,
+            max_weights_limit: 999,
+            tempo: 360,
+            min_difficulty: 1,
+            max_difficulty: 1000,
+            weights_version: 1,
+            weights_rate_limit: 100,
+            adjustment_interval: 100,
+            activity_cutoff: 5000,
+            registration_allowed: true,
+            target_regs_per_interval: 1,
+            min_burn: Balance::from_tao(0.0),
+            max_burn: Balance::from_tao(1.0),
+            bonds_moving_avg: 900000,
+            max_regs_per_block: 1,
+            serving_rate_limit: 10,
+            max_validators: 64,
+            adjustment_alpha: 0,
+            difficulty: 100,
+            commit_reveal_weights_enabled: false,
+            commit_reveal_weights_interval: 0,
+            liquid_alpha_enabled: false,
+        };
+        // max_allowed_uids should return None (not the max_weights_limit value)
+        assert!(
+            current_param_value(&h, "max_allowed_uids").is_none(),
+            "max_allowed_uids should return None since it's not in SubnetHyperparameters"
+        );
+        // max_weights_limit should now have its own entry
+        assert_eq!(
+            current_param_value(&h, "max_weights_limit"),
+            Some("999".to_string())
+        );
+        // tempo should still work
+        assert_eq!(current_param_value(&h, "tempo"), Some("360".to_string()));
     }
 }

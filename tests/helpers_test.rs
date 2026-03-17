@@ -1643,37 +1643,41 @@ use agcli::cli::helpers::validate_password_strength;
 
 #[test]
 fn validate_password_strength_strong_no_panic() {
-    // Should not panic — function only prints warnings
-    validate_password_strength("Str0ng!Pass#2024");
+    validate_password_strength("Str0ng!Pass#2024").unwrap();
 }
 
 #[test]
 fn validate_password_strength_short_no_panic() {
-    validate_password_strength("ab");
+    // Short but non-empty — warns but succeeds
+    validate_password_strength("ab").unwrap();
 }
 
 #[test]
-fn validate_password_strength_empty_no_panic() {
-    validate_password_strength("");
+fn validate_password_strength_empty_rejects() {
+    // Empty password must be rejected (Issue 729)
+    let result = validate_password_strength("");
+    assert!(result.is_err(), "Empty password should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("Empty password"), "Error should mention empty password, got: {}", msg);
 }
 
 #[test]
 fn validate_password_strength_common_no_panic() {
-    validate_password_strength("password");
-    validate_password_strength("12345678");
-    validate_password_strength("qwerty");
+    validate_password_strength("password").unwrap();
+    validate_password_strength("12345678").unwrap();
+    validate_password_strength("qwerty").unwrap();
 }
 
 #[test]
 fn validate_password_strength_single_type_no_panic() {
-    validate_password_strength("abcdefgh");
-    validate_password_strength("12345678");
-    validate_password_strength("ABCDEFGH");
+    validate_password_strength("abcdefgh").unwrap();
+    validate_password_strength("12345678").unwrap();
+    validate_password_strength("ABCDEFGH").unwrap();
 }
 
 #[test]
 fn validate_password_strength_mixed_no_panic() {
-    validate_password_strength("aB1!");
+    validate_password_strength("aB1!").unwrap();
 }
 
 // ── validate_port ──
