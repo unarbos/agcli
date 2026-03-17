@@ -155,7 +155,7 @@ pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
         );
     }
 
-    let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let container_id = String::from_utf8_lossy(&output.stdout).trim().to_owned();
     let endpoint = format!("ws://127.0.0.1:{}", cfg.port);
 
     // Wait for chain readiness

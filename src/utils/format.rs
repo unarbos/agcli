@@ -4,13 +4,15 @@ use crate::types::Balance;
 
 /// Truncate an SS58 address for display: "5Gx...abc"
 pub fn short_ss58(addr: &str) -> String {
-    let chars: Vec<char> = addr.chars().collect();
-    if chars.len() <= 10 {
+    // SS58 addresses are ASCII, so byte indexing is safe and avoids Vec<char> allocation
+    if addr.len() <= 10 {
         return addr.to_string();
     }
-    let prefix: String = chars[..4].iter().collect();
-    let suffix: String = chars[chars.len() - 4..].iter().collect();
-    format!("{}...{}", prefix, suffix)
+    let mut s = String::with_capacity(11); // 4 + 3 + 4
+    s.push_str(&addr[..4]);
+    s.push_str("...");
+    s.push_str(&addr[addr.len() - 4..]);
+    s
 }
 
 /// Format TAO balance with commas: "1,234.5678"
@@ -32,13 +34,18 @@ pub fn format_tao(balance: Balance) -> String {
 
 /// Truncate a string to `max` chars, appending ellipsis if needed.
 pub fn truncate(s: &str, max: usize) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    if chars.len() <= max {
-        s.to_string()
-    } else {
-        let prefix: String = chars[..max - 1].iter().collect();
-        format!("{}…", prefix)
+    if s.chars().count() <= max {
+        return s.to_string();
     }
+    // Take max-1 chars and append ellipsis, avoiding intermediate Vec<char>
+    let end = s.char_indices()
+        .nth(max - 1)
+        .map(|(i, _)| i)
+        .unwrap_or(s.len());
+    let mut result = String::with_capacity(end + 3); // +3 for '…' (UTF-8)
+    result.push_str(&s[..end]);
+    result.push('…');
+    result
 }
 
 /// Normalize u16 weight to f64 in [0, 1].

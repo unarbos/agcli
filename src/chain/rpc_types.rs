@@ -223,7 +223,7 @@ fn fixed_i128_to_f64(bits: i128) -> f64 {
 /// Decode Compact<u8> vec to a UTF-8 string.
 fn compact_u8_vec_to_string(v: &[parity_scale_codec::Compact<u8>]) -> String {
     let bytes: Vec<u8> = v.iter().map(|c| c.0).collect();
-    String::from_utf8_lossy(&bytes).to_string()
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 impl From<GenDynamicInfo> for DynamicInfo {
