@@ -34,11 +34,14 @@ pub fn csv_escape(val: &str) -> std::borrow::Cow<'_, str> {
 
 /// Join CSV fields with commas, escaping each field per RFC 4180.
 pub fn csv_row_from(fields: &[&str]) -> String {
-    fields
-        .iter()
-        .map(|f| csv_escape(f))
-        .collect::<Vec<_>>()
-        .join(",")
+    let mut out = String::new();
+    for (i, f) in fields.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(&csv_escape(f));
+    }
+    out
 }
 
 /// Create a styled spinner with a message, returns the ProgressBar handle.

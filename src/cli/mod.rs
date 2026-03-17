@@ -77,7 +77,7 @@ pub struct Cli {
     pub wallet: String,
 
     /// Hotkey name (file under wallet's hotkeys/ directory)
-    #[arg(long, global = true, default_value = "default", env = "AGCLI_HOTKEY")]
+    #[arg(long, alias = "hotkey", global = true, default_value = "default", env = "AGCLI_HOTKEY")]
     pub hotkey_name: String,
 
     /// Output format

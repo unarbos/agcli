@@ -288,3 +288,136 @@ fn print_dynamic_snapshot(subnets: &[DynamicInfo]) {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::balance::{AlphaBalance, Balance};
+    use crate::types::network::NetUid;
+
+    fn make_di(netuid: u16, price: f64, tao_rao: u64, volume: u128) -> DynamicInfo {
+        DynamicInfo {
+            netuid: NetUid(netuid),
+            name: format!("SN{}", netuid),
+            symbol: format!("α{}", netuid),
+            tempo: 360,
+            emission: 0,
+            tao_in: Balance::from_rao(tao_rao),
+            alpha_in: AlphaBalance::from_raw(1_000_000_000),
+            alpha_out: AlphaBalance::from_raw(1_000_000_000),
+            price,
+            owner_hotkey: String::new(),
+            owner_coldkey: String::new(),
+            last_step: 0,
+            blocks_since_last_step: 0,
+            alpha_out_emission: 0,
+            alpha_in_emission: 0,
+            tao_in_emission: 0,
+            pending_alpha_emission: 0,
+            pending_root_emission: 0,
+            subnet_volume: volume,
+            network_registered_at: 0,
+        }
+    }
+
+    #[test]
+    fn default_poll_secs_value() {
+        assert_eq!(DEFAULT_POLL_SECS, 12);
+    }
+
+    #[test]
+    fn identical_snapshots_produce_no_deltas() {
+        let snap = vec![
+            make_di(1, 1.0, 1_000_000_000, 500),
+            make_di(2, 2.5, 2_000_000_000, 1000),
+        ];
+        let deltas = compute_dynamic_deltas(&snap, &snap);
+        assert!(deltas.is_empty(), "identical snapshots should yield zero deltas");
+    }
+
+    #[test]
+    fn price_change_produces_delta_with_correct_pct() {
+        let prev = vec![make_di(1, 2.0, 1_000_000_000, 500)];
+        let curr = vec![make_di(1, 3.0, 1_000_000_000, 500)];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        assert_eq!(deltas.len(), 1);
+        let d = &deltas[0];
+        assert_eq!(d.netuid, 1);
+        assert!((d.price_prev - 2.0).abs() < 1e-10);
+        assert!((d.price_now - 3.0).abs() < 1e-10);
+        // (3.0 - 2.0) / 2.0 * 100 = 50%
+        assert!((d.price_pct - 50.0).abs() < 1e-10, "expected 50%, got {}", d.price_pct);
+    }
+
+    #[test]
+    fn tao_pool_change_produces_delta() {
+        let prev = vec![make_di(5, 1.0, 1_000_000_000, 100)];
+        let curr = vec![make_di(5, 1.0, 2_000_000_000, 100)];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        assert_eq!(deltas.len(), 1);
+        let d = &deltas[0];
+        assert_eq!(d.tao_in_prev, 1_000_000_000);
+        assert_eq!(d.tao_in_now, 2_000_000_000);
+    }
+
+    #[test]
+    fn volume_change_produces_delta() {
+        let prev = vec![make_di(3, 1.5, 500_000_000, 100)];
+        let curr = vec![make_di(3, 1.5, 500_000_000, 999)];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        assert_eq!(deltas.len(), 1);
+        let d = &deltas[0];
+        assert_eq!(d.volume_prev, 100);
+        assert_eq!(d.volume_now, 999);
+    }
+
+    #[test]
+    fn subnet_not_in_prev_is_skipped() {
+        let prev = vec![make_di(1, 1.0, 1_000_000_000, 100)];
+        let curr = vec![
+            make_di(1, 1.0, 1_000_000_000, 100), // unchanged
+            make_di(99, 5.0, 3_000_000_000, 200), // new, not in prev
+        ];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        // SN1 is unchanged, SN99 is not in prev => both skipped
+        assert!(deltas.is_empty(), "new subnet not in prev should not produce a delta");
+    }
+
+    #[test]
+    fn multiple_changes_produce_multiple_deltas() {
+        let prev = vec![
+            make_di(1, 1.0, 1_000_000_000, 100),
+            make_di(2, 2.0, 2_000_000_000, 200),
+            make_di(3, 3.0, 3_000_000_000, 300),
+        ];
+        let curr = vec![
+            make_di(1, 1.1, 1_000_000_000, 100), // price changed
+            make_di(2, 2.0, 2_000_000_000, 200), // unchanged
+            make_di(3, 3.0, 4_000_000_000, 300), // tao_in changed
+        ];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        assert_eq!(deltas.len(), 2, "expected 2 deltas, got {}", deltas.len());
+        let netuids: Vec<u16> = deltas.iter().map(|d| d.netuid).collect();
+        assert!(netuids.contains(&1));
+        assert!(netuids.contains(&3));
+    }
+
+    #[test]
+    fn delta_field_values_are_correct() {
+        let prev = vec![make_di(7, 4.0, 10_000_000_000, 5000)];
+        let curr = vec![make_di(7, 5.0, 12_000_000_000, 6000)];
+        let deltas = compute_dynamic_deltas(&prev, &curr);
+        assert_eq!(deltas.len(), 1);
+        let d = &deltas[0];
+        assert_eq!(d.netuid, 7);
+        assert_eq!(d.name, "SN7");
+        assert!((d.price_prev - 4.0).abs() < 1e-10);
+        assert!((d.price_now - 5.0).abs() < 1e-10);
+        // (5 - 4) / 4 * 100 = 25%
+        assert!((d.price_pct - 25.0).abs() < 1e-10);
+        assert_eq!(d.tao_in_prev, 10_000_000_000);
+        assert_eq!(d.tao_in_now, 12_000_000_000);
+        assert_eq!(d.volume_prev, 5000);
+        assert_eq!(d.volume_now, 6000);
+    }
+}

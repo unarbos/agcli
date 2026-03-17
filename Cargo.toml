@@ -58,7 +58,7 @@ fs2 = "0.4"
 moka = { version = "0.12", features = ["future"] }
 
 [build-dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 subxt-codegen = "0.38"
 subxt-metadata = "0.38"
 subxt-utils-fetchmetadata = { version = "0.38", features = ["url"] }

@@ -118,15 +118,19 @@ pub(super) async fn handle_subnet(
             let nuid = NetUid(netuid);
             let (info, dynamic) = if let Some(bn) = at_block {
                 let bh = client.get_block_hash(bn).await?;
-                let subnets = client.get_all_subnets_at_block(bh).await?;
-                let si = subnets.into_iter().find(|s| s.netuid == nuid);
-                let di = match client.get_dynamic_info_at_block(nuid, bh).await {
-                    Ok(v) => v,
-                    Err(e) => {
-                        tracing::debug!(netuid = nuid.0, block = bn, error = %e, "get_dynamic_info_at_block failed (non-fatal)");
-                        None
+                let (subnets, di) = tokio::try_join!(
+                    client.get_all_subnets_at_block(bh),
+                    async {
+                        Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, bh).await {
+                            Ok(v) => v,
+                            Err(e) => {
+                                tracing::debug!(netuid = nuid.0, block = bn, error = %e, "get_dynamic_info_at_block failed (non-fatal)");
+                                None
+                            }
+                        })
                     }
-                };
+                )?;
+                let si = subnets.into_iter().find(|s| s.netuid == nuid);
                 (si, di)
             } else {
                 let pin = client.pin_latest_block().await?;
@@ -197,64 +201,31 @@ pub(super) async fn handle_subnet(
                         return Ok(());
                     }
                     let rows: Vec<(String, String)> = vec![
-                        ("rho".into(), format!("{}", h.rho)),
-                        ("kappa".into(), format!("{}", h.kappa)),
-                        ("immunity_period".into(), format!("{}", h.immunity_period)),
-                        (
-                            "min_allowed_weights".into(),
-                            format!("{}", h.min_allowed_weights),
-                        ),
-                        (
-                            "max_weights_limit".into(),
-                            format!("{}", h.max_weights_limit),
-                        ),
-                        ("tempo".into(), format!("{}", h.tempo)),
-                        ("min_difficulty".into(), format!("{}", h.min_difficulty)),
-                        ("max_difficulty".into(), format!("{}", h.max_difficulty)),
-                        ("weights_version".into(), format!("{}", h.weights_version)),
-                        (
-                            "weights_rate_limit".into(),
-                            format!("{}", h.weights_rate_limit),
-                        ),
-                        (
-                            "adjustment_interval".into(),
-                            format!("{}", h.adjustment_interval),
-                        ),
-                        ("activity_cutoff".into(), format!("{}", h.activity_cutoff)),
-                        (
-                            "registration_allowed".into(),
-                            format!("{}", h.registration_allowed),
-                        ),
-                        (
-                            "target_regs_per_interval".into(),
-                            format!("{}", h.target_regs_per_interval),
-                        ),
+                        ("rho".into(), h.rho.to_string()),
+                        ("kappa".into(), h.kappa.to_string()),
+                        ("immunity_period".into(), h.immunity_period.to_string()),
+                        ("min_allowed_weights".into(), h.min_allowed_weights.to_string()),
+                        ("max_weights_limit".into(), h.max_weights_limit.to_string()),
+                        ("tempo".into(), h.tempo.to_string()),
+                        ("min_difficulty".into(), h.min_difficulty.to_string()),
+                        ("max_difficulty".into(), h.max_difficulty.to_string()),
+                        ("weights_version".into(), h.weights_version.to_string()),
+                        ("weights_rate_limit".into(), h.weights_rate_limit.to_string()),
+                        ("adjustment_interval".into(), h.adjustment_interval.to_string()),
+                        ("activity_cutoff".into(), h.activity_cutoff.to_string()),
+                        ("registration_allowed".into(), h.registration_allowed.to_string()),
+                        ("target_regs_per_interval".into(), h.target_regs_per_interval.to_string()),
                         ("min_burn".into(), h.min_burn.display_tao()),
                         ("max_burn".into(), h.max_burn.display_tao()),
-                        ("bonds_moving_avg".into(), format!("{}", h.bonds_moving_avg)),
-                        (
-                            "max_regs_per_block".into(),
-                            format!("{}", h.max_regs_per_block),
-                        ),
-                        (
-                            "serving_rate_limit".into(),
-                            format!("{}", h.serving_rate_limit),
-                        ),
-                        ("max_validators".into(), format!("{}", h.max_validators)),
-                        ("adjustment_alpha".into(), format!("{}", h.adjustment_alpha)),
-                        ("difficulty".into(), format!("{}", h.difficulty)),
-                        (
-                            "commit_reveal_weights".into(),
-                            format!("{}", h.commit_reveal_weights_enabled),
-                        ),
-                        (
-                            "commit_reveal_interval".into(),
-                            format!("{}", h.commit_reveal_weights_interval),
-                        ),
-                        (
-                            "liquid_alpha_enabled".into(),
-                            format!("{}", h.liquid_alpha_enabled),
-                        ),
+                        ("bonds_moving_avg".into(), h.bonds_moving_avg.to_string()),
+                        ("max_regs_per_block".into(), h.max_regs_per_block.to_string()),
+                        ("serving_rate_limit".into(), h.serving_rate_limit.to_string()),
+                        ("max_validators".into(), h.max_validators.to_string()),
+                        ("adjustment_alpha".into(), h.adjustment_alpha.to_string()),
+                        ("difficulty".into(), h.difficulty.to_string()),
+                        ("commit_reveal_weights".into(), h.commit_reveal_weights_enabled.to_string()),
+                        ("commit_reveal_interval".into(), h.commit_reveal_weights_interval.to_string()),
+                        ("liquid_alpha_enabled".into(), h.liquid_alpha_enabled.to_string()),
                     ];
                     render_rows(
                         output,
@@ -829,9 +800,11 @@ pub(super) async fn handle_subnet(
         }
         SubnetCommands::CheckStart { netuid } => {
             let nuid = NetUid(netuid);
-            let is_active = client.is_subnet_active(nuid).await?;
-            let hyperparams = client.get_subnet_hyperparams(nuid).await?;
-            let neurons = client.get_neurons_lite(nuid).await?;
+            let (is_active, hyperparams, neurons) = tokio::try_join!(
+                client.is_subnet_active(nuid),
+                client.get_subnet_hyperparams(nuid),
+                client.get_neurons_lite(nuid),
+            )?;
             let n_neurons = neurons.len();
             if output.is_json() {
                 print_json(&serde_json::json!({

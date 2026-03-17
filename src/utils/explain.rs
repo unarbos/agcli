@@ -1068,3 +1068,436 @@ TIPS FOR OWNERS:
 - Set-param shows the current value before confirming changes.
 - Run `agcli doctor` to verify connectivity and wallet health.
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- Known topics return Some ---
+
+    #[test]
+    fn known_topic_tempo() {
+        assert!(explain("tempo").is_some());
+    }
+
+    #[test]
+    fn known_topic_yuma() {
+        assert!(explain("yuma").is_some());
+    }
+
+    #[test]
+    fn known_topic_amm() {
+        assert!(explain("amm").is_some());
+    }
+
+    #[test]
+    fn known_topic_emission() {
+        assert!(explain("emission").is_some());
+    }
+
+    #[test]
+    fn known_topic_subnet() {
+        assert!(explain("subnet").is_some());
+    }
+
+    #[test]
+    fn known_topic_registration() {
+        assert!(explain("registration").is_some());
+    }
+
+    #[test]
+    fn known_topic_validator() {
+        assert!(explain("validator").is_some());
+    }
+
+    #[test]
+    fn known_topic_miner() {
+        assert!(explain("miner").is_some());
+    }
+
+    #[test]
+    fn known_topic_proxy() {
+        assert!(explain("proxy").is_some());
+    }
+
+    #[test]
+    fn known_topic_governance() {
+        assert!(explain("governance").is_some());
+    }
+
+    #[test]
+    fn known_topic_root() {
+        assert!(explain("root").is_some());
+    }
+
+    #[test]
+    fn known_topic_bootstrap() {
+        assert!(explain("bootstrap").is_some());
+    }
+
+    #[test]
+    fn known_topic_alpha() {
+        assert!(explain("alpha").is_some());
+    }
+
+    #[test]
+    fn known_topic_immunity() {
+        assert!(explain("immunity").is_some());
+    }
+
+    #[test]
+    fn known_topic_delegate() {
+        assert!(explain("delegate").is_some());
+    }
+
+    #[test]
+    fn known_topic_childkey() {
+        assert!(explain("childkey").is_some());
+    }
+
+    #[test]
+    fn known_topic_senate() {
+        assert!(explain("senate").is_some());
+    }
+
+    #[test]
+    fn known_topic_hyperparams() {
+        assert!(explain("hyperparams").is_some());
+    }
+
+    #[test]
+    fn known_topic_axon() {
+        assert!(explain("axon").is_some());
+    }
+
+    #[test]
+    fn known_topic_take() {
+        assert!(explain("take").is_some());
+    }
+
+    #[test]
+    fn known_topic_recycle() {
+        assert!(explain("recycle").is_some());
+    }
+
+    #[test]
+    fn known_topic_pow() {
+        assert!(explain("pow").is_some());
+    }
+
+    #[test]
+    fn known_topic_archive() {
+        assert!(explain("archive").is_some());
+    }
+
+    #[test]
+    fn known_topic_diff() {
+        assert!(explain("diff").is_some());
+    }
+
+    #[test]
+    fn known_topic_owner_workflow() {
+        assert!(explain("ow").is_some());
+    }
+
+    // --- Alias tests ---
+
+    #[test]
+    fn alias_cr_for_commit_reveal() {
+        let cr = explain("cr");
+        let full = explain("commit-reveal");
+        assert!(cr.is_some());
+        assert_eq!(cr, full);
+    }
+
+    #[test]
+    fn alias_dtao_for_amm() {
+        let dtao = explain("dtao");
+        let amm = explain("amm");
+        assert!(dtao.is_some());
+        assert_eq!(dtao, amm);
+    }
+
+    #[test]
+    fn alias_pool_for_amm() {
+        let pool = explain("pool");
+        let amm = explain("amm");
+        assert!(pool.is_some());
+        assert_eq!(pool, amm);
+    }
+
+    #[test]
+    fn alias_dynamic_tao_for_amm() {
+        let dtao = explain("dynamic-tao");
+        let amm = explain("amm");
+        assert!(dtao.is_some());
+        assert_eq!(dtao, amm);
+    }
+
+    #[test]
+    fn alias_yuma_consensus() {
+        let yc = explain("yuma-consensus");
+        let yuma = explain("yuma");
+        assert!(yc.is_some());
+        assert_eq!(yc, yuma);
+    }
+
+    #[test]
+    fn alias_gov_for_governance() {
+        let gov = explain("gov");
+        let full = explain("governance");
+        assert!(gov.is_some());
+        assert_eq!(gov, full);
+    }
+
+    #[test]
+    fn alias_proposals_for_governance() {
+        assert_eq!(explain("proposals"), explain("governance"));
+    }
+
+    #[test]
+    fn alias_triumvirate_for_senate() {
+        assert_eq!(explain("triumvirate"), explain("senate"));
+    }
+
+    #[test]
+    fn alias_ckswap_for_coldkeyswap() {
+        let ck = explain("ckswap");
+        let full = explain("coldkey-swap");
+        assert!(ck.is_some());
+        assert_eq!(ck, full);
+    }
+
+    #[test]
+    fn alias_mev_for_mevshield() {
+        let mev = explain("mev");
+        let full = explain("mev-shield");
+        assert!(mev.is_some());
+        assert_eq!(mev, full);
+    }
+
+    #[test]
+    fn alias_nominate_for_delegation() {
+        assert_eq!(explain("nominate"), explain("delegation"));
+    }
+
+    #[test]
+    fn alias_1000_for_stake_weight() {
+        assert_eq!(explain("1000"), explain("stake-weight"));
+    }
+
+    #[test]
+    fn alias_params_for_hyperparams() {
+        assert_eq!(explain("params"), explain("hyperparams"));
+    }
+
+    #[test]
+    fn alias_serving_for_axon() {
+        assert_eq!(explain("serving"), explain("axon"));
+    }
+
+    #[test]
+    fn alias_burn_for_recycle() {
+        assert_eq!(explain("burn"), explain("recycle"));
+    }
+
+    #[test]
+    fn alias_wayback_for_archive() {
+        assert_eq!(explain("wayback"), explain("archive"));
+    }
+
+    #[test]
+    fn alias_subnet_owner_for_owner_workflow() {
+        assert_eq!(explain("subnet-owner"), explain("ow"));
+    }
+
+    // --- Case insensitivity ---
+
+    #[test]
+    fn case_insensitive_tempo() {
+        assert_eq!(explain("TEMPO"), explain("tempo"));
+    }
+
+    #[test]
+    fn case_insensitive_yuma() {
+        assert_eq!(explain("YUMA"), explain("yuma"));
+    }
+
+    #[test]
+    fn case_insensitive_amm() {
+        assert_eq!(explain("AMM"), explain("amm"));
+    }
+
+    #[test]
+    fn case_insensitive_mixed() {
+        assert_eq!(explain("Emission"), explain("emission"));
+    }
+
+    #[test]
+    fn case_insensitive_subnet() {
+        assert_eq!(explain("SUBNET"), explain("subnet"));
+    }
+
+    #[test]
+    fn case_insensitive_dtao() {
+        assert_eq!(explain("DTAO"), explain("dtao"));
+    }
+
+    #[test]
+    fn case_insensitive_cr() {
+        assert_eq!(explain("CR"), explain("cr"));
+    }
+
+    #[test]
+    fn case_insensitive_mev_shield() {
+        assert_eq!(explain("MEV-SHIELD"), explain("mev-shield"));
+    }
+
+    // --- Hyphen/underscore stripping ---
+
+    #[test]
+    fn strip_hyphens_commit_reveal() {
+        assert_eq!(explain("commit-reveal"), explain("commitreveal"));
+    }
+
+    #[test]
+    fn strip_underscores_commit_reveal() {
+        assert_eq!(explain("commit_reveal"), explain("commitreveal"));
+    }
+
+    #[test]
+    fn strip_hyphens_rate_limit() {
+        assert_eq!(explain("rate-limit"), explain("ratelimit"));
+    }
+
+    #[test]
+    fn strip_underscores_rate_limit() {
+        assert_eq!(explain("rate_limit"), explain("ratelimit"));
+    }
+
+    #[test]
+    fn strip_hyphens_stake_weight() {
+        assert_eq!(explain("stake-weight"), explain("stakeweight"));
+    }
+
+    #[test]
+    fn strip_hyphens_dynamic_tao() {
+        assert_eq!(explain("dynamic-tao"), explain("dynamictao"));
+    }
+
+    #[test]
+    fn strip_underscores_dynamic_tao() {
+        assert_eq!(explain("dynamic_tao"), explain("dynamictao"));
+    }
+
+    #[test]
+    fn strip_hyphens_alpha_token() {
+        assert_eq!(explain("alpha-token"), explain("alphatoken"));
+    }
+
+    #[test]
+    fn strip_hyphens_cold_key_swap() {
+        assert_eq!(explain("coldkey-swap"), explain("coldkeyswap"));
+    }
+
+    #[test]
+    fn strip_hyphens_mev_protection() {
+        assert_eq!(explain("mev-protection"), explain("mevprotection"));
+    }
+
+    #[test]
+    fn strip_hyphens_network_limits() {
+        assert_eq!(explain("network-limits"), explain("networklimits"));
+    }
+
+    #[test]
+    fn strip_hyphens_immunity_period() {
+        assert_eq!(explain("immunity-period"), explain("immunityperiod"));
+    }
+
+    #[test]
+    fn strip_hyphens_root_network() {
+        assert_eq!(explain("root-network"), explain("rootnetwork"));
+    }
+
+    #[test]
+    fn strip_hyphens_pow_registration() {
+        assert_eq!(explain("pow-registration"), explain("powregistration"));
+    }
+
+    #[test]
+    fn strip_hyphens_archive_node() {
+        assert_eq!(explain("archive-node"), explain("archivenode"));
+    }
+
+    #[test]
+    fn strip_mixed_hyphens_and_case() {
+        assert_eq!(explain("Commit-Reveal"), explain("commitreveal"));
+    }
+
+    // --- Unknown topics return None ---
+
+    #[test]
+    fn unknown_topic_returns_none() {
+        assert!(explain("xyzzy_nonexistent_topic_999").is_none());
+    }
+
+    #[test]
+    fn unknown_topic_empty_string_returns_none() {
+        assert!(explain("").is_none());
+    }
+
+    #[test]
+    fn unknown_topic_random_returns_none() {
+        assert!(explain("notarealconcept").is_none());
+    }
+
+    #[test]
+    fn unknown_topic_number_returns_none() {
+        // "1000" is a known alias for stake-weight, but other numbers should not match
+        assert!(explain("9999").is_none());
+    }
+
+    // --- list_topics is non-empty ---
+
+    #[test]
+    fn list_topics_not_empty() {
+        let topics = list_topics();
+        assert!(!topics.is_empty());
+    }
+
+    #[test]
+    fn list_topics_contains_tempo() {
+        let topics = list_topics();
+        assert!(topics.iter().any(|(k, _)| *k == "tempo"));
+    }
+
+    #[test]
+    fn list_topics_contains_amm() {
+        let topics = list_topics();
+        assert!(topics.iter().any(|(k, _)| *k == "amm"));
+    }
+
+    // --- Content sanity: known topics contain expected keywords ---
+
+    #[test]
+    fn tempo_content_mentions_blocks() {
+        let text = explain("tempo").unwrap();
+        let lower = text.to_lowercase();
+        assert!(lower.contains("block") || lower.contains("tempo"));
+    }
+
+    #[test]
+    fn amm_content_mentions_pool_or_market() {
+        let text = explain("amm").unwrap();
+        let lower = text.to_lowercase();
+        assert!(lower.contains("pool") || lower.contains("market") || lower.contains("amm"));
+    }
+
+    #[test]
+    fn emission_content_mentions_emission() {
+        let text = explain("emission").unwrap();
+        let lower = text.to_lowercase();
+        assert!(lower.contains("emission") || lower.contains("tao"));
+    }
+}

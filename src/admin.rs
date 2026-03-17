@@ -328,3 +328,76 @@ pub fn known_params() -> Vec<(&'static str, &'static str, &'static [&'static str
         ),
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn known_params_is_non_empty() {
+        let params = known_params();
+        assert!(!params.is_empty(), "known_params should return a non-empty list");
+    }
+
+    #[test]
+    fn all_entries_have_non_empty_fields() {
+        for (call_name, description, args) in known_params() {
+            assert!(
+                !call_name.is_empty(),
+                "call_name must not be empty"
+            );
+            assert!(
+                !description.is_empty(),
+                "description must not be empty for {}",
+                call_name
+            );
+            assert!(
+                !args.is_empty(),
+                "args must not be empty for {}",
+                call_name
+            );
+        }
+    }
+
+    #[test]
+    fn all_call_names_start_with_sudo_set() {
+        for (call_name, _, _) in known_params() {
+            assert!(
+                call_name.starts_with("sudo_set_"),
+                "call_name '{}' does not start with 'sudo_set_'",
+                call_name
+            );
+        }
+    }
+
+    #[test]
+    fn first_arg_is_netuid_u16() {
+        for (call_name, _, args) in known_params() {
+            assert!(
+                !args.is_empty(),
+                "args must not be empty for {}",
+                call_name
+            );
+            assert_eq!(
+                args[0], "netuid: u16",
+                "first arg of {} should be 'netuid: u16', got '{}'",
+                call_name, args[0]
+            );
+        }
+    }
+
+    #[test]
+    fn no_duplicate_call_names() {
+        let params = known_params();
+        let mut seen = HashSet::new();
+        for (call_name, _, _) in &params {
+            assert!(
+                seen.insert(call_name),
+                "duplicate call_name found: {}",
+                call_name
+            );
+        }
+        assert_eq!(seen.len(), params.len());
+    }
+}

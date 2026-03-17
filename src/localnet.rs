@@ -127,7 +127,7 @@ pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
         ])
         .output();
 
-    std::thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     // Start container
     let output = Command::new("docker")

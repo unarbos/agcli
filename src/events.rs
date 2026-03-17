@@ -212,10 +212,12 @@ pub async fn subscribe_events_filtered(
     if !json_output {
         let mut desc = format!("filter: {:?}", filter);
         if let Some(n) = netuid_filter {
-            desc.push_str(&format!(", netuid={}", n));
+            use std::fmt::Write;
+            let _ = write!(desc, ", netuid={}", n);
         }
         if let Some(a) = account_filter {
-            desc.push_str(&format!(", account={}", crate::utils::short_ss58(a)));
+            use std::fmt::Write;
+            let _ = write!(desc, ", account={}", crate::utils::short_ss58(a));
         }
         println!(
             "Subscribed to finalized blocks ({}). Ctrl+C to stop.\n",
@@ -487,5 +489,420 @@ pub async fn subscribe_blocks(
             );
         }
         tokio::time::sleep(delay).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    // ========== EventFilter::from_str tests ==========
+
+    #[test]
+    fn from_str_staking() {
+        assert_eq!(EventFilter::from_str("staking").unwrap(), EventFilter::Staking);
+    }
+
+    #[test]
+    fn from_str_stake() {
+        assert_eq!(EventFilter::from_str("stake").unwrap(), EventFilter::Staking);
+    }
+
+    #[test]
+    fn from_str_registration() {
+        assert_eq!(EventFilter::from_str("registration").unwrap(), EventFilter::Registration);
+    }
+
+    #[test]
+    fn from_str_register() {
+        assert_eq!(EventFilter::from_str("register").unwrap(), EventFilter::Registration);
+    }
+
+    #[test]
+    fn from_str_reg() {
+        assert_eq!(EventFilter::from_str("reg").unwrap(), EventFilter::Registration);
+    }
+
+    #[test]
+    fn from_str_transfer() {
+        assert_eq!(EventFilter::from_str("transfer").unwrap(), EventFilter::Transfer);
+    }
+
+    #[test]
+    fn from_str_transfers() {
+        assert_eq!(EventFilter::from_str("transfers").unwrap(), EventFilter::Transfer);
+    }
+
+    #[test]
+    fn from_str_weights() {
+        assert_eq!(EventFilter::from_str("weights").unwrap(), EventFilter::Weights);
+    }
+
+    #[test]
+    fn from_str_weight() {
+        assert_eq!(EventFilter::from_str("weight").unwrap(), EventFilter::Weights);
+    }
+
+    #[test]
+    fn from_str_subnet() {
+        assert_eq!(EventFilter::from_str("subnet").unwrap(), EventFilter::Subnet);
+    }
+
+    #[test]
+    fn from_str_subnets() {
+        assert_eq!(EventFilter::from_str("subnets").unwrap(), EventFilter::Subnet);
+    }
+
+    #[test]
+    fn from_str_unknown_falls_back_to_all() {
+        assert_eq!(EventFilter::from_str("anything_else").unwrap(), EventFilter::All);
+    }
+
+    #[test]
+    fn from_str_empty_falls_back_to_all() {
+        assert_eq!(EventFilter::from_str("").unwrap(), EventFilter::All);
+    }
+
+    #[test]
+    fn from_str_case_insensitive_staking() {
+        assert_eq!(EventFilter::from_str("STAKING").unwrap(), EventFilter::Staking);
+    }
+
+    #[test]
+    fn from_str_case_insensitive_transfer() {
+        assert_eq!(EventFilter::from_str("Transfer").unwrap(), EventFilter::Transfer);
+    }
+
+    #[test]
+    fn from_str_case_insensitive_weights() {
+        assert_eq!(EventFilter::from_str("WEIGHTS").unwrap(), EventFilter::Weights);
+    }
+
+    #[test]
+    fn from_str_case_insensitive_subnet() {
+        assert_eq!(EventFilter::from_str("SUBNET").unwrap(), EventFilter::Subnet);
+    }
+
+    #[test]
+    fn from_str_case_insensitive_registration() {
+        assert_eq!(EventFilter::from_str("Registration").unwrap(), EventFilter::Registration);
+    }
+
+    // ========== EventFilter::matches() tests ==========
+
+    // -- All variant matches everything --
+
+    #[test]
+    fn all_matches_any_pallet_and_variant() {
+        assert!(EventFilter::All.matches("SubtensorModule", "StakeAdded"));
+        assert!(EventFilter::All.matches("Balances", "Transfer"));
+        assert!(EventFilter::All.matches("System", "ExtrinsicSuccess"));
+        assert!(EventFilter::All.matches("Whatever", "Anything"));
+    }
+
+    // -- Staking variant --
+
+    #[test]
+    fn staking_matches_stake_added() {
+        assert!(EventFilter::Staking.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    #[test]
+    fn staking_matches_stake_removed() {
+        assert!(EventFilter::Staking.matches("SubtensorModule", "StakeRemoved"));
+    }
+
+    #[test]
+    fn staking_matches_stake_moved() {
+        assert!(EventFilter::Staking.matches("SubtensorModule", "StakeMoved"));
+    }
+
+    #[test]
+    fn staking_matches_stake_swapped() {
+        assert!(EventFilter::Staking.matches("SubtensorModule", "StakeSwapped"));
+    }
+
+    #[test]
+    fn staking_matches_all_stake_removed() {
+        assert!(EventFilter::Staking.matches("SubtensorModule", "AllStakeRemoved"));
+    }
+
+    #[test]
+    fn staking_rejects_wrong_pallet() {
+        assert!(!EventFilter::Staking.matches("Balances", "StakeAdded"));
+    }
+
+    #[test]
+    fn staking_rejects_wrong_variant() {
+        assert!(!EventFilter::Staking.matches("SubtensorModule", "NeuronRegistered"));
+    }
+
+    #[test]
+    fn staking_rejects_transfer() {
+        assert!(!EventFilter::Staking.matches("Balances", "Transfer"));
+    }
+
+    // -- Registration variant --
+
+    #[test]
+    fn registration_matches_neuron_registered() {
+        assert!(EventFilter::Registration.matches("SubtensorModule", "NeuronRegistered"));
+    }
+
+    #[test]
+    fn registration_matches_burned_register() {
+        assert!(EventFilter::Registration.matches("SubtensorModule", "BurnedRegister"));
+    }
+
+    #[test]
+    fn registration_matches_subnet_registered() {
+        assert!(EventFilter::Registration.matches("SubtensorModule", "SubnetRegistered"));
+    }
+
+    #[test]
+    fn registration_matches_pow_registered() {
+        assert!(EventFilter::Registration.matches("SubtensorModule", "PowRegistered"));
+    }
+
+    #[test]
+    fn registration_rejects_wrong_pallet() {
+        assert!(!EventFilter::Registration.matches("Balances", "NeuronRegistered"));
+    }
+
+    #[test]
+    fn registration_rejects_wrong_variant() {
+        assert!(!EventFilter::Registration.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    // -- Transfer variant --
+
+    #[test]
+    fn transfer_matches_balances_pallet() {
+        assert!(EventFilter::Transfer.matches("Balances", "Transfer"));
+    }
+
+    #[test]
+    fn transfer_matches_any_balances_variant() {
+        assert!(EventFilter::Transfer.matches("Balances", "Deposit"));
+        assert!(EventFilter::Transfer.matches("Balances", "Withdraw"));
+        assert!(EventFilter::Transfer.matches("Balances", "Endowed"));
+    }
+
+    #[test]
+    fn transfer_rejects_subtensor_module() {
+        assert!(!EventFilter::Transfer.matches("SubtensorModule", "Transfer"));
+    }
+
+    #[test]
+    fn transfer_rejects_system_pallet() {
+        assert!(!EventFilter::Transfer.matches("System", "Transfer"));
+    }
+
+    // -- Weights variant --
+
+    #[test]
+    fn weights_matches_weights_set() {
+        assert!(EventFilter::Weights.matches("SubtensorModule", "WeightsSet"));
+    }
+
+    #[test]
+    fn weights_matches_weights_committed() {
+        assert!(EventFilter::Weights.matches("SubtensorModule", "WeightsCommitted"));
+    }
+
+    #[test]
+    fn weights_matches_weights_revealed() {
+        assert!(EventFilter::Weights.matches("SubtensorModule", "WeightsRevealed"));
+    }
+
+    #[test]
+    fn weights_matches_weights_batch_revealed() {
+        assert!(EventFilter::Weights.matches("SubtensorModule", "WeightsBatchRevealed"));
+    }
+
+    #[test]
+    fn weights_rejects_wrong_pallet() {
+        assert!(!EventFilter::Weights.matches("Balances", "WeightsSet"));
+    }
+
+    #[test]
+    fn weights_rejects_wrong_variant() {
+        assert!(!EventFilter::Weights.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    // -- Subnet variant --
+
+    #[test]
+    fn subnet_matches_hyperparams_set() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "SubnetHyperparamsSet"));
+    }
+
+    #[test]
+    fn subnet_matches_identity_set() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "SubnetIdentitySet"));
+    }
+
+    #[test]
+    fn subnet_matches_identity_removed() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "SubnetIdentityRemoved"));
+    }
+
+    #[test]
+    fn subnet_matches_network_added() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "NetworkAdded"));
+    }
+
+    #[test]
+    fn subnet_matches_network_removed() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "NetworkRemoved"));
+    }
+
+    #[test]
+    fn subnet_matches_tempo_set() {
+        assert!(EventFilter::Subnet.matches("SubtensorModule", "TempoSet"));
+    }
+
+    #[test]
+    fn subnet_rejects_wrong_pallet() {
+        assert!(!EventFilter::Subnet.matches("Balances", "NetworkAdded"));
+    }
+
+    #[test]
+    fn subnet_rejects_wrong_variant() {
+        assert!(!EventFilter::Subnet.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    // -- Cross-filter isolation --
+
+    #[test]
+    fn staking_does_not_match_weight_events() {
+        assert!(!EventFilter::Staking.matches("SubtensorModule", "WeightsSet"));
+    }
+
+    #[test]
+    fn weights_does_not_match_staking_events() {
+        assert!(!EventFilter::Weights.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    #[test]
+    fn registration_does_not_match_subnet_events() {
+        assert!(!EventFilter::Registration.matches("SubtensorModule", "NetworkAdded"));
+    }
+
+    #[test]
+    fn subnet_does_not_match_registration_events() {
+        assert!(!EventFilter::Subnet.matches("SubtensorModule", "NeuronRegistered"));
+    }
+
+    // ========== ChainEvent Display tests ==========
+
+    #[test]
+    fn chain_event_display_format() {
+        let event = ChainEvent {
+            block_number: 12345,
+            block_hash: "0xabc".to_string(),
+            pallet: "SubtensorModule".to_string(),
+            variant: "StakeAdded".to_string(),
+            fields: "{amount: 100}".to_string(),
+        };
+        let display = format!("{}", event);
+        assert_eq!(display, "#12345 SubtensorModule::StakeAdded {amount: 100}");
+    }
+
+    #[test]
+    fn chain_event_display_zero_block() {
+        let event = ChainEvent {
+            block_number: 0,
+            block_hash: "0x000".to_string(),
+            pallet: "Balances".to_string(),
+            variant: "Transfer".to_string(),
+            fields: "{}".to_string(),
+        };
+        let display = format!("{}", event);
+        assert_eq!(display, "#0 Balances::Transfer {}");
+    }
+
+    #[test]
+    fn chain_event_display_empty_fields() {
+        let event = ChainEvent {
+            block_number: 999,
+            block_hash: "0xdef".to_string(),
+            pallet: "System".to_string(),
+            variant: "ExtrinsicSuccess".to_string(),
+            fields: "".to_string(),
+        };
+        let display = format!("{}", event);
+        assert_eq!(display, "#999 System::ExtrinsicSuccess ");
+    }
+
+    #[test]
+    fn chain_event_display_large_block_number() {
+        let event = ChainEvent {
+            block_number: 4_000_000,
+            block_hash: "0xfff".to_string(),
+            pallet: "SubtensorModule".to_string(),
+            variant: "WeightsCommitted".to_string(),
+            fields: "{netuid: 1}".to_string(),
+        };
+        let display = format!("{}", event);
+        assert!(display.starts_with("#4000000 "));
+        assert!(display.contains("SubtensorModule::WeightsCommitted"));
+    }
+
+    #[test]
+    fn chain_event_display_contains_block_number() {
+        let event = ChainEvent {
+            block_number: 42,
+            block_hash: "0x1".to_string(),
+            pallet: "P".to_string(),
+            variant: "V".to_string(),
+            fields: "F".to_string(),
+        };
+        let display = format!("{}", event);
+        assert!(display.contains("#42"));
+    }
+
+    #[test]
+    fn chain_event_display_contains_pallet_and_variant() {
+        let event = ChainEvent {
+            block_number: 1,
+            block_hash: "0x2".to_string(),
+            pallet: "MyPallet".to_string(),
+            variant: "MyEvent".to_string(),
+            fields: "data".to_string(),
+        };
+        let display = format!("{}", event);
+        assert!(display.contains("MyPallet::MyEvent"));
+    }
+
+    // ========== EventFilter Debug derive ==========
+
+    #[test]
+    fn event_filter_debug() {
+        assert_eq!(format!("{:?}", EventFilter::All), "All");
+        assert_eq!(format!("{:?}", EventFilter::Staking), "Staking");
+        assert_eq!(format!("{:?}", EventFilter::Registration), "Registration");
+        assert_eq!(format!("{:?}", EventFilter::Transfer), "Transfer");
+        assert_eq!(format!("{:?}", EventFilter::Weights), "Weights");
+        assert_eq!(format!("{:?}", EventFilter::Subnet), "Subnet");
+    }
+
+    // ========== EventFilter Clone + Copy + PartialEq ==========
+
+    #[test]
+    fn event_filter_clone_and_eq() {
+        let f = EventFilter::Staking;
+        let f2 = f;  // Copy
+        let f3 = f.clone();
+        assert_eq!(f, f2);
+        assert_eq!(f, f3);
+    }
+
+    #[test]
+    fn event_filter_inequality() {
+        assert_ne!(EventFilter::Staking, EventFilter::Transfer);
+        assert_ne!(EventFilter::All, EventFilter::Subnet);
+        assert_ne!(EventFilter::Weights, EventFilter::Registration);
     }
 }
