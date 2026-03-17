@@ -956,16 +956,19 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         0.0
     };
 
-    let mut top_miners = miners.clone();
-    top_miners.sort_unstable_by(|a, b| {
-        b.incentive
-            .partial_cmp(&a.incentive)
+    // Sort by index to avoid cloning entire Vec of neuron records
+    let mut miner_indices: Vec<usize> = (0..miners.len()).collect();
+    miner_indices.sort_unstable_by(|&a, &b| {
+        miners[b]
+            .incentive
+            .partial_cmp(&miners[a].incentive)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    let mut top_vals = validators.clone();
-    top_vals.sort_unstable_by(|a, b| {
-        b.dividends
-            .partial_cmp(&a.dividends)
+    let mut val_indices: Vec<usize> = (0..validators.len()).collect();
+    val_indices.sort_unstable_by(|&a, &b| {
+        validators[b]
+            .dividends
+            .partial_cmp(&validators[a].dividends)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
@@ -1066,8 +1069,8 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         );
     }
 
-    if !top_miners.is_empty() {
-        let miners_top: Vec<_> = top_miners.into_iter().take(5).collect();
+    if !miner_indices.is_empty() {
+        let miners_top: Vec<_> = miner_indices.iter().take(5).map(|&i| miners[i]).collect();
         render_rows(
             OutputFormat::Table,
             &miners_top,
@@ -1087,8 +1090,8 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         );
     }
 
-    if !top_vals.is_empty() {
-        let vals_top: Vec<_> = top_vals.into_iter().take(5).collect();
+    if !val_indices.is_empty() {
+        let vals_top: Vec<_> = val_indices.iter().take(5).map(|&i| validators[i]).collect();
         render_rows(
             OutputFormat::Table,
             &vals_top,
@@ -1377,10 +1380,12 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
         println!("    Total Stake: {}", d.total_stake.display_tao());
         println!("    Nominators:  {}", d.nominators.len());
         if !d.nominators.is_empty() {
-            let mut sorted = d.nominators.clone();
-            sorted.sort_by(|a, b| b.1.rao().cmp(&a.1.rao()));
+            // Sort by index to avoid cloning the entire nominators vector
+            let mut indices: Vec<usize> = (0..d.nominators.len()).collect();
+            indices.sort_unstable_by(|&a, &b| d.nominators[b].1.rao().cmp(&d.nominators[a].1.rao()));
             println!("    Top nominators:");
-            for (addr, stake) in sorted.iter().take(10) {
+            for &i in indices.iter().take(10) {
+                let (ref addr, ref stake) = d.nominators[i];
                 println!(
                     "      {} — {}",
                     crate::utils::short_ss58(addr),
@@ -1851,9 +1856,12 @@ async fn handle_metagraph_view(
 
     if let Some(block_num) = since_block {
         // Diff mode: compare current vs historical
-        let block_hash = client.get_block_hash(block_num).await?;
+        // Parallelize block hash lookup and current block number (independent queries)
+        let (block_hash, current_block) = tokio::try_join!(
+            client.get_block_hash(block_num),
+            client.get_block_number(),
+        )?;
         let old_neurons = client.get_neurons_lite_at_block(netuid, block_hash).await?;
-        let current_block = client.get_block_number().await?;
 
         let old_map: std::collections::HashMap<u16, &crate::types::chain_data::NeuronInfoLite> =
             old_neurons.iter().map(|n| (n.uid, n)).collect();
@@ -2312,4 +2320,84 @@ async fn handle_emissions(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::chain_data::{AxonInfo, PrometheusInfo};
+
+    #[test]
+    fn module_compiles() {
+        // If this test compiles, the view_cmds module is structurally valid.
+    }
+
+    #[test]
+    fn handle_view_symbol_exists() {
+        let _ = super::handle_view as fn(_, _, _) -> _;
+    }
+
+    #[test]
+    fn format_ip_v4_basic() {
+        let axon = AxonInfo {
+            block: 0,
+            version: 0,
+            ip: "3232235777".to_string(), // 192.168.1.1 = 0xC0A80101
+            port: 8080,
+            ip_type: 4,
+            protocol: 0,
+        };
+        assert_eq!(super::format_ip(&axon), "192.168.1.1");
+    }
+
+    #[test]
+    fn format_ip_returns_raw_for_non_v4() {
+        let axon = AxonInfo {
+            block: 0,
+            version: 0,
+            ip: "some_ipv6_value".to_string(),
+            port: 8080,
+            ip_type: 6,
+            protocol: 0,
+        };
+        // Non-IPv4: should return the raw string.
+        assert_eq!(super::format_ip(&axon), "some_ipv6_value");
+    }
+
+    #[test]
+    fn format_ip_loopback() {
+        // 127.0.0.1 = 2130706433
+        let axon = AxonInfo {
+            block: 0,
+            version: 0,
+            ip: "2130706433".to_string(),
+            port: 80,
+            ip_type: 4,
+            protocol: 0,
+        };
+        assert_eq!(super::format_ip(&axon), "127.0.0.1");
+    }
+
+    #[test]
+    fn format_prometheus_ip_v4_basic() {
+        let info = PrometheusInfo {
+            block: 0,
+            version: 0,
+            ip: "3232235777".to_string(),
+            port: 9090,
+            ip_type: 4,
+        };
+        assert_eq!(super::format_prometheus_ip(&info), "192.168.1.1");
+    }
+
+    #[test]
+    fn format_prometheus_ip_returns_raw_for_non_v4() {
+        let info = PrometheusInfo {
+            block: 0,
+            version: 0,
+            ip: "some_ipv6".to_string(),
+            port: 9090,
+            ip_type: 6,
+        };
+        assert_eq!(super::format_prometheus_ip(&info), "some_ipv6");
+    }
 }

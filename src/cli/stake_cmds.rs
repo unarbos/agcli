@@ -633,23 +633,34 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 target_netuids
             );
 
+            // Submit claims in parallel for all subnets
+            let hk_account = Client::ss58_to_account_id_pub(&hk)?;
+            let claim_futures: Vec<_> = target_netuids
+                .iter()
+                .map(|&nuid| {
+                    let hk_bytes = hk_account.0;
+                    let pair_clone = pair.clone();
+                    async move {
+                        let result = client
+                            .submit_raw_call(
+                                &pair_clone,
+                                "SubtensorModule",
+                                "claim_root_dividends",
+                                vec![
+                                    subxt::dynamic::Value::from_bytes(hk_bytes),
+                                    subxt::dynamic::Value::u128(nuid as u128),
+                                ],
+                            )
+                            .await;
+                        (nuid, result)
+                    }
+                })
+                .collect();
+            let results = futures::future::join_all(claim_futures).await;
             let mut success = 0u32;
             let mut failed = 0u32;
-            for nuid in &target_netuids {
-                match client
-                    .submit_raw_call(
-                        &pair,
-                        "SubtensorModule",
-                        "claim_root_dividends",
-                        vec![
-                            subxt::dynamic::Value::from_bytes(
-                                Client::ss58_to_account_id_pub(&hk)?.0,
-                            ),
-                            subxt::dynamic::Value::u128(*nuid as u128),
-                        ],
-                    )
-                    .await
-                {
+            for (nuid, result) in results {
+                match result {
                     Ok(hash) => {
                         println!("  SN{}: claimed (tx: {})", nuid, hash);
                         success += 1;
@@ -888,4 +899,19 @@ async fn staking_wizard(
     println!("  Staked: {}", portfolio.total_staked.display_tao());
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    /// Structural: `handle_stake` is async and requires a Client, so we cannot
+    /// exercise it without a live chain. These tests confirm the module compiles.
+    #[test]
+    fn module_compiles() {
+        // If this test compiles, the stake_cmds module is structurally valid.
+    }
+
+    #[test]
+    fn handle_stake_symbol_exists() {
+        let _ = super::handle_stake as fn(_, _, _) -> _;
+    }
 }

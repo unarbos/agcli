@@ -1751,8 +1751,8 @@ async fn handle_subnet_monitor(
     loop {
         let block = client.get_block_number().await?;
         let neurons = client.get_neurons_lite(nuid).await?;
-        let mut cur_map: HashMap<u16, NeuronSnapshot> = HashMap::new();
-        let mut cur_uids: std::collections::HashSet<u16> = std::collections::HashSet::new();
+        let mut cur_map: HashMap<u16, NeuronSnapshot> = HashMap::with_capacity(neurons.len());
+        let mut cur_uids: std::collections::HashSet<u16> = std::collections::HashSet::with_capacity(neurons.len());
 
         for n in neurons.iter() {
             cur_uids.insert(n.uid);
@@ -2269,7 +2269,7 @@ async fn handle_subnet_probe(
     }
 
     // Fetch full neuron info (with axon endpoints) in parallel
-    let mut neurons = Vec::new();
+    let mut neurons = Vec::with_capacity(target_uids.len());
     for chunk in target_uids.chunks(32) {
         let futs: Vec<_> = chunk
             .iter()
