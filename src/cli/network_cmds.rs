@@ -1231,7 +1231,12 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             Ok(())
         }
         ProxyCommands::List { address } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "proxy list --address",
+            )?;
             let proxies = client.list_proxies(&addr).await?;
             if output.is_json() {
                 let json: Vec<serde_json::Value> = proxies.iter().map(|(d, t, delay)| {
@@ -1357,7 +1362,12 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             Ok(())
         }
         ProxyCommands::ListAnnouncements { address } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "proxy list-announcements --address",
+            )?;
             let announcements = client.list_proxy_announcements(&addr).await?;
             if output.is_json() {
                 let json: Vec<serde_json::Value> = announcements

@@ -739,6 +739,20 @@ pub fn resolve_coldkey_address(
     })
 }
 
+/// Resolve a coldkey address from an optional CLI argument, with SS58 validation when the user
+/// explicitly provides one. Falls back to the wallet's coldkey if no address is given.
+pub fn resolve_and_validate_coldkey_address(
+    address: Option<String>,
+    wallet_dir: &str,
+    wallet_name: &str,
+    label: &str,
+) -> Result<String> {
+    if let Some(ref addr) = address {
+        validate_ss58(addr, label)?;
+    }
+    Ok(resolve_coldkey_address(address, wallet_dir, wallet_name))
+}
+
 pub fn resolve_hotkey_ss58(
     hotkey_arg: Option<String>,
     wallet: &mut Wallet,
@@ -1526,6 +1540,26 @@ pub fn validate_view_limit(limit: usize, label: &str) -> Result<()> {
     Ok(())
 }
 
+/// Validate a balance threshold value (used in `balance --watch --threshold`).
+/// Unlike `validate_amount`, zero is allowed (alert when balance drops to zero),
+/// but negative, NaN, and Infinity are rejected.
+pub fn validate_threshold(value: f64, label: &str) -> Result<()> {
+    if value < 0.0 {
+        anyhow::bail!(
+            "Invalid {}: {:.9}. Threshold cannot be negative.\n  Tip: use a value like 1.0 to alert when balance drops below 1 TAO.",
+            label, value
+        );
+    }
+    if !value.is_finite() {
+        anyhow::bail!(
+            "Invalid {}: value must be a valid number (got {}).",
+            label,
+            value
+        );
+    }
+    Ok(())
+}
+
 /// Validate admin raw call name. Must be a valid Rust identifier (snake_case)
 /// and should match a known AdminUtils call from `admin::known_params()`.
 pub fn validate_admin_call_name(name: &str) -> Result<()> {
@@ -1707,10 +1741,8 @@ pub fn validate_github_repo(repo: &str) -> Result<()> {
         return Ok(()); // Optional
     }
     if trimmed.len() > 256 {
-        anyhow::bail!(
-            "GitHub repo '{}' is too long (max 256 chars).",
-            &trimmed[..32]
-        );
+        let preview: String = trimmed.chars().take(32).collect();
+        anyhow::bail!("GitHub repo '{}' is too long (max 256 chars).", preview);
     }
     // Must contain exactly one '/'
     let parts: Vec<&str> = trimmed.splitn(3, '/').collect();

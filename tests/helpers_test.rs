@@ -2,13 +2,14 @@
 //! Run with: cargo test --test helpers_test
 
 use agcli::cli::helpers::{
-    json_to_subxt_value, parse_children, parse_weight_pairs, validate_admin_call_name,
-    validate_amount, validate_batch_file, validate_call_hash, validate_config_network,
-    validate_delegate_take, validate_derive_input, validate_emission_weights, validate_evm_address,
-    validate_gas_limit, validate_github_repo, validate_hex_data, validate_ipv4, validate_max_cost,
-    validate_mnemonic, validate_multisig_json_args, validate_name, validate_netuid,
-    validate_pallet_call, validate_schedule_id, validate_subnet_name, validate_symbol,
-    validate_take_pct, validate_threads, validate_url, validate_view_limit, validate_wasm_file,
+    json_to_subxt_value, parse_children, parse_weight_pairs, resolve_and_validate_coldkey_address,
+    validate_admin_call_name, validate_amount, validate_batch_file, validate_call_hash,
+    validate_config_network, validate_delegate_take, validate_derive_input,
+    validate_emission_weights, validate_evm_address, validate_gas_limit, validate_github_repo,
+    validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_multisig_json_args, validate_name, validate_netuid, validate_pallet_call,
+    validate_schedule_id, validate_subnet_name, validate_symbol, validate_take_pct,
+    validate_threads, validate_threshold, validate_url, validate_view_limit, validate_wasm_file,
     validate_weight_input,
 };
 use agcli::utils::explain;
@@ -5058,4 +5059,136 @@ fn validate_netuid_error_message_helpful() {
         "Error should guide user: {}",
         msg
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// validate_threshold (new in Step 20)
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn validate_threshold_zero_accepted() {
+    assert!(validate_threshold(0.0, "test").is_ok());
+}
+
+#[test]
+fn validate_threshold_positive_accepted() {
+    assert!(validate_threshold(1.0, "test").is_ok());
+    assert!(validate_threshold(0.5, "test").is_ok());
+    assert!(validate_threshold(100_000.0, "test").is_ok());
+}
+
+#[test]
+fn validate_threshold_negative_rejected() {
+    let err = validate_threshold(-1.0, "test").unwrap_err();
+    assert!(err.to_string().contains("negative"), "Error: {}", err);
+}
+
+#[test]
+fn validate_threshold_negative_small_rejected() {
+    assert!(validate_threshold(-0.001, "test").is_err());
+}
+
+#[test]
+fn validate_threshold_nan_rejected() {
+    assert!(validate_threshold(f64::NAN, "test").is_err());
+}
+
+#[test]
+fn validate_threshold_infinity_rejected() {
+    assert!(validate_threshold(f64::INFINITY, "test").is_err());
+    assert!(validate_threshold(f64::NEG_INFINITY, "test").is_err());
+}
+
+#[test]
+fn validate_threshold_error_mentions_tip() {
+    let err = validate_threshold(-5.0, "balance --threshold").unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Tip:") || msg.contains("threshold"),
+        "Error should be helpful: {}",
+        msg
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// resolve_and_validate_coldkey_address (new in Step 20)
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn resolve_and_validate_rejects_invalid_ss58() {
+    let result = resolve_and_validate_coldkey_address(
+        Some("not-a-real-address".to_string()),
+        "/tmp/nonexistent",
+        "default",
+        "test --address",
+    );
+    assert!(result.is_err(), "invalid SS58 should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(
+        msg.contains("test --address"),
+        "Error should mention parameter: {}",
+        msg
+    );
+}
+
+#[test]
+fn resolve_and_validate_accepts_valid_ss58() {
+    // This is a valid Bittensor SS58 address (Alice)
+    let result = resolve_and_validate_coldkey_address(
+        Some("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".to_string()),
+        "/tmp/nonexistent",
+        "default",
+        "test --address",
+    );
+    assert!(
+        result.is_ok(),
+        "valid SS58 should be accepted: {:?}",
+        result.err()
+    );
+}
+
+#[test]
+fn resolve_and_validate_none_falls_back_to_wallet() {
+    // With None address and nonexistent wallet dir, should return empty string (from wallet fallback)
+    let result = resolve_and_validate_coldkey_address(
+        None,
+        "/tmp/nonexistent_wallet_dir_xyz",
+        "default",
+        "test --address",
+    );
+    // Should not error — None means use wallet, which just returns empty on failure
+    assert!(result.is_ok());
+}
+
+#[test]
+fn resolve_and_validate_rejects_empty_string() {
+    let result = resolve_and_validate_coldkey_address(
+        Some("".to_string()),
+        "/tmp/nonexistent",
+        "default",
+        "test --address",
+    );
+    assert!(result.is_err(), "empty address string should be rejected");
+}
+
+#[test]
+fn resolve_and_validate_rejects_short_garbage() {
+    let result = resolve_and_validate_coldkey_address(
+        Some("abc".to_string()),
+        "/tmp/nonexistent",
+        "default",
+        "test --address",
+    );
+    assert!(result.is_err(), "short garbage should be rejected");
+}
+
+#[test]
+fn resolve_and_validate_rejects_ethereum_address() {
+    let result = resolve_and_validate_coldkey_address(
+        Some("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045".to_string()),
+        "/tmp/nonexistent",
+        "default",
+        "portfolio --address",
+    );
+    assert!(result.is_err(), "Ethereum address should be rejected");
 }

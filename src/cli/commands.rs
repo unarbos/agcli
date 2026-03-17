@@ -115,7 +115,12 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Wallet(WalletCommands::CheckSwap { address }) => {
             let client = connect(&network, dry_run, best).await?;
-            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                ctx.wallet_dir,
+                ctx.wallet_name,
+                "check-swap --address",
+            )?;
             let swap = client.get_coldkey_swap_scheduled(&addr).await?;
             match swap {
                 Some((block, new_ss58)) => {
@@ -161,8 +166,16 @@ pub async fn execute(cli: Cli) -> Result<()> {
             threshold,
             at_block,
         } => {
+            if let Some(t) = threshold {
+                validate_threshold(t, "balance --threshold")?;
+            }
             let client = connect(&network, dry_run, best).await?;
-            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                ctx.wallet_dir,
+                ctx.wallet_name,
+                "balance --address",
+            )?;
 
             // Historical wayback mode
             if let Some(block_num) = at_block {
@@ -434,7 +447,12 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Audit { address } => {
             let client = connect(&network, dry_run, best).await?;
-            let addr = resolve_coldkey_address(address, ctx.wallet_dir, ctx.wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                ctx.wallet_dir,
+                ctx.wallet_name,
+                "audit --address",
+            )?;
             view_cmds::handle_audit(&client, &addr, ctx.output).await
         }
         Commands::Commitment(cmd) => {

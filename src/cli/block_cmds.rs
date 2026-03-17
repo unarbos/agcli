@@ -175,7 +175,12 @@ pub(super) async fn handle_diff(
             block1,
             block2,
         } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "diff portfolio --address",
+            )?;
             if addr.is_empty() {
                 anyhow::bail!("No address provided and no wallet found. Use --address <SS58>.");
             }

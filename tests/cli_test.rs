@@ -14969,3 +14969,427 @@ fn parse_admin_list_json_s18() {
     let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "admin", "list"]);
     assert!(cli.is_ok(), "admin list json: {:?}", cli.err());
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Step 20 — Address validation & threshold tests
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn parse_balance_with_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "balance",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "balance with valid address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_with_threshold_s20() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "balance", "--watch", "--threshold", "1.5"]);
+    assert!(cli.is_ok(), "balance watch with threshold: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_watch_interval_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "balance", "--watch", "30"]);
+    assert!(cli.is_ok(), "balance watch with interval: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_at_block_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "balance", "--at-block", "1000000"]);
+    assert!(cli.is_ok(), "balance at-block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "balance"]);
+    assert!(cli.is_ok(), "balance json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_balance_threshold_zero_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "balance", "--watch", "--threshold", "0"]);
+    assert!(
+        cli.is_ok(),
+        "balance threshold zero parses: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_check_swap_with_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "wallet",
+        "check-swap",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "check-swap with address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_check_swap_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "wallet", "check-swap"]);
+    assert!(cli.is_ok(), "check-swap no address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_audit_with_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "audit",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "audit with address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_audit_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "audit"]);
+    assert!(cli.is_ok(), "audit no address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_audit_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "audit"]);
+    assert!(cli.is_ok(), "audit json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_portfolio_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "portfolio",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "portfolio with address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_portfolio_at_block_s20() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "view", "portfolio", "--at-block", "5000000"]);
+    assert!(cli.is_ok(), "portfolio at-block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_history_address_limit_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "history",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--limit",
+        "50",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "history with address and limit: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_view_account_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "account",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "account with address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_account_at_block_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "view", "account", "--at-block", "1000"]);
+    assert!(cli.is_ok(), "account at-block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_staking_analytics_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "view",
+        "staking-analytics",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "staking-analytics with addr: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_staking_analytics_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "view", "staking-analytics"]);
+    assert!(cli.is_ok(), "staking-analytics no addr: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_list_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "list",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "stake list address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_list_at_block_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "list", "--at-block", "500000"]);
+    assert!(cli.is_ok(), "stake list at-block: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_show_auto_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "stake",
+        "show-auto",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "stake show-auto address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_stake_show_auto_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "stake", "show-auto"]);
+    assert!(cli.is_ok(), "stake show-auto no addr: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_list_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "list",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "proxy list address: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_list_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "proxy", "list"]);
+    assert!(cli.is_ok(), "proxy list no addr: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_list_announcements_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "proxy",
+        "list-announcements",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "proxy list-announcements addr: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_proxy_list_announcements_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "proxy", "list-announcements"]);
+    assert!(
+        cli.is_ok(),
+        "proxy list-announcements no addr: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_diff_portfolio_address_blocks_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "diff",
+        "portfolio",
+        "--address",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+        "--block1",
+        "100000",
+        "--block2",
+        "200000",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "diff portfolio address+blocks: {:?}",
+        cli.err()
+    );
+}
+
+#[test]
+fn parse_diff_portfolio_no_address_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "diff",
+        "portfolio",
+        "--block1",
+        "100000",
+        "--block2",
+        "200000",
+    ]);
+    assert!(cli.is_ok(), "diff portfolio no addr: {:?}", cli.err());
+}
+
+// ── Batch file CLI tests ──
+
+#[test]
+fn parse_batch_file_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "batch", "--file", "/tmp/batch.json"]);
+    assert!(cli.is_ok(), "batch file: {:?}", cli.err());
+}
+
+#[test]
+fn parse_batch_no_atomic_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "batch",
+        "--file",
+        "/tmp/batch.json",
+        "--no-atomic",
+    ]);
+    assert!(cli.is_ok(), "batch no-atomic: {:?}", cli.err());
+}
+
+#[test]
+fn parse_batch_force_s20() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "batch", "--file", "/tmp/batch.json", "--force"]);
+    assert!(cli.is_ok(), "batch force: {:?}", cli.err());
+}
+
+// ── View commands edge cases ──
+
+#[test]
+fn parse_view_portfolio_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "view", "portfolio"]);
+    assert!(cli.is_ok(), "portfolio json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_history_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "view", "history"]);
+    assert!(cli.is_ok(), "history json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_account_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "view", "account"]);
+    assert!(cli.is_ok(), "account json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_view_staking_analytics_json_s20() {
+    let cli =
+        agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "view", "staking-analytics"]);
+    assert!(cli.is_ok(), "staking-analytics json: {:?}", cli.err());
+}
+
+// ── Weights input edge cases ──
+
+#[test]
+fn parse_weights_set_pid_uid_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:100,1:200,2:50",
+    ]);
+    assert!(cli.is_ok(), "weights set pairs: {:?}", cli.err());
+}
+
+#[test]
+fn parse_weights_commit_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "commit",
+        "--netuid",
+        "1",
+        "--weights",
+        "[100,200,300]",
+    ]);
+    assert!(cli.is_ok(), "weights commit: {:?}", cli.err());
+}
+
+// ── Proxy commands edge cases ──
+
+#[test]
+fn parse_proxy_list_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from(["agcli", "--output", "json", "proxy", "list"]);
+    assert!(cli.is_ok(), "proxy list json: {:?}", cli.err());
+}
+
+#[test]
+fn parse_proxy_list_announcements_json_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--output",
+        "json",
+        "proxy",
+        "list-announcements",
+    ]);
+    assert!(
+        cli.is_ok(),
+        "proxy list-announcements json: {:?}",
+        cli.err()
+    );
+}
+
+// ── URL validator CLI edge cases (for config set/identity) ──
+
+#[test]
+fn parse_config_set_endpoint_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "config",
+        "set",
+        "--key",
+        "endpoint",
+        "--value",
+        "wss://custom.node:9944",
+    ]);
+    assert!(cli.is_ok(), "config set endpoint: {:?}", cli.err());
+}
+
+#[test]
+fn parse_config_set_network_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli", "config", "set", "--key", "network", "--value", "finney",
+    ]);
+    assert!(cli.is_ok(), "config set network: {:?}", cli.err());
+}
+
+#[test]
+fn parse_config_set_proxy_s20() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "config",
+        "set",
+        "--key",
+        "proxy",
+        "--value",
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ]);
+    assert!(cli.is_ok(), "config set proxy: {:?}", cli.err());
+}

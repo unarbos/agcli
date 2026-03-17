@@ -11,7 +11,12 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
     let (output, password, mev) = (ctx.output, ctx.password, ctx.mev);
     match cmd {
         StakeCommands::List { address, at_block } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "stake list --address",
+            )?;
 
             // Historical wayback mode
             if let Some(block_num) = at_block {
@@ -468,7 +473,12 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             Ok(())
         }
         StakeCommands::ShowAuto { address } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "stake show-auto --address",
+            )?;
             let subnets = client.get_all_subnets().await?;
             // Parallel fetch: query all subnets concurrently instead of one-by-one
             let addr_ref = &addr;

@@ -11,7 +11,12 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
     let (output, live_interval) = (ctx.output, ctx.live_interval);
     match cmd {
         ViewCommands::Portfolio { address, at_block } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "portfolio --address",
+            )?;
             if let Some(bn) = at_block {
                 return handle_portfolio_at_block(client, &addr, output, bn).await;
             }
@@ -51,11 +56,21 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
         }
         ViewCommands::History { address, limit } => {
             validate_view_limit(limit, "history --limit")?;
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "history --address",
+            )?;
             handle_history(&addr, output, limit).await
         }
         ViewCommands::Account { address, at_block } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "account --address",
+            )?;
             handle_account_explorer(client, &addr, output, at_block).await
         }
         ViewCommands::SubnetAnalytics { netuid } => {
@@ -63,7 +78,12 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             handle_subnet_analytics(client, netuid, output).await
         }
         ViewCommands::StakingAnalytics { address } => {
-            let addr = resolve_coldkey_address(address, wallet_dir, wallet_name);
+            let addr = resolve_and_validate_coldkey_address(
+                address,
+                wallet_dir,
+                wallet_name,
+                "staking-analytics --address",
+            )?;
             handle_staking_analytics(client, &addr, output).await
         }
         ViewCommands::SwapSim { netuid, tao, alpha } => {

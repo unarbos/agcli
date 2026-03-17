@@ -10,14 +10,16 @@ use proptest::prelude::*;
 
 use agcli::cli::helpers::{
     json_to_subxt_value, parse_children, parse_json_args, parse_weight_pairs,
-    validate_admin_call_name, validate_amount, validate_batch_axon_json, validate_call_hash,
-    validate_commitment_data, validate_config_network, validate_crowdloan_amount,
-    validate_delegate_take, validate_derive_input, validate_emission_weights,
-    validate_event_filter, validate_evm_address, validate_hex_data, validate_ipv4,
-    validate_max_cost, validate_mnemonic, validate_multisig_json_args, validate_name,
-    validate_netuid, validate_pallet_call, validate_password_strength, validate_port,
-    validate_price, validate_proxy_type, validate_schedule_id, validate_spending_limit,
-    validate_ss58, validate_symbol, validate_take_pct,
+    validate_admin_call_name, validate_amount, validate_batch_axon_json, validate_batch_file,
+    validate_call_hash, validate_commitment_data, validate_config_network,
+    validate_crowdloan_amount, validate_delegate_take, validate_derive_input,
+    validate_emission_weights, validate_event_filter, validate_evm_address, validate_gas_limit,
+    validate_github_repo, validate_hex_data, validate_ipv4, validate_max_cost, validate_mnemonic,
+    validate_multisig_json_args, validate_name, validate_netuid, validate_pallet_call,
+    validate_password_strength, validate_port, validate_price, validate_proxy_type,
+    validate_schedule_id, validate_spending_limit, validate_ss58, validate_subnet_name,
+    validate_symbol, validate_take_pct, validate_threads, validate_threshold, validate_url,
+    validate_view_limit, validate_wasm_file, validate_weight_input,
 };
 
 // ──── validate_amount: never panics, valid amounts always accepted ────
@@ -1200,8 +1202,8 @@ proptest! {
     }
 
     #[test]
-    fn fuzz_admin_call_name_special_chars_rejected(s in "[a-z]{1}[^a-zA-Z0-9_]{1,10}") {
-        // Any string starting with a letter but containing non-identifier chars
+    fn fuzz_admin_call_name_special_chars_rejected(s in "[a-z]{1}[^a-zA-Z0-9_\\s]{1,10}[a-z]{1}") {
+        // String with non-identifier chars sandwiched between letters (so trim can't strip them)
         prop_assert!(validate_admin_call_name(&s).is_err(),
             "special chars '{}' should be rejected", s);
     }
@@ -1224,5 +1226,284 @@ proptest! {
     fn fuzz_netuid_zero_rejected(_ in 0..1u16) {
         prop_assert!(validate_netuid(0).is_err(),
             "netuid 0 should be rejected");
+    }
+
+    // ── validate_threshold fuzz ─────────────────────────────────────
+
+    #[test]
+    fn fuzz_threshold_no_panic(v in proptest::num::f64::ANY) {
+        let _ = validate_threshold(v, "test");
+    }
+
+    #[test]
+    fn fuzz_threshold_non_negative_finite_accepted(v in 0.0f64..1e18) {
+        prop_assert!(validate_threshold(v, "test").is_ok(),
+            "non-negative finite threshold {} should be accepted", v);
+    }
+
+    #[test]
+    fn fuzz_threshold_zero_accepted(_ in 0u8..1u8) {
+        prop_assert!(validate_threshold(0.0, "test").is_ok(),
+            "zero threshold should be accepted");
+    }
+
+    #[test]
+    fn fuzz_threshold_negative_rejected(v in -1e18f64..-0.001) {
+        prop_assert!(validate_threshold(v, "test").is_err(),
+            "negative threshold {} should be rejected", v);
+    }
+
+    // ── validate_wasm_file fuzz ─────────────────────────────────────
+
+    #[test]
+    fn fuzz_wasm_file_no_panic(data in proptest::collection::vec(any::<u8>(), 0..500)) {
+        let _ = validate_wasm_file(&data, "test.wasm");
+    }
+
+    #[test]
+    fn fuzz_wasm_file_valid_magic_accepted(payload in proptest::collection::vec(any::<u8>(), 4..100)) {
+        let mut data = vec![0x00, 0x61, 0x73, 0x6d]; // \0asm magic
+        data.extend_from_slice(&payload);
+        prop_assert!(validate_wasm_file(&data, "test.wasm").is_ok(),
+            "valid WASM magic should be accepted");
+    }
+
+    #[test]
+    fn fuzz_wasm_file_empty_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_wasm_file(&[], "test.wasm").is_err(),
+            "empty file should be rejected");
+    }
+
+    #[test]
+    fn fuzz_wasm_file_wrong_magic_rejected(
+        b0 in 1u8..=255u8,
+        payload in proptest::collection::vec(any::<u8>(), 7..50),
+    ) {
+        let mut data = vec![b0]; // non-zero first byte = not \0asm
+        data.extend_from_slice(&payload);
+        prop_assert!(validate_wasm_file(&data, "test.wasm").is_err(),
+            "wrong magic bytes should be rejected");
+    }
+
+    // ── validate_gas_limit fuzz ─────────────────────────────────────
+
+    #[test]
+    fn fuzz_gas_limit_nonzero_accepted(gas in 1u64..=u64::MAX) {
+        prop_assert!(validate_gas_limit(gas, "test").is_ok(),
+            "nonzero gas {} should be accepted", gas);
+    }
+
+    #[test]
+    fn fuzz_gas_limit_zero_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_gas_limit(0, "test").is_err(),
+            "zero gas should be rejected");
+    }
+
+    // ── validate_batch_file fuzz ────────────────────────────────────
+
+    #[test]
+    fn fuzz_batch_file_no_panic(s in "\\PC{0,500}") {
+        let _ = validate_batch_file(&s, "test.json");
+    }
+
+    #[test]
+    fn fuzz_batch_file_valid_single_call(_ in 0u8..1u8) {
+        let json = r#"[{"pallet": "Balances", "call": "transfer", "args": []}]"#;
+        prop_assert!(validate_batch_file(json, "test.json").is_ok());
+    }
+
+    #[test]
+    fn fuzz_batch_file_non_array_rejected(n in -100i64..100) {
+        let json = format!("{}", n);
+        prop_assert!(validate_batch_file(&json, "test.json").is_err(),
+            "non-array JSON {} should be rejected", json);
+    }
+
+    #[test]
+    fn fuzz_batch_file_empty_array_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_batch_file("[]", "test.json").is_err(),
+            "empty array should be rejected");
+    }
+
+    // ── validate_weight_input fuzz ──────────────────────────────────
+
+    #[test]
+    fn fuzz_weight_input_no_panic(s in "\\PC{0,200}") {
+        let _ = validate_weight_input(&s);
+    }
+
+    #[test]
+    fn fuzz_weight_input_valid_pairs(
+        uid1 in 0u16..1000, w1 in 1u32..10000,
+        uid2 in 0u16..1000, w2 in 1u32..10000,
+    ) {
+        let input = format!("{}:{},{}:{}", uid1, w1, uid2, w2);
+        prop_assert!(validate_weight_input(&input).is_ok(),
+            "valid pairs '{}' should be accepted", input);
+    }
+
+    #[test]
+    fn fuzz_weight_input_empty_rejected(spaces in " {0,5}") {
+        prop_assert!(validate_weight_input(&spaces).is_err(),
+            "empty/spaces weight input should be rejected");
+    }
+
+    #[test]
+    fn fuzz_weight_input_stdin_accepted(_ in 0u8..1u8) {
+        prop_assert!(validate_weight_input("-").is_ok(),
+            "stdin marker should be accepted");
+    }
+
+    #[test]
+    fn fuzz_weight_input_file_ref_accepted(name in "[a-z]{1,20}") {
+        let input = format!("@{}.json", name);
+        prop_assert!(validate_weight_input(&input).is_ok(),
+            "file ref '{}' should be accepted", input);
+    }
+
+    // ── validate_view_limit fuzz ────────────────────────────────────
+
+    #[test]
+    fn fuzz_view_limit_valid_range(limit in 1usize..=10_000) {
+        prop_assert!(validate_view_limit(limit, "test").is_ok(),
+            "valid limit {} should be accepted", limit);
+    }
+
+    #[test]
+    fn fuzz_view_limit_zero_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_view_limit(0, "test").is_err(),
+            "zero limit should be rejected");
+    }
+
+    #[test]
+    fn fuzz_view_limit_too_large_rejected(limit in 10_001usize..100_000) {
+        prop_assert!(validate_view_limit(limit, "test").is_err(),
+            "large limit {} should be rejected", limit);
+    }
+
+    // ── validate_threads fuzz ───────────────────────────────────────
+
+    #[test]
+    fn fuzz_threads_valid_range(threads in 1u32..=256) {
+        prop_assert!(validate_threads(threads, "test").is_ok(),
+            "valid thread count {} should be accepted", threads);
+    }
+
+    #[test]
+    fn fuzz_threads_zero_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_threads(0, "test").is_err(),
+            "zero threads should be rejected");
+    }
+
+    #[test]
+    fn fuzz_threads_too_many_rejected(threads in 257u32..10_000) {
+        prop_assert!(validate_threads(threads, "test").is_err(),
+            "threads {} exceeding 256 should be rejected", threads);
+    }
+
+    // ── validate_url fuzz ───────────────────────────────────────────
+
+    #[test]
+    fn fuzz_url_no_panic(s in "\\PC{0,200}") {
+        let _ = validate_url(&s, "test");
+    }
+
+    #[test]
+    fn fuzz_url_valid_https(host in "[a-z]{3,20}", path in "[a-z/]{0,50}") {
+        let url = format!("https://{}.com/{}", host, path);
+        prop_assert!(validate_url(&url, "test").is_ok(),
+            "valid https URL '{}' should be accepted", url);
+    }
+
+    #[test]
+    fn fuzz_url_valid_http(host in "[a-z]{3,20}") {
+        let url = format!("http://{}.example.com", host);
+        prop_assert!(validate_url(&url, "test").is_ok(),
+            "valid http URL '{}' should be accepted", url);
+    }
+
+    #[test]
+    fn fuzz_url_no_scheme_rejected(host in "[a-z]{3,30}") {
+        let url = format!("{}.com", host);
+        prop_assert!(validate_url(&url, "test").is_err(),
+            "URL without scheme '{}' should be rejected", url);
+    }
+
+    #[test]
+    fn fuzz_url_empty_accepted(_ in 0u8..1u8) {
+        prop_assert!(validate_url("", "test").is_ok(),
+            "empty URL should be accepted (optional field)");
+    }
+
+    #[test]
+    fn fuzz_url_scheme_only_rejected(_ in 0u8..1u8) {
+        prop_assert!(validate_url("https://", "test").is_err(),
+            "scheme-only URL should be rejected (missing host)");
+    }
+
+    // ── validate_subnet_name fuzz ───────────────────────────────────
+
+    #[test]
+    fn fuzz_subnet_name_no_panic(s in "\\PC{0,500}") {
+        let _ = validate_subnet_name(&s, "test");
+    }
+
+    #[test]
+    fn fuzz_subnet_name_valid_ascii(s in "[a-zA-Z0-9._-]{1}[a-zA-Z0-9 ._-]{0,99}") {
+        prop_assert!(validate_subnet_name(&s, "test").is_ok(),
+            "valid subnet name '{}' should be accepted", s);
+    }
+
+    #[test]
+    fn fuzz_subnet_name_empty_rejected(spaces in " {0,5}") {
+        prop_assert!(validate_subnet_name(&spaces, "test").is_err(),
+            "empty/spaces subnet name should be rejected");
+    }
+
+    #[test]
+    fn fuzz_subnet_name_control_chars_rejected(
+        prefix in "[a-z]{1,10}",
+        ctrl in 0u8..32u8,
+        suffix in "[a-z]{1,10}",
+    ) {
+        // Embed control char between non-whitespace so trim() can't strip it
+        let name = format!("{}{}{}", prefix, ctrl as char, suffix);
+        prop_assert!(validate_subnet_name(&name, "test").is_err(),
+            "subnet name with control char should be rejected: {:?}", name);
+    }
+
+    // ── validate_github_repo fuzz ───────────────────────────────────
+
+    #[test]
+    fn fuzz_github_repo_no_panic(s in "\\PC{0,500}") {
+        let _ = validate_github_repo(&s);
+    }
+
+    #[test]
+    fn fuzz_github_repo_valid(owner in "[a-zA-Z][a-zA-Z0-9_-]{0,20}", repo in "[a-zA-Z][a-zA-Z0-9_.-]{0,20}") {
+        let full = format!("{}/{}", owner, repo);
+        prop_assert!(validate_github_repo(&full).is_ok(),
+            "valid repo '{}' should be accepted", full);
+    }
+
+    #[test]
+    fn fuzz_github_repo_empty_accepted(_ in 0u8..1u8) {
+        prop_assert!(validate_github_repo("").is_ok(),
+            "empty repo should be accepted (optional)");
+    }
+
+    #[test]
+    fn fuzz_github_repo_no_slash_rejected(name in "[a-zA-Z]{3,20}") {
+        prop_assert!(validate_github_repo(&name).is_err(),
+            "repo without slash '{}' should be rejected", name);
+    }
+
+    #[test]
+    fn fuzz_github_repo_triple_slash_rejected(
+        a in "[a-z]{1,10}", b in "[a-z]{1,10}", c in "[a-z]{1,10}",
+    ) {
+        let full = format!("{}/{}/{}", a, b, c);
+        prop_assert!(validate_github_repo(&full).is_err(),
+            "repo with extra slashes '{}' should be rejected", full);
     }
 }
