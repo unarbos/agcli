@@ -4,10 +4,13 @@ use crate::types::Balance;
 
 /// Truncate an SS58 address for display: "5Gx...abc"
 pub fn short_ss58(addr: &str) -> String {
-    if addr.len() <= 10 {
+    let chars: Vec<char> = addr.chars().collect();
+    if chars.len() <= 10 {
         return addr.to_string();
     }
-    format!("{}...{}", &addr[..4], &addr[addr.len() - 4..])
+    let prefix: String = chars[..4].iter().collect();
+    let suffix: String = chars[chars.len() - 4..].iter().collect();
+    format!("{}...{}", prefix, suffix)
 }
 
 /// Format TAO balance with commas: "1,234.5678"
@@ -29,10 +32,12 @@ pub fn format_tao(balance: Balance) -> String {
 
 /// Truncate a string to `max` chars, appending ellipsis if needed.
 pub fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= max {
         s.to_string()
     } else {
-        format!("{}…", &s[..max - 1])
+        let prefix: String = chars[..max - 1].iter().collect();
+        format!("{}…", prefix)
     }
 }
 

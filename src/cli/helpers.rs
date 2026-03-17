@@ -361,16 +361,18 @@ pub fn validate_ss58(address: &str, label: &str) -> Result<()> {
         );
     }
     // Quick sanity checks before the expensive crypto verification
-    if trimmed.len() < 10 {
+    let char_len = trimmed.chars().count();
+    if char_len < 10 {
         anyhow::bail!(
             "Invalid {} address '{}' — too short. Bittensor SS58 addresses are 48 characters starting with '5'.",
             label, trimmed
         );
     }
-    if trimmed.len() > 60 {
+    if char_len > 60 {
+        let preview: String = trimmed.chars().take(20).collect();
         anyhow::bail!(
             "Invalid {} address '{}' — too long ({} chars). Bittensor SS58 addresses are 48 characters.",
-            label, &trimmed[..20], trimmed.len()
+            label, preview, char_len
         );
     }
     // Check for common mistakes: 0x prefix (Ethereum address), spaces, non-base58 chars

@@ -912,3 +912,418 @@ fn wallet_coldkey_requires_unlock() {
         }
     }
 }
+
+// ──────── Error Recovery Tests ────────
+
+#[test]
+fn corrupted_coldkey_zero_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    // Create a valid wallet first
+    Wallet::create(base, "corrupt_zero", "pass", "default").unwrap();
+    // Overwrite coldkey with zeros (corrupted)
+    let coldkey_path = dir.path().join("corrupt_zero").join("coldkey");
+    std::fs::write(&coldkey_path, vec![0u8; 100]).unwrap();
+    // Attempt to unlock should fail gracefully
+    let mut wallet = Wallet::open(format!("{}/corrupt_zero", base)).unwrap();
+    let result = wallet.unlock_coldkey("pass");
+    assert!(result.is_err(), "corrupted coldkey should fail to decrypt");
+    let msg = result.unwrap_err().to_string();
+    assert!(
+        msg.contains("Decryption failed") || msg.contains("wrong password") || msg.contains("decrypt") || msg.contains("Failed"),
+        "error should describe decryption failure, got: {}",
+        msg
+    );
+}
+
+#[test]
+fn corrupted_coldkey_truncated() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "corrupt_trunc", "pass", "default").unwrap();
+    // Write a file that's too short to contain salt + nonce
+    let coldkey_path = dir.path().join("corrupt_trunc").join("coldkey");
+    std::fs::write(&coldkey_path, &[1, 2, 3, 4, 5]).unwrap();
+    let mut wallet = Wallet::open(format!("{}/corrupt_trunc", base)).unwrap();
+    let result = wallet.unlock_coldkey("pass");
+    assert!(result.is_err(), "truncated coldkey should fail");
+    let msg = result.unwrap_err().to_string();
+    assert!(
+        msg.contains("corrupted") || msg.contains("too short") || msg.contains("decrypt"),
+        "error should describe corruption, got: {}", msg
+    );
+}
+
+#[test]
+fn corrupted_coldkey_random_garbage() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "corrupt_rand", "pass", "default").unwrap();
+    // Fill with random-looking data (proper length but wrong content)
+    let coldkey_path = dir.path().join("corrupt_rand").join("coldkey");
+    let garbage: Vec<u8> = (0..200).map(|i| (i * 37 + 13) as u8).collect();
+    std::fs::write(&coldkey_path, garbage).unwrap();
+    let mut wallet = Wallet::open(format!("{}/corrupt_rand", base)).unwrap();
+    let result = wallet.unlock_coldkey("pass");
+    assert!(result.is_err(), "garbage coldkey should fail");
+}
+
+#[test]
+fn corrupted_coldkey_empty_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "corrupt_empty", "pass", "default").unwrap();
+    let coldkey_path = dir.path().join("corrupt_empty").join("coldkey");
+    std::fs::write(&coldkey_path, &[]).unwrap();
+    let mut wallet = Wallet::open(format!("{}/corrupt_empty", base)).unwrap();
+    let result = wallet.unlock_coldkey("pass");
+    assert!(result.is_err(), "empty coldkey should fail");
+    let msg = format!("{:#}", result.unwrap_err());
+    assert!(
+        msg.contains("corrupted") || msg.contains("too short") || msg.contains("decrypt"),
+        "error for empty file: {}", msg
+    );
+}
+
+#[test]
+fn wrong_password_gives_helpful_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "pw_test", "correct_password_123", "default").unwrap();
+    let mut wallet = Wallet::open(format!("{}/pw_test", base)).unwrap();
+    let result = wallet.unlock_coldkey("wrong_password");
+    assert!(result.is_err());
+    // Use the full error chain for assertions
+    let msg = format!("{:#}", result.unwrap_err());
+    assert!(
+        msg.contains("wrong password") || msg.contains("Decryption failed") || msg.contains("decrypt"),
+        "error should mention wrong password or decryption: {}", msg
+    );
+}
+
+#[test]
+fn empty_password_works_but_warns() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    // Empty password should work (we just warn about it)
+    let result = Wallet::create(base, "empty_pw", "", "default");
+    assert!(result.is_ok(), "empty password should be allowed: {:?}", result.err());
+    let mut wallet = Wallet::open(format!("{}/empty_pw", base)).unwrap();
+    assert!(wallet.unlock_coldkey("").is_ok(), "empty password unlock should work");
+}
+
+#[test]
+fn unicode_password_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let password = "日本語パスワード🔑";
+    let result = Wallet::create(base, "unicode_pw", password, "default");
+    assert!(result.is_ok(), "unicode password should work: {:?}", result.err());
+    let mut wallet = Wallet::open(format!("{}/unicode_pw", base)).unwrap();
+    assert!(wallet.unlock_coldkey(password).is_ok(), "should unlock with same unicode pw");
+    assert!(wallet.unlock_coldkey("wrong").is_err(), "should fail with wrong pw");
+}
+
+#[test]
+fn very_long_password_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let password = "a".repeat(10000);
+    let result = Wallet::create(base, "long_pw", &password, "default");
+    assert!(result.is_ok());
+    let mut wallet = Wallet::open(format!("{}/long_pw", base)).unwrap();
+    assert!(wallet.unlock_coldkey(&password).is_ok());
+}
+
+#[test]
+fn missing_coldkey_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "missing_ck", "pass", "default").unwrap();
+    // Delete the coldkey file
+    std::fs::remove_file(dir.path().join("missing_ck").join("coldkey")).unwrap();
+    let mut wallet = Wallet::open(format!("{}/missing_ck", base)).unwrap();
+    let result = wallet.unlock_coldkey("pass");
+    assert!(result.is_err(), "missing coldkey should fail");
+    // Use full error chain — the inner error has the filesystem details
+    let msg = format!("{:#}", result.unwrap_err());
+    let msg_lower = msg.to_lowercase();
+    assert!(
+        msg_lower.contains("read") || msg_lower.contains("no such file") || msg_lower.contains("not found") || msg_lower.contains("cannot") || msg_lower.contains("decrypt"),
+        "error for missing file: {}", msg
+    );
+}
+
+#[test]
+fn missing_hotkey_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "missing_hk", "pass", "default").unwrap();
+    // Delete the hotkey
+    std::fs::remove_file(dir.path().join("missing_hk").join("hotkeys").join("default")).unwrap();
+    let mut wallet = Wallet::open(format!("{}/missing_hk", base)).unwrap();
+    let result = wallet.load_hotkey("default");
+    assert!(result.is_err(), "missing hotkey should fail");
+}
+
+#[test]
+fn corrupted_hotkey_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "corrupt_hk", "pass", "default").unwrap();
+    let hk_path = dir.path().join("corrupt_hk").join("hotkeys").join("default");
+    std::fs::write(&hk_path, "not_a_valid_mnemonic_at_all_xyz").unwrap();
+    let mut wallet = Wallet::open(format!("{}/corrupt_hk", base)).unwrap();
+    let result = wallet.load_hotkey("default");
+    assert!(result.is_err(), "corrupted hotkey should fail to load");
+}
+
+#[test]
+fn missing_coldkeypub_still_opens() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "no_pub", "pass", "default").unwrap();
+    // Delete the public key file
+    std::fs::remove_file(dir.path().join("no_pub").join("coldkeypub.txt")).unwrap();
+    // Wallet should still open (coldkey_ss58 will be None)
+    let wallet = Wallet::open(format!("{}/no_pub", base)).unwrap();
+    assert!(wallet.coldkey_ss58().is_none(), "coldkey_ss58 should be None when pubfile missing");
+    // But unlock should still work
+    let mut wallet = wallet;
+    assert!(wallet.unlock_coldkey("pass").is_ok(), "should still unlock without pubfile");
+    assert!(wallet.coldkey_ss58().is_some(), "coldkey_ss58 should be populated after unlock");
+}
+
+#[test]
+fn nonexistent_hotkey_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    Wallet::create(base, "no_hk_name", "pass", "default").unwrap();
+    let mut wallet = Wallet::open(format!("{}/no_hk_name", base)).unwrap();
+    let result = wallet.load_hotkey("nonexistent_hotkey");
+    assert!(result.is_err(), "loading nonexistent hotkey should fail");
+}
+
+#[test]
+fn wallet_open_nonexistent_directory() {
+    let result = Wallet::open("/tmp/nonexistent_wallet_dir_xyz_12345");
+    // Opening should succeed (it's lazy), but there's no coldkeypub
+    match result {
+        Ok(w) => assert!(w.coldkey_ss58().is_none()),
+        Err(_) => {} // Also acceptable
+    }
+}
+
+// ──────── Wallet Sign/Verify Integration ────────
+
+#[test]
+fn sign_verify_roundtrip_multiple_messages() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (mut wallet, _, _) = Wallet::create(base, "sv_multi", "pass", "default").unwrap();
+    // wallet is already unlocked from create
+
+    let messages = [
+        "Hello, Bittensor!",
+        "",
+        "a",
+        &"x".repeat(10000),
+        "日本語メッセージ",
+        "\x00\x01\x02\x7f",
+        "   spaces   ",
+        "line1\nline2\nline3",
+    ];
+
+    let pair = wallet.coldkey().unwrap().clone();
+    for msg in &messages {
+        let msg_bytes = msg.as_bytes();
+        let sig = pair.sign(msg_bytes);
+        assert!(
+            sr25519::Pair::verify(&sig, msg_bytes, &pair.public()),
+            "signature should verify for message: {:?}", msg
+        );
+        // Wrong message should not verify
+        let wrong = format!("{}_tampered", msg);
+        assert!(
+            !sr25519::Pair::verify(&sig, wrong.as_bytes(), &pair.public()),
+            "tampered message should NOT verify"
+        );
+    }
+}
+
+#[test]
+fn sign_with_different_keys_not_interchangeable() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (w1, _, _) = Wallet::create(base, "sv_key1", "pass1", "default").unwrap();
+    let (w2, _, _) = Wallet::create(base, "sv_key2", "pass2", "default").unwrap();
+
+    let msg = b"cross-key test message";
+    let sig1 = w1.coldkey().unwrap().sign(msg);
+    let sig2 = w2.coldkey().unwrap().sign(msg);
+
+    // Each signature verifies with its own key
+    assert!(sr25519::Pair::verify(&sig1, msg, &w1.coldkey().unwrap().public()));
+    assert!(sr25519::Pair::verify(&sig2, msg, &w2.coldkey().unwrap().public()));
+
+    // Cross-verification should fail
+    assert!(!sr25519::Pair::verify(&sig1, msg, &w2.coldkey().unwrap().public()),
+        "sig1 should not verify with key2");
+    assert!(!sr25519::Pair::verify(&sig2, msg, &w1.coldkey().unwrap().public()),
+        "sig2 should not verify with key1");
+}
+
+#[test]
+fn sign_verify_after_unlock_reimport() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (_wallet, mnemonic, _) = Wallet::create(base, "sv_reimport", "pass", "default").unwrap();
+    let pair_original = _wallet.coldkey().unwrap().clone();
+    let msg = b"persistence test";
+    let sig = pair_original.sign(msg);
+
+    // Re-import from mnemonic into a new wallet
+    let reimported = Wallet::import_from_mnemonic(base, "sv_reimported", &mnemonic, "newpass").unwrap();
+    let pair_reimported = reimported.coldkey().unwrap().clone();
+
+    // Keys should be the same
+    assert_eq!(
+        keypair::to_ss58(&pair_original.public(), 42),
+        keypair::to_ss58(&pair_reimported.public(), 42),
+        "reimported key should have same SS58 address"
+    );
+
+    // Signature from original should verify with reimported key
+    assert!(
+        sr25519::Pair::verify(&sig, msg, &pair_reimported.public()),
+        "sig from original should verify with reimported key"
+    );
+}
+
+#[test]
+fn hotkey_coldkey_isolation() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (mut wallet, _, _) = Wallet::create(base, "isolation", "pass", "default").unwrap();
+    wallet.load_hotkey("default").unwrap();
+
+    let cold = wallet.coldkey().unwrap().clone();
+    let hot = wallet.hotkey().unwrap().clone();
+
+    // Keys should be different
+    assert_ne!(
+        cold.public(), hot.public(),
+        "coldkey and hotkey should be different keys"
+    );
+
+    // Signatures are not interchangeable
+    let msg = b"isolation test";
+    let cold_sig = cold.sign(msg);
+    let hot_sig = hot.sign(msg);
+
+    assert!(sr25519::Pair::verify(&cold_sig, msg, &cold.public()));
+    assert!(sr25519::Pair::verify(&hot_sig, msg, &hot.public()));
+    assert!(!sr25519::Pair::verify(&cold_sig, msg, &hot.public()));
+    assert!(!sr25519::Pair::verify(&hot_sig, msg, &cold.public()));
+}
+
+#[test]
+fn wallet_create_import_create_sequence() {
+    // Test: create wallet A, import into B, create C — all should have independent keys
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    let (wa, mn_a, _) = Wallet::create(base, "seq_a", "pass", "default").unwrap();
+    let wb = Wallet::import_from_mnemonic(base, "seq_b", &mn_a, "pass2").unwrap();
+    let (wc, _, _) = Wallet::create(base, "seq_c", "pass3", "default").unwrap();
+
+    let ss58_a = keypair::to_ss58(&wa.coldkey().unwrap().public(), 42);
+    let ss58_b = keypair::to_ss58(&wb.coldkey().unwrap().public(), 42);
+    let ss58_c = keypair::to_ss58(&wc.coldkey().unwrap().public(), 42);
+
+    // A and B should match (same mnemonic)
+    assert_eq!(ss58_a, ss58_b, "imported wallet should match original");
+    // C should be different
+    assert_ne!(ss58_a, ss58_c, "new wallet should have different key");
+}
+
+#[test]
+fn wallet_list_hotkeys_with_lock_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let (wallet, _, _) = Wallet::create(base, "list_hk", "pass", "default").unwrap();
+    // Create a lockfile and hidden file in hotkeys dir
+    let hk_dir = wallet.path.join("hotkeys");
+    std::fs::write(hk_dir.join("default.lock"), "").unwrap();
+    std::fs::write(hk_dir.join(".hidden"), "").unwrap();
+    std::fs::write(hk_dir.join("miner1"), "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+
+    let hotkeys = wallet.list_hotkeys().unwrap();
+    assert!(hotkeys.contains(&"default".to_string()));
+    assert!(hotkeys.contains(&"miner1".to_string()));
+    assert!(!hotkeys.iter().any(|h| h.contains(".lock")), "lock files should be filtered");
+    assert!(!hotkeys.iter().any(|h| h.starts_with('.')), "hidden files should be filtered");
+}
+
+#[test]
+fn dev_key_wallet_sign_verify() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let wallet = Wallet::create_from_uri(base, "//Alice", "pass").unwrap();
+    let pair = wallet.coldkey().unwrap().clone();
+    let msg = b"dev key test";
+    let sig = pair.sign(msg);
+    assert!(sr25519::Pair::verify(&sig, msg, &pair.public()));
+    // Alice's SS58 should be known
+    let ss58 = keypair::to_ss58(&pair.public(), 42);
+    assert!(ss58.starts_with('5'), "Alice SS58 should start with 5: {}", ss58);
+}
+
+#[test]
+fn dev_key_wallet_reopen_unlock() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+    let original = Wallet::create_from_uri(base, "//Bob", "testpw").unwrap();
+    let original_ss58 = keypair::to_ss58(&original.coldkey().unwrap().public(), 42);
+
+    // Reopen and unlock
+    let mut reopened = Wallet::open(format!("{}/bob", base)).unwrap();
+    reopened.unlock_coldkey("testpw").unwrap();
+    let reopened_ss58 = keypair::to_ss58(&reopened.coldkey().unwrap().public(), 42);
+    assert_eq!(original_ss58, reopened_ss58, "reopened dev key should match");
+}
+
+// ──────── Mnemonic Determinism Integration ────────
+
+#[test]
+fn same_mnemonic_always_produces_same_address() {
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    let w1 = Wallet::import_from_mnemonic(base, "det1", mnemonic, "pw1").unwrap();
+    let w2 = Wallet::import_from_mnemonic(base, "det2", mnemonic, "pw2").unwrap();
+
+    let ss58_1 = keypair::to_ss58(&w1.coldkey().unwrap().public(), 42);
+    let ss58_2 = keypair::to_ss58(&w2.coldkey().unwrap().public(), 42);
+    assert_eq!(ss58_1, ss58_2, "same mnemonic with different passwords should produce same key");
+}
+
+#[test]
+fn wallet_import_then_unlock_then_sign() {
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let dir = tempfile::tempdir().unwrap();
+    let base = dir.path().to_str().unwrap();
+
+    // Import, close, reopen, unlock, sign, verify
+    let w = Wallet::import_from_mnemonic(base, "flow", mnemonic, "flowpw").unwrap();
+    let original_ss58 = w.coldkey_ss58().unwrap().to_string();
+    drop(w);
+
+    let mut reopened = Wallet::open(format!("{}/flow", base)).unwrap();
+    assert_eq!(reopened.coldkey_ss58().unwrap(), original_ss58);
+    reopened.unlock_coldkey("flowpw").unwrap();
+    let pair = reopened.coldkey().unwrap().clone();
+    let sig = pair.sign(b"flow test");
+    assert!(sr25519::Pair::verify(&sig, b"flow test", &pair.public()));
+}

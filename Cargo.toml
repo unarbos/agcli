@@ -76,3 +76,4 @@ sdk-only = []
 
 [dev-dependencies]
 tempfile = "3.27.0"
+proptest = "1.6"
