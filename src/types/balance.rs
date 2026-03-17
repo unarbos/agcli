@@ -22,11 +22,21 @@ impl Balance {
         Self { rao }
     }
 
-    /// Create from TAO (floating point, truncated to RAO precision).
+    /// Create from TAO (floating point, rounded to nearest RAO).
+    ///
+    /// Returns `Balance::ZERO` for negative, NaN, or infinite inputs.
     pub fn from_tao(tao: f64) -> Self {
-        Self {
-            rao: (tao * RAO_PER_TAO as f64) as u64,
+        if !tao.is_finite() || tao < 0.0 {
+            return Self::ZERO;
         }
+        let rao_f = (tao * RAO_PER_TAO as f64).round();
+        // After rounding, clamp to u64 range (saturating cast)
+        let rao = if rao_f >= u64::MAX as f64 {
+            u64::MAX
+        } else {
+            rao_f as u64
+        };
+        Self { rao }
     }
 
     /// Return value in RAO.
@@ -180,5 +190,53 @@ mod tests {
         let json = serde_json::to_string(&b).unwrap();
         let deserialized: Balance = serde_json::from_str(&json).unwrap();
         assert_eq!(b, deserialized);
+    }
+
+    // ── Fix: from_tao input validation (Issues 652, 657) ──
+
+    #[test]
+    fn from_tao_negative_returns_zero() {
+        assert_eq!(Balance::from_tao(-1.0), Balance::ZERO);
+        assert_eq!(Balance::from_tao(-0.001), Balance::ZERO);
+        assert_eq!(Balance::from_tao(f64::MIN), Balance::ZERO);
+    }
+
+    #[test]
+    fn from_tao_nan_returns_zero() {
+        assert_eq!(Balance::from_tao(f64::NAN), Balance::ZERO);
+    }
+
+    #[test]
+    fn from_tao_infinity_returns_zero() {
+        assert_eq!(Balance::from_tao(f64::INFINITY), Balance::ZERO);
+        assert_eq!(Balance::from_tao(f64::NEG_INFINITY), Balance::ZERO);
+    }
+
+    #[test]
+    fn from_tao_rounds_correctly() {
+        // 0.1 TAO should round to exactly 100_000_000 RAO, not 99_999_999
+        let b = Balance::from_tao(0.1);
+        assert_eq!(b.rao(), 100_000_000);
+    }
+
+    #[test]
+    fn from_tao_point_three() {
+        // 0.3 TAO — another f64 representation edge case
+        let b = Balance::from_tao(0.3);
+        assert_eq!(b.rao(), 300_000_000);
+    }
+
+    #[test]
+    fn from_tao_large_value_saturates() {
+        // Value larger than u64::MAX RAO should saturate
+        let b = Balance::from_tao(20_000_000_000.0); // 20B TAO > u64::MAX RAO
+        assert_eq!(b.rao(), u64::MAX);
+    }
+
+    #[test]
+    fn from_tao_negative_zero_is_zero() {
+        // -0.0 is non-negative per IEEE 754
+        let b = Balance::from_tao(-0.0);
+        assert_eq!(b, Balance::ZERO);
     }
 }

@@ -46,7 +46,7 @@ fn ip_to_string(ip: u128, ip_type: u8) -> String {
 
 impl From<GenNeuronInfoLite> for NeuronInfoLite {
     fn from(n: GenNeuronInfoLite) -> Self {
-        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).sum();
+        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
         NeuronInfoLite {
             hotkey: account_to_ss58(&n.hotkey),
             coldkey: account_to_ss58(&n.coldkey),
@@ -72,7 +72,7 @@ impl From<GenNeuronInfoLite> for NeuronInfoLite {
 
 impl From<GenNeuronInfo> for NeuronInfo {
     fn from(n: GenNeuronInfo) -> Self {
-        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).sum();
+        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
         NeuronInfo {
             hotkey: account_to_ss58(&n.hotkey),
             coldkey: account_to_ss58(&n.coldkey),
@@ -125,7 +125,9 @@ impl From<GenSubnetInfo> for SubnetInfo {
             difficulty: s.difficulty,
             immunity_period: s.immunity_period,
             owner: account_to_ss58(&s.owner),
-            registration_allowed: true,
+            // GenSubnetInfo lacks registration_allowed — default to false (unknown).
+            // Callers should check SubnetHyperparameters for the authoritative value.
+            registration_allowed: false,
         }
     }
 }
@@ -173,7 +175,7 @@ impl From<GenDelegateInfo> for DelegateInfo {
             .nominators
             .iter()
             .flat_map(|(_, stakes)| stakes.iter().map(|(_, s)| s.0))
-            .sum();
+            .fold(0u64, u64::saturating_add);
         DelegateInfo {
             hotkey: account_to_ss58(&d.delegate_ss58),
             owner: account_to_ss58(&d.owner_ss58),
@@ -183,7 +185,7 @@ impl From<GenDelegateInfo> for DelegateInfo {
                 .nominators
                 .into_iter()
                 .map(|(a, stakes)| {
-                    let total: u64 = stakes.iter().map(|(_, s)| s.0).sum();
+                    let total: u64 = stakes.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
                     (account_to_ss58(&a), Balance::from_rao(total))
                 })
                 .collect(),

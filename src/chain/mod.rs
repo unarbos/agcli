@@ -85,6 +85,37 @@ where
     Err(last_err.unwrap_or_else(|| anyhow::anyhow!("{}: all retries exhausted", label)))
 }
 
+/// Derive a short cache prefix from a WebSocket URL to namespace disk cache entries.
+/// Recognizes well-known Bittensor endpoints; falls back to host-based prefix.
+fn url_to_cache_prefix(url: &str) -> String {
+    let lower = url.to_lowercase();
+    // Check more specific patterns first
+    if lower.contains("test.finney") || lower.contains("testnet") {
+        return "test".to_string();
+    }
+    if lower.contains("entrypoint-finney") || lower.contains("finney.opentensor") {
+        return "finney".to_string();
+    }
+    if lower.contains("127.0.0.1") || lower.contains("localhost") {
+        return "local".to_string();
+    }
+    if lower.contains("archive") || lower.contains("onfinality") {
+        return "archive".to_string();
+    }
+    // Fallback: use a sanitized host portion
+    let host = lower
+        .trim_start_matches("wss://")
+        .trim_start_matches("ws://")
+        .split(':')
+        .next()
+        .unwrap_or("unknown")
+        .split('/')
+        .next()
+        .unwrap_or("unknown")
+        .replace('.', "_");
+    host
+}
+
 /// Signer type for extrinsic submission.
 pub type Signer = PairSigner<SubtensorConfig, sr25519::Pair>;
 
@@ -118,10 +149,13 @@ impl Client {
             .await
             .with_context(|| "Failed to initialize subxt client from RPC connection")?;
         tracing::info!("Connected to {} in {:?}", url, start.elapsed());
+        // Derive a short network prefix from the URL for disk cache namespacing.
+        // This prevents cross-network cache contamination (e.g. finney data served to testnet).
+        let net_prefix = url_to_cache_prefix(url);
         Ok(Self {
             inner,
             rpc,
-            cache: QueryCache::new(),
+            cache: QueryCache::new_with_network(&net_prefix),
             dry_run: false,
             url: url.to_string(),
         })
@@ -1280,5 +1314,44 @@ mod tests {
         assert!(is_transient_error("request timeout after 30s"));
         assert!(!is_transient_error("Invalid SS58 address"));
         assert!(!is_transient_error("NotEnoughBalance"));
+    }
+
+    // ── Fix: disk cache network namespacing (Issue 678) ──
+
+    #[test]
+    fn url_to_cache_prefix_finney() {
+        assert_eq!(url_to_cache_prefix("wss://entrypoint-finney.opentensor.ai:443"), "finney");
+    }
+
+    #[test]
+    fn url_to_cache_prefix_test() {
+        assert_eq!(url_to_cache_prefix("wss://test.finney.opentensor.ai:443"), "test");
+    }
+
+    #[test]
+    fn url_to_cache_prefix_local() {
+        assert_eq!(url_to_cache_prefix("ws://127.0.0.1:9944"), "local");
+        assert_eq!(url_to_cache_prefix("ws://localhost:9944"), "local");
+    }
+
+    #[test]
+    fn url_to_cache_prefix_archive() {
+        assert_eq!(url_to_cache_prefix("wss://bittensor-finney.api.onfinality.io/public-ws"), "archive");
+    }
+
+    #[test]
+    fn url_to_cache_prefix_unknown() {
+        let prefix = url_to_cache_prefix("wss://my-custom-node.example.com:443");
+        assert_eq!(prefix, "my-custom-node_example_com");
+    }
+
+    #[test]
+    fn different_networks_produce_different_prefixes() {
+        let finney = url_to_cache_prefix("wss://entrypoint-finney.opentensor.ai:443");
+        let test = url_to_cache_prefix("wss://test.finney.opentensor.ai:443");
+        let local = url_to_cache_prefix("ws://127.0.0.1:9944");
+        assert_ne!(finney, test);
+        assert_ne!(finney, local);
+        assert_ne!(test, local);
     }
 }

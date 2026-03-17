@@ -21,12 +21,17 @@ pub fn format_tao(balance: Balance) -> String {
     if tao >= 1_000.0 {
         let whole = tao as u64;
         let frac = tao - whole as f64;
-        format!(
-            "{},{:03}.{:04}",
-            whole / 1000,
-            whole % 1000,
-            (frac * 10000.0) as u64
-        )
+        let frac_part = (frac * 10000.0).round() as u64;
+        // Build whole part with proper comma separators for any magnitude
+        let whole_str = whole.to_string();
+        let mut comma_str = String::with_capacity(whole_str.len() + whole_str.len() / 3);
+        for (i, c) in whole_str.chars().enumerate() {
+            if i > 0 && (whole_str.len() - i) % 3 == 0 {
+                comma_str.push(',');
+            }
+            comma_str.push(c);
+        }
+        format!("{}.{:04}", comma_str, frac_part)
     } else {
         format!("{:.4}", tao)
     }
@@ -53,9 +58,9 @@ pub fn u16_to_float(val: u16) -> f64 {
     val as f64 / 65535.0
 }
 
-/// Convert f64 in [0, 1] to u16 weight.
+/// Convert f64 in [0, 1] to u16 weight (rounded to nearest).
 pub fn float_to_u16(val: f64) -> u16 {
-    (val.clamp(0.0, 1.0) * 65535.0) as u16
+    (val.clamp(0.0, 1.0) * 65535.0).round() as u16
 }
 
 #[cfg(test)]
@@ -109,5 +114,53 @@ mod tests {
         let b = Balance::from_tao(12345.6789);
         let s = format_tao(b);
         assert!(s.contains(","));
+    }
+
+    // ── Fix: format_tao for values >= 1M TAO (Issue 653) ──
+
+    #[test]
+    fn format_tao_million() {
+        let b = Balance::from_rao(1_234_567_890_000_000);
+        let s = format_tao(b);
+        assert!(s.starts_with("1,234,567"), "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_billion() {
+        // 9,876,543 TAO — verifies multi-comma formatting
+        let b = Balance::from_rao(9_876_543_000_000_000);
+        let s = format_tao(b);
+        assert!(s.starts_with("9,876,543"), "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_thousands() {
+        // Verify existing thousands formatting still works
+        let b = Balance::from_rao(1_500_000_000_000); // 1,500 TAO
+        let s = format_tao(b);
+        assert!(s.starts_with("1,500"), "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_exact_1000() {
+        let b = Balance::from_rao(1_000_000_000_000); // exactly 1,000 TAO
+        let s = format_tao(b);
+        assert!(s.starts_with("1,000"), "got: {}", s);
+    }
+
+    // ── Fix: float_to_u16 rounding (Issue 659) ──
+
+    #[test]
+    fn float_to_u16_rounds_not_truncates() {
+        // 0.5 should map to 32768 (rounded), not 32767 (truncated)
+        assert_eq!(float_to_u16(0.5), 32768);
+    }
+
+    #[test]
+    fn float_to_u16_roundtrip_half() {
+        // Roundtrip: 0.5 → u16 → float should be close to 0.5
+        let u = float_to_u16(0.5);
+        let back = u16_to_float(u);
+        assert!((back - 0.5).abs() < 0.0001, "got: {}", back);
     }
 }

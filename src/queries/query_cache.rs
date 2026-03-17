@@ -40,12 +40,22 @@ pub struct QueryCache {
     neurons_lite: Cache<u16, Arc<Vec<NeuronInfoLite>>>,
     /// Whether to use the disk cache layer. Disabled for tests with custom TTLs.
     use_disk: bool,
+    /// Network prefix for disk cache keys (e.g. "finney", "test") to prevent
+    /// cross-network data contamination (Issue 678).
+    network_prefix: String,
 }
 
 impl QueryCache {
     /// Create a new cache with the default TTL and disk caching enabled.
     pub fn new() -> Self {
         Self::with_ttl_and_disk(Duration::from_secs(DEFAULT_TTL_SECS), true)
+    }
+
+    /// Create a new cache with network-namespaced disk keys.
+    pub fn new_with_network(network: &str) -> Self {
+        let mut cache = Self::with_ttl_and_disk(Duration::from_secs(DEFAULT_TTL_SECS), true);
+        cache.network_prefix = network.to_string();
+        cache
     }
 
     /// Create a cache with a custom TTL. Disk caching is disabled for custom TTLs
@@ -63,6 +73,16 @@ impl QueryCache {
             delegates: Cache::builder().time_to_live(ttl).max_capacity(1).build(),
             neurons_lite: Cache::builder().time_to_live(ttl).max_capacity(100).build(),
             use_disk,
+            network_prefix: String::new(),
+        }
+    }
+
+    /// Return a disk cache key namespaced by network.
+    fn disk_key(&self, base: &str) -> String {
+        if self.network_prefix.is_empty() {
+            base.to_string()
+        } else {
+            format!("{}_{}", self.network_prefix, base)
         }
     }
 
@@ -75,11 +95,12 @@ impl QueryCache {
         Fut: std::future::Future<Output = anyhow::Result<Vec<SubnetInfo>>>,
     {
         let disk = self.use_disk;
+        let dk = self.disk_key("all_subnets");
         self.subnets
             .try_get_with((), async {
                 // Check disk cache before hitting chain
                 if disk {
-                    if let Some(cached) = super::disk_cache::get::<Vec<SubnetInfo>>("all_subnets", DISK_TTL) {
+                    if let Some(cached) = super::disk_cache::get::<Vec<SubnetInfo>>(&dk, DISK_TTL) {
                         tracing::debug!(count = cached.len(), "cache hit: all_subnets (disk)");
                         return Ok(Arc::new(cached)) as anyhow::Result<_>;
                     }
@@ -91,7 +112,7 @@ impl QueryCache {
                         tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_subnets");
                         // Write through to disk cache (best-effort)
                         if disk {
-                            if let Err(e) = super::disk_cache::put("all_subnets", &data) {
+                            if let Err(e) = super::disk_cache::put(&dk, &data) {
                                 tracing::warn!(error = %e, "failed to write all_subnets to disk cache");
                             }
                         }
@@ -100,7 +121,7 @@ impl QueryCache {
                     Err(e) => {
                         // Stale-while-error: serve expired disk cache on chain failure
                         if disk {
-                            if let Some(stale) = super::disk_cache::get_stale::<Vec<SubnetInfo>>("all_subnets") {
+                            if let Some(stale) = super::disk_cache::get_stale::<Vec<SubnetInfo>>(&dk) {
                                 tracing::warn!(count = stale.len(), error = %e, "chain fetch failed, serving stale all_subnets from disk cache");
                                 return Ok(Arc::new(stale));
                             }
@@ -126,11 +147,12 @@ impl QueryCache {
     {
         let per_netuid = self.dynamic_by_netuid.clone();
         let disk = self.use_disk;
+        let dk = self.disk_key("all_dynamic_info");
         self.all_dynamic
             .try_get_with((), async {
                 // Check disk cache before hitting chain
                 if disk {
-                    if let Some(cached) = super::disk_cache::get::<Vec<DynamicInfo>>("all_dynamic_info", DISK_TTL) {
+                    if let Some(cached) = super::disk_cache::get::<Vec<DynamicInfo>>(&dk, DISK_TTL) {
                         tracing::debug!(count = cached.len(), "cache hit: all_dynamic_info (disk)");
                         let data = Arc::new(cached);
                         // Also populate per-netuid in-memory cache
@@ -147,7 +169,7 @@ impl QueryCache {
                         tracing::debug!(elapsed_ms = start.elapsed().as_millis() as u64, count = data.len(), "fetched all_dynamic_info");
                         // Write through to disk cache (best-effort)
                         if disk {
-                            if let Err(e) = super::disk_cache::put("all_dynamic_info", &data) {
+                            if let Err(e) = super::disk_cache::put(&dk, &data) {
                                 tracing::warn!(error = %e, "failed to write all_dynamic_info to disk cache");
                             }
                         }
@@ -163,7 +185,7 @@ impl QueryCache {
                     Err(e) => {
                         // Stale-while-error: serve expired disk cache on chain failure
                         if disk {
-                            if let Some(stale) = super::disk_cache::get_stale::<Vec<DynamicInfo>>("all_dynamic_info") {
+                            if let Some(stale) = super::disk_cache::get_stale::<Vec<DynamicInfo>>(&dk) {
                                 tracing::warn!(count = stale.len(), error = %e, "chain fetch failed, serving stale all_dynamic_info from disk cache");
                                 let data = Arc::new(stale);
                                 for d in data.iter() {
@@ -278,8 +300,8 @@ impl QueryCache {
         self.delegates.invalidate_all();
         self.neurons_lite.invalidate_all();
         if self.use_disk {
-            super::disk_cache::remove("all_subnets");
-            super::disk_cache::remove("all_dynamic_info");
+            super::disk_cache::remove(&self.disk_key("all_subnets"));
+            super::disk_cache::remove(&self.disk_key("all_dynamic_info"));
         }
     }
 }
