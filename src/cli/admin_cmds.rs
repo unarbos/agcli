@@ -192,6 +192,135 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             Ok(())
         }
 
+        AdminCommands::SetDefaultTake { take, sudo_key } => {
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_default_take(client, &pair, take).await?;
+            print_tx_result(ctx.output, &hash, &format!("Default take set to {}", take));
+            Ok(())
+        }
+
+        AdminCommands::SetTxRateLimit { limit, sudo_key } => {
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_tx_rate_limit(client, &pair, limit).await?;
+            print_tx_result(ctx.output, &hash, &format!("TX rate limit set to {}", limit));
+            Ok(())
+        }
+
+        AdminCommands::SetMinDifficulty { netuid, difficulty, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_min_difficulty(client, &pair, netuid, difficulty).await?;
+            print_tx_result(ctx.output, &hash, &format!("Min difficulty set to {} on SN{}", difficulty, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetMaxDifficulty { netuid, difficulty, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_max_difficulty(client, &pair, netuid, difficulty).await?;
+            print_tx_result(ctx.output, &hash, &format!("Max difficulty set to {} on SN{}", difficulty, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetAdjustmentInterval { netuid, interval, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_adjustment_interval(client, &pair, netuid, interval).await?;
+            print_tx_result(ctx.output, &hash, &format!("Adjustment interval set to {} on SN{}", interval, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetKappa { netuid, kappa, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_kappa(client, &pair, netuid, kappa).await?;
+            print_tx_result(ctx.output, &hash, &format!("Kappa set to {} on SN{}", kappa, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetRho { netuid, rho, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_rho(client, &pair, netuid, rho).await?;
+            print_tx_result(ctx.output, &hash, &format!("Rho set to {} on SN{}", rho, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetMinBurn { netuid, burn, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_min_burn(client, &pair, netuid, burn).await?;
+            print_tx_result(ctx.output, &hash, &format!("Min burn set to {} on SN{}", burn, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetMaxBurn { netuid, burn, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_max_burn(client, &pair, netuid, burn).await?;
+            print_tx_result(ctx.output, &hash, &format!("Max burn set to {} on SN{}", burn, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetLiquidAlpha { netuid, enabled, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_liquid_alpha_enabled(client, &pair, netuid, enabled).await?;
+            let state = if enabled { "enabled" } else { "disabled" };
+            print_tx_result(ctx.output, &hash, &format!("Liquid alpha {} on SN{}", state, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetAlphaValues { netuid, alpha_low, alpha_high, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_alpha_values(client, &pair, netuid, alpha_low, alpha_high).await?;
+            print_tx_result(ctx.output, &hash, &format!("Alpha values set to low={}, high={} on SN{}", alpha_low, alpha_high, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetYuma3 { netuid, enabled, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_yuma3_enabled(client, &pair, netuid, enabled).await?;
+            let state = if enabled { "enabled" } else { "disabled" };
+            print_tx_result(ctx.output, &hash, &format!("Yuma3 {} on SN{}", state, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetBondsPenalty { netuid, penalty, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_bonds_penalty(client, &pair, netuid, penalty).await?;
+            print_tx_result(ctx.output, &hash, &format!("Bonds penalty set to {} on SN{}", penalty, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetStakeThreshold { threshold, sudo_key } => {
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_stake_threshold(client, &pair, threshold).await?;
+            print_tx_result(ctx.output, &hash, &format!("Stake threshold set to {}", threshold));
+            Ok(())
+        }
+
+        AdminCommands::SetNetworkRegistration { netuid, allowed, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_network_registration_allowed(client, &pair, netuid, allowed).await?;
+            let state = if allowed { "enabled" } else { "disabled" };
+            print_tx_result(ctx.output, &hash, &format!("Network registration {} on SN{}", state, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetPowRegistration { netuid, allowed, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_network_pow_registration_allowed(client, &pair, netuid, allowed).await?;
+            let state = if allowed { "enabled" } else { "disabled" };
+            print_tx_result(ctx.output, &hash, &format!("POW registration {} on SN{}", state, netuid));
+            Ok(())
+        }
+
         AdminCommands::Raw {
             call,
             args,

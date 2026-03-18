@@ -211,12 +211,28 @@ pub(super) async fn handle_identity(
             url,
             github,
             description,
+            image,
         } => {
-            let _ = (&name, &url, &github, &description);
-            anyhow::bail!(
-                "Account-level identity (Registry pallet) is not yet supported.\n\
-                 Use 'agcli identity set-subnet' to set subnet identity instead."
-            );
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            let url_str = url.as_deref().unwrap_or("");
+            let desc_str = description.as_deref().unwrap_or("");
+            let gh_str = github.as_deref().unwrap_or("");
+            let img_str = image.as_deref().unwrap_or("");
+            println!("Setting on-chain identity: name='{}'", name);
+            let hash = client
+                .set_registry_identity(wallet.coldkey()?, &name, url_str, desc_str, gh_str, img_str)
+                .await?;
+            println!("Identity set (name: '{}').\n  Tx: {}", name, hash);
+            Ok(())
+        }
+        IdentityCommands::Clear => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!("Clearing on-chain identity");
+            let hash = client.clear_registry_identity(wallet.coldkey()?).await?;
+            println!("Identity cleared.\n  Tx: {}", hash);
+            Ok(())
         }
         IdentityCommands::SetSubnet {
             netuid,
@@ -1238,6 +1254,71 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
             );
             Ok(())
         }
+        ServeCommands::Prometheus {
+            netuid,
+            ip,
+            port,
+            version,
+        } => {
+            let ip_u128 = crate::cli::helpers::validate_ipv4(&ip)?;
+            crate::cli::helpers::validate_port(port, "prometheus")?;
+            let (pair, _hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            println!(
+                "Serving Prometheus on SN{}: {}:{} (ver={})",
+                netuid, ip, port, version
+            );
+            let hash = client
+                .serve_prometheus(&pair, NetUid(netuid), version, ip_u128, port, 4)
+                .await?;
+            println!(
+                "Prometheus served on SN{}: {}:{} (ver={}).\n  Tx: {}",
+                netuid, ip, port, version, hash
+            );
+            Ok(())
+        }
+        ServeCommands::AxonTls {
+            netuid,
+            ip,
+            port,
+            protocol,
+            version,
+            cert,
+        } => {
+            let ip_u128 = crate::cli::helpers::validate_ipv4(&ip)?;
+            crate::cli::helpers::validate_port(port, "axon-tls")?;
+            let cert_bytes = std::fs::read(&cert)
+                .map_err(|e| anyhow::anyhow!("Failed to read TLS cert '{}': {}", cert, e))?;
+            let (pair, _hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            let axon = crate::types::chain_data::AxonInfo {
+                block: 0,
+                version,
+                ip: ip_u128.to_string(),
+                port,
+                ip_type: 4,
+                protocol,
+            };
+            println!(
+                "Serving axon with TLS on SN{}: {}:{} (cert={} bytes)",
+                netuid,
+                ip,
+                port,
+                cert_bytes.len()
+            );
+            let hash = client
+                .serve_axon_tls(&pair, NetUid(netuid), &axon, &cert_bytes)
+                .await?;
+            println!(
+                "Axon TLS served on SN{}: {}:{} (cert={} bytes).\n  Tx: {}",
+                netuid,
+                ip,
+                port,
+                cert_bytes.len(),
+                hash
+            );
+            Ok(())
+        }
     }
 }
 
@@ -1499,6 +1580,42 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
                     println!("  Real: {}  Hash: {}  Height: {}", real, call_hash, height);
                 }
             }
+            Ok(())
+        }
+        ProxyCommands::RemoveAll => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            confirm_action(
+                "WARNING: This will revoke ALL proxy delegations for your account.\n\
+                 This cannot be undone. Confirm?"
+            )?;
+            println!("Removing all proxy delegations");
+            let hash = client.remove_proxies(wallet.coldkey()?).await?;
+            println!("All proxy delegations removed.\n  Tx: {}", hash);
+            Ok(())
+        }
+        ProxyCommands::RemoveAnnouncement { real, call_hash } => {
+            validate_ss58(&real, "real")?;
+            validate_call_hash(&call_hash, "proxy remove-announcement")?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            let hash_hex = call_hash.strip_prefix("0x").unwrap_or(&call_hash);
+            let hash_bytes: [u8; 32] = hex::decode(hash_hex)?.try_into().map_err(|_| {
+                anyhow::anyhow!("Call hash must be exactly 32 bytes (64 hex chars)")
+            })?;
+            println!(
+                "Removing announcement for {} (hash: {})",
+                crate::utils::short_ss58(&real),
+                call_hash
+            );
+            let tx_hash = client
+                .remove_announcement(wallet.coldkey()?, &real, hash_bytes)
+                .await?;
+            println!(
+                "Announcement removed for {}.\n  Tx: {}",
+                crate::utils::short_ss58(&real),
+                tx_hash
+            );
             Ok(())
         }
     }

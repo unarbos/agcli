@@ -62,6 +62,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Balance { .. } => "balance",
         Commands::Transfer { .. } => "transfer",
         Commands::TransferAll { .. } => "transfer-all",
+        Commands::TransferKeepAlive { .. } => "transfer-keep-alive",
         Commands::Stake(_) => "stake",
         Commands::Subnet(_) => "subnet",
         Commands::Weights(_) => "weights",
@@ -360,6 +361,52 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 &hash,
                 &format!(
                     "All balance transferred to {}",
+                    crate::utils::short_ss58(&dest)
+                ),
+            );
+            Ok(())
+        }
+        Commands::TransferKeepAlive { dest, amount } => {
+            validate_ss58(&dest, "destination")?;
+            validate_amount(amount, "transfer amount")?;
+            let client = connect(&network, dry_run, best).await?;
+            let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            unlock_coldkey(&mut wallet, ctx.password)?;
+            let balance = Balance::from_tao(amount);
+            if let Some(ss58) = wallet.coldkey_ss58() {
+                let current = client.get_balance_ss58(ss58).await?;
+                if current.rao() < balance.rao() {
+                    anyhow::bail!(
+                        "Insufficient balance: you have {} but trying to transfer {}.",
+                        current.display_tao(),
+                        balance.display_tao()
+                    );
+                }
+            }
+            println!(
+                "Transferring {} to {} (keep-alive)",
+                balance.display_tao(),
+                crate::utils::short_ss58(&dest)
+            );
+            if !is_yes_mode() {
+                let proceed = dialoguer::Confirm::new()
+                    .with_prompt("Proceed?")
+                    .default(true)
+                    .interact()?;
+                if !proceed {
+                    println!("Cancelled.");
+                    return Ok(());
+                }
+            }
+            let hash = client
+                .transfer_keep_alive(wallet.coldkey()?, &dest, balance)
+                .await?;
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!(
+                    "Transferred {} to {} (keep-alive)",
+                    balance.display_tao(),
                     crate::utils::short_ss58(&dest)
                 ),
             );

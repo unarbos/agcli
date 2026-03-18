@@ -189,6 +189,17 @@ pub enum Commands {
         keep_alive: bool,
     },
 
+    /// Transfer TAO while keeping sender account alive (ensures existential deposit remains)
+    #[command(name = "transfer-keep-alive")]
+    TransferKeepAlive {
+        /// Destination SS58 address
+        #[arg(long)]
+        dest: String,
+        /// Amount of TAO to send
+        #[arg(long)]
+        amount: f64,
+    },
+
     // ──── Staking ────
     /// Staking operations
     #[command(subcommand)]
@@ -1326,7 +1337,7 @@ pub enum ViewCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum IdentityCommands {
-    /// Set on-chain identity
+    /// Set on-chain identity (Registry pallet)
     Set {
         /// Name
         #[arg(long)]
@@ -1340,7 +1351,12 @@ pub enum IdentityCommands {
         /// Description
         #[arg(long)]
         description: Option<String>,
+        /// Image URL
+        #[arg(long)]
+        image: Option<String>,
     },
+    /// Clear on-chain identity (Registry pallet)
+    Clear,
     /// Show identity
     Show {
         /// SS58 address
@@ -1396,6 +1412,42 @@ pub enum ServeCommands {
         /// Format: [{"netuid": 1, "ip": "1.2.3.4", "port": 8091, "protocol": 4, "version": 0}, ...]
         #[arg(long)]
         file: String,
+    },
+    /// Serve Prometheus metrics endpoint on a subnet
+    Prometheus {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// IP address (IPv4)
+        #[arg(long)]
+        ip: String,
+        /// Port number
+        #[arg(long)]
+        port: u16,
+        /// Prometheus version
+        #[arg(long, default_value = "0")]
+        version: u32,
+    },
+    /// Serve axon with TLS certificate
+    AxonTls {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// IP address (IPv4)
+        #[arg(long)]
+        ip: String,
+        /// Port number
+        #[arg(long)]
+        port: u16,
+        /// Protocol version (default 4)
+        #[arg(long, default_value = "4")]
+        protocol: u8,
+        /// Axon version
+        #[arg(long, default_value = "0")]
+        version: u32,
+        /// Path to TLS certificate (DER or PEM)
+        #[arg(long)]
+        cert: String,
     },
 }
 
@@ -1505,6 +1557,17 @@ pub enum ProxyCommands {
         /// SS58 address (defaults to wallet coldkey)
         #[arg(long)]
         address: Option<String>,
+    },
+    /// Remove ALL proxy delegations (revoke every proxy at once)
+    RemoveAll,
+    /// Remove a pending announcement
+    RemoveAnnouncement {
+        /// Real account SS58 address
+        #[arg(long)]
+        real: String,
+        /// Call hash (0x-prefixed hex, blake2_256 of the encoded call)
+        #[arg(long)]
+        call_hash: String,
     },
 }
 
@@ -2290,6 +2353,146 @@ pub enum AdminCommands {
         netuid: u16,
         #[arg(long)]
         cutoff: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set default take for delegation (global)
+    SetDefaultTake {
+        #[arg(long)]
+        take: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set transaction rate limit (global)
+    SetTxRateLimit {
+        #[arg(long)]
+        limit: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set minimum POW difficulty
+    SetMinDifficulty {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        difficulty: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set maximum POW difficulty
+    SetMaxDifficulty {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        difficulty: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set difficulty adjustment interval
+    SetAdjustmentInterval {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        interval: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set kappa (bonds moving average)
+    SetKappa {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        kappa: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set rho (weight discount factor)
+    SetRho {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        rho: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set minimum burn registration cost
+    SetMinBurn {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        burn: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set maximum burn registration cost
+    SetMaxBurn {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        burn: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Enable/disable liquid alpha
+    SetLiquidAlpha {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        enabled: bool,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set alpha high/low values
+    SetAlphaValues {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        alpha_low: u16,
+        #[arg(long)]
+        alpha_high: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Enable/disable Yuma3
+    SetYuma3 {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        enabled: bool,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set bonds penalty
+    SetBondsPenalty {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        penalty: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set stake threshold (global)
+    SetStakeThreshold {
+        #[arg(long)]
+        threshold: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Enable/disable network registration
+    SetNetworkRegistration {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        allowed: bool,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Enable/disable POW registration
+    SetPowRegistration {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        allowed: bool,
         #[arg(long)]
         sudo_key: Option<String>,
     },
