@@ -153,7 +153,7 @@ async fn change_take(
         hotkey,
         ctx.password,
     )?;
-    let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
+    let take_u16 = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
     let dir = if increase { "Increasing" } else { "Decreasing" };
     tracing::info!(hotkey = %crate::utils::short_ss58(&hk), take_pct = take, direction = dir, "Changing delegate take");
     println!(
@@ -870,9 +870,11 @@ pub(super) async fn handle_contracts(
                 .try_into()
                 .map_err(|_| anyhow::anyhow!("Code hash must be 32 bytes"))?;
             let data_hex = data.strip_prefix("0x").unwrap_or(&data);
-            let data_bytes = hex::decode(data_hex).unwrap_or_default();
+            let data_bytes = hex::decode(data_hex)
+                .map_err(|e| anyhow::anyhow!("Invalid hex data '{}': {}", data, e))?;
             let salt_hex = salt.strip_prefix("0x").unwrap_or(&salt);
-            let salt_bytes = hex::decode(salt_hex).unwrap_or_default();
+            let salt_bytes = hex::decode(salt_hex)
+                .map_err(|e| anyhow::anyhow!("Invalid hex salt '{}': {}", salt, e))?;
             println!("Instantiating contract from code hash 0x{}", hash_hex);
             let tx_hash = client
                 .contracts_instantiate(
@@ -970,7 +972,8 @@ pub(super) async fn handle_evm(cmd: EvmCommands, client: &Client, ctx: &Ctx<'_>)
                 .try_into()
                 .map_err(|_| anyhow::anyhow!("Target must be 20 bytes (EVM address)"))?;
             let input_hex = input.strip_prefix("0x").unwrap_or(&input);
-            let input_bytes = hex::decode(input_hex).unwrap_or_default();
+            let input_bytes = hex::decode(input_hex)
+                .map_err(|e| anyhow::anyhow!("Invalid hex input '{}': {}", input, e))?;
             let value_hex = value.strip_prefix("0x").unwrap_or(&value);
             let value_bytes: [u8; 32] = hex::decode(value_hex)?
                 .try_into()
@@ -2335,5 +2338,26 @@ mod tests {
         let port_result: Result<u16, _> = port_val.try_into();
         assert!(port_result.is_ok());
         assert_eq!(port_result.unwrap(), 65535u16);
+    }
+
+    // ── Issue 135: change_take uses .round() ──
+
+    #[test]
+    fn change_take_rounds_correctly() {
+        // Same pattern as ChildkeyTake fix (Issue 130) — must also round here
+        let take = 0.01_f64; // 0.01%
+        let take_u16 = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
+        // Without round: 6.5535 truncates to 6. With round: 7.
+        assert_eq!(take_u16, 7);
+    }
+
+    #[test]
+    fn change_take_truncation_would_give_wrong_value() {
+        let take = 0.01_f64;
+        let truncated = (take / 100.0 * 65535.0).min(65535.0) as u16;
+        let rounded = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
+        assert_eq!(truncated, 6, "truncation gives wrong value");
+        assert_eq!(rounded, 7, "rounding gives correct value");
+        assert_ne!(truncated, rounded);
     }
 }

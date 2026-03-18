@@ -112,10 +112,10 @@ pub fn dev_accounts() -> Vec<DevAccount> {
 /// Kills any stale container on the same port, starts fresh, and optionally
 /// waits for the chain to produce blocks.
 pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
-    if cfg.port == 0 || cfg.port == 65535 {
+    if cfg.port == 0 || cfg.port >= 65534 {
         anyhow::bail!(
-            "Invalid localnet port {}. Needs two consecutive ports ({} and {}), both in range 1-65534.",
-            cfg.port, cfg.port, cfg.port.wrapping_add(1)
+            "Invalid localnet port {}. Needs two consecutive ports ({} and {}), both in range 1-65533.",
+            cfg.port, cfg.port, cfg.port.saturating_add(1)
         );
     }
     // Kill stale containers (spawn_blocking to avoid blocking async executor)
@@ -353,4 +353,43 @@ async fn get_block_height(endpoint: &str) -> Result<u64> {
     let client = crate::chain::Client::connect(endpoint).await?;
     let block = client.get_block_number().await?;
     Ok(block)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Issue 142: port 65534 off-by-one ──
+
+    /// Port validation helper matching the logic in start().
+    fn is_valid_localnet_port(port: u16) -> bool {
+        !(port == 0 || port >= 65534)
+    }
+
+    #[test]
+    fn port_0_rejected() {
+        assert!(!is_valid_localnet_port(0));
+    }
+
+    #[test]
+    fn port_65535_rejected() {
+        assert!(!is_valid_localnet_port(65535));
+    }
+
+    #[test]
+    fn port_65534_rejected() {
+        // 65534 needs ws port 65535, which is also invalid
+        assert!(!is_valid_localnet_port(65534));
+    }
+
+    #[test]
+    fn port_65533_accepted() {
+        // 65533 + 1 = 65534, both valid
+        assert!(is_valid_localnet_port(65533));
+    }
+
+    #[test]
+    fn port_9944_accepted() {
+        assert!(is_valid_localnet_port(9944));
+    }
 }

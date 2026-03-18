@@ -912,7 +912,7 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
     // Extract the number from "Custom error: N" or "custom error: N"
     let lower = msg.to_lowercase();
     let idx = lower.find("custom error:")?;
-    let after = &msg[idx + "custom error:".len()..];
+    let after = &lower[idx + "custom error:".len()..];
     let num_str = after.trim().trim_matches(|c: char| !c.is_ascii_digit());
     let n: u32 = num_str.parse().ok()?;
     // SubtensorModule (pallet index 7) error enum — from chain metadata
@@ -1574,5 +1574,24 @@ mod tests {
             let prefix = url_to_cache_prefix(url);
             assert_eq!(prefix, expected, "URL '{}' should produce prefix '{}'", url, expected);
         }
+    }
+
+    // ── Issue 139: decode_custom_error slices lowercased string ──
+
+    #[test]
+    fn decode_custom_error_slices_lower_not_original() {
+        // The fix ensures we slice `lower` (not `msg`) so byte offsets are consistent.
+        let d = decode_custom_error("Custom error: 6").expect("should decode");
+        assert_eq!(d.name, "HotKeyNotRegisteredInNetwork");
+        // Mixed case — to_lowercase finds the substring correctly
+        let d2 = decode_custom_error("CUSTOM ERROR: 97").expect("should decode");
+        assert_eq!(d2.name, "InsufficientBalance");
+    }
+
+    #[test]
+    fn decode_custom_error_with_leading_text() {
+        // Error message with prefix text before "custom error:"
+        let d = decode_custom_error("Dispatch failed: Custom error: 20").expect("should decode");
+        assert_eq!(d.name, "TooManyRegistrationsThisBlock");
     }
 }

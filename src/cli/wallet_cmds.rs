@@ -57,6 +57,11 @@ pub async fn handle_wallet(
                     println!("Mnemonic display suppressed. Use `agcli wallet show-mnemonic` to retrieve it later.");
                 }
             }
+            // Zeroize mnemonics before they go out of scope
+            let mut coldkey_mnemonic = coldkey_mnemonic;
+            let mut hotkey_mnemonic = hotkey_mnemonic;
+            coldkey_mnemonic.zeroize();
+            hotkey_mnemonic.zeroize();
             Ok(())
         }
         WalletCommands::List => {
@@ -203,11 +208,12 @@ pub async fn handle_wallet(
             password: cmd_password,
         } => {
             crate::cli::helpers::validate_name(&name, "wallet")?;
-            let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
+            let mut mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             crate::cli::helpers::validate_password_strength(&password)?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, &name, &mnemonic, &password)?;
+            mnemonic.zeroize();
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "name": name,
@@ -225,11 +231,12 @@ pub async fn handle_wallet(
             mnemonic: cmd_mnemonic,
             password: cmd_password,
         } => {
-            let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
+            let mut mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             crate::cli::helpers::validate_password_strength(&password)?;
             let wallet = Wallet::import_from_mnemonic(wallet_dir, wallet_name, &mnemonic, &password)?;
+            mnemonic.zeroize();
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "coldkey": wallet.coldkey_ss58().unwrap_or(""),
@@ -247,7 +254,7 @@ pub async fn handle_wallet(
             mnemonic: cmd_mnemonic,
         } => {
             crate::cli::helpers::validate_name(&name, "hotkey")?;
-            let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
+            let mut mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let pair = crate::wallet::keypair::pair_from_mnemonic(&mnemonic)?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             let hotkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
@@ -258,6 +265,7 @@ pub async fn handle_wallet(
                 std::fs::create_dir_all(parent)?;
             }
             crate::wallet::keyfile::write_keyfile(&hotkey_path, &mnemonic)?;
+            mnemonic.zeroize();
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "name": name,

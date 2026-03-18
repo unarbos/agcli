@@ -646,9 +646,20 @@ impl Client {
             while let Some(Ok(pair)) = iter.next().await {
                 // Serialize the decoded value to JSON for easier field access
                 let value = pair.value.to_value()?;
-                let json_str = serde_json::to_string(&value).unwrap_or_default();
-                let json: serde_json::Value =
-                    serde_json::from_str(&json_str).unwrap_or(serde_json::Value::Null);
+                let json_str = match serde_json::to_string(&value) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::warn!("Failed to serialize multisig value: {e}");
+                        continue;
+                    }
+                };
+                let json: serde_json::Value = match serde_json::from_str(&json_str) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::warn!("Failed to parse multisig JSON: {e}");
+                        continue;
+                    }
+                };
                 let height = json
                     .get("when")
                     .and_then(|w| w.get("height"))

@@ -55,7 +55,7 @@ pub(super) async fn handle_block(
             if from > to {
                 anyhow::bail!("--from ({}) must be <= --to ({})", from, to);
             }
-            let count = (to - from + 1) as usize;
+            let count = (to as u64 - from as u64 + 1) as usize;
             if count > 1000 {
                 anyhow::bail!(
                     "Range too large ({} blocks). Maximum 1000 blocks per query.",
@@ -586,5 +586,26 @@ mod tests {
         assert_eq!(diff_i64, 1, "i64 would give wrong value due to truncation");
         // The i128 and i64 diffs are fundamentally different
         assert_ne!(diff_i128, diff_i64 as i128, "i128 and i64 diffs must differ for large values");
+    }
+
+    // ── Issue 140: block range count uses u64 arithmetic to avoid u32 wrap ──
+
+    #[test]
+    fn block_range_count_no_u32_wrap() {
+        // With old code: (u32::MAX - 0 + 1) as usize would wrap to 0 in u32 arithmetic.
+        // With fix: (u32::MAX as u64 - 0 + 1) = 4294967296 which correctly exceeds 1000.
+        let from: u32 = 0;
+        let to: u32 = u32::MAX;
+        let count = (to as u64 - from as u64 + 1) as usize;
+        assert_eq!(count, 4_294_967_296);
+        assert!(count > 1000, "full u32 range must exceed the 1000-block guard");
+    }
+
+    #[test]
+    fn block_range_count_normal() {
+        let from: u32 = 100;
+        let to: u32 = 199;
+        let count = (to as u64 - from as u64 + 1) as usize;
+        assert_eq!(count, 100);
     }
 }

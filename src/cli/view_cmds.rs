@@ -667,7 +667,7 @@ async fn handle_history(address: &str, output: OutputFormat, limit: usize) -> Re
                         .get("extrinsic_hash")
                         .and_then(|v| v.as_str())
                         .unwrap_or("?");
-                    let hash_short = if hash.len() > 18 { &hash[..18] } else { hash };
+                    let hash_short: String = hash.chars().take(18).collect();
                     vec![
                         format!("{}", block),
                         module.to_string(),
@@ -2590,5 +2590,29 @@ mod tests {
             err_rao,
             err_f64
         );
+    }
+
+    // ── Issue 141: hash_short uses chars().take() instead of byte-slicing ──
+
+    #[test]
+    fn hash_short_safe_for_ascii() {
+        let hash = "0xabcdef1234567890abcdef";
+        let hash_short: String = hash.chars().take(18).collect();
+        assert_eq!(hash_short, "0xabcdef1234567890");
+    }
+
+    #[test]
+    fn hash_short_safe_for_short_hash() {
+        let hash = "0xabc";
+        let hash_short: String = hash.chars().take(18).collect();
+        assert_eq!(hash_short, "0xabc");
+    }
+
+    #[test]
+    fn hash_short_safe_for_multibyte() {
+        // Even if API returned non-ASCII (shouldn't happen), chars().take() is safe
+        let hash = "\u{1F600}abcdefghij"; // emoji + ASCII
+        let hash_short: String = hash.chars().take(18).collect();
+        assert_eq!(hash_short.chars().count(), 11); // 1 emoji + 10 ascii chars
     }
 }
