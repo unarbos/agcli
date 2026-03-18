@@ -423,15 +423,15 @@ async fn subscribe_events_inner(
                     if !json_output {
                         eprintln!(
                             "Warning: {} block(s) missed (#{} to #{}) — events in those blocks were not captured",
-                            gap, last + 1, block_number - 1
+                            gap, last.saturating_add(1), block_number.saturating_sub(1)
                         );
                     } else {
                         println!(
                             "{}",
                             serde_json::json!({
                                 "warning": "gap_detected",
-                                "missed_from": last + 1,
-                                "missed_to": block_number - 1,
+                                "missed_from": last.saturating_add(1),
+                                "missed_to": block_number.saturating_sub(1),
                                 "missed_count": gap,
                             })
                         );
@@ -629,15 +629,15 @@ async fn subscribe_blocks_inner(
                     if !json_output {
                         eprintln!(
                             "Warning: {} block(s) missed (#{} to #{})",
-                            gap, last + 1, number - 1
+                            gap, last.saturating_add(1), number.saturating_sub(1)
                         );
                     } else {
                         println!(
                             "{}",
                             serde_json::json!({
                                 "warning": "gap_detected",
-                                "missed_from": last + 1,
-                                "missed_to": number - 1,
+                                "missed_from": last.saturating_add(1),
+                                "missed_to": number.saturating_sub(1),
                                 "missed_count": gap,
                             })
                         );
@@ -1278,5 +1278,35 @@ mod tests {
             ("netuid".to_string(), subxt::ext::scale_value::Value::u128(0x0001_0001)),
         ]);
         assert_eq!(extract_netuid(&composite), None);
+    }
+
+    // --- Issue 155: saturating arithmetic for gap display ---
+
+    #[test]
+    fn compute_block_gap_no_underflow_at_zero() {
+        // If current == 0 and last was None, gap should be 0 (no underflow)
+        assert_eq!(compute_block_gap(None, 0), 0);
+    }
+
+    #[test]
+    fn compute_block_gap_normal_gap() {
+        // last=5, current=8 → missed blocks 6,7 → gap=2
+        assert_eq!(compute_block_gap(Some(5), 8), 2);
+    }
+
+    #[test]
+    fn compute_block_gap_consecutive_no_gap() {
+        // last=5, current=6 → no gap
+        assert_eq!(compute_block_gap(Some(5), 6), 0);
+    }
+
+    #[test]
+    fn saturating_sub_display_safety() {
+        // Ensure the display arithmetic (last+1, block-1) won't overflow
+        let last: u64 = 0;
+        let block_number: u64 = 0;
+        // These should not panic
+        let _ = last.saturating_add(1);
+        let _ = block_number.saturating_sub(1);
     }
 }

@@ -126,14 +126,18 @@ fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(mode))
-            .with_context(|| format!("Failed to set permissions on '{}'", tmp_path.display()))?;
+        if let Err(e) = fs::set_permissions(&tmp_path, fs::Permissions::from_mode(mode)) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e).with_context(|| format!("Failed to set permissions on '{}'", tmp_path.display()));
+        }
     }
     let _ = mode; // suppress unused warning on non-unix
 
     // Atomic rename into place
-    fs::rename(&tmp_path, path)
-        .with_context(|| format!("rename '{}' -> '{}'", tmp_path.display(), path.display()))?;
+    fs::rename(&tmp_path, path).map_err(|e| {
+        let _ = fs::remove_file(&tmp_path);
+        anyhow::anyhow!("rename '{}' -> '{}': {}", tmp_path.display(), path.display(), e)
+    })?;
     Ok(())
 }
 
@@ -818,5 +822,25 @@ mod tests {
         let data = vec![0u8; 20];
         let result = decrypt_nacl_keyfile_data(&data, "test");
         assert!(result.is_err());
+    }
+
+    // --- Issue 151: atomic_write temp file cleanup on set_permissions failure ---
+
+    #[test]
+    fn atomic_write_creates_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_keyfile");
+        atomic_write(&path, b"test data", 0o600).unwrap();
+        assert!(path.exists());
+        assert_eq!(std::fs::read(&path).unwrap(), b"test data");
+    }
+
+    #[test]
+    fn atomic_write_no_temp_file_left_on_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_keyfile2");
+        atomic_write(&path, b"test", 0o600).unwrap();
+        let tmp_path = path.with_extension("tmp");
+        assert!(!tmp_path.exists(), "temp file should be cleaned up after successful write");
     }
 }

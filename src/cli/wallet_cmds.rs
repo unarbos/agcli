@@ -289,12 +289,15 @@ pub async fn handle_wallet(
                     hotkey_path.display()
                 );
             }
-            let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
+            let (pair, mut mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             if let Some(parent) = hotkey_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            crate::wallet::keyfile::write_keyfile(&hotkey_path, &mnemonic)?;
+            let write_result = crate::wallet::keyfile::write_keyfile(&hotkey_path, &mnemonic);
+            use zeroize::Zeroize;
+            mnemonic.zeroize();
+            write_result?;
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "name": name,

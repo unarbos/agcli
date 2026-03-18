@@ -34,7 +34,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
         "archive" | "archivenode" | "historical" | "wayback" => Some(ARCHIVE),
         "diff" | "compare" | "historicaldiff" => Some(DIFF),
         "ownerworkflow" | "ow" | "subnetowner" | "ownerguide" => Some(OWNER_WORKFLOW),
-        topics => {
+        topics if !topics.is_empty() => {
             // Fuzzy: check if the topic is a substring of any key
             let all = list_topics();
             for (key, _) in &all {
@@ -44,6 +44,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
             }
             None
         }
+        _ => None
     }
 }
 

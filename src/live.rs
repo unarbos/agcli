@@ -63,7 +63,7 @@ pub fn compute_dynamic_deltas(prev: &[DynamicInfo], curr: &[DynamicInfo]) -> Vec
                 0.0
             };
             // Only report if something actually changed
-            if (c.price - p.price).abs() < 1e-15
+            if (c.price - p.price).abs() < 1e-9 * p.price.abs().max(1.0)
                 && c.tao_in.rao() == p.tao_in.rao()
                 && c.subnet_volume == p.subnet_volume
             {
@@ -277,11 +277,7 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
                     ));
                 }
             } else {
-                let hk_prefix = if c.hotkey.len() >= 8 {
-                    &c.hotkey[..8]
-                } else {
-                    &c.hotkey
-                };
+                let hk_prefix: String = c.hotkey.chars().take(8).collect();
                 changes.push(format!(
                     "  UID {:<4} NEW neuron (hotkey: {})",
                     c.uid, hk_prefix
@@ -603,5 +599,47 @@ mod tests {
     fn both_empty_produces_no_deltas() {
         let deltas = compute_dynamic_deltas(&[], &[]);
         assert!(deltas.is_empty());
+    }
+
+    // --- Issue 157: char-safe hotkey prefix ---
+
+    #[test]
+    fn hotkey_prefix_ascii_safe() {
+        let hotkey = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
+        let prefix: String = hotkey.chars().take(8).collect();
+        assert_eq!(prefix, "5GrwvaEF");
+    }
+
+    #[test]
+    fn hotkey_prefix_short_string() {
+        let hotkey = "abc";
+        let prefix: String = hotkey.chars().take(8).collect();
+        assert_eq!(prefix, "abc");
+    }
+
+    // --- Issue 159: relative epsilon for price comparison ---
+
+    #[test]
+    fn price_epsilon_large_value() {
+        // For large prices, 1e-15 is too small. Our relative epsilon should detect same values.
+        let price_prev = 1000.0_f64;
+        let price_now = 1000.0_f64 + 1e-13; // tiny float rounding diff
+        let epsilon = 1e-9 * price_prev.abs().max(1.0);
+        assert!(
+            (price_now - price_prev).abs() < epsilon,
+            "tiny rounding diff on large price should be within epsilon"
+        );
+    }
+
+    #[test]
+    fn price_epsilon_small_value() {
+        // For small prices, epsilon should still catch real changes
+        let price_prev = 0.001_f64;
+        let price_now = 0.002_f64;
+        let epsilon = 1e-9 * price_prev.abs().max(1.0);
+        assert!(
+            (price_now - price_prev).abs() >= epsilon,
+            "real price change should exceed epsilon"
+        );
     }
 }

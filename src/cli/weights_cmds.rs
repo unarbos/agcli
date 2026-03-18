@@ -358,12 +358,12 @@ pub(super) async fn handle_weights(
 
             // Step 2: Wait for reveal window
             // Reveal window opens after cr_interval tempos from the commit
-            let reveal_after_blocks = cr_interval * tempo;
-            let reveal_target = block_at_commit + reveal_after_blocks;
+            let reveal_after_blocks = cr_interval.saturating_mul(tempo);
+            let reveal_target = block_at_commit.saturating_add(reveal_after_blocks);
             println!(
                 "\n  Waiting for reveal window (~{} blocks, ~{}m)...",
                 reveal_after_blocks,
-                reveal_after_blocks * 12 / 60
+                reveal_after_blocks.saturating_mul(12) / 60
             );
 
             loop {

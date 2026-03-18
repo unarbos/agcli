@@ -79,7 +79,10 @@ impl Config {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))?;
+            if let Err(e) = std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600)) {
+                let _ = std::fs::remove_file(&tmp_path);
+                return Err(e.into());
+            }
         }
         std::fs::rename(&tmp_path, path).map_err(|e| {
             // Clean up temp file on rename failure
@@ -250,5 +253,23 @@ mod tests {
         let final_cfg = Config::load_from(&path).unwrap();
         assert!(final_cfg.network.is_some());
         assert!(final_cfg.wallet.is_some());
+    }
+
+    // --- Issue 152: config save_to temp file cleanup on permission failure ---
+
+    #[test]
+    fn save_to_no_temp_file_left_on_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_config.toml");
+        let mut cfg = Config::default();
+        cfg.network = Some("finney".to_string());
+        cfg.save_to(&path).unwrap();
+        // Check no temp files remain
+        let entries: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_str().map_or(false, |n| n.contains(".tmp")))
+            .collect();
+        assert!(entries.is_empty(), "temp file should not remain after successful save");
     }
 }
