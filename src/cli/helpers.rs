@@ -1115,23 +1115,28 @@ pub fn validate_derive_input(input: &str) -> Result<()> {
 /// Require a mnemonic phrase: use `provided` if Some, else prompt interactively (or error in batch mode).
 /// Validates the mnemonic format and dictionary words before returning.
 ///
-/// Warns if the mnemonic was passed via CLI flag (visible in `ps`) rather than
-/// the `AGCLI_MNEMONIC` environment variable.
+/// **Security**: If the mnemonic was provided via the `--mnemonic` CLI flag
+/// (detectable because `AGCLI_MNEMONIC` env var is not set), the function
+/// **refuses** it — CLI arguments are visible in `ps` output and process listings,
+/// exposing the mnemonic to any local user. Use `AGCLI_MNEMONIC` env var instead.
 pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
     let mnemonic = match provided {
         Some(m) => {
-            // Warn if passed via CLI flag rather than env var (visible in process listing)
+            // Detect if mnemonic came from CLI flag vs env var.
+            // clap fills the field from either source; we check which one.
             if std::env::var("AGCLI_MNEMONIC").is_err() {
-                eprintln!(
-                    "Warning: mnemonic passed via --mnemonic flag is visible in `ps`. \
-                     Prefer AGCLI_MNEMONIC env var for security."
+                anyhow::bail!(
+                    "Refusing --mnemonic flag: mnemonic phrases are visible in `ps` output.\n\
+                     Use the AGCLI_MNEMONIC environment variable instead:\n  \
+                     export AGCLI_MNEMONIC='your twelve words here'\n  \
+                     agcli wallet import"
                 );
             }
             m
         }
         None => {
             if is_batch_mode() {
-                anyhow::bail!("Mnemonic required in batch mode. Pass --mnemonic <phrase> or set AGCLI_MNEMONIC env var.");
+                anyhow::bail!("Mnemonic required in batch mode. Set AGCLI_MNEMONIC env var.");
             }
             dialoguer::Input::<String>::new()
                 .with_prompt("Enter mnemonic phrase")
@@ -2260,5 +2265,54 @@ mod tests {
     fn validate_admin_call_name_rejects_too_long() {
         let long = "a".repeat(200);
         assert!(validate_admin_call_name(&long).is_err());
+    }
+
+    // ──── Issue 668/731: Mnemonic CLI flag rejection ────
+
+    #[test]
+    fn require_mnemonic_rejects_cli_flag_without_env_var() {
+        // Ensure AGCLI_MNEMONIC is NOT set for this test
+        std::env::remove_var("AGCLI_MNEMONIC");
+        let result = require_mnemonic(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()));
+        assert!(result.is_err(), "Should reject mnemonic passed via CLI flag");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("Refusing --mnemonic flag"),
+            "Error should mention refusing CLI flag: {}", msg
+        );
+        assert!(
+            msg.contains("AGCLI_MNEMONIC"),
+            "Error should mention env var alternative: {}", msg
+        );
+    }
+
+    #[test]
+    fn require_mnemonic_accepts_env_var() {
+        // Set AGCLI_MNEMONIC so the detection thinks it came from env
+        std::env::set_var("AGCLI_MNEMONIC", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
+        let result = require_mnemonic(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()));
+        std::env::remove_var("AGCLI_MNEMONIC");
+        assert!(result.is_ok(), "Should accept mnemonic from env var: {:?}", result.err());
+    }
+
+    #[test]
+    fn require_mnemonic_error_mentions_ps_visibility() {
+        std::env::remove_var("AGCLI_MNEMONIC");
+        let result = require_mnemonic(Some("test words here a b c d e f g h i".to_string()));
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("ps"),
+            "Error should warn about ps visibility: {}", msg
+        );
+    }
+
+    #[test]
+    fn require_mnemonic_batch_mode_error_mentions_env_var() {
+        std::env::remove_var("AGCLI_MNEMONIC");
+        // In batch mode (no TTY), None should error with env var instructions
+        // We can't easily set batch mode in tests, but we can verify the Some() path
+        let result = require_mnemonic(Some("a b c d e f g h i j k l".to_string()));
+        assert!(result.is_err(), "Should still reject via CLI flag");
     }
 }

@@ -116,6 +116,49 @@ fn url_to_cache_prefix(url: &str) -> String {
     host
 }
 
+/// Acquire a per-signer file lock to serialize concurrent extrinsic submissions.
+///
+/// Multiple agcli processes using the same coldkey would race for the same nonce,
+/// causing "Transaction already imported" or "Priority too low" errors. This lock
+/// serializes all submissions from the same key so each gets a fresh nonce.
+///
+/// Lock file: `/tmp/agcli-tx-locks/<hex-pubkey>.lock`
+/// The lock is held for the entire sign+submit+finalize cycle and released on drop.
+fn acquire_tx_lock(pair: &sr25519::Pair) -> Result<std::fs::File> {
+    use fs2::FileExt;
+    let pub_key = sp_core::Pair::public(pair);
+    let hex_key = hex::encode(pub_key.as_ref() as &[u8]);
+    let lock_dir = std::path::PathBuf::from("/tmp/agcli-tx-locks");
+    std::fs::create_dir_all(&lock_dir).context("create tx lock dir")?;
+    let lock_path = lock_dir.join(format!("{}.lock", hex_key));
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .with_context(|| format!("open tx lock file: {}", lock_path.display()))?;
+    // Try to acquire exclusive lock with 60s timeout (enough for finalization)
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        match file.try_lock_exclusive() {
+            Ok(()) => {
+                tracing::debug!("Acquired tx lock for {}", &hex_key[..8]);
+                return Ok(file);
+            }
+            Err(_) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            Err(_) => {
+                anyhow::bail!(
+                    "Another agcli process is submitting a transaction with this key. \
+                     Timed out waiting 60s for tx lock. If no other process is running, \
+                     remove {}", lock_path.display()
+                );
+            }
+        }
+    }
+}
+
 /// Signer type for extrinsic submission.
 pub type Signer = PairSigner<SubtensorConfig, sr25519::Pair>;
 
@@ -374,6 +417,9 @@ impl Client {
         }
 
         let signer = Self::signer(pair);
+        // Acquire per-signer file lock to prevent concurrent agcli instances
+        // from submitting with the same nonce (Issue 648).
+        let _tx_lock = acquire_tx_lock(pair)?;
         let start = std::time::Instant::now();
         let spinner = crate::cli::helpers::spinner("Submitting transaction...");
         tracing::debug!("Submitting extrinsic");
@@ -1418,5 +1464,75 @@ mod tests {
     fn client_has_sign_submit_or_mev() {
         // This test verifies that sign_submit_or_mev exists and accepts (Payload, Pair, bool).
         // Compile-time verification only — no runtime Client available.
+    }
+
+    // ──── Issue 648: Per-signer transaction lock ────
+
+    #[test]
+    fn tx_lock_acquires_and_releases() {
+        use sp_core::Pair;
+        let pair = sr25519::Pair::from_string("//Alice", None).unwrap();
+        let lock = acquire_tx_lock(&pair);
+        assert!(lock.is_ok(), "Should acquire tx lock: {:?}", lock.err());
+        drop(lock); // Release
+        // Should be able to reacquire immediately
+        let lock2 = acquire_tx_lock(&pair);
+        assert!(lock2.is_ok(), "Should reacquire tx lock: {:?}", lock2.err());
+    }
+
+    #[test]
+    fn tx_lock_different_keys_independent() {
+        use sp_core::Pair;
+        let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
+        let bob = sr25519::Pair::from_string("//Bob", None).unwrap();
+        let lock_a = acquire_tx_lock(&alice).unwrap();
+        let lock_b = acquire_tx_lock(&bob);
+        assert!(lock_b.is_ok(), "Different keys should not block each other");
+        drop(lock_a);
+        drop(lock_b);
+    }
+
+    #[test]
+    fn tx_lock_same_key_blocks_concurrent() {
+        use sp_core::Pair;
+        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+
+        let pair = sr25519::Pair::from_string("//Charlie", None).unwrap();
+        // Acquire lock in main thread
+        let _lock = acquire_tx_lock(&pair).unwrap();
+
+        let acquired = Arc::new(AtomicBool::new(false));
+        let acquired2 = acquired.clone();
+
+        // Try to acquire in another thread — should block
+        let pair2 = pair.clone();
+        let handle = std::thread::spawn(move || {
+            // This should block until we release
+            match acquire_tx_lock(&pair2) {
+                Ok(_lock) => {
+                    acquired2.store(true, Ordering::SeqCst);
+                }
+                Err(_) => {}
+            }
+        });
+
+        // Wait a bit — the other thread should still be blocked
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        assert!(!acquired.load(Ordering::SeqCst), "Other thread should be blocked");
+
+        // Release the lock
+        drop(_lock);
+        handle.join().unwrap();
+        assert!(acquired.load(Ordering::SeqCst), "Other thread should have acquired lock after release");
+    }
+
+    #[test]
+    fn tx_lock_creates_lock_dir() {
+        use sp_core::Pair;
+        let pair = sr25519::Pair::from_string("//Dave", None).unwrap();
+        let lock = acquire_tx_lock(&pair);
+        assert!(lock.is_ok());
+        assert!(std::path::Path::new("/tmp/agcli-tx-locks").exists());
+        drop(lock);
     }
 }

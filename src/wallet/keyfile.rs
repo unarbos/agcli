@@ -8,7 +8,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use anyhow::{Context, Result};
-use argon2::Argon2;
+// argon2 crate used via fully-qualified paths (argon2::Argon2, argon2::Params, etc.)
 use fs2::FileExt;
 use rand::RngCore;
 use sp_core::sr25519;
@@ -268,10 +268,23 @@ pub fn read_public_key(path: &Path) -> Result<sr25519::Public> {
 
 /// Derive a 256-bit AES key from password + salt using Argon2id.
 ///
+/// Uses hardened parameters (256 MiB memory, 4 iterations) comparable to
+/// the Python bittensor-wallet's Argon2i settings (512 MiB, 8 iterations).
+/// The argon2 crate defaults (19 MiB, 2 iterations) are too weak for
+/// protecting wallet mnemonics.
+///
 /// **Caller is responsible for zeroizing the returned key when done.**
 fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
+    let params = argon2::Params::new(
+        256 * 1024, // m_cost: 256 MiB in KiB (strong, but half of Python's 512 MiB for usability)
+        4,          // t_cost: 4 iterations (Python uses 8, but Argon2id is stronger per-iteration than Argon2i)
+        1,          // p_cost: single-threaded (matches Python)
+        Some(KEY_LEN),
+    )
+    .map_err(|e| anyhow::anyhow!("argon2 params error: {}", e))?;
+    let argon2 = argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
     let mut key = [0u8; KEY_LEN];
-    Argon2::default()
+    argon2
         .hash_password_into(password.as_bytes(), salt, &mut key)
         .map_err(|e| anyhow::anyhow!("key derivation failed: {}", e))?;
     Ok(key)
@@ -414,6 +427,8 @@ mod tests {
     fn concurrent_encrypted_read_write() {
         // Verify that concurrent reads and writes to the same keyfile
         // are safely serialized via advisory locks.
+        // Use 2 threads — hardened Argon2id KDF (256 MiB) makes each KDF ~8-15s, and
+        // with serialized exclusive locks, too many threads exceeds the 30s lock timeout.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("concurrent_coldkey");
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -424,7 +439,7 @@ mod tests {
 
         // Spawn concurrent readers
         let mut handles = Vec::new();
-        for _ in 0..8 {
+        for _ in 0..2 {
             let p = path.clone();
             let pw = password.to_string();
             handles.push(std::thread::spawn(move || read_encrypted_keyfile(&p, &pw)));
@@ -703,6 +718,58 @@ mod tests {
         write_encrypted_keyfile(&path, mnemonic, password).unwrap();
         let recovered = read_any_encrypted_keyfile(&path, password).unwrap();
         assert_eq!(mnemonic, recovered, "read_any_encrypted should work with zeroization");
+    }
+
+    // ──── Issue 666: Argon2id hardened parameters ────
+
+    #[test]
+    fn argon2id_hardened_params_produces_valid_key() {
+        // Verify derive_key works with the new hardened params
+        let salt = [0x42u8; SALT_LEN];
+        let key = derive_key("test_password", &salt).unwrap();
+        assert_eq!(key.len(), KEY_LEN);
+        // Key should not be all zeros
+        assert!(key.iter().any(|&b| b != 0), "Derived key should not be all zeros");
+    }
+
+    #[test]
+    fn argon2id_hardened_roundtrip_still_works() {
+        // Verify encrypt/decrypt roundtrip works after parameter change
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("hardened_argon2_coldkey");
+        let mnemonic = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
+        let password = "strong_password_456";
+
+        write_encrypted_keyfile(&path, mnemonic, password).unwrap();
+        let recovered = read_encrypted_keyfile(&path, password).unwrap();
+        assert_eq!(mnemonic, recovered, "Hardened Argon2id roundtrip should match");
+    }
+
+    #[test]
+    fn argon2id_hardened_different_passwords_different_keys() {
+        let salt = [0xABu8; SALT_LEN];
+        let key1 = derive_key("password_one", &salt).unwrap();
+        let key2 = derive_key("password_two", &salt).unwrap();
+        assert_ne!(key1, key2, "Different passwords should produce different keys");
+    }
+
+    #[test]
+    fn argon2id_hardened_different_salts_different_keys() {
+        let salt1 = [0x01u8; SALT_LEN];
+        let salt2 = [0x02u8; SALT_LEN];
+        let key1 = derive_key("same_password", &salt1).unwrap();
+        let key2 = derive_key("same_password", &salt2).unwrap();
+        assert_ne!(key1, key2, "Different salts should produce different keys");
+    }
+
+    #[test]
+    fn argon2id_hardened_wrong_password_fails_decrypt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("hardened_wrong_pw");
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        write_encrypted_keyfile(&path, mnemonic, "correct_pw").unwrap();
+        let result = read_encrypted_keyfile(&path, "wrong_pw");
+        assert!(result.is_err(), "Wrong password should fail with hardened params");
     }
 
     #[test]
