@@ -126,14 +126,25 @@ impl Client {
         to: NetUid,
         amount: Balance,
     ) -> Result<String> {
+        self.move_stake_mev(pair, hotkey_ss58, from, to, amount, false)
+            .await
+    }
+
+    /// Move stake, optionally wrapping through MEV shield.
+    pub async fn move_stake_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        from: NetUid,
+        to: NetUid,
+        amount: Balance,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx()
-                .subtensor_module()
-                .move_stake(hk.clone(), hk, from.0, to.0, amount.rao()),
-            pair,
-        )
-        .await
+        let tx = api::tx()
+            .subtensor_module()
+            .move_stake(hk.clone(), hk, from.0, to.0, amount.rao());
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Swap stake between subnets (same hotkey).
@@ -145,14 +156,25 @@ impl Client {
         to: NetUid,
         amount: Balance,
     ) -> Result<String> {
+        self.swap_stake_mev(pair, hotkey_ss58, from, to, amount, false)
+            .await
+    }
+
+    /// Swap stake, optionally wrapping through MEV shield.
+    pub async fn swap_stake_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        from: NetUid,
+        to: NetUid,
+        amount: Balance,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx()
-                .subtensor_module()
-                .swap_stake(hk, from.0, to.0, amount.rao()),
-            pair,
-        )
-        .await
+        let tx = api::tx()
+            .subtensor_module()
+            .swap_stake(hk, from.0, to.0, amount.rao());
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Unstake all from a hotkey.
@@ -172,15 +194,27 @@ impl Client {
         to: NetUid,
         amount: Balance,
     ) -> Result<String> {
+        self.transfer_stake_mev(pair, dest_ss58, hotkey_ss58, from, to, amount, false)
+            .await
+    }
+
+    /// Transfer stake, optionally wrapping through MEV shield.
+    pub async fn transfer_stake_mev(
+        &self,
+        pair: &sr25519::Pair,
+        dest_ss58: &str,
+        hotkey_ss58: &str,
+        from: NetUid,
+        to: NetUid,
+        amount: Balance,
+        mev: bool,
+    ) -> Result<String> {
         let dest = Self::ss58_to_account_id(dest_ss58)?;
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx()
-                .subtensor_module()
-                .transfer_stake(dest, hk, from.0, to.0, amount.rao()),
-            pair,
-        )
-        .await
+        let tx = api::tx()
+            .subtensor_module()
+            .transfer_stake(dest, hk, from.0, to.0, amount.rao());
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Recycle alpha for TAO.
@@ -191,14 +225,24 @@ impl Client {
         netuid: NetUid,
         amount: u64,
     ) -> Result<String> {
+        self.recycle_alpha_mev(pair, hotkey_ss58, netuid, amount, false)
+            .await
+    }
+
+    /// Recycle alpha, optionally wrapping through MEV shield.
+    pub async fn recycle_alpha_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        amount: u64,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx()
-                .subtensor_module()
-                .recycle_alpha(hk, amount, netuid.0),
-            pair,
-        )
-        .await
+        let tx = api::tx()
+            .subtensor_module()
+            .recycle_alpha(hk, amount, netuid.0);
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Claim root dividends.
@@ -220,18 +264,30 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
+        self.add_stake_limit_mev(pair, hotkey_ss58, netuid, amount, limit_price, allow_partial, false)
+            .await
+    }
+
+    /// Add stake limit, optionally wrapping through MEV shield.
+    pub async fn add_stake_limit_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        amount: Balance,
+        limit_price: u64,
+        allow_partial: bool,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx().subtensor_module().add_stake_limit(
-                hk,
-                netuid.0,
-                amount.rao(),
-                limit_price,
-                allow_partial,
-            ),
-            pair,
-        )
-        .await
+        let tx = api::tx().subtensor_module().add_stake_limit(
+            hk,
+            netuid.0,
+            amount.rao(),
+            limit_price,
+            allow_partial,
+        );
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Remove stake with limit order.
@@ -244,18 +300,30 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
+        self.remove_stake_limit_mev(pair, hotkey_ss58, netuid, amount, limit_price, allow_partial, false)
+            .await
+    }
+
+    /// Remove stake limit, optionally wrapping through MEV shield.
+    pub async fn remove_stake_limit_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        amount: u64,
+        limit_price: u64,
+        allow_partial: bool,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx().subtensor_module().remove_stake_limit(
-                hk,
-                netuid.0,
-                amount,
-                limit_price,
-                allow_partial,
-            ),
-            pair,
-        )
-        .await
+        let tx = api::tx().subtensor_module().remove_stake_limit(
+            hk,
+            netuid.0,
+            amount,
+            limit_price,
+            allow_partial,
+        );
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Unstake all alpha across all subnets for a hotkey.
@@ -277,14 +345,24 @@ impl Client {
         amount: u64,
         netuid: NetUid,
     ) -> Result<String> {
+        self.burn_alpha_mev(pair, hotkey_ss58, amount, netuid, false)
+            .await
+    }
+
+    /// Burn alpha, optionally wrapping through MEV shield.
+    pub async fn burn_alpha_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        amount: u64,
+        netuid: NetUid,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx()
-                .subtensor_module()
-                .burn_alpha(hk, amount, netuid.0),
-            pair,
-        )
-        .await
+        let tx = api::tx()
+            .subtensor_module()
+            .burn_alpha(hk, amount, netuid.0);
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     /// Swap stake between subnets with a limit price.
@@ -299,19 +377,33 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
+        self.swap_stake_limit_mev(pair, hotkey_ss58, from, to, amount, limit_price, allow_partial, false)
+            .await
+    }
+
+    /// Swap stake limit, optionally wrapping through MEV shield.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn swap_stake_limit_mev(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        from: NetUid,
+        to: NetUid,
+        amount: u64,
+        limit_price: u64,
+        allow_partial: bool,
+        mev: bool,
+    ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(
-            &api::tx().subtensor_module().swap_stake_limit(
-                hk,
-                from.0,
-                to.0,
-                amount,
-                limit_price,
-                allow_partial,
-            ),
-            pair,
-        )
-        .await
+        let tx = api::tx().subtensor_module().swap_stake_limit(
+            hk,
+            from.0,
+            to.0,
+            amount,
+            limit_price,
+            allow_partial,
+        );
+        self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
     // ──────── Weights ────────
@@ -2047,6 +2139,31 @@ mod tests {
         assert!(err.to_string().contains("Unknown proxy type"));
         assert!(err.to_string().contains("typo"));
     }
+
+    // ──── Batch 6: MEV shield coverage — structural tests ────
+    // These verify all stake _mev method variants exist by taking function pointers.
+    // Without a live chain, we can only verify the methods compile with the correct
+    // signatures. This prevents regressions where a _mev variant gets removed.
+
+    macro_rules! assert_async_method_exists {
+        ($name:ident, $method:ident) => {
+            #[test]
+            fn $name() {
+                // If this compiles, the method exists with the expected Self type.
+                // We can't call it (needs a Client), but we can verify it resolves.
+                let _ = Client::$method;
+            }
+        };
+    }
+
+    assert_async_method_exists!(mev_variant_move_stake_exists, move_stake_mev);
+    assert_async_method_exists!(mev_variant_swap_stake_exists, swap_stake_mev);
+    assert_async_method_exists!(mev_variant_transfer_stake_exists, transfer_stake_mev);
+    assert_async_method_exists!(mev_variant_recycle_alpha_exists, recycle_alpha_mev);
+    assert_async_method_exists!(mev_variant_burn_alpha_exists, burn_alpha_mev);
+    assert_async_method_exists!(mev_variant_add_stake_limit_exists, add_stake_limit_mev);
+    assert_async_method_exists!(mev_variant_remove_stake_limit_exists, remove_stake_limit_mev);
+    assert_async_method_exists!(mev_variant_swap_stake_limit_exists, swap_stake_limit_mev);
 
     #[test]
     fn parse_proxy_type_all_variants_accepted() {

@@ -186,8 +186,14 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             if from == to {
                 anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
             }
+            // Spending limit check on destination subnet
+            check_spending_limit(to, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            if mev {
+                eprintln!("MEV shield: encrypting move-stake operation");
+                tracing::info!("MEV shield: encrypting move-stake operation");
+            }
             {
                 let bal = Balance::from_tao(amount);
                 stake_op(
@@ -195,7 +201,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                     "moved",
                     &hk,
                     client
-                        .move_stake(&pair, &hk, NetUid(from), NetUid(to), bal)
+                        .move_stake_mev(&pair, &hk, NetUid(from), NetUid(to), bal, mev)
                         .await,
                     &format!("Moved {} from SN{} to SN{}", bal.display_tao(), from, to),
                 )
@@ -213,9 +219,15 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             if from == to {
                 anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
             }
+            // Spending limit check on destination subnet
+            check_spending_limit(to, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
+            if mev {
+                eprintln!("MEV shield: encrypting swap-stake operation");
+                tracing::info!("MEV shield: encrypting swap-stake operation");
+            }
             println!(
                 "Swapping stake: {} from SN{} to SN{} for {}",
                 bal.display_tao(),
@@ -224,12 +236,13 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 crate::utils::short_ss58(&hk)
             );
             let hash = client
-                .swap_stake(
+                .swap_stake_mev(
                     &pair,
                     &hk,
                     NetUid(from),
                     NetUid(to),
                     bal,
+                    mev,
                 )
                 .await?;
             println!(
@@ -271,10 +284,16 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_amount(amount, "limit stake amount")?;
             validate_amount(price, "limit price")?;
             validate_limit_price(price, "limit price")?;
+            // Spending limit check
+            check_spending_limit(netuid, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
             let lp = safe_rao(price);
+            if mev {
+                eprintln!("MEV shield: encrypting add-stake-limit operation");
+                tracing::info!("MEV shield: encrypting add-stake-limit operation");
+            }
             println!(
                 "Adding stake limit: {} at {:.4} on SN{} (partial={})",
                 bal.display_tao(),
@@ -283,7 +302,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 partial
             );
             let hash = client
-                .add_stake_limit(&pair, &hk, NetUid(netuid), bal, lp, partial)
+                .add_stake_limit_mev(&pair, &hk, NetUid(netuid), bal, lp, partial, mev)
                 .await?;
             println!(
                 "Limit stake order placed. {} at price {:.4} on SN{} (partial={})\n  Tx: {}",
@@ -306,16 +325,22 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_amount(amount, "limit unstake amount")?;
             validate_amount(price, "limit price")?;
             validate_limit_price(price, "limit price")?;
+            // Spending limit check
+            check_spending_limit(netuid, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let lp = safe_rao(price);
             let amt = safe_rao(amount);
+            if mev {
+                eprintln!("MEV shield: encrypting remove-stake-limit operation");
+                tracing::info!("MEV shield: encrypting remove-stake-limit operation");
+            }
             println!(
                 "Removing stake limit: {:.4} at {:.4} on SN{} (partial={})",
                 amount, price, netuid, partial
             );
             let hash = client
-                .remove_stake_limit(&pair, &hk, NetUid(netuid), amt, lp, partial)
+                .remove_stake_limit_mev(&pair, &hk, NetUid(netuid), amt, lp, partial, mev)
                 .await?;
             println!(
                 "Limit stake order removed. {:.4} at price {:.4} on SN{}\n  Tx: {}",
@@ -379,12 +404,16 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_amount(amount, "recycle alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            if mev {
+                eprintln!("MEV shield: encrypting recycle-alpha operation");
+                tracing::info!("MEV shield: encrypting recycle-alpha operation");
+            }
             stake_op(
                 "Recycling alpha via",
                 "recycled",
                 &hk,
                 client
-                    .recycle_alpha(&pair, &hk, NetUid(netuid), safe_rao(amount))
+                    .recycle_alpha_mev(&pair, &hk, NetUid(netuid), safe_rao(amount), mev)
                     .await,
                 &format!("Recycled {:.4} alpha on SN{}", amount, netuid),
             )
@@ -409,12 +438,16 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_amount(amount, "burn alpha amount")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            if mev {
+                eprintln!("MEV shield: encrypting burn-alpha operation");
+                tracing::info!("MEV shield: encrypting burn-alpha operation");
+            }
             stake_op(
                 "Burning alpha via",
                 "burned",
                 &hk,
                 client
-                    .burn_alpha(&pair, &hk, safe_rao(amount), NetUid(netuid))
+                    .burn_alpha_mev(&pair, &hk, safe_rao(amount), NetUid(netuid), mev)
                     .await,
                 &format!(
                     "Burned {:.4} alpha on SN{} (permanently destroyed)",
@@ -437,16 +470,22 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             if from == to {
                 anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
             }
+            // Spending limit check on destination subnet
+            check_spending_limit(to, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let amt = safe_rao(amount);
             let lp = safe_rao(price);
+            if mev {
+                eprintln!("MEV shield: encrypting swap-stake-limit operation");
+                tracing::info!("MEV shield: encrypting swap-stake-limit operation");
+            }
             println!(
                 "Swap-limit {:.4} from SN{} to SN{} at price {:.4} (partial={})",
                 amount, from, to, price, partial
             );
             let hash = client
-                .swap_stake_limit(&pair, &hk, NetUid(from), NetUid(to), amt, lp, partial)
+                .swap_stake_limit_mev(&pair, &hk, NetUid(from), NetUid(to), amt, lp, partial, mev)
                 .await?;
             println!(
                 "Swap limit submitted. {:.4} from SN{} to SN{} at price {:.4}\n  Tx: {}",
@@ -566,9 +605,15 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_netuid(to)?;
             validate_ss58(&dest, "destination")?;
             validate_amount(amount, "transfer stake amount")?;
+            // Spending limit check on destination subnet
+            check_spending_limit(to, amount)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let amt = Balance::from_tao(amount);
+            if mev {
+                eprintln!("MEV shield: encrypting transfer-stake operation");
+                tracing::info!("MEV shield: encrypting transfer-stake operation");
+            }
             println!(
                 "Transferring {:.4} TAO stake from SN{} to SN{} → {}",
                 amount,
@@ -577,7 +622,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 crate::utils::short_ss58(&dest)
             );
             let hash = client
-                .transfer_stake(&pair, &dest, &hk, NetUid(from), NetUid(to), amt)
+                .transfer_stake_mev(&pair, &dest, &hk, NetUid(from), NetUid(to), amt, mev)
                 .await?;
             println!(
                 "Stake transferred. {:.4} TAO from SN{} to SN{}, destination: {}\n  Tx: {}",
@@ -860,6 +905,9 @@ async fn staking_wizard(
         anyhow::bail!("Amount {:.4} τ exceeds your balance of {:.4} τ. Use a smaller amount or transfer more TAO first.", amount, max_tao);
     }
 
+    // Spending limit check
+    check_spending_limit(netuid, amount)?;
+
     let hotkey_ss58 = resolve_hotkey_ss58(hotkey_arg, &mut wallet, hotkey_name)?;
     println!(
         "\nStaking {:.4} τ on SN{} with hotkey {}",
@@ -881,14 +929,20 @@ async fn staking_wizard(
         }
     }
 
+    let mev = ctx.mev;
+    if mev {
+        eprintln!("MEV shield: encrypting stake operation");
+        tracing::info!("MEV shield: encrypting stake operation");
+    }
     unlock_coldkey(&mut wallet, password)?;
     let stake_balance = Balance::from_tao(amount);
     let hash = client
-        .add_stake(
+        .add_stake_mev(
             wallet.coldkey()?,
             &hotkey_ss58,
             NetUid(netuid),
             stake_balance,
+            mev,
         )
         .await?;
     println!("Stake added! Tx: {}", hash);

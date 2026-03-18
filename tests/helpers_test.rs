@@ -5366,3 +5366,52 @@ fn price_range_very_close_values() {
 fn price_range_very_small_low() {
     assert!(validate_price_range(f64::MIN_POSITIVE, 1.0).is_ok());
 }
+
+// ──── Batch 6: Spending limit enforcement regression tests ────
+// These verify check_spending_limit is callable for all the stake operations
+// that now enforce it (move, swap, add-limit, remove-limit, swap-limit,
+// transfer-stake, wizard). Without a config file, all should pass.
+
+#[test]
+fn spending_limit_move_stake_dest_subnet() {
+    // move stake checks destination subnet — should pass with no config
+    let result = agcli::cli::helpers::check_spending_limit(42, 1000.0);
+    assert!(result.is_ok(), "move-stake spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_swap_stake_dest_subnet() {
+    let result = agcli::cli::helpers::check_spending_limit(18, 500.0);
+    assert!(result.is_ok(), "swap-stake spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_add_limit_order() {
+    let result = agcli::cli::helpers::check_spending_limit(1, 250.0);
+    assert!(result.is_ok(), "add-limit spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_remove_limit_order() {
+    let result = agcli::cli::helpers::check_spending_limit(3, 750.0);
+    assert!(result.is_ok(), "remove-limit spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_swap_limit_order() {
+    let result = agcli::cli::helpers::check_spending_limit(99, 333.0);
+    assert!(result.is_ok(), "swap-limit spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_transfer_stake() {
+    let result = agcli::cli::helpers::check_spending_limit(7, 100.0);
+    assert!(result.is_ok(), "transfer-stake spending check should pass without config");
+}
+
+#[test]
+fn spending_limit_wizard() {
+    // wizard now checks spending limit before staking
+    let result = agcli::cli::helpers::check_spending_limit(12, 50.0);
+    assert!(result.is_ok(), "wizard spending check should pass without config");
+}
