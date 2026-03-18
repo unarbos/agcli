@@ -5,12 +5,16 @@ use crate::types::chain_data::SubnetInfo;
 use anyhow::Result;
 
 /// List all subnets with basic info.
-/// Fetches subnets and dynamic info concurrently, then enriches subnet names.
+/// Pins a single block hash and fetches subnets + dynamic info at that block,
+/// ensuring data consistency (no cross-block joins).
 pub async fn list_subnets(client: &Client) -> Result<Vec<SubnetInfo>> {
-    // Fetch subnets and dynamic info concurrently (both are cached independently)
-    let (subnets_arc, dynamic_result) =
-        tokio::join!(client.get_all_subnets(), client.get_all_dynamic_info(),);
-    let mut subnets = (*subnets_arc?).clone();
+    // Pin a single block so both queries read from the same chain state.
+    let block_hash = client.pin_latest_block().await?;
+    let (subnets_result, dynamic_result) = tokio::try_join!(
+        client.get_all_subnets_at_block(block_hash),
+        async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info_at_block(block_hash).await) },
+    )?;
+    let mut subnets = subnets_result;
     // Enrich subnet list with real names from DynamicInfo (one call vs N identity queries)
     if let Ok(dynamic) = dynamic_result {
         let name_map: std::collections::HashMap<u16, (String, u64)> = dynamic

@@ -907,6 +907,28 @@ async fn staking_wizard(
     // Spending limit check
     check_spending_limit(netuid, amount)?;
 
+    // Re-fetch fresh data after interactive prompts to guard against stale prices.
+    // The user may have spent >30s on the prompts, making cached data unreliable.
+    client.invalidate_cache().await;
+    if let Ok(fresh_dynamic) = client.get_all_dynamic_info().await {
+        if let Some(fresh_d) = fresh_dynamic.iter().find(|d| d.netuid.0 == netuid) {
+            // Find the original cached price we displayed to the user
+            if let Some(orig_d) = subnets_with_pool.iter().find(|d| d.netuid.0 == netuid) {
+                let orig_price = orig_d.price;
+                let fresh_price = fresh_d.price;
+                if orig_price > 0.0 {
+                    let pct_change = ((fresh_price - orig_price) / orig_price).abs() * 100.0;
+                    if pct_change > 5.0 {
+                        eprintln!(
+                            "⚠ Price for SN{} changed {:.1}% since displayed ({:.6} → {:.6} τ/α)",
+                            netuid, pct_change, orig_price, fresh_price
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     let hotkey_ss58 = resolve_hotkey_ss58(hotkey_arg, &mut wallet, hotkey_name)?;
     println!(
         "\nStaking {:.4} τ on SN{} with hotkey {}",
@@ -966,5 +988,14 @@ mod tests {
     #[test]
     fn handle_stake_symbol_exists() {
         let _ = super::handle_stake as fn(_, _, _) -> _;
+    }
+
+    /// Structural: staking_wizard function exists and compiles with cache invalidation logic.
+    /// The wizard invalidates cache after interactive prompts to prevent stale price display (Issue 647).
+    #[test]
+    fn staking_wizard_compiles_with_cache_invalidation() {
+        // staking_wizard is private (async fn) — verify it exists in this module.
+        // The actual cache invalidation is tested in query_cache::tests::invalidate_forces_fresh_dynamic_fetch.
+        // This test just confirms the module still compiles after the change.
     }
 }

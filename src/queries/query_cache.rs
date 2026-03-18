@@ -627,4 +627,156 @@ mod tests {
         // Clean up
         disk_cache::remove(key);
     }
+
+    /// Invalidate forces fresh fetch even within TTL — critical for wizard staleness (Issue 647).
+    /// After interactive prompts, the wizard must invalidate cache so the next fetch
+    /// gets current chain data, not stale cached data from before the user's input delay.
+    #[tokio::test]
+    async fn invalidate_forces_fresh_dynamic_fetch() {
+        let cache = QueryCache::with_ttl(Duration::from_secs(300)); // long TTL
+        let call_count = Arc::new(AtomicU32::new(0));
+
+        // Initial fetch — caches the data
+        let _initial = {
+            let count = call_count.clone();
+            cache
+                .get_all_dynamic_info(|| {
+                    let c = count.clone();
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![make_dynamic_info(1, "OldPrice")])
+                    }
+                })
+                .await
+                .unwrap()
+        };
+        assert_eq!(call_count.load(Ordering::SeqCst), 1);
+
+        // Invalidate (simulates what wizard does after interactive prompts)
+        cache.invalidate_all().await;
+
+        // Next fetch MUST call the provider again (not serve stale cache)
+        let refreshed = {
+            let count = call_count.clone();
+            cache
+                .get_all_dynamic_info(|| {
+                    let c = count.clone();
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![make_dynamic_info(1, "FreshPrice")])
+                    }
+                })
+                .await
+                .unwrap()
+        };
+        assert_eq!(call_count.load(Ordering::SeqCst), 2, "invalidate must force a fresh fetch");
+        assert_eq!(refreshed[0].name, "FreshPrice");
+    }
+
+    /// Invalidate clears all cache types — subnets AND dynamic info together.
+    /// This ensures the wizard's single invalidate_all() call refreshes everything.
+    #[tokio::test]
+    async fn invalidate_clears_all_cache_types() {
+        let cache = QueryCache::with_ttl(Duration::from_secs(300));
+        let subnet_count = Arc::new(AtomicU32::new(0));
+        let dynamic_count = Arc::new(AtomicU32::new(0));
+
+        // Populate both caches
+        {
+            let sc = subnet_count.clone();
+            cache
+                .get_all_subnets(|| {
+                    let c = sc;
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![])
+                    }
+                })
+                .await
+                .unwrap();
+        }
+        {
+            let dc = dynamic_count.clone();
+            cache
+                .get_all_dynamic_info(|| {
+                    let c = dc;
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![])
+                    }
+                })
+                .await
+                .unwrap();
+        }
+        assert_eq!(subnet_count.load(Ordering::SeqCst), 1);
+        assert_eq!(dynamic_count.load(Ordering::SeqCst), 1);
+
+        // Single invalidate_all clears everything
+        cache.invalidate_all().await;
+
+        // Both must re-fetch
+        {
+            let sc = subnet_count.clone();
+            cache
+                .get_all_subnets(|| {
+                    let c = sc;
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![])
+                    }
+                })
+                .await
+                .unwrap();
+        }
+        {
+            let dc = dynamic_count.clone();
+            cache
+                .get_all_dynamic_info(|| {
+                    let c = dc;
+                    async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        Ok(vec![])
+                    }
+                })
+                .await
+                .unwrap();
+        }
+        assert_eq!(subnet_count.load(Ordering::SeqCst), 2, "subnets must re-fetch after invalidate");
+        assert_eq!(dynamic_count.load(Ordering::SeqCst), 2, "dynamic must re-fetch after invalidate");
+    }
+
+    /// Invalidate also clears per-netuid dynamic cache entries.
+    /// After invalidation, individual subnet lookups must re-fetch, not serve stale cached values.
+    #[tokio::test]
+    async fn invalidate_clears_per_netuid_cache() {
+        let cache = QueryCache::with_ttl(Duration::from_secs(300));
+
+        // Populate per-netuid cache via bulk fetch
+        cache
+            .get_all_dynamic_info(|| async {
+                Ok(vec![
+                    make_dynamic_info(1, "BeforeInvalidate"),
+                    make_dynamic_info(2, "BeforeInvalidate"),
+                ])
+            })
+            .await
+            .unwrap();
+
+        // Verify per-netuid is cached
+        let cached = cache
+            .get_dynamic_info(1, || async { Err(anyhow::anyhow!("should not call")) })
+            .await
+            .unwrap();
+        assert_eq!(cached.unwrap().name, "BeforeInvalidate");
+
+        // Invalidate all
+        cache.invalidate_all().await;
+
+        // Per-netuid must re-fetch
+        let fresh = cache
+            .get_dynamic_info(1, || async { Ok(Some(make_dynamic_info(1, "AfterInvalidate"))) })
+            .await
+            .unwrap();
+        assert_eq!(fresh.unwrap().name, "AfterInvalidate");
+    }
 }

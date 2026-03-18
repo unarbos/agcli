@@ -214,6 +214,13 @@ impl Client {
         Ok(())
     }
 
+    /// Invalidate all cached query data (both in-memory and disk).
+    /// Call this before critical operations where stale data could mislead the user,
+    /// e.g. after interactive prompts where the user may have waited longer than the cache TTL.
+    pub async fn invalidate_cache(&self) {
+        self.cache.invalidate_all().await;
+    }
+
     /// Check if the connection is still alive by attempting a lightweight RPC call.
     pub async fn is_alive(&self) -> bool {
         self.inner.blocks().at_latest().await.is_ok()
