@@ -24,7 +24,7 @@ pub fn format_tao(balance: Balance) -> String {
         let whole_str = whole_tao.to_string();
         let mut comma_str = String::with_capacity(whole_str.len() + whole_str.len() / 3);
         for (i, c) in whole_str.chars().enumerate() {
-            if i > 0 && (whole_str.len() - i) % 3 == 0 {
+            if i > 0 && (whole_str.len() - i).is_multiple_of(3) {
                 comma_str.push(',');
             }
             comma_str.push(c);

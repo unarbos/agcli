@@ -200,12 +200,11 @@ pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
         .decrypt(nonce, ciphertext)
         .map_err(|_| anyhow::anyhow!("Decryption failed — wrong password. If you forgot your password, restore from your mnemonic with `agcli wallet regen-coldkey`."))?;
 
-    // Convert without cloning to avoid leaving an unzeroized copy in memory
-    let result = String::from_utf8(plaintext).context("mnemonic is not valid UTF-8");
-    // Note: if from_utf8 succeeds, ownership transferred to String (no clone needed).
+    // Convert without cloning to avoid leaving an unzeroized copy in memory.
+    // If from_utf8 succeeds, ownership transferred to String (no clone needed).
     // If it fails, the error contains the bytes which will be dropped, but that's
     // an error path (invalid data) so zeroization of the error payload is acceptable.
-    result
+    String::from_utf8(plaintext).context("mnemonic is not valid UTF-8")
 }
 
 /// Decrypt AES-256-GCM keyfile data that has already been read into memory.
@@ -391,8 +390,7 @@ pub fn decrypt_nacl_keyfile_data(data: &[u8], password: &str) -> Result<String> 
 
     // Consume plaintext directly to avoid leaving an unzeroized clone in memory.
     // If from_utf8 fails, the error contains the bytes — but those are invalid/corrupt data anyway.
-    let result = String::from_utf8(plaintext).context("decrypted data is not valid UTF-8");
-    result
+    String::from_utf8(plaintext).context("decrypted data is not valid UTF-8")
 }
 
 /// Detect keyfile format and decrypt accordingly.

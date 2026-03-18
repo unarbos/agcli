@@ -281,6 +281,7 @@ fn value_to_json<T: Clone>(val: &subxt::ext::scale_value::Value<T>) -> serde_jso
 
 /// Compute the gap (number of missed blocks) between the last processed block and the current one.
 /// Returns 0 if there is no gap or if `last_processed` is None (first block).
+#[allow(dead_code)]
 pub(crate) fn compute_block_gap(last_processed: Option<u64>, current: u64) -> u64 {
     match last_processed {
         Some(last) => current.saturating_sub(last + 1),

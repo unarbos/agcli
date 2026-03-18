@@ -1933,12 +1933,8 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
     let pin = client.pin_latest_block().await?;
     let (neurons, dynamic, hyperparams, block) = tokio::try_join!(
         client.get_neurons_lite(nuid),
-        async {
-            Ok::<_, anyhow::Error>(client.get_dynamic_info_at_block(nuid, pin).await?)
-        },
-        async {
-            Ok::<_, anyhow::Error>(client.get_subnet_hyperparams_pinned(nuid, pin).await?)
-        },
+        client.get_dynamic_info_at_block(nuid, pin),
+        client.get_subnet_hyperparams_pinned(nuid, pin),
         client.get_block_number_at(pin),
     )?;
 
