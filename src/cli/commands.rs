@@ -37,6 +37,13 @@ pub async fn execute(cli: Cli) -> Result<()> {
     set_pretty_mode(cli.pretty);
 
     // Build shared command context — eliminates 6-9 repeated parameters across handlers
+    // Warn if --proxy is set: the flag is accepted but extrinsic wrapping is
+    // not yet implemented, so the proxy value would be silently ignored.
+    if cli.proxy.is_some() {
+        eprintln!("Warning: --proxy is not yet supported; the flag will be ignored.");
+        tracing::warn!("--proxy flag is set but proxy extrinsic wrapping is not implemented");
+    }
+
     let ctx = Ctx {
         wallet_dir: &cli.wallet_dir,
         wallet_name: &cli.wallet,
@@ -46,6 +53,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         yes: cli.yes,
         mev: cli.mev,
         live_interval: cli.live_interval(),
+        proxy: cli.proxy.as_deref(),
     };
 
     // Log the command being executed for telemetry

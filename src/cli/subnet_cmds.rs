@@ -392,7 +392,13 @@ pub(super) async fn handle_subnet(
                 )?;
                 (neurons, block)
             };
-            let n_count = neurons.len() as u16;
+            let n_count: u16 = neurons.len().try_into().map_err(|_| {
+                anyhow::anyhow!(
+                    "Subnet has {} neurons, exceeding u16::MAX ({})",
+                    neurons.len(),
+                    u16::MAX
+                )
+            })?;
 
             // --save: cache the metagraph to disk
             if save {

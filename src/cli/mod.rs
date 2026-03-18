@@ -1072,9 +1072,6 @@ pub enum WeightCommands {
         /// Version key
         #[arg(long, default_value = "0")]
         version_key: u64,
-        /// Dry-run: check pre-conditions without submitting
-        #[arg(long)]
-        dry_run: bool,
     },
     /// Commit weights (for commit-reveal enabled subnets)
     Commit {
@@ -2361,6 +2358,12 @@ impl Cli {
                 self.batch = true;
             }
         }
+        // Apply config live_interval when --live was not passed on CLI (Issue 75)
+        if self.live.is_none() {
+            if let Some(interval) = cfg.live_interval {
+                self.live = Some(Some(interval));
+            }
+        }
     }
 
     /// Apply config using explicit args list (for testing without relying on std::env::args).
@@ -2407,6 +2410,12 @@ impl Cli {
                 self.batch = true;
             }
         }
+        // Apply config live_interval when --live was not passed on CLI (Issue 75)
+        if !has("--live") {
+            if let Some(interval) = cfg.live_interval {
+                self.live = Some(Some(interval));
+            }
+        }
     }
 
     /// Get live polling interval (None = not live, Some(secs) = live mode).
@@ -2432,7 +2441,7 @@ impl Cli {
 
 /// Check whether a flag (e.g. "--network") was explicitly passed on the command line.
 /// Handles both `--flag value` and `--flag=value` forms.
-fn cli_has_flag(args: &[String], flag: &str) -> bool {
+pub(crate) fn cli_has_flag(args: &[String], flag: &str) -> bool {
     args.iter().any(|a| a == flag || a.starts_with(&format!("{}=", flag)))
 }
 
@@ -2487,5 +2496,100 @@ mod tests {
         let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
         cli.apply_config_with_args(&cfg, &args);
         assert_eq!(cli.network, "test", "config network should apply when no CLI flag");
+    }
+
+    // ── Issue 87: --proxy flag is parsed and stored in Ctx ──
+
+    #[test]
+    fn proxy_flag_parsed_into_cli() {
+        let cli = Cli::parse_from(["agcli", "--proxy", "5GrwvaEF...", "config", "show"]);
+        assert_eq!(cli.proxy.as_deref(), Some("5GrwvaEF..."));
+    }
+
+    #[test]
+    fn proxy_defaults_to_none() {
+        let cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(cli.proxy.is_none(), "proxy should default to None");
+    }
+
+    #[test]
+    fn proxy_loaded_from_config_when_not_on_cli() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.proxy = Some("5FHne...".into());
+
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.proxy.as_deref(), Some("5FHne..."));
+    }
+
+    // ── Issue 75: live_interval config value applied ──
+
+    #[test]
+    fn live_interval_from_config_applied_when_no_cli_flag() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(cli.live.is_none(), "live should default to None without --live");
+
+        let mut cfg = crate::config::Config::default();
+        cfg.live_interval = Some(30);
+
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+
+        assert_eq!(cli.live_interval(), Some(30), "config live_interval=30 should be applied");
+    }
+
+    #[test]
+    fn live_interval_config_ignored_when_cli_flag_present() {
+        let mut cli = Cli::parse_from(["agcli", "--live", "5", "config", "show"]);
+        assert_eq!(cli.live_interval(), Some(5), "--live 5 should give interval 5");
+
+        let mut cfg = crate::config::Config::default();
+        cfg.live_interval = Some(30);
+
+        let args: Vec<String> = vec!["agcli".into(), "--live".into(), "5".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+
+        assert_eq!(cli.live_interval(), Some(5), "--live CLI flag should take precedence over config");
+    }
+
+    #[test]
+    fn live_interval_config_not_applied_when_absent() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let cfg = crate::config::Config::default(); // live_interval = None
+
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+
+        assert!(cli.live_interval().is_none(), "should remain None when no config and no flag");
+    }
+
+    // ── Issue 89: WeightCommands::Set no longer has its own dry_run field ──
+
+    #[test]
+    fn weights_set_uses_global_dry_run() {
+        // Verify that WeightCommands::Set does not have a dry_run field by
+        // parsing a command line with the global --dry-run flag.
+        let cli = Cli::parse_from([
+            "agcli", "--dry-run", "weights", "set",
+            "--netuid", "1", "--weights", "0:100",
+        ]);
+        assert!(cli.dry_run, "global --dry-run should be true");
+        // Ensure the parsed Set variant doesn't have its own dry_run
+        match cli.command {
+            Commands::Weights(WeightCommands::Set { netuid, .. }) => {
+                assert_eq!(netuid, 1);
+            }
+            _ => panic!("expected WeightCommands::Set"),
+        }
+    }
+
+    #[test]
+    fn weights_set_without_global_dry_run() {
+        let cli = Cli::parse_from([
+            "agcli", "weights", "set",
+            "--netuid", "1", "--weights", "0:100",
+        ]);
+        assert!(!cli.dry_run, "global --dry-run should be false by default");
     }
 }

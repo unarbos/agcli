@@ -94,12 +94,15 @@ pub async fn handle_wallet(
         }
         WalletCommands::Show { all } => {
             let all_wallets = Wallet::list_wallets(wallet_dir)?;
-            // If a specific wallet was requested via -w/--wallet, filter to it
-            let wallets: Vec<String> = if wallet_name != "default"
+            // If a specific wallet was requested via -w/--wallet, filter to it.
+            // Use wallet_explicitly_set() to distinguish "user typed --wallet default"
+            // from "clap filled in the 'default' default value" (Issue 71).
+            let explicit = crate::cli::helpers::wallet_explicitly_set();
+            let wallets: Vec<String> = if explicit
                 && all_wallets.contains(&wallet_name.to_string())
             {
                 vec![wallet_name.to_string()]
-            } else if wallet_name != "default" && !all_wallets.contains(&wallet_name.to_string()) {
+            } else if explicit && !all_wallets.contains(&wallet_name.to_string()) {
                 anyhow::bail!("Wallet '{}' not found in {}", wallet_name, wallet_dir);
             } else {
                 all_wallets

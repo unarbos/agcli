@@ -16,7 +16,13 @@ pub async fn fetch_metagraph(client: &Client, netuid: NetUid) -> Result<Metagrap
     // stale relative to `block`, but the block number we report now accurately
     // reflects the chain tip at query time rather than a parallel race.
     let neurons_arc = client.get_neurons_lite(netuid).await?;
-    let n = neurons_arc.len() as u16;
+    let n: u16 = neurons_arc.len().try_into().map_err(|_| {
+        anyhow::anyhow!(
+            "Subnet has {} neurons, exceeding u16::MAX ({})",
+            neurons_arc.len(),
+            u16::MAX
+        )
+    })?;
 
     // Single-pass extraction: iterate once instead of 12 times
     let mut stake = Vec::with_capacity(neurons_arc.len());
@@ -68,4 +74,32 @@ pub async fn fetch_metagraph(client: &Client, netuid: NetUid) -> Result<Metagrap
         last_update,
         neurons,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    // ── Issue 77: neurons.len() as u16 — verify checked conversion ──
+
+    #[test]
+    fn neuron_count_within_u16_succeeds() {
+        let count: usize = 65535;
+        let result: Result<u16, _> = count.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), u16::MAX);
+    }
+
+    #[test]
+    fn neuron_count_exceeding_u16_fails() {
+        let count: usize = 65536;
+        let result: Result<u16, _> = count.try_into();
+        assert!(result.is_err(), "65536 neurons should fail u16 conversion");
+    }
+
+    #[test]
+    fn neuron_count_zero_succeeds() {
+        let count: usize = 0;
+        let result: Result<u16, _> = count.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0u16);
+    }
 }

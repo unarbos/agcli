@@ -3,7 +3,7 @@
 use crate::wallet::Wallet;
 use anyhow::Result;
 
-use crate::cli::OutputFormat;
+use crate::cli::{cli_has_flag, OutputFormat};
 
 /// Common context passed to all command handlers, reducing parameter sprawl.
 ///
@@ -18,6 +18,17 @@ pub struct Ctx<'a> {
     pub yes: bool,
     pub mev: bool,
     pub live_interval: Option<u64>,
+    pub proxy: Option<&'a str>,
+}
+
+/// Returns true if the user explicitly passed `--wallet` or `-w` on the CLI.
+///
+/// This is used to distinguish "user typed `--wallet default`" from "clap filled
+/// in the default value". Without this check, a user cannot filter to a wallet
+/// literally named "default" in `wallet show`.
+pub fn wallet_explicitly_set() -> bool {
+    let args: Vec<String> = std::env::args().collect();
+    cli_has_flag(&args, "--wallet") || cli_has_flag(&args, "-w")
 }
 
 /// Escape a value for RFC 4180 CSV output.

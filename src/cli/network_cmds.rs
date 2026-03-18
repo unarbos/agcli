@@ -1126,9 +1126,17 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
             println!("Batch serving {} axon updates", entries.len());
             for (i, entry) in entries.iter().enumerate() {
                 // Fields are validated by validate_batch_axon_json, but use safe access for defense-in-depth
-                let netuid = entry["netuid"].as_u64().ok_or_else(|| {
+                let netuid_val = entry["netuid"].as_u64().ok_or_else(|| {
                     anyhow::anyhow!("Batch entry {}: missing or invalid 'netuid'", i)
-                })? as u16;
+                })?;
+                let netuid: u16 = netuid_val.try_into().map_err(|_| {
+                    anyhow::anyhow!(
+                        "Batch entry {}: netuid {} exceeds u16::MAX ({})",
+                        i,
+                        netuid_val,
+                        u16::MAX
+                    )
+                })?;
                 let ip = entry["ip"]
                     .as_str()
                     .ok_or_else(|| anyhow::anyhow!("Batch entry {}: missing or invalid 'ip'", i))?;
@@ -2053,5 +2061,33 @@ pub(super) async fn handle_commitment(
             }
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // ── Issue 80: netuid u16 overflow guard in batch axon ──
+
+    #[test]
+    fn netuid_within_u16_succeeds() {
+        let netuid_val: u64 = 65535;
+        let result: Result<u16, _> = netuid_val.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), u16::MAX);
+    }
+
+    #[test]
+    fn netuid_exceeding_u16_fails() {
+        let netuid_val: u64 = 65536;
+        let result: Result<u16, _> = netuid_val.try_into();
+        assert!(result.is_err(), "netuid 65536 should fail u16 conversion");
+    }
+
+    #[test]
+    fn netuid_zero_succeeds() {
+        let netuid_val: u64 = 0;
+        let result: Result<u16, _> = netuid_val.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0u16);
     }
 }

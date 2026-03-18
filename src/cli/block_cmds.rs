@@ -126,7 +126,14 @@ pub(super) async fn handle_block(
         }
         BlockCommands::Latest => {
             let block_num = client.get_block_number().await?;
-            let block_hash = client.get_block_hash(block_num as u32).await?;
+            let block_num_u32: u32 = block_num.try_into().map_err(|_| {
+                anyhow::anyhow!(
+                    "Block number {} exceeds u32::MAX ({})",
+                    block_num,
+                    u32::MAX
+                )
+            })?;
+            let block_hash = client.get_block_hash(block_num_u32).await?;
             let (ext_count, timestamp) = tokio::try_join!(
                 client.get_block_extrinsic_count(block_hash),
                 client.get_block_timestamp(block_hash),
@@ -526,5 +533,25 @@ pub(super) async fn handle_diff(
             }
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // ── Issue 78: block_num u32 truncation guard ──
+
+    #[test]
+    fn block_num_within_u32_succeeds() {
+        let block_num: u64 = u32::MAX as u64;
+        let result: Result<u32, _> = block_num.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), u32::MAX);
+    }
+
+    #[test]
+    fn block_num_exceeding_u32_fails() {
+        let block_num: u64 = u32::MAX as u64 + 1;
+        let result: Result<u32, _> = block_num.try_into();
+        assert!(result.is_err(), "block number exceeding u32::MAX should fail");
     }
 }

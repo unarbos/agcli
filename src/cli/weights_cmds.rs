@@ -126,8 +126,8 @@ pub(super) async fn handle_weights(
             netuid,
             weights,
             version_key,
-            dry_run,
         } => {
+            let dry_run = client.is_dry_run();
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let (uids, wts) = resolve_weights(&weights)?;

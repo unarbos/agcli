@@ -391,6 +391,11 @@ impl Client {
         self.dry_run = enabled;
     }
 
+    /// Returns true if dry-run mode is enabled.
+    pub fn is_dry_run(&self) -> bool {
+        self.dry_run
+    }
+
     /// Sign, submit, and wait for finalization of a typed extrinsic.
     /// Returns the extrinsic hash. Provides contextual error messages for common failures.
     /// In dry-run mode, encodes the call data and returns a JSON preview without submitting.
