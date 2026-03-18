@@ -429,7 +429,7 @@ fn read_hotkey_ss58(wallet_path: &Path, hotkey_name: &str) -> Option<String> {
     None
 }
 
-fn expand_tilde(path: &Path) -> PathBuf {
+pub(crate) fn expand_tilde(path: &Path) -> PathBuf {
     if let Ok(stripped) = path.strip_prefix("~") {
         if let Some(home) = dirs::home_dir() {
             return home.join(stripped);
@@ -538,5 +538,35 @@ mod tests {
         assert!(w.coldkey_public().is_err(), "should fail before unlock");
         w.unlock_coldkey("mypass").unwrap();
         assert!(w.coldkey_public().is_ok(), "should succeed after unlock");
+    }
+
+    // ── Issue 72-74: expand_tilde must resolve ~ in wallet paths ──
+
+    #[test]
+    fn expand_tilde_resolves_home_directory() {
+        let expanded = expand_tilde(std::path::Path::new("~/.bittensor/wallets"));
+        assert!(
+            !expanded.starts_with("~"),
+            "expand_tilde should resolve ~ to home dir, got: {:?}",
+            expanded
+        );
+        assert!(
+            expanded.to_string_lossy().contains(".bittensor/wallets"),
+            "should preserve path after ~"
+        );
+    }
+
+    #[test]
+    fn expand_tilde_preserves_absolute_path() {
+        let path = std::path::Path::new("/tmp/wallets");
+        let expanded = expand_tilde(path);
+        assert_eq!(expanded, path.to_path_buf(), "absolute paths should be unchanged");
+    }
+
+    #[test]
+    fn expand_tilde_preserves_relative_path() {
+        let path = std::path::Path::new("wallets/default");
+        let expanded = expand_tilde(path);
+        assert_eq!(expanded, path.to_path_buf(), "relative paths without ~ should be unchanged");
     }
 }

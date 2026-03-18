@@ -243,7 +243,7 @@ pub async fn handle_wallet(
             let mnemonic = crate::cli::helpers::require_mnemonic(cmd_mnemonic)?;
             let pair = crate::wallet::keypair::pair_from_mnemonic(&mnemonic)?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
-            let hotkey_path = std::path::PathBuf::from(wallet_dir)
+            let hotkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
                 .join(wallet_name)
                 .join("hotkeys")
                 .join(&name);
@@ -265,7 +265,7 @@ pub async fn handle_wallet(
             crate::cli::helpers::validate_name(&name, "hotkey")?;
             let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
             let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
-            let hotkey_path = std::path::PathBuf::from(wallet_dir)
+            let hotkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
                 .join(wallet_name)
                 .join("hotkeys")
                 .join(&name);
@@ -349,7 +349,7 @@ pub async fn handle_wallet(
         } => {
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, false)?;
-            let coldkey_path = std::path::PathBuf::from(wallet_dir)
+            let coldkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
                 .join(wallet_name)
                 .join("coldkey");
             let decrypted =

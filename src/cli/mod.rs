@@ -2321,7 +2321,7 @@ impl Cli {
         let has = |flag: &str| cli_has_flag(&args, flag);
 
         // Only apply config if the user did NOT explicitly pass the flag
-        if !has("--network") {
+        if !has("--network") && !has("-n") {
             if let Some(ref n) = cfg.network {
                 self.network = n.clone();
             }
@@ -2367,7 +2367,7 @@ impl Cli {
     pub fn apply_config_with_args(&mut self, cfg: &crate::config::Config, args: &[String]) {
         let has = |flag: &str| cli_has_flag(args, flag);
 
-        if !has("--network") {
+        if !has("--network") && !has("-n") {
             if let Some(ref n) = cfg.network {
                 self.network = n.clone();
             }
@@ -2434,4 +2434,58 @@ impl Cli {
 /// Handles both `--flag value` and `--flag=value` forms.
 fn cli_has_flag(args: &[String], flag: &str) -> bool {
     args.iter().any(|a| a == flag || a.starts_with(&format!("{}=", flag)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Issue 70: -n short flag must prevent config override for network ──
+
+    #[test]
+    fn cli_has_flag_detects_short_n() {
+        let args: Vec<String> = vec!["agcli".into(), "-n".into(), "local".into()];
+        assert!(cli_has_flag(&args, "-n"), "-n should be detected");
+        assert!(!cli_has_flag(&args, "--network"), "--network should not match -n");
+    }
+
+    #[test]
+    fn cli_has_flag_detects_short_n_equals_form() {
+        let args: Vec<String> = vec!["agcli".into(), "-n=local".into()];
+        assert!(cli_has_flag(&args, "-n"), "-n=value should be detected");
+    }
+
+    #[test]
+    fn cli_has_flag_detects_long_network() {
+        let args: Vec<String> = vec!["agcli".into(), "--network".into(), "test".into()];
+        assert!(cli_has_flag(&args, "--network"), "--network should be detected");
+        assert!(!cli_has_flag(&args, "-n"), "-n should not match --network");
+    }
+
+    #[test]
+    fn apply_config_with_args_skips_network_on_short_flag() {
+        // This tests the actual apply_config_with_args method using parse_from
+        let mut cli = Cli::parse_from(["agcli", "-n", "local", "config", "show"]);
+        assert_eq!(cli.network, "local");
+
+        let mut cfg = crate::config::Config::default();
+        cfg.network = Some("test".into());
+
+        let args: Vec<String> = vec!["agcli".into(), "-n".into(), "local".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.network, "local", "-n flag should prevent config from overriding network");
+    }
+
+    #[test]
+    fn apply_config_with_args_applies_network_when_no_flag() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert_eq!(cli.network, "finney"); // default
+
+        let mut cfg = crate::config::Config::default();
+        cfg.network = Some("test".into());
+
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.network, "test", "config network should apply when no CLI flag");
+    }
 }
