@@ -1159,18 +1159,9 @@ async fn handle_staking_analytics(
         let tao_in = di.map(|d| d.tao_in.tao()).unwrap_or(0.0);
         let name = di.map(|d| d.name.clone()).unwrap_or_default();
 
-        let share = if tao_in > 0.0 {
-            staked_tao / tao_in
-        } else {
-            0.0
-        };
-        let emission_per_block_tao = subnet_emission as f64 / 1e9;
-        let daily_emission = emission_per_block_tao * 7200.0 * share;
-        let apy = if staked_tao > 0.0 {
-            daily_emission / staked_tao * 365.0 * 100.0
-        } else {
-            0.0
-        };
+        let tempo = di.map(|d| d.tempo).unwrap_or(360);
+        let (daily_emission, apy) =
+            estimate_daily_emission_and_apy(staked_tao, tao_in, subnet_emission, tempo);
 
         positions.push(PositionAnalytics {
             netuid: s.netuid.0,
@@ -2328,6 +2319,36 @@ async fn handle_emissions(
     Ok(())
 }
 
+/// Estimate daily emission (in TAO) and annualized APY for a staking position.
+///
+/// - `staked_tao`: user's stake in TAO
+/// - `tao_in`: total TAO in the subnet pool
+/// - `subnet_emission_rao`: per-tempo emission in RAO (from `DynamicInfo::total_emission()`)
+/// - `tempo`: subnet tempo in blocks (emission event period)
+///
+/// Returns `(daily_emission_tao, apy_pct)`.
+fn estimate_daily_emission_and_apy(
+    staked_tao: f64,
+    tao_in: f64,
+    subnet_emission_rao: u64,
+    tempo: u16,
+) -> (f64, f64) {
+    let share = if tao_in > 0.0 {
+        staked_tao / tao_in
+    } else {
+        return (0.0, 0.0);
+    };
+    let tempo_f = (tempo as f64).max(1.0);
+    let emission_per_block_tao = subnet_emission_rao as f64 / 1e9 / tempo_f;
+    let daily_emission = emission_per_block_tao * 7200.0 * share;
+    let apy = if staked_tao > 0.0 {
+        daily_emission / staked_tao * 365.0 * 100.0
+    } else {
+        0.0
+    };
+    (daily_emission, apy)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::types::chain_data::{AxonInfo, PrometheusInfo};
@@ -2405,5 +2426,93 @@ mod tests {
             ip_type: 6,
         };
         assert_eq!(super::format_prometheus_ip(&info), "some_ipv6");
+    }
+
+    // ========== Issue 673: APY calculation — per-tempo vs per-block ==========
+
+    #[test]
+    fn apy_correctly_divides_by_tempo() {
+        // Subnet with tempo=100, emission=1e9 RAO per tempo (= 1 TAO per tempo)
+        // Per-block emission = 1 TAO / 100 blocks = 0.01 TAO/block
+        // Daily = 0.01 * 7200 = 72 TAO daily * share
+        let (daily, _apy) = super::estimate_daily_emission_and_apy(
+            100.0,     // 100 TAO staked
+            1000.0,    // 1000 TAO in pool
+            1_000_000_000, // 1 TAO per tempo in RAO
+            100,       // tempo = 100 blocks
+        );
+        let share = 100.0 / 1000.0; // 10%
+        let expected_daily = (1.0 / 100.0) * 7200.0 * share; // 7.2
+        assert!(
+            (daily - expected_daily).abs() < 0.001,
+            "Daily emission should be {:.4}, got {:.4}",
+            expected_daily,
+            daily
+        );
+    }
+
+    #[test]
+    fn apy_with_tempo_1_is_per_block() {
+        // With tempo=1, emission IS per-block
+        let (daily1, _) = super::estimate_daily_emission_and_apy(
+            100.0, 1000.0, 1_000_000_000, 1,
+        );
+        // Compare with tempo=100 — should be 100x different
+        let (daily100, _) = super::estimate_daily_emission_and_apy(
+            100.0, 1000.0, 1_000_000_000, 100,
+        );
+        let ratio = daily1 / daily100;
+        assert!(
+            (ratio - 100.0).abs() < 0.01,
+            "Tempo=1 should give 100x more daily emission than tempo=100, got ratio {:.2}",
+            ratio
+        );
+    }
+
+    #[test]
+    fn apy_zero_staked_returns_zero() {
+        let (daily, apy) = super::estimate_daily_emission_and_apy(
+            0.0, 1000.0, 1_000_000_000, 100,
+        );
+        assert_eq!(daily, 0.0);
+        assert_eq!(apy, 0.0);
+    }
+
+    #[test]
+    fn apy_zero_pool_returns_zero() {
+        let (daily, apy) = super::estimate_daily_emission_and_apy(
+            100.0, 0.0, 1_000_000_000, 100,
+        );
+        assert_eq!(daily, 0.0);
+        assert_eq!(apy, 0.0);
+    }
+
+    #[test]
+    fn apy_tempo_zero_treated_as_one() {
+        // tempo=0 should be clamped to 1 to avoid division by zero
+        let (daily, _) = super::estimate_daily_emission_and_apy(
+            100.0, 1000.0, 1_000_000_000, 0,
+        );
+        let (daily_t1, _) = super::estimate_daily_emission_and_apy(
+            100.0, 1000.0, 1_000_000_000, 1,
+        );
+        assert!(
+            (daily - daily_t1).abs() < 0.001,
+            "tempo=0 should behave like tempo=1"
+        );
+    }
+
+    #[test]
+    fn apy_calculation_reasonable_range() {
+        // Typical subnet: 10 TAO/tempo, tempo=360, pool=100k TAO, staked=1000 TAO
+        let (_, apy) = super::estimate_daily_emission_and_apy(
+            1000.0,            // 1k TAO staked
+            100_000.0,         // 100k TAO pool
+            10_000_000_000,    // 10 TAO/tempo
+            360,               // typical tempo
+        );
+        // Sanity check: APY should be positive and < 10000%
+        assert!(apy > 0.0, "APY should be positive, got {}", apy);
+        assert!(apy < 10000.0, "APY should be reasonable (<10000%), got {:.1}%", apy);
     }
 }

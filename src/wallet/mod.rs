@@ -327,11 +327,13 @@ impl Wallet {
     }
 
     /// Get the coldkey public key bytes.
-    pub fn coldkey_public(&self) -> sp_core::sr25519::Public {
+    /// Returns an error if the coldkey has not been unlocked yet, preventing
+    /// silent use of a zero/default public key.
+    pub fn coldkey_public(&self) -> Result<sp_core::sr25519::Public> {
         self.coldkey
             .as_ref()
             .map(|p| p.public())
-            .unwrap_or_default()
+            .context("Coldkey not unlocked. Call unlock_coldkey() first.")
     }
 
     /// List all hotkeys in the wallet.
@@ -496,5 +498,45 @@ mod tests {
         assert!(w1.is_ok());
         let w2 = Wallet::create_from_uri(dir.path(), "//Bob", "pass");
         assert!(w2.is_ok(), "Different URIs should create separate wallets");
+    }
+
+    // ── Issue 667: coldkey_public() must not silently return zero key ──
+
+    #[test]
+    fn coldkey_public_errors_when_not_unlocked() {
+        let dir = tempfile::tempdir().unwrap();
+        let (wallet, _, _) = Wallet::create(dir.path(), "test667", "pass", "default").unwrap();
+        // Re-open without unlocking
+        let w = Wallet::open(dir.path().join("test667")).unwrap();
+        // coldkey_public() should error, not return a zero key
+        assert!(
+            w.coldkey_public().is_err(),
+            "coldkey_public() should error when coldkey is not unlocked"
+        );
+    }
+
+    #[test]
+    fn coldkey_public_succeeds_when_unlocked() {
+        let dir = tempfile::tempdir().unwrap();
+        let (wallet, _, _) = Wallet::create(dir.path(), "test667b", "pass", "default").unwrap();
+        // The wallet returned from create() has coldkey loaded
+        let pk = wallet.coldkey_public();
+        assert!(pk.is_ok(), "coldkey_public() should succeed when unlocked");
+        // The public key should not be all zeros
+        assert_ne!(
+            pk.unwrap().0,
+            [0u8; 32],
+            "coldkey_public() should return a real key, not zeros"
+        );
+    }
+
+    #[test]
+    fn coldkey_public_succeeds_after_explicit_unlock() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_wallet, _, _) = Wallet::create(dir.path(), "test667c", "mypass", "default").unwrap();
+        let mut w = Wallet::open(dir.path().join("test667c")).unwrap();
+        assert!(w.coldkey_public().is_err(), "should fail before unlock");
+        w.unlock_coldkey("mypass").unwrap();
+        assert!(w.coldkey_public().is_ok(), "should succeed after unlock");
     }
 }

@@ -1720,7 +1720,8 @@ pub fn validate_admin_call_name(name: &str) -> Result<()> {
             bad
         );
     }
-    // Check against known AdminUtils calls
+    // Check against known AdminUtils calls — reject unknown calls to prevent
+    // typos from executing unintended sudo operations (Issue 711).
     let known = crate::admin::known_params();
     let known_names: Vec<&str> = known.iter().map(|(n, _, _)| *n).collect();
     if !known_names.contains(&trimmed) {
@@ -1739,11 +1740,7 @@ pub fn validate_admin_call_name(name: &str) -> Result<()> {
         if let Some(closest) = suggestion {
             msg.push_str(&format!("\n  Did you mean '{}'?", closest));
         }
-        eprintln!("Warning: {}", msg);
-        tracing::warn!(
-            call = trimmed,
-            "Unknown admin call name — proceeding anyway (may be a new chain call)"
-        );
+        anyhow::bail!("{}", msg);
     }
     Ok(())
 }
@@ -2213,5 +2210,55 @@ mod tests {
         set_batch_mode(true);
         assert!(is_yes_mode());
         set_batch_mode(false);
+    }
+
+    // ========== Issue 711: validate_admin_call_name rejects unknown calls ==========
+
+    #[test]
+    fn validate_admin_call_name_accepts_known_calls() {
+        assert!(validate_admin_call_name("sudo_set_tempo").is_ok());
+        assert!(validate_admin_call_name("sudo_set_max_allowed_validators").is_ok());
+        assert!(validate_admin_call_name("sudo_set_difficulty").is_ok());
+    }
+
+    #[test]
+    fn validate_admin_call_name_rejects_unknown_calls() {
+        let result = validate_admin_call_name("sudo_set_nonexistent");
+        assert!(result.is_err(), "Unknown call name should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("Unknown admin call"),
+            "Error should mention unknown call: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn validate_admin_call_name_rejects_typos() {
+        let result = validate_admin_call_name("sudo_set_temp"); // typo for sudo_set_tempo
+        assert!(result.is_err(), "Typo should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("Did you mean"),
+            "Should suggest closest match: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn validate_admin_call_name_rejects_empty() {
+        assert!(validate_admin_call_name("").is_err());
+    }
+
+    #[test]
+    fn validate_admin_call_name_rejects_special_chars() {
+        assert!(validate_admin_call_name("sudo; rm -rf /").is_err());
+        assert!(validate_admin_call_name("call(1)").is_err());
+    }
+
+    #[test]
+    fn validate_admin_call_name_rejects_too_long() {
+        let long = "a".repeat(200);
+        assert!(validate_admin_call_name(&long).is_err());
     }
 }

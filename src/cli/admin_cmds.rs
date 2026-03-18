@@ -198,6 +198,10 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             sudo_key,
         } => {
             validate_admin_call_name(&call)?;
+            // Validate netuid in raw args — all known admin calls take netuid as
+            // first arg; reject netuid 0 to prevent accidental root network
+            // modification (Issue 710).
+            validate_raw_admin_netuid(&call, &args)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             // Parse args as JSON array of values
             let values = parse_raw_args(&args)?;
@@ -237,6 +241,33 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             Ok(())
         }
     }
+}
+
+/// Check if the first arg of a raw admin call is netuid 0 (root network).
+/// All known AdminUtils calls take `netuid: u16` as the first argument.
+fn validate_raw_admin_netuid(call: &str, args: &str) -> Result<()> {
+    // All known admin calls take netuid as first arg — check it
+    let known = crate::admin::known_params();
+    let is_known = known.iter().any(|(n, _, _)| *n == call.trim());
+    if !is_known {
+        return Ok(()); // unknown call — can't validate structure
+    }
+    // Parse the first element to check for netuid 0
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(args) {
+        if let Some(arr) = parsed.as_array() {
+            if let Some(first) = arr.first() {
+                if let Some(n) = first.as_u64() {
+                    if n == 0 {
+                        anyhow::bail!(
+                            "Invalid netuid: 0 in admin raw call '{}'. Root network (netuid 0) is not a user subnet.\n  Tip: user subnets start at netuid 1.",
+                            call
+                        );
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Parse a JSON array string into dynamic Values.
@@ -346,5 +377,49 @@ mod tests {
         let result = confirm_action("Test?");
         set_batch_mode(false);
         assert!(result.is_ok());
+    }
+
+    // ========== Issue 710: validate_raw_admin_netuid tests ==========
+
+    #[test]
+    fn raw_admin_rejects_netuid_zero() {
+        let result = validate_raw_admin_netuid("sudo_set_tempo", "[0, 100]");
+        assert!(result.is_err(), "Should reject netuid 0 in raw admin call");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("netuid: 0"),
+            "Error should mention netuid 0: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn raw_admin_accepts_valid_netuid() {
+        assert!(validate_raw_admin_netuid("sudo_set_tempo", "[1, 100]").is_ok());
+        assert!(validate_raw_admin_netuid("sudo_set_tempo", "[42, 200]").is_ok());
+    }
+
+    #[test]
+    fn raw_admin_skips_validation_for_unknown_calls() {
+        // Unknown calls can't be validated — let them through
+        assert!(validate_raw_admin_netuid("some_new_call", "[0, 1]").is_ok());
+    }
+
+    #[test]
+    fn raw_admin_handles_empty_args() {
+        // Empty array — no netuid to validate
+        assert!(validate_raw_admin_netuid("sudo_set_tempo", "[]").is_ok());
+    }
+
+    #[test]
+    fn raw_admin_handles_non_numeric_first_arg() {
+        // String first arg — can't validate as netuid, skip
+        assert!(validate_raw_admin_netuid("sudo_set_tempo", "[\"hello\", 100]").is_ok());
+    }
+
+    #[test]
+    fn raw_admin_handles_invalid_json() {
+        // Invalid JSON — parse fails, validation skips gracefully
+        assert!(validate_raw_admin_netuid("sudo_set_tempo", "not json").is_ok());
     }
 }
