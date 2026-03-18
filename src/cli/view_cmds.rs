@@ -326,7 +326,7 @@ async fn handle_portfolio_at_block(
         client.get_balance_at_block(addr, block_hash),
         client.get_stake_for_coldkey_at_block(addr, block_hash),
     )?;
-    let total_staked: u64 = stakes.iter().map(|s| s.stake.rao()).sum();
+    let total_staked: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
     if output.is_json() {
         print_json(&serde_json::json!({
             "address": addr,
@@ -703,7 +703,8 @@ async fn handle_account_explorer(
             client.get_stake_for_coldkey_at_block(address, block_hash),
             client.get_identity_at_block(address, block_hash),
         )?;
-        let total_staked: f64 = stakes.iter().map(|s| s.stake.tao()).sum();
+        let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+        let total_staked: f64 = total_staked_rao as f64 / 1e9;
         let total_value = balance.tao() + total_staked;
 
         if output.is_json() {
@@ -796,7 +797,7 @@ async fn handle_account_explorer(
     let dynamic_map = build_dynamic_map(&dynamic);
 
     if output.is_json() {
-        let total_staked: u64 = stakes.iter().map(|s| s.stake.rao()).sum();
+        let total_staked: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
         let positions: Vec<serde_json::Value> = stakes
             .iter()
             .map(|s| {
@@ -942,7 +943,8 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
     let validators: Vec<_> = neurons.iter().filter(|n| n.validator_permit).collect();
     let miners: Vec<_> = neurons.iter().filter(|n| !n.validator_permit).collect();
 
-    let total_stake: f64 = neurons.iter().map(|n| n.stake.tao()).sum();
+    let total_stake_rao: u64 = neurons.iter().fold(0u64, |acc, n| acc.saturating_add(n.stake.rao()));
+    let total_stake: f64 = total_stake_rao as f64 / 1e9;
     let total_emission: f64 = neurons.iter().map(|n| n.emission).sum();
     let avg_trust: f64 = if n > 0 {
         neurons.iter().map(|n| n.trust).sum::<f64>() / n as f64
@@ -1179,7 +1181,8 @@ async fn handle_staking_analytics(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let total_staked: f64 = positions.iter().map(|p| p.staked_tao).sum();
+    let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let total_staked: f64 = total_staked_rao as f64 / 1e9;
     let total_daily: f64 = positions
         .iter()
         .map(|p| p.estimated_daily_emission_tao)
@@ -1500,7 +1503,8 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
     }
 
     // Check stake concentration
-    let total_staked: f64 = stakes.iter().map(|s| s.stake.tao()).sum();
+    let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let total_staked: f64 = total_staked_rao as f64 / 1e9;
     let total_value = balance.tao() + total_staked;
     if !stakes.is_empty() {
         let top_stake = stakes.iter().map(|s| s.stake.tao()).fold(0.0_f64, f64::max);
@@ -2132,7 +2136,13 @@ async fn handle_subnet_health(
             let uid = n.uid;
             let hk = n.hotkey.clone();
             futs.push(async move {
-                let neuron_full = client.get_neuron(netuid, uid).await.ok().flatten();
+                let neuron_full = match client.get_neuron(netuid, uid).await {
+                    Ok(nf) => nf,
+                    Err(e) => {
+                        tracing::debug!(uid, error = %e, "health check: neuron fetch failed");
+                        None
+                    }
+                };
                 (uid, hk, neuron_full)
             });
         }
@@ -2514,5 +2524,70 @@ mod tests {
         // Sanity check: APY should be positive and < 10000%
         assert!(apy > 0.0, "APY should be positive, got {}", apy);
         assert!(apy < 10000.0, "APY should be reasonable (<10000%), got {:.1}%", apy);
+    }
+
+    // ── Issue 83: u64 saturating_add prevents overflow ──
+
+    #[test]
+    fn saturating_add_prevents_u64_overflow() {
+        let a: u64 = u64::MAX - 10;
+        let b: u64 = 100;
+        let result = a.saturating_add(b);
+        assert_eq!(result, u64::MAX, "saturating_add should cap at u64::MAX");
+    }
+
+    #[test]
+    fn saturating_fold_sums_correctly_within_range() {
+        let values: Vec<u64> = vec![1_000_000_000, 2_000_000_000, 3_000_000_000];
+        let total: u64 = values.iter().fold(0u64, |acc, &v| acc.saturating_add(v));
+        assert_eq!(total, 6_000_000_000u64);
+    }
+
+    #[test]
+    fn saturating_fold_caps_at_max_on_overflow() {
+        let values: Vec<u64> = vec![u64::MAX, 1];
+        let total: u64 = values.iter().fold(0u64, |acc, &v| acc.saturating_add(v));
+        assert_eq!(total, u64::MAX);
+    }
+
+    // ── Issue 84: f64 precision — sum in RAO then convert ──
+
+    #[test]
+    fn rao_to_tao_conversion_preserves_precision() {
+        // Summing in RAO (integer) then converting is more precise than f64 sum
+        let rao_values: Vec<u64> = vec![1_000_000_001, 2_000_000_002, 3_000_000_003];
+        let total_rao: u64 = rao_values.iter().fold(0u64, |acc, &v| acc.saturating_add(v));
+        let total_tao = total_rao as f64 / 1e9;
+        assert!(
+            (total_tao - 6.000000006).abs() < 1e-9,
+            "RAO→TAO conversion should preserve precision: got {}",
+            total_tao
+        );
+    }
+
+    #[test]
+    fn rao_sum_more_precise_than_f64_sum() {
+        // Many small identical values: f64 sum accumulates error, RAO sum is exact
+        let count = 10_000u64;
+        let each_rao: u64 = 1_000_000_001; // 1.000000001 TAO
+
+        // RAO path (what we do now)
+        let total_rao: u64 = (0..count).fold(0u64, |acc, _| acc.saturating_add(each_rao));
+        let tao_from_rao = total_rao as f64 / 1e9;
+
+        // f64 path (old way)
+        let each_tao = each_rao as f64 / 1e9;
+        let tao_from_f64: f64 = (0..count).map(|_| each_tao).sum();
+
+        // RAO path should be at least as accurate
+        let expected = count as f64 * (each_rao as f64 / 1e9);
+        let err_rao = (tao_from_rao - expected).abs();
+        let err_f64 = (tao_from_f64 - expected).abs();
+        assert!(
+            err_rao <= err_f64,
+            "RAO-based sum error ({:e}) should be <= f64 sum error ({:e})",
+            err_rao,
+            err_f64
+        );
     }
 }

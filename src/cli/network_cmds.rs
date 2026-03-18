@@ -317,7 +317,6 @@ pub(super) async fn handle_subscribe(
     cmd: SubscribeCommands,
     client: &Client,
     output: OutputFormat,
-    _batch: bool,
 ) -> Result<()> {
     // Validate inputs before connecting
     if let SubscribeCommands::Events {
@@ -1143,8 +1142,26 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
                 let port = entry["port"].as_u64().ok_or_else(|| {
                     anyhow::anyhow!("Batch entry {}: missing or invalid 'port'", i)
                 })? as u16;
-                let protocol = entry["protocol"].as_u64().unwrap_or(4) as u8;
-                let version = entry["version"].as_u64().unwrap_or(0) as u32;
+                let protocol: u8 = entry["protocol"]
+                    .as_u64()
+                    .unwrap_or(4)
+                    .try_into()
+                    .map_err(|_| {
+                        anyhow::anyhow!(
+                            "Batch entry {}: protocol value exceeds u8::MAX (255)",
+                            i
+                        )
+                    })?;
+                let version: u32 = entry["version"]
+                    .as_u64()
+                    .unwrap_or(0)
+                    .try_into()
+                    .map_err(|_| {
+                        anyhow::anyhow!(
+                            "Batch entry {}: version value exceeds u32::MAX",
+                            i
+                        )
+                    })?;
 
                 let ip_u128 = crate::cli::helpers::validate_ipv4(ip)?;
 
@@ -1793,7 +1810,7 @@ pub(super) async fn handle_crowdloan(
 fn price_to_tick(price: f64) -> i32 {
     const MIN_TICK: i32 = -887272;
     const MAX_TICK: i32 = 887272;
-    if price <= 0.0 {
+    if !price.is_finite() || price <= 0.0 {
         return MIN_TICK;
     }
     let tick = (price.ln() / 1.0001_f64.ln()) as i32;
@@ -2089,5 +2106,70 @@ mod tests {
         let result: Result<u16, _> = netuid_val.try_into();
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0u16);
+    }
+
+    // ── Issue 81: protocol/version truncation guards ──
+
+    #[test]
+    fn protocol_within_u8_range_succeeds() {
+        let val: u64 = 4;
+        let result: Result<u8, _> = val.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 4u8);
+    }
+
+    #[test]
+    fn protocol_exceeding_u8_fails() {
+        let val: u64 = 256;
+        let result: Result<u8, _> = val.try_into();
+        assert!(result.is_err(), "protocol 256 should fail u8 conversion");
+    }
+
+    #[test]
+    fn version_within_u32_range_succeeds() {
+        let val: u64 = u32::MAX as u64;
+        let result: Result<u32, _> = val.try_into();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), u32::MAX);
+    }
+
+    #[test]
+    fn version_exceeding_u32_fails() {
+        let val: u64 = u32::MAX as u64 + 1;
+        let result: Result<u32, _> = val.try_into();
+        assert!(result.is_err(), "version exceeding u32::MAX should fail");
+    }
+
+    // ── Issue 82: price_to_tick NaN/Inf guard ──
+
+    #[test]
+    fn price_to_tick_nan_returns_min_tick() {
+        assert_eq!(super::price_to_tick(f64::NAN), -887272);
+    }
+
+    #[test]
+    fn price_to_tick_inf_returns_min_tick() {
+        assert_eq!(super::price_to_tick(f64::INFINITY), -887272);
+    }
+
+    #[test]
+    fn price_to_tick_neg_inf_returns_min_tick() {
+        assert_eq!(super::price_to_tick(f64::NEG_INFINITY), -887272);
+    }
+
+    #[test]
+    fn price_to_tick_zero_returns_min_tick() {
+        assert_eq!(super::price_to_tick(0.0), -887272);
+    }
+
+    #[test]
+    fn price_to_tick_negative_returns_min_tick() {
+        assert_eq!(super::price_to_tick(-1.0), -887272);
+    }
+
+    #[test]
+    fn price_to_tick_normal_price_is_sane() {
+        let tick = super::price_to_tick(1.0);
+        assert_eq!(tick, 0, "price=1.0 should give tick=0 (ln(1)=0)");
     }
 }

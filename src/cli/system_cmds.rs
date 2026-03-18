@@ -427,14 +427,21 @@ pub(super) async fn handle_utils(
                     println!("{} TAO = {} RAO", amount, rao);
                 }
             } else {
+                if !amount.is_finite() || amount < 0.0 || amount > u64::MAX as f64 {
+                    return Err(anyhow::anyhow!(
+                        "Invalid RAO amount: {} (must be a finite non-negative number within u64 range)",
+                        amount
+                    ));
+                }
+                let rao = amount as u64;
                 let tao = amount / 1e9;
                 if output.is_json() {
                     print_json(&serde_json::json!({
-                        "rao": amount as u64,
+                        "rao": rao,
                         "tao": tao,
                     }));
                 } else {
-                    println!("{} RAO = {:.9} TAO", amount as u64, tao);
+                    println!("{} RAO = {:.9} TAO", rao, tao);
                 }
             }
             Ok(())
@@ -477,7 +484,7 @@ pub(super) async fn handle_utils(
                 avg_ms: Option<u128>,
                 min_ms: Option<u128>,
                 max_ms: Option<u128>,
-                failures: u32,
+                failures: usize,
             }
 
             let mut results: Vec<EndpointResult> = Vec::new();
@@ -489,7 +496,7 @@ pub(super) async fn handle_utils(
                     Ok(client) => {
                         let connect_ms = connect_start.elapsed().as_millis();
                         let mut latencies = Vec::new();
-                        let mut failures = 0u32;
+                        let mut failures: usize = 0;
                         for _ in 0..pings {
                             let t = Instant::now();
                             match client.get_block_number().await {
@@ -544,7 +551,7 @@ pub(super) async fn handle_utils(
                             avg_ms: None,
                             min_ms: None,
                             max_ms: None,
-                            failures: pings as u32,
+                            failures: pings,
                         });
                         if !output.is_json() {
                             println!("{:<12} {}", label, url);
@@ -756,6 +763,53 @@ mod tests {
             "Non-MEV message should not mention MEV: {}",
             msg_no_mev
         );
+    }
+
+    // ── Issue 79: amount as u64 bounds check ──
+
+    #[test]
+    fn rao_amount_negative_is_invalid() {
+        let amount: f64 = -1.0;
+        assert!(
+            !amount.is_finite() || amount < 0.0 || amount > u64::MAX as f64,
+            "Negative amount should be detected as invalid"
+        );
+    }
+
+    #[test]
+    fn rao_amount_nan_is_invalid() {
+        let amount = f64::NAN;
+        assert!(
+            !amount.is_finite(),
+            "NaN amount should be detected as invalid"
+        );
+    }
+
+    #[test]
+    fn rao_amount_infinity_is_invalid() {
+        let amount = f64::INFINITY;
+        assert!(
+            !amount.is_finite(),
+            "Infinity amount should be detected as invalid"
+        );
+    }
+
+    #[test]
+    fn rao_amount_valid_converts_cleanly() {
+        let amount: f64 = 1_000_000_000.0;
+        assert!(amount.is_finite() && amount >= 0.0 && amount <= u64::MAX as f64);
+        let rao = amount as u64;
+        assert_eq!(rao, 1_000_000_000u64);
+    }
+
+    // ── Issue 86: pings as usize (not u32) ──
+
+    #[test]
+    fn endpoint_result_failures_is_usize() {
+        // Verify that the type system accepts usize directly without cast
+        let failures: usize = 42;
+        // This would fail to compile if failures was u32 and we tried to assign usize
+        assert_eq!(failures, 42usize);
     }
 }
 

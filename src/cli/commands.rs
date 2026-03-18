@@ -415,7 +415,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Subscribe(cmd) => {
             let client = connect(&network, dry_run, best).await?;
-            network_cmds::handle_subscribe(cmd, &client, ctx.output, batch).await
+            network_cmds::handle_subscribe(cmd, &client, ctx.output).await
         }
         Commands::Multisig(cmd) => {
             network_cmds::handle_multisig(

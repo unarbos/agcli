@@ -429,6 +429,9 @@ pub enum WalletCommands {
         /// Wallet name
         #[arg(long, default_value = "default")]
         name: String,
+        /// Name for the initial hotkey (default: "default")
+        #[arg(long)]
+        hotkey_name: Option<String>,
         /// Coldkey password (non-interactive)
         #[arg(long, env = "AGCLI_PASSWORD", hide_env_values = true)]
         password: Option<String>,

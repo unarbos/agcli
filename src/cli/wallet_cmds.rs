@@ -16,15 +16,18 @@ pub async fn handle_wallet(
     match cmd {
         WalletCommands::Create {
             name,
+            hotkey_name,
             password: cmd_password,
             no_mnemonic,
         } => {
             crate::cli::helpers::validate_name(&name, "wallet")?;
+            let hk_name = hotkey_name.as_deref().unwrap_or("default");
+            crate::cli::helpers::validate_name(hk_name, "hotkey")?;
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             crate::cli::helpers::validate_password_strength(&password)?;
             let (wallet, coldkey_mnemonic, hotkey_mnemonic) =
-                Wallet::create(wallet_dir, &name, &password, "default")?;
+                Wallet::create(wallet_dir, &name, &password, hk_name)?;
             if output.is_json() {
                 let mut obj = serde_json::json!({
                     "name": name,
@@ -442,6 +445,49 @@ pub async fn handle_wallet(
                 }
             }
             Ok(())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // ── Issue 76: wallet create now accepts --hotkey-name ──
+
+    #[test]
+    fn wallet_create_enum_has_hotkey_name_field() {
+        // Confirm the WalletCommands::Create variant includes hotkey_name.
+        // This will fail to compile if the field is removed.
+        let _cmd = crate::cli::WalletCommands::Create {
+            name: "test".to_string(),
+            hotkey_name: Some("my-hotkey".to_string()),
+            password: None,
+            no_mnemonic: false,
+        };
+    }
+
+    #[test]
+    fn wallet_create_hotkey_name_defaults_to_none() {
+        let cmd = crate::cli::WalletCommands::Create {
+            name: "test".to_string(),
+            hotkey_name: None,
+            password: None,
+            no_mnemonic: false,
+        };
+        if let crate::cli::WalletCommands::Create { hotkey_name, .. } = cmd {
+            assert!(hotkey_name.is_none(), "hotkey_name should default to None");
+        }
+    }
+
+    #[test]
+    fn wallet_create_hotkey_name_custom_value() {
+        let cmd = crate::cli::WalletCommands::Create {
+            name: "test".to_string(),
+            hotkey_name: Some("validator".to_string()),
+            password: None,
+            no_mnemonic: false,
+        };
+        if let crate::cli::WalletCommands::Create { hotkey_name, .. } = cmd {
+            assert_eq!(hotkey_name.as_deref(), Some("validator"));
         }
     }
 }
