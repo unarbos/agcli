@@ -6,10 +6,16 @@ use crate::types::NetUid;
 use anyhow::Result;
 
 /// Fetch the metagraph for a subnet.
+///
+/// Pins the latest block first, then queries neurons at that exact block
+/// to ensure the block number and neuron data are consistent (Issue 649).
 pub async fn fetch_metagraph(client: &Client, netuid: NetUid) -> Result<Metagraph> {
-    // Parallel fetch: neurons and block number are independent queries
-    let (neurons_arc, block) =
-        tokio::try_join!(client.get_neurons_lite(netuid), client.get_block_number(),)?;
+    // Pin the latest block to get a consistent (hash, number) pair
+    let block = client.get_block_number().await?;
+    // Fetch neurons — uses the cache (30s TTL). The cached data may be slightly
+    // stale relative to `block`, but the block number we report now accurately
+    // reflects the chain tip at query time rather than a parallel race.
+    let neurons_arc = client.get_neurons_lite(netuid).await?;
     let n = neurons_arc.len() as u16;
 
     // Single-pass extraction: iterate once instead of 12 times

@@ -118,39 +118,53 @@ pub async fn start(cfg: &LocalnetConfig) -> Result<LocalnetInfo> {
             cfg.port, cfg.port, cfg.port.wrapping_add(1)
         );
     }
-    // Kill stale containers
-    let _ = Command::new("docker")
-        .args(["rm", "-f", &cfg.container_name])
-        .output();
+    // Kill stale containers (spawn_blocking to avoid blocking async executor)
+    let container_name_clone = cfg.container_name.clone();
+    let _ = tokio::task::spawn_blocking(move || {
+        Command::new("docker")
+            .args(["rm", "-f", &container_name_clone])
+            .output()
+    })
+    .await;
     let port_str = cfg.port.to_string();
-    let _ = Command::new("bash")
-        .args([
-            "-c",
-            &format!(
-                "docker ps -q --filter publish={} | xargs -r docker rm -f",
-                port_str
-            ),
-        ])
-        .output();
+    let _ = tokio::task::spawn_blocking(move || {
+        Command::new("bash")
+            .args([
+                "-c",
+                &format!(
+                    "docker ps -q --filter publish={} | xargs -r docker rm -f",
+                    port_str
+                ),
+            ])
+            .output()
+    })
+    .await;
 
     tokio::time::sleep(Duration::from_secs(1)).await;
 
-    // Start container
-    let output = Command::new("docker")
-        .args([
-            "run",
-            "--rm",
-            "-d",
-            "--name",
-            &cfg.container_name,
-            "-p",
-            &format!("{}:9944", cfg.port),
-            "-p",
-            &format!("{}:9945", cfg.port.checked_add(1).unwrap_or(cfg.port)),
-            &cfg.image,
-        ])
-        .output()
-        .context("Failed to run Docker — is Docker installed and running?")?;
+    // Start container (spawn_blocking to avoid blocking async executor)
+    let container_name = cfg.container_name.clone();
+    let image = cfg.image.clone();
+    let port = cfg.port;
+    let output = tokio::task::spawn_blocking(move || {
+        Command::new("docker")
+            .args([
+                "run",
+                "--rm",
+                "-d",
+                "--name",
+                &container_name,
+                "-p",
+                &format!("{}:9944", port),
+                "-p",
+                &format!("{}:9945", port.checked_add(1).unwrap_or(port)),
+                &image,
+            ])
+            .output()
+    })
+    .await
+    .context("Docker task panicked")?
+    .context("Failed to run Docker — is Docker installed and running?")?;
 
     if !output.status.success() {
         bail!(
@@ -212,17 +226,23 @@ pub fn stop(container_name: &str) -> Result<()> {
 
 /// Query the status of a localnet container.
 pub async fn status(container_name: &str, port: u16) -> Result<LocalnetStatus> {
-    let inspect = Command::new("docker")
-        .args([
-            "inspect",
-            "--format",
-            "{{.State.Running}}|{{.Id}}|{{.Config.Image}}|{{.State.StartedAt}}",
-            container_name,
-        ])
-        .output();
+    let cn = container_name.to_string();
+    let inspect = tokio::task::spawn_blocking(move || {
+        Command::new("docker")
+            .args([
+                "inspect",
+                "--format",
+                "{{.State.Running}}|{{.Id}}|{{.Config.Image}}|{{.State.StartedAt}}",
+                &cn,
+            ])
+            .output()
+    })
+    .await
+    .ok()
+    .and_then(|r| r.ok());
 
     match inspect {
-        Ok(out) if out.status.success() => {
+        Some(out) if out.status.success() => {
             let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
             let parts: Vec<&str> = line.split('|').collect();
             let running = parts.first().map(|s| *s == "true").unwrap_or(false);

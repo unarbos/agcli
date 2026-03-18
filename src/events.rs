@@ -322,6 +322,26 @@ pub async fn subscribe_events_filtered(
         );
     }
 
+    // Run the subscription loop with Ctrl+C handling (Issue 721)
+    tokio::select! {
+        result = subscribe_events_inner(client, filter, json_output, netuid_filter, account_filter) => result,
+        _ = tokio::signal::ctrl_c() => {
+            if !json_output {
+                eprintln!("\nInterrupted. Closing event subscription.");
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Inner event subscription loop, factored out for Ctrl+C wrapping.
+async fn subscribe_events_inner(
+    client: &OnlineClient<SubtensorConfig>,
+    filter: EventFilter,
+    json_output: bool,
+    netuid_filter: Option<u16>,
+    account_filter: Option<&str>,
+) -> Result<()> {
     let mut reconnect_attempts = 0u32;
     let mut last_processed_block: Option<u64> = None;
     loop {
@@ -528,6 +548,23 @@ pub async fn subscribe_blocks(
 ) -> Result<()> {
     println!("Subscribed to finalized blocks. Ctrl+C to stop.\n");
 
+    // Run the block subscription loop with Ctrl+C handling (Issue 721)
+    tokio::select! {
+        result = subscribe_blocks_inner(client, json_output) => result,
+        _ = tokio::signal::ctrl_c() => {
+            if !json_output {
+                eprintln!("\nInterrupted. Closing block subscription.");
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Inner block subscription loop, factored out for Ctrl+C wrapping.
+async fn subscribe_blocks_inner(
+    client: &OnlineClient<SubtensorConfig>,
+    json_output: bool,
+) -> Result<()> {
     let mut reconnect_attempts = 0u32;
     let mut last_processed_block: Option<u64> = None;
     loop {

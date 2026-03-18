@@ -2129,6 +2129,67 @@ pub fn validate_repeat_params(repeat_every: u32, repeat_count: u32) -> Result<()
     Ok(())
 }
 
+/// Validate a Docker container name.
+///
+/// Docker container names must match `[a-zA-Z0-9][a-zA-Z0-9_.-]*` and be
+/// at most 128 characters. Empty strings are rejected.
+pub fn validate_docker_name(name: &str, label: &str) -> Result<()> {
+    if name.is_empty() {
+        anyhow::bail!("{} cannot be empty.", label);
+    }
+    if name.len() > 128 {
+        anyhow::bail!(
+            "{} '{}...' is too long ({} chars, max 128).",
+            label,
+            &name[..32],
+            name.len()
+        );
+    }
+    let first = name.as_bytes()[0];
+    if !first.is_ascii_alphanumeric() {
+        anyhow::bail!(
+            "{} '{}' must start with an alphanumeric character (got '{}').",
+            label,
+            name,
+            first as char
+        );
+    }
+    if let Some(bad) = name.chars().find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '.' | '-')) {
+        anyhow::bail!(
+            "{} '{}' contains invalid character '{}'. Only [a-zA-Z0-9_.-] are allowed.",
+            label,
+            name,
+            bad
+        );
+    }
+    Ok(())
+}
+
+/// Validate a Docker image reference.
+///
+/// Image references must be non-empty, max 256 chars, and contain only valid
+/// characters (alphanumeric, `/`, `.`, `-`, `_`, `:`). No shell metacharacters.
+pub fn validate_docker_image(image: &str) -> Result<()> {
+    if image.is_empty() {
+        anyhow::bail!("Docker image cannot be empty.");
+    }
+    if image.len() > 256 {
+        anyhow::bail!(
+            "Docker image '{}...' is too long ({} chars, max 256).",
+            &image[..32],
+            image.len()
+        );
+    }
+    if let Some(bad) = image.chars().find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '/' | '.' | '-' | '_' | ':' | '@')) {
+        anyhow::bail!(
+            "Docker image '{}' contains invalid character '{}'. Only [a-zA-Z0-9/._:-@] are allowed.",
+            image,
+            bad
+        );
+    }
+    Ok(())
+}
+
 /// Validate liquidity price range: price_low must be strictly less than price_high.
 pub fn validate_price_range(price_low: f64, price_high: f64) -> Result<()> {
     if price_low >= price_high {
@@ -2407,5 +2468,79 @@ mod tests {
         assert!(confirm_action("Delete everything?").is_ok(),
             "confirm_action should auto-confirm in batch mode");
         set_batch_mode(false);
+    }
+
+    // ========== Issue 698: Docker name/image validation tests ==========
+
+    #[test]
+    fn validate_docker_name_accepts_valid_names() {
+        assert!(validate_docker_name("agcli_localnet", "Container name").is_ok());
+        assert!(validate_docker_name("my-container.v2", "Container name").is_ok());
+        assert!(validate_docker_name("A123", "Container name").is_ok());
+        assert!(validate_docker_name("a", "Container name").is_ok());
+    }
+
+    #[test]
+    fn validate_docker_name_rejects_empty() {
+        let err = validate_docker_name("", "Container name").unwrap_err();
+        assert!(err.to_string().contains("cannot be empty"), "{}", err);
+    }
+
+    #[test]
+    fn validate_docker_name_rejects_leading_special() {
+        let err = validate_docker_name("_foo", "Container name").unwrap_err();
+        assert!(err.to_string().contains("must start with an alphanumeric"), "{}", err);
+        let err2 = validate_docker_name("-bar", "Container name").unwrap_err();
+        assert!(err2.to_string().contains("must start with an alphanumeric"), "{}", err2);
+        let err3 = validate_docker_name(".baz", "Container name").unwrap_err();
+        assert!(err3.to_string().contains("must start with an alphanumeric"), "{}", err3);
+    }
+
+    #[test]
+    fn validate_docker_name_rejects_shell_metacharacters() {
+        let err = validate_docker_name("foo;rm -rf /", "Container name").unwrap_err();
+        assert!(err.to_string().contains("invalid character"), "{}", err);
+        let err2 = validate_docker_name("foo$(cmd)", "Container name").unwrap_err();
+        assert!(err2.to_string().contains("invalid character"), "{}", err2);
+    }
+
+    #[test]
+    fn validate_docker_name_rejects_spaces() {
+        let err = validate_docker_name("my container", "Container name").unwrap_err();
+        assert!(err.to_string().contains("invalid character"), "{}", err);
+    }
+
+    #[test]
+    fn validate_docker_name_rejects_too_long() {
+        let long = format!("a{}", "x".repeat(128));
+        let err = validate_docker_name(&long, "Container name").unwrap_err();
+        assert!(err.to_string().contains("too long"), "{}", err);
+    }
+
+    #[test]
+    fn validate_docker_image_accepts_valid_images() {
+        assert!(validate_docker_image("ghcr.io/opentensor/subtensor-localnet:devnet-ready").is_ok());
+        assert!(validate_docker_image("ubuntu:22.04").is_ok());
+        assert!(validate_docker_image("my-registry.com/org/image:v1.2.3").is_ok());
+        assert!(validate_docker_image("image@sha256:abc123").is_ok());
+    }
+
+    #[test]
+    fn validate_docker_image_rejects_empty() {
+        let err = validate_docker_image("").unwrap_err();
+        assert!(err.to_string().contains("cannot be empty"), "{}", err);
+    }
+
+    #[test]
+    fn validate_docker_image_rejects_shell_metacharacters() {
+        let err = validate_docker_image("ubuntu;echo pwned").unwrap_err();
+        assert!(err.to_string().contains("invalid character"), "{}", err);
+    }
+
+    #[test]
+    fn validate_docker_image_rejects_too_long() {
+        let long = "a".repeat(257);
+        let err = validate_docker_image(&long).unwrap_err();
+        assert!(err.to_string().contains("too long"), "{}", err);
     }
 }

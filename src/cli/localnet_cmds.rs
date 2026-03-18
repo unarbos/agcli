@@ -18,10 +18,14 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
             if let Some(p) = port {
                 crate::cli::helpers::validate_port(p, "localnet")?;
             }
+            let image_val = image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string());
+            let container_val = container
+                .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            validate_docker_image(&image_val)?;
+            validate_docker_name(&container_val, "Container name")?;
             let cfg = LocalnetConfig {
-                image: image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string()),
-                container_name: container
-                    .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string()),
+                image: image_val,
+                container_name: container_val,
                 port: port.unwrap_or(9944),
                 wait: wait.unwrap_or(true),
                 wait_timeout: timeout.unwrap_or(120),
@@ -77,6 +81,7 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
 
         LocalnetCommands::Stop { container } => {
             let name = container.unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            validate_docker_name(&name, "Container name")?;
             localnet::stop(&name)?;
 
             if ctx.output.is_json() {
@@ -95,6 +100,7 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
                 crate::cli::helpers::validate_port(p, "localnet status")?;
             }
             let name = container.unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            validate_docker_name(&name, "Container name")?;
             let p = port.unwrap_or(9944);
             let st = localnet::status(&name, p).await?;
 
@@ -130,10 +136,14 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
             if let Some(p) = port {
                 crate::cli::helpers::validate_port(p, "localnet reset")?;
             }
+            let image_val = image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string());
+            let container_val = container
+                .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            validate_docker_image(&image_val)?;
+            validate_docker_name(&container_val, "Container name")?;
             let cfg = LocalnetConfig {
-                image: image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string()),
-                container_name: container
-                    .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string()),
+                image: image_val,
+                container_name: container_val,
                 port: port.unwrap_or(9944),
                 wait: true,
                 wait_timeout: timeout.unwrap_or(120),
@@ -168,6 +178,7 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
 
         LocalnetCommands::Logs { container, tail } => {
             let name = container.unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            validate_docker_name(&name, "Container name")?;
             let log_output = localnet::logs(&name, tail)?;
             print!("{}", log_output);
             Ok(())
