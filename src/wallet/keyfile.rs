@@ -109,6 +109,33 @@ pub fn lock_wallet_dir(dir: &Path) -> Result<fs::File> {
     }
 }
 
+/// Atomically write data to a file: write to a temp file in the same directory,
+/// set permissions, then rename into place. This ensures the target path is
+/// never left in a partial state (crash-safe).
+fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
+    let parent = path.parent().unwrap_or(Path::new("."));
+    fs::create_dir_all(parent)?;
+
+    // Write to a temp file in the same directory (same filesystem for rename)
+    let tmp_path = path.with_extension("tmp");
+    fs::write(&tmp_path, data)
+        .with_context(|| format!("write temp file '{}'", tmp_path.display()))?;
+
+    // Set permissions BEFORE rename so the file is never world-readable at the target path
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(mode))
+            .with_context(|| format!("Failed to set permissions on '{}'", tmp_path.display()))?;
+    }
+    let _ = mode; // suppress unused warning on non-unix
+
+    // Atomic rename into place
+    fs::rename(&tmp_path, path)
+        .with_context(|| format!("rename '{}' -> '{}'", tmp_path.display(), path.display()))?;
+    Ok(())
+}
+
 /// Write mnemonic encrypted with password.
 pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> Result<()> {
     tracing::debug!(path = %path.display(), "Writing encrypted keyfile");
@@ -133,17 +160,7 @@ pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> R
     data.extend_from_slice(&nonce_bytes);
     data.extend_from_slice(&ciphertext);
 
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, data).context("write keyfile")?;
-    // Set restrictive permissions (0600) on the keyfile
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-            .with_context(|| format!("Failed to set permissions on '{}'", path.display()))?;
-    }
+    atomic_write(path, &data, 0o600)?;
     Ok(())
 }
 
@@ -174,16 +191,7 @@ pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
 /// Write a plaintext keyfile (for hotkeys).
 pub fn write_keyfile(path: &Path, mnemonic: &str) -> Result<()> {
     let _lock = lock_keyfile(path)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, mnemonic).context("write keyfile")?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-            .with_context(|| format!("Failed to set permissions on '{}'", path.display()))?;
-    }
+    atomic_write(path, mnemonic.as_bytes(), 0o600)?;
     Ok(())
 }
 
@@ -196,16 +204,7 @@ pub fn read_keyfile(path: &Path) -> Result<String> {
 /// Write public key to a file (hex-encoded).
 pub fn write_public_key(path: &Path, public: &sr25519::Public) -> Result<()> {
     let _lock = lock_keyfile(path)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, hex::encode(public.0)).context("write public key")?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o644))
-            .with_context(|| format!("Failed to set permissions on '{}'", path.display()))?;
-    }
+    atomic_write(path, hex::encode(public.0).as_bytes(), 0o644)?;
     Ok(())
 }
 

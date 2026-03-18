@@ -449,8 +449,8 @@ pub enum WalletCommands {
         /// Wallet name
         #[arg(long, default_value = "default")]
         name: String,
-        /// Mnemonic phrase (non-interactive)
-        #[arg(long)]
+        /// Mnemonic phrase (non-interactive). Prefer AGCLI_MNEMONIC env var for security.
+        #[arg(long, env = "AGCLI_MNEMONIC", hide_env_values = true)]
         mnemonic: Option<String>,
         /// Coldkey password (non-interactive)
         #[arg(long, env = "AGCLI_PASSWORD", hide_env_values = true)]
@@ -458,8 +458,8 @@ pub enum WalletCommands {
     },
     /// Regenerate coldkey from mnemonic
     RegenColdkey {
-        /// Mnemonic phrase (non-interactive)
-        #[arg(long)]
+        /// Mnemonic phrase (non-interactive). Prefer AGCLI_MNEMONIC env var for security.
+        #[arg(long, env = "AGCLI_MNEMONIC", hide_env_values = true)]
         mnemonic: Option<String>,
         /// Coldkey password (non-interactive)
         #[arg(long, env = "AGCLI_PASSWORD", hide_env_values = true)]
@@ -470,8 +470,8 @@ pub enum WalletCommands {
         /// Hotkey name
         #[arg(long, default_value = "default")]
         name: String,
-        /// Mnemonic phrase (non-interactive)
-        #[arg(long)]
+        /// Mnemonic phrase (non-interactive). Prefer AGCLI_MNEMONIC env var for security.
+        #[arg(long, env = "AGCLI_MNEMONIC", hide_env_values = true)]
         mnemonic: Option<String>,
     },
     /// Create a new hotkey

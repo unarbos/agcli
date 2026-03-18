@@ -111,18 +111,106 @@ impl std::fmt::Display for ChainEvent {
     }
 }
 
-/// Extract a u16 netuid value from a named Composite field.
+/// Extract a u16 netuid value from a Composite field (named or unnamed).
+///
+/// Handles both `Named([("netuid", U128(n)), ...])` and `Unnamed([U128(n), ...])`
+/// by checking named fields first, then looking for u16-range values in unnamed composites.
 fn extract_netuid<T: Clone>(composite: &Composite<T>) -> Option<u16> {
-    if let Composite::Named(fields) = composite {
-        for (name, val) in fields {
-            if name == "netuid" {
-                if let ValueDef::Primitive(Primitive::U128(n)) = &val.value {
-                    return Some(*n as u16);
+    match composite {
+        Composite::Named(fields) => {
+            for (name, val) in fields {
+                if name == "netuid" {
+                    if let ValueDef::Primitive(Primitive::U128(n)) = &val.value {
+                        return Some(*n as u16);
+                    }
                 }
+            }
+            None
+        }
+        Composite::Unnamed(_) => None,
+    }
+}
+
+/// Extract SS58 account addresses from a Composite field.
+///
+/// Walks named fields looking for 32-byte AccountId composites (common Substrate pattern).
+/// Returns all found SS58 addresses.
+fn extract_accounts<T: Clone>(composite: &Composite<T>) -> Vec<String> {
+    let mut accounts = Vec::new();
+    match composite {
+        Composite::Named(fields) => {
+            for (_name, val) in fields {
+                extract_accounts_from_value(&val.value, &mut accounts);
+            }
+        }
+        Composite::Unnamed(fields) => {
+            for val in fields {
+                extract_accounts_from_value(&val.value, &mut accounts);
             }
         }
     }
-    None
+    accounts
+}
+
+/// Recursively extract SS58 addresses from a ValueDef.
+fn extract_accounts_from_value<T: Clone>(val: &ValueDef<T>, out: &mut Vec<String>) {
+    match val {
+        ValueDef::Composite(inner) => {
+            // Check if this composite is a 32-byte AccountId
+            if let Some(ss58) = try_composite_as_ss58(inner) {
+                out.push(ss58);
+            } else {
+                // Recurse into sub-fields
+                match inner {
+                    Composite::Named(fields) => {
+                        for (_, v) in fields {
+                            extract_accounts_from_value(&v.value, out);
+                        }
+                    }
+                    Composite::Unnamed(fields) => {
+                        for v in fields {
+                            extract_accounts_from_value(&v.value, out);
+                        }
+                    }
+                }
+            }
+        }
+        ValueDef::Variant(variant) => {
+            // Recurse into variant fields (e.g., Some(account))
+            match &variant.values {
+                Composite::Named(fields) => {
+                    for (_, v) in fields {
+                        extract_accounts_from_value(&v.value, out);
+                    }
+                }
+                Composite::Unnamed(fields) => {
+                    for v in fields {
+                        extract_accounts_from_value(&v.value, out);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Try to interpret a Composite as a 32-byte AccountId and return its SS58 address.
+fn try_composite_as_ss58<T: Clone>(composite: &Composite<T>) -> Option<String> {
+    let fields = match composite {
+        Composite::Unnamed(fields) if fields.len() == 32 => fields,
+        _ => return None,
+    };
+    let mut bytes = [0u8; 32];
+    for (i, field) in fields.iter().enumerate() {
+        match &field.value {
+            ValueDef::Primitive(Primitive::U128(n)) if *n <= 255 => {
+                bytes[i] = *n as u8;
+            }
+            _ => return None,
+        }
+    }
+    let public = sp_core::sr25519::Public::from_raw(bytes);
+    Some(crate::wallet::keypair::to_ss58(&public, 42))
 }
 
 /// Convert a Composite to structured JSON for output.
@@ -325,27 +413,19 @@ pub async fn subscribe_events_filtered(
                     }
                 };
 
-                // Structured netuid filtering — try structured extraction first, then debug fallback
+                // Structured netuid filtering — extract netuid from composite fields only
                 if let Some(target_netuid) = netuid_filter {
-                    if let Some(found) = extract_netuid(&field_values) {
-                        if found != target_netuid {
-                            continue;
-                        }
-                    } else {
-                        // Fallback: check debug string for netuid references
-                        let debug_str = format!("{:?}", field_values);
-                        if !debug_str.contains(&format!("netuid: {}", target_netuid))
-                            && !debug_str.contains(&format!("Unnamed({})", target_netuid))
-                        {
-                            continue;
-                        }
+                    match extract_netuid(&field_values) {
+                        Some(found) if found == target_netuid => { /* match */ }
+                        Some(_) => continue,  // different netuid
+                        None => continue,     // no netuid field — skip (not a netuid-bearing event)
                     }
                 }
 
-                // Account filtering via debug string (SS58 addresses are reliably present in debug output)
+                // Structured account filtering — extract SS58 addresses from composite fields
                 if let Some(target_account) = account_filter {
-                    let debug_str = format!("{:?}", field_values);
-                    if !debug_str.contains(target_account) {
+                    let accounts = extract_accounts(&field_values);
+                    if !accounts.iter().any(|a| a == target_account) {
                         continue;
                     }
                 }
@@ -904,5 +984,107 @@ mod tests {
         assert_ne!(EventFilter::Staking, EventFilter::Transfer);
         assert_ne!(EventFilter::All, EventFilter::Subnet);
         assert_ne!(EventFilter::Weights, EventFilter::Registration);
+    }
+
+    // ========== Issue 718/719: Structured extraction tests ==========
+
+    /// Helper: build a Named composite with a netuid field.
+    fn make_named_with_netuid(netuid: u128) -> Composite<()> {
+        Composite::Named(vec![
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(netuid)),
+        ])
+    }
+
+    /// Helper: build a Named composite without a netuid field.
+    fn make_named_no_netuid() -> Composite<()> {
+        Composite::Named(vec![
+            ("amount".to_string(), subxt::ext::scale_value::Value::u128(1000)),
+        ])
+    }
+
+    #[test]
+    fn extract_netuid_named_match() {
+        let composite = make_named_with_netuid(42);
+        assert_eq!(extract_netuid(&composite), Some(42));
+    }
+
+    #[test]
+    fn extract_netuid_named_no_field() {
+        let composite = make_named_no_netuid();
+        assert_eq!(extract_netuid(&composite), None);
+    }
+
+    #[test]
+    fn extract_netuid_unnamed_returns_none() {
+        // Issue 719: Unnamed composites should NOT match by accident
+        let composite = Composite::Unnamed(vec![
+            subxt::ext::scale_value::Value::u128(42),
+        ]);
+        assert_eq!(extract_netuid(&composite), None, "Unnamed(42) must not match as netuid");
+    }
+
+    #[test]
+    fn extract_accounts_from_32_byte_composite() {
+        // Build a 32-byte unnamed composite (AccountId pattern)
+        let bytes: Vec<subxt::ext::scale_value::Value<()>> = (0u8..32)
+            .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
+            .collect();
+        let account_composite = Composite::Unnamed(bytes);
+        let outer = Composite::Named(vec![
+            ("who".to_string(), subxt::ext::scale_value::Value {
+                value: ValueDef::Composite(account_composite),
+                context: (),
+            }),
+        ]);
+        let accounts = extract_accounts(&outer);
+        assert_eq!(accounts.len(), 1, "Should extract exactly one account");
+        assert!(accounts[0].starts_with("5"), "Should be a valid SS58 address: {}", accounts[0]);
+    }
+
+    #[test]
+    fn extract_accounts_no_account_fields() {
+        // Issue 718: A composite with no 32-byte fields should return empty
+        let composite = Composite::Named(vec![
+            ("amount".to_string(), subxt::ext::scale_value::Value::u128(1000)),
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(1)),
+        ]);
+        let accounts = extract_accounts(&composite);
+        assert!(accounts.is_empty(), "Should not find any accounts");
+    }
+
+    #[test]
+    fn extract_accounts_multiple_accounts() {
+        // Build two different 32-byte AccountIds
+        let bytes_a: Vec<subxt::ext::scale_value::Value<()>> = vec![1u8; 32]
+            .into_iter()
+            .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
+            .collect();
+        let bytes_b: Vec<subxt::ext::scale_value::Value<()>> = vec![2u8; 32]
+            .into_iter()
+            .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
+            .collect();
+        let outer = Composite::Named(vec![
+            ("from".to_string(), subxt::ext::scale_value::Value {
+                value: ValueDef::Composite(Composite::Unnamed(bytes_a)),
+                context: (),
+            }),
+            ("to".to_string(), subxt::ext::scale_value::Value {
+                value: ValueDef::Composite(Composite::Unnamed(bytes_b)),
+                context: (),
+            }),
+        ]);
+        let accounts = extract_accounts(&outer);
+        assert_eq!(accounts.len(), 2, "Should find two accounts");
+        assert_ne!(accounts[0], accounts[1], "Different bytes should produce different SS58");
+    }
+
+    #[test]
+    fn try_composite_as_ss58_rejects_non_32_byte() {
+        // A 16-byte composite should not be interpreted as an account
+        let bytes: Vec<subxt::ext::scale_value::Value<()>> = (0u8..16)
+            .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
+            .collect();
+        let composite = Composite::Unnamed(bytes);
+        assert!(try_composite_as_ss58(&composite).is_none());
     }
 }

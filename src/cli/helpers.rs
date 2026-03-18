@@ -1017,12 +1017,24 @@ pub fn validate_derive_input(input: &str) -> Result<()> {
 
 /// Require a mnemonic phrase: use `provided` if Some, else prompt interactively (or error in batch mode).
 /// Validates the mnemonic format and dictionary words before returning.
+///
+/// Warns if the mnemonic was passed via CLI flag (visible in `ps`) rather than
+/// the `AGCLI_MNEMONIC` environment variable.
 pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
     let mnemonic = match provided {
-        Some(m) => m,
+        Some(m) => {
+            // Warn if passed via CLI flag rather than env var (visible in process listing)
+            if std::env::var("AGCLI_MNEMONIC").is_err() {
+                eprintln!(
+                    "Warning: mnemonic passed via --mnemonic flag is visible in `ps`. \
+                     Prefer AGCLI_MNEMONIC env var for security."
+                );
+            }
+            m
+        }
         None => {
             if is_batch_mode() {
-                anyhow::bail!("Mnemonic required in batch mode. Pass --mnemonic <phrase>.");
+                anyhow::bail!("Mnemonic required in batch mode. Pass --mnemonic <phrase> or set AGCLI_MNEMONIC env var.");
             }
             dialoguer::Input::<String>::new()
                 .with_prompt("Enter mnemonic phrase")

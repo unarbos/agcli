@@ -1620,3 +1620,108 @@ async fn regen_coldkey_does_not_touch_other_wallets() {
         "other_wallet should have a coldkey"
     );
 }
+
+// ========== Issue 733: Atomic file write tests ==========
+
+/// Verify that wallet creation leaves no .tmp files behind on success.
+#[test]
+fn create_wallet_no_temp_files_remain() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_wallet, _mnemonic, _hk) =
+        Wallet::create(dir.path(), "atomic_test", "pass123", "default").unwrap();
+
+    let wallet_dir = dir.path().join("atomic_test");
+    // No .tmp files should exist after successful creation
+    assert!(
+        !wallet_dir.join("coldkey.tmp").exists(),
+        "coldkey.tmp should not remain after successful create"
+    );
+    assert!(
+        !wallet_dir.join("coldkeypub.txt.tmp").exists(),
+        "coldkeypub.txt.tmp should not remain after successful create"
+    );
+    assert!(
+        !wallet_dir.join("hotkeys").join("default.tmp").exists(),
+        "default.tmp should not remain after successful create"
+    );
+    // Actual files should exist
+    assert!(wallet_dir.join("coldkey").exists());
+    assert!(wallet_dir.join("coldkeypub.txt").exists());
+    assert!(wallet_dir.join("hotkeys").join("default").exists());
+}
+
+/// Verify that encrypted keyfile write is atomic: permissions are set correctly.
+#[test]
+fn encrypted_keyfile_permissions_after_atomic_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("test_coldkey");
+    agcli::wallet::keyfile::write_encrypted_keyfile(&path, "test mnemonic", "pass").unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::metadata(&path).unwrap().permissions();
+        assert_eq!(
+            perms.mode() & 0o777,
+            0o600,
+            "Encrypted keyfile should be 0600 (owner read/write only)"
+        );
+    }
+    // No temp file left
+    assert!(!dir.path().join("test_coldkey.tmp").exists());
+}
+
+/// Verify that public key write is atomic: permissions are set correctly.
+#[test]
+fn public_key_permissions_after_atomic_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pubkey.txt");
+    let pk = sr25519::Public::from_raw([99u8; 32]);
+    agcli::wallet::keyfile::write_public_key(&path, &pk).unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::metadata(&path).unwrap().permissions();
+        assert_eq!(
+            perms.mode() & 0o777,
+            0o644,
+            "Public key file should be 0644 (world-readable)"
+        );
+    }
+    assert!(!dir.path().join("pubkey.txt.tmp").exists());
+}
+
+/// Verify that plaintext keyfile write is atomic: permissions are set correctly.
+#[test]
+fn plaintext_keyfile_permissions_after_atomic_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("test_hotkey");
+    agcli::wallet::keyfile::write_keyfile(&path, "hotkey mnemonic words").unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::metadata(&path).unwrap().permissions();
+        assert_eq!(
+            perms.mode() & 0o777,
+            0o600,
+            "Plaintext keyfile should be 0600 (owner read/write only)"
+        );
+    }
+    assert!(!dir.path().join("test_hotkey.tmp").exists());
+}
+
+/// Verify import_from_mnemonic also produces no temp files.
+#[test]
+fn import_wallet_no_temp_files_remain() {
+    let dir = tempfile::tempdir().unwrap();
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let _wallet = Wallet::import_from_mnemonic(dir.path(), "import_atomic", mnemonic, "pass123").unwrap();
+
+    let wallet_dir = dir.path().join("import_atomic");
+    assert!(!wallet_dir.join("coldkey.tmp").exists());
+    assert!(!wallet_dir.join("coldkeypub.txt.tmp").exists());
+    assert!(wallet_dir.join("coldkey").exists());
+    assert!(wallet_dir.join("coldkeypub.txt").exists());
+}
