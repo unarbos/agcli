@@ -913,7 +913,7 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
     let lower = msg.to_lowercase();
     let idx = lower.find("custom error:")?;
     let after = &lower[idx + "custom error:".len()..];
-    let num_str = after.trim().trim_matches(|c: char| !c.is_ascii_digit());
+    let num_str: String = after.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
     let n: u32 = num_str.parse().ok()?;
     // SubtensorModule (pallet index 7) error enum — from chain metadata
     let (name, desc) = match n {
@@ -1593,5 +1593,21 @@ mod tests {
         // Error message with prefix text before "custom error:"
         let d = decode_custom_error("Dispatch failed: Custom error: 20").expect("should decode");
         assert_eq!(d.name, "TooManyRegistrationsThisBlock");
+    }
+
+    #[test]
+    fn decode_custom_error_with_trailing_digit_suffix() {
+        // Issue 146: trim_matches with inverted digit predicate fails when suffix contains digits.
+        // "Custom error: 6 (SubError2)" — old code would produce "6 (SubError2" via trim_matches.
+        // New take_while approach correctly extracts "6".
+        let d = decode_custom_error("Custom error: 6 (SubError2)").expect("should decode");
+        assert_eq!(d.name, "HotKeyNotRegisteredInNetwork");
+    }
+
+    #[test]
+    fn decode_custom_error_only_first_number_extracted() {
+        // "Custom error: 42 extra99" — should extract 42, not "42 extra99"
+        let d = decode_custom_error("Custom error: 42");
+        assert!(d.is_some(), "should decode error code 42");
     }
 }

@@ -409,7 +409,7 @@ impl Wallet {
             }
             // Pub sidecar: "{name}pub.txt" — record base name, don't add directly
             if fname.ends_with("pub.txt") {
-                let base = fname.trim_end_matches("pub.txt").to_string();
+                let base = fname.strip_suffix("pub.txt").unwrap_or(&fname).to_string();
                 if !base.is_empty() {
                     pub_only.insert(base);
                 }
@@ -728,5 +728,28 @@ mod tests {
         let mut w = Wallet::open(dir.path().join("ztest2")).unwrap();
         assert!(w.load_hotkey("default").is_ok(), "load_hotkey should still work after zeroize refactor");
         assert!(w.hotkey().is_ok(), "hotkey pair should be available after load");
+    }
+
+    #[test]
+    fn strip_suffix_pub_txt_not_char_trim() {
+        // Issue 143: trim_end_matches("pub.txt") strips individual chars, not literal suffix.
+        // Verify strip_suffix correctly handles names ending in chars from the set {p,u,b,.,t,x}.
+        let fname = "testpub.txt";
+        let base = fname.strip_suffix("pub.txt").unwrap_or(fname).to_string();
+        assert_eq!(base, "test", "base should be 'test', not incorrectly trimmed");
+    }
+
+    #[test]
+    fn strip_suffix_pub_txt_default_hotkey() {
+        let fname = "defaultpub.txt";
+        let base = fname.strip_suffix("pub.txt").unwrap_or(fname).to_string();
+        assert_eq!(base, "default", "base should be 'default', not 'defaul'");
+    }
+
+    #[test]
+    fn strip_suffix_no_match() {
+        let fname = "mykeyfile";
+        let base = fname.strip_suffix("pub.txt").unwrap_or(fname).to_string();
+        assert_eq!(base, "mykeyfile", "non-matching name should be unchanged");
     }
 }

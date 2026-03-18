@@ -325,8 +325,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_amount(amount, "limit unstake amount")?;
             validate_amount(price, "limit price")?;
             validate_limit_price(price, "limit price")?;
-            // Spending limit check
-            check_spending_limit(netuid, amount)?;
+            // No spending limit check: unstaking returns funds to the user, not a spend.
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let lp = safe_rao(price);

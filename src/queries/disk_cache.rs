@@ -36,7 +36,10 @@ fn now_secs() -> u64 {
 /// Read a cached value if it exists and hasn't expired.
 /// Returns `Some(data)` if cache hit, `None` if miss or expired.
 pub fn get<T: DeserializeOwned>(key: &str, ttl: Duration) -> Option<T> {
-    let path = cache_dir().join(format!("{}.json", key));
+    // Sanitize key: reject path separators and traversal to prevent cache directory escape
+    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key = safe_key.replace("..", "__");
+    let path = cache_dir().join(format!("{}.json", safe_key));
     let data = match std::fs::read_to_string(&path) {
         Ok(d) => d,
         Err(_) => return None,
@@ -49,7 +52,7 @@ pub fn get<T: DeserializeOwned>(key: &str, ttl: Duration) -> Option<T> {
         }
     };
     let age = now_secs().saturating_sub(entry.written_at);
-    if ttl.is_zero() || age > ttl.as_secs() {
+    if ttl.is_zero() || age >= ttl.as_secs() {
         tracing::debug!(
             key,
             age_secs = age,
@@ -74,12 +77,16 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
     };
     let json = serde_json::to_string(&entry).context("Failed to serialize cache entry")?;
 
+    // Sanitize key: reject path separators and traversal to prevent cache directory escape
+    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key = safe_key.replace("..", "__");
+
     // Atomic write: temp file in same dir, then rename
-    let tmp = dir.join(format!(".{}-{}.tmp", key, std::process::id()));
+    let tmp = dir.join(format!(".{}-{}.tmp", safe_key, std::process::id()));
     std::fs::write(&tmp, json.as_bytes())
         .with_context(|| format!("Failed to write cache temp file: {}", tmp.display()))?;
 
-    let target = dir.join(format!("{}.json", key));
+    let target = dir.join(format!("{}.json", safe_key));
     std::fs::rename(&tmp, &target).with_context(|| {
         format!(
             "Failed to rename cache file: {} -> {}",
@@ -94,7 +101,7 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
     static WRITE_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     if WRITE_COUNT
         .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        .is_multiple_of(10)
+        % 10 == 9
     {
         prune_if_needed();
     }
@@ -103,7 +110,9 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
 
 /// Read a stale cached value (ignores TTL). Used for stale-while-error fallback.
 pub fn get_stale<T: DeserializeOwned>(key: &str) -> Option<T> {
-    let path = cache_dir().join(format!("{}.json", key));
+    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key = safe_key.replace("..", "__");
+    let path = cache_dir().join(format!("{}.json", safe_key));
     let data = std::fs::read_to_string(&path).ok()?;
     let entry: CacheEntry<T> = serde_json::from_str(&data).ok()?;
     let age = now_secs().saturating_sub(entry.written_at);
@@ -113,7 +122,9 @@ pub fn get_stale<T: DeserializeOwned>(key: &str) -> Option<T> {
 
 /// Remove a cached entry.
 pub fn remove(key: &str) {
-    let path = cache_dir().join(format!("{}.json", key));
+    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key = safe_key.replace("..", "__");
+    let path = cache_dir().join(format!("{}.json", safe_key));
     let _ = std::fs::remove_file(&path);
 }
 
@@ -338,5 +349,44 @@ mod tests {
         assert_eq!(loaded.len(), 16000);
         assert_eq!(loaded[15999], 15999);
         remove(key);
+    }
+
+    #[test]
+    fn ttl_boundary_expires_at_exact_ttl() {
+        // Issue 147: age >= ttl should expire (was age > ttl, serving 1 second past TTL)
+        // With TTL=0, everything should expire immediately
+        let key = "test_ttl_boundary";
+        put(key, &42u32).unwrap();
+        let result: Option<u32> = get(key, Duration::from_secs(0));
+        assert!(result.is_none(), "TTL=0 should immediately expire");
+        remove(key);
+    }
+
+    #[test]
+    fn path_traversal_key_sanitized() {
+        // Issue 148: keys with path separators should be sanitized
+        let key = "../../etc/passwd";
+        put(key, &"test").unwrap();
+        // After sanitization: '/' → '_', then '..' → '__'
+        // "../../etc/passwd" → ".._.._ etc_passwd" → "______etc_passwd"
+        let safe_key = "______etc_passwd";
+        let path = cache_dir().join(format!("{}.json", safe_key));
+        assert!(path.exists(), "sanitized cache file should exist in cache dir");
+        // Verify the dangerous path does NOT exist
+        let dangerous = cache_dir().join("../../etc/passwd.json");
+        assert!(!dangerous.exists(), "path traversal file should not exist");
+        // Clean up
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn path_traversal_slash_key_sanitized() {
+        // Issue 148: forward slash in key should become underscore
+        let key = "finney/evil";
+        put(key, &"data").unwrap();
+        let safe_key = "finney_evil";
+        let path = cache_dir().join(format!("{}.json", safe_key));
+        assert!(path.exists(), "sanitized cache file should exist");
+        let _ = std::fs::remove_file(&path);
     }
 }

@@ -1051,7 +1051,10 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
             // Try to suggest a close match
             let suggestion = wordlist
                 .iter()
-                .find(|w| w.starts_with(&word[..word.len().min(3)]));
+                .find(|w| {
+                    let end = word.char_indices().nth(3).map(|(i, _)| i).unwrap_or(word.len());
+                    w.starts_with(&word[..end])
+                });
             let tip = if let Some(s) = suggestion {
                 format!("  Did you mean \"{}\"?", s)
             } else {
@@ -2648,5 +2651,20 @@ mod tests {
     fn validate_spending_limit_accepts_numeric_netuid() {
         let result = validate_spending_limit(100.0, "1");
         assert!(result.is_ok(), "Numeric netuid should be accepted: {:?}", result);
+    }
+
+    #[test]
+    fn validate_mnemonic_multibyte_word_no_panic() {
+        // Issue 145: word[..word.len().min(3)] panics on multi-byte UTF-8 input
+        // The function should return an error, not panic.
+        let result = validate_mnemonic("café latte espresso drink make sure love open right left paper again");
+        assert!(result.is_err(), "non-BIP39 words should produce an error, not a panic");
+    }
+
+    #[test]
+    fn validate_mnemonic_emoji_word_no_panic() {
+        // Issue 145: emoji (4 bytes) at byte position 0-3 would cause panic on [..3]
+        let result = validate_mnemonic("🎉 abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
+        assert!(result.is_err(), "emoji word should produce an error, not a panic");
     }
 }
