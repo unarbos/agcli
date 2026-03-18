@@ -241,7 +241,11 @@ pub enum DeltaKind {
 impl std::fmt::Display for MetagraphDelta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let hk_short = if self.hotkey.len() > 8 {
-            &self.hotkey[..8]
+            // Safe slice: SS58 addresses are ASCII, but guard against non-ASCII
+            match self.hotkey.get(..8) {
+                Some(s) => s,
+                None => &self.hotkey,
+            }
         } else {
             &self.hotkey
         };
@@ -409,5 +413,42 @@ mod tests {
 
         // Cleanup
         let _ = std::fs::remove_dir_all(cache_path(netuid));
+    }
+
+    // ── Issue 97: MetagraphDelta hotkey slicing safe for non-ASCII ──
+
+    #[test]
+    fn metagraph_delta_display_safe_for_short_hotkey() {
+        let delta = MetagraphDelta {
+            uid: 0,
+            hotkey: "5ABC".to_string(),
+            kind: DeltaKind::Registered,
+        };
+        let s = format!("{}", delta);
+        assert!(s.contains("5ABC"), "Short hotkey should be displayed fully");
+    }
+
+    #[test]
+    fn metagraph_delta_display_safe_for_long_hotkey() {
+        let delta = MetagraphDelta {
+            uid: 1,
+            hotkey: "5ABCDEFGHIJKLM".to_string(),
+            kind: DeltaKind::Deregistered,
+        };
+        let s = format!("{}", delta);
+        assert!(s.contains("5ABCDEFG"), "Long hotkey should be truncated to 8 chars");
+        assert!(!s.contains("HIJKLM"), "Truncated portion should not appear");
+    }
+
+    #[test]
+    fn metagraph_delta_display_no_panic_on_multibyte() {
+        // Defensive: even if hotkey somehow contains multi-byte UTF-8, no panic
+        let delta = MetagraphDelta {
+            uid: 2,
+            hotkey: "\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}".to_string(),
+            kind: DeltaKind::Registered,
+        };
+        // This should not panic
+        let _s = format!("{}", delta);
     }
 }

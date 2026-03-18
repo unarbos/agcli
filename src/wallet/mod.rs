@@ -14,6 +14,7 @@ pub mod keypair;
 use anyhow::{Context, Result};
 use sp_core::{sr25519, Pair as _};
 use std::path::{Path, PathBuf};
+use zeroize::Zeroize;
 
 /// Reject hotkey names that contain path traversal sequences or path separators.
 /// (audit fix: prevent path traversal via crafted hotkey names like "../../../etc/passwd")
@@ -24,6 +25,22 @@ fn validate_hotkey_name(name: &str) -> Result<()> {
     if name.contains('/') || name.contains('\\') || name.contains("..") || name.contains('\0') {
         anyhow::bail!(
             "Invalid hotkey name '{}': must not contain '/', '\\', '..', or null bytes.",
+            name
+        );
+    }
+    Ok(())
+}
+
+/// Reject wallet names that contain path traversal sequences or path separators.
+/// (audit fix: library-level validation — CLI already validates via helpers::validate_name,
+/// but direct library callers bypass CLI and need this check)
+fn validate_wallet_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        anyhow::bail!("Wallet name cannot be empty.");
+    }
+    if name.contains('/') || name.contains('\\') || name.contains("..") || name.contains('\0') {
+        anyhow::bail!(
+            "Invalid wallet name '{}': must not contain '/', '\\', '..', or null bytes.",
             name
         );
     }
@@ -101,6 +118,7 @@ impl Wallet {
         password: &str,
         hotkey_name: &str,
     ) -> Result<(Self, String, String)> {
+        validate_wallet_name(name)?;
         validate_hotkey_name(hotkey_name)?;
         let dir = expand_tilde(wallet_dir.as_ref()).join(name);
         // Create directory structure first (idempotent, needed so lock file can be placed)
@@ -166,6 +184,7 @@ impl Wallet {
     ) -> Result<Self> {
         let pair = keypair::pair_from_uri(uri)?;
         let name = uri.trim_start_matches('/').to_lowercase();
+        validate_wallet_name(&name)?;
         let dir = expand_tilde(wallet_dir.as_ref()).join(&name);
         std::fs::create_dir_all(dir.join("hotkeys"))?;
         let _dir_lock = keyfile::lock_wallet_dir(&dir)?;
@@ -207,6 +226,7 @@ impl Wallet {
         mnemonic: &str,
         password: &str,
     ) -> Result<Self> {
+        validate_wallet_name(name)?;
         let dir = expand_tilde(wallet_dir.as_ref()).join(name);
         std::fs::create_dir_all(dir.join("hotkeys"))?;
 
@@ -241,27 +261,31 @@ impl Wallet {
     /// Unlock the coldkey with a password.
     /// Auto-detects keyfile format (agcli AES-256-GCM or Python NaCl SecretBox).
     pub fn unlock_coldkey(&mut self, password: &str) -> Result<()> {
-        let data = keyfile::read_any_encrypted_keyfile(&self.path.join("coldkey"), password)
+        let mut data = keyfile::read_any_encrypted_keyfile(&self.path.join("coldkey"), password)
             .context("Failed to decrypt coldkey")?;
         // The decrypted data may be a mnemonic or a JSON keypair (Python format)
-        let pair = if data.trim().starts_with('{') {
-            // Python bittensor-wallet stores JSON: {"secretSeed": "0x...", ...} or
-            // {"ss58Address": "...", "secretPhrase": "...", ...}
-            let v: serde_json::Value =
-                serde_json::from_str(data.trim()).context("Failed to parse Python keyfile JSON")?;
-            if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
-                keypair::pair_from_seed_hex(seed)?
-            } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
-                keypair::pair_from_mnemonic(phrase)?
+        let result = (|| -> Result<sr25519::Pair> {
+            if data.trim().starts_with('{') {
+                // Python bittensor-wallet stores JSON: {"secretSeed": "0x...", ...} or
+                // {"ss58Address": "...", "secretPhrase": "...", ...}
+                let v: serde_json::Value =
+                    serde_json::from_str(data.trim()).context("Failed to parse Python keyfile JSON")?;
+                if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
+                    keypair::pair_from_seed_hex(seed)
+                } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
+                    keypair::pair_from_mnemonic(phrase)
+                } else {
+                    anyhow::bail!("Python keyfile JSON has no secretSeed or secretPhrase");
+                }
+            } else if data.trim().starts_with("//") {
+                // Dev URI (e.g. "//Alice") — stored by create_from_uri
+                keypair::pair_from_uri(data.trim())
             } else {
-                anyhow::bail!("Python keyfile JSON has no secretSeed or secretPhrase");
+                keypair::pair_from_mnemonic(data.trim())
             }
-        } else if data.trim().starts_with("//") {
-            // Dev URI (e.g. "//Alice") — stored by create_from_uri
-            keypair::pair_from_uri(data.trim())?
-        } else {
-            keypair::pair_from_mnemonic(data.trim())?
-        };
+        })();
+        data.zeroize(); // Wipe decrypted secret from memory
+        let pair = result?;
         self.coldkey_ss58 = Some(keypair::to_ss58(&pair.public(), 42));
         self.coldkey = Some(pair);
         Ok(())
@@ -276,22 +300,26 @@ impl Wallet {
         validate_hotkey_name(hotkey_name)?;
         let keypair_path = self.path.join("hotkeys").join(hotkey_name);
         if keypair_path.exists() {
-            let data = keyfile::read_keyfile(&keypair_path)?;
-            let pair = if data.trim().starts_with('{') {
-                let v: serde_json::Value =
-                    serde_json::from_str(data.trim()).context("Failed to parse hotkey JSON")?;
-                if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
-                    keypair::pair_from_seed_hex(seed)?
-                } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
-                    keypair::pair_from_mnemonic(phrase)?
+            let mut data = keyfile::read_keyfile(&keypair_path)?;
+            let result = (|| -> Result<sr25519::Pair> {
+                if data.trim().starts_with('{') {
+                    let v: serde_json::Value =
+                        serde_json::from_str(data.trim()).context("Failed to parse hotkey JSON")?;
+                    if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
+                        keypair::pair_from_seed_hex(seed)
+                    } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
+                        keypair::pair_from_mnemonic(phrase)
+                    } else {
+                        anyhow::bail!("Hotkey JSON has no secretSeed or secretPhrase");
+                    }
+                } else if data.trim().starts_with("//") {
+                    keypair::pair_from_uri(data.trim())
                 } else {
-                    anyhow::bail!("Hotkey JSON has no secretSeed or secretPhrase");
+                    keypair::pair_from_mnemonic(data.trim())
                 }
-            } else if data.trim().starts_with("//") {
-                keypair::pair_from_uri(data.trim())?
-            } else {
-                keypair::pair_from_mnemonic(data.trim())?
-            };
+            })();
+            data.zeroize(); // Wipe hotkey secret from memory
+            let pair = result?;
             self.hotkey_ss58 = Some(keypair::to_ss58(&pair.public(), 42));
             self.hotkey = Some(pair);
             return Ok(());
@@ -640,5 +668,64 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let result = Wallet::create(dir.path(), "test", "pass", "../escape");
         assert!(result.is_err(), "create must reject path traversal in hotkey name");
+    }
+
+    // ── Issue 94: Wallet name path traversal at library level ──
+
+    #[test]
+    fn validate_wallet_name_rejects_traversal() {
+        assert!(validate_wallet_name("../escape").is_err());
+        assert!(validate_wallet_name("..").is_err());
+        assert!(validate_wallet_name("foo/bar").is_err());
+        assert!(validate_wallet_name("foo\\bar").is_err());
+        assert!(validate_wallet_name("foo\0bar").is_err());
+        assert!(validate_wallet_name("").is_err());
+    }
+
+    #[test]
+    fn validate_wallet_name_accepts_valid() {
+        assert!(validate_wallet_name("default").is_ok());
+        assert!(validate_wallet_name("my-wallet").is_ok());
+        assert!(validate_wallet_name("wallet_01").is_ok());
+        assert!(validate_wallet_name("MyWallet").is_ok());
+    }
+
+    #[test]
+    fn create_rejects_traversal_wallet_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = Wallet::create(dir.path(), "../escape", "pass", "default");
+        assert!(result.is_err(), "create must reject path traversal in wallet name");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("Invalid wallet name"), "error should mention invalid wallet name, got: {}", msg);
+    }
+
+    #[test]
+    fn import_rejects_traversal_wallet_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let result = Wallet::import_from_mnemonic(dir.path(), "../../etc/shadow", mnemonic, "pass");
+        assert!(result.is_err(), "import must reject path traversal in wallet name");
+    }
+
+    // ── Issue 95/96: Decrypted key data zeroized after use ──
+
+    #[test]
+    fn unlock_coldkey_succeeds_and_key_is_usable() {
+        // Verifies that the zeroize refactor doesn't break unlock functionality
+        let dir = tempfile::tempdir().unwrap();
+        let (_, _, _) = Wallet::create(dir.path(), "ztest", "mypass", "default").unwrap();
+        let mut w = Wallet::open(dir.path().join("ztest")).unwrap();
+        assert!(w.unlock_coldkey("mypass").is_ok(), "unlock_coldkey should still work after zeroize refactor");
+        assert!(w.coldkey().is_ok(), "coldkey pair should be available after unlock");
+    }
+
+    #[test]
+    fn load_hotkey_succeeds_after_zeroize_refactor() {
+        // Verifies that the zeroize refactor doesn't break hotkey loading
+        let dir = tempfile::tempdir().unwrap();
+        let (_, _, _) = Wallet::create(dir.path(), "ztest2", "mypass", "default").unwrap();
+        let mut w = Wallet::open(dir.path().join("ztest2")).unwrap();
+        assert!(w.load_hotkey("default").is_ok(), "load_hotkey should still work after zeroize refactor");
+        assert!(w.hotkey().is_ok(), "hotkey pair should be available after load");
     }
 }

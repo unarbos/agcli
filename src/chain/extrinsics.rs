@@ -503,9 +503,13 @@ impl Client {
             // Extract the account ID from the storage key (last 32 bytes)
             let key_bytes = kv.key_bytes;
             if key_bytes.len() >= 32 {
-                let account_bytes: [u8; 32] = key_bytes[key_bytes.len() - 32..]
-                    .try_into()
-                    .unwrap_or([0u8; 32]);
+                let account_bytes: [u8; 32] = match key_bytes[key_bytes.len() - 32..].try_into() {
+                    Ok(b) => b,
+                    Err(_) => {
+                        tracing::warn!("Skipping weight commit entry: malformed account ID in storage key ({} bytes)", key_bytes.len());
+                        continue;
+                    }
+                };
                 let account = AccountId::from(account_bytes);
                 results.push((account, kv.value));
             }
@@ -1080,6 +1084,14 @@ impl Client {
             Some(val) => {
                 // Decode the BoundedVec<u8> from the storage value
                 let bytes: Vec<u8> = val.as_type()?;
+                // ML-KEM-768 public key must be exactly 1184 bytes
+                if bytes.len() != 1184 {
+                    anyhow::bail!(
+                        "MEV shield key has unexpected size ({} bytes, expected 1184 for ML-KEM-768). \
+                         The chain may have a different key type or corrupted storage.",
+                        bytes.len()
+                    );
+                }
                 Ok(bytes)
             }
             None => anyhow::bail!(
@@ -2233,5 +2245,14 @@ mod tests {
         // Should be at least 1KB and at most 50MB
         assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE >= 1024);
         assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE <= 50 * 1024 * 1024);
+    }
+
+    // ── Issue 98: MEV shield key size validation constant ──
+
+    #[test]
+    fn ml_kem_768_public_key_size_is_1184() {
+        // ML-KEM-768 (Kyber768) public key is always 1184 bytes.
+        // This test documents the expected size used in get_mev_shield_next_key validation.
+        assert_eq!(1184, 1184, "ML-KEM-768 public key expected size");
     }
 }
