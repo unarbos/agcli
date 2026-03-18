@@ -1279,7 +1279,7 @@ async fn handle_swap_sim(
     let sim = match (tao, alpha) {
         (Some(tao_amt), _) => {
             let (out, tf, af) = client
-                .sim_swap_tao_for_alpha(NetUid(netuid), (tao_amt * 1e9) as u64)
+                .sim_swap_tao_for_alpha(NetUid(netuid), safe_rao(tao_amt))
                 .await?;
             let out_f = out as f64 / 1e9;
             Some((
@@ -1296,7 +1296,7 @@ async fn handle_swap_sim(
         }
         (_, Some(alpha_amt)) => {
             let (out, tf, af) = client
-                .sim_swap_alpha_for_tao(NetUid(netuid), (alpha_amt * 1e9) as u64)
+                .sim_swap_alpha_for_tao(NetUid(netuid), safe_rao(alpha_amt))
                 .await?;
             let out_f = out as f64 / 1e9;
             Some((

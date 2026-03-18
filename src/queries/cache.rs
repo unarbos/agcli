@@ -283,7 +283,7 @@ mod tests {
             uid,
             netuid: NetUid(netuid),
             active: true,
-            stake: Balance::from_rao((stake_tao * 1e9) as u64),
+            stake: Balance::from_tao(stake_tao),
             rank: 0.0,
             emission: 0.0,
             incentive,

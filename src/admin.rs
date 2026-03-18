@@ -29,7 +29,7 @@ pub async fn set_tempo(
     tempo: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_tempo",
@@ -46,7 +46,7 @@ pub async fn set_max_allowed_validators(
     max: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_max_allowed_validators",
@@ -63,7 +63,7 @@ pub async fn set_max_allowed_uids(
     max: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_max_allowed_uids",
@@ -80,7 +80,7 @@ pub async fn set_immunity_period(
     period: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_immunity_period",
@@ -97,7 +97,7 @@ pub async fn set_min_allowed_weights(
     min: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_min_allowed_weights",
@@ -114,7 +114,7 @@ pub async fn set_max_weight_limit(
     limit: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_max_weight_limit",
@@ -131,7 +131,7 @@ pub async fn set_weights_set_rate_limit(
     limit: u64,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_weights_set_rate_limit",
@@ -148,7 +148,7 @@ pub async fn set_commit_reveal_weights_enabled(
     enabled: bool,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_commit_reveal_weights_enabled",
@@ -165,7 +165,7 @@ pub async fn set_difficulty(
     difficulty: u64,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_difficulty",
@@ -182,7 +182,7 @@ pub async fn set_bonds_moving_average(
     avg: u64,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_bonds_moving_average",
@@ -199,7 +199,7 @@ pub async fn set_target_registrations_per_interval(
     target: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_target_registrations_per_interval",
@@ -216,7 +216,7 @@ pub async fn set_activity_cutoff(
     cutoff: u16,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_activity_cutoff",
@@ -233,7 +233,7 @@ pub async fn set_serving_rate_limit(
     limit: u64,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(
+        .submit_sudo_raw_call_checked(
             sudo_key,
             "AdminUtils",
             "sudo_set_serving_rate_limit",
@@ -253,7 +253,7 @@ pub async fn raw_admin_call(
     args: Vec<Value>,
 ) -> Result<String> {
     client
-        .submit_sudo_raw_call(sudo_key, "AdminUtils", call_name, args)
+        .submit_sudo_raw_call_checked(sudo_key, "AdminUtils", call_name, args)
         .await
 }
 

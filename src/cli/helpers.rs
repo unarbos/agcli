@@ -133,6 +133,12 @@ pub fn validate_amount(amount: f64, label: &str) -> Result<()> {
     Ok(())
 }
 
+/// Safely convert a TAO-scale f64 to RAO (u64) with overflow protection.
+/// Uses the same saturating logic as `Balance::from_tao()` to prevent silent truncation.
+pub fn safe_rao(amount: f64) -> u64 {
+    crate::types::Balance::from_tao(amount).rao()
+}
+
 /// Validate childkey take percentage is in the allowed range [0, 18].
 pub fn validate_take_pct(take: f64) -> Result<()> {
     if take < 0.0 {
@@ -2025,4 +2031,41 @@ pub fn validate_price_range(price_low: f64, price_high: f64) -> Result<()> {
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_rao_normal_values() {
+        assert_eq!(safe_rao(1.0), 1_000_000_000);
+        assert_eq!(safe_rao(0.000000001), 1); // 1 RAO
+        assert_eq!(safe_rao(0.5), 500_000_000);
+        assert_eq!(safe_rao(100.0), 100_000_000_000);
+    }
+
+    #[test]
+    fn safe_rao_saturates_on_overflow() {
+        // u64::MAX / 1e9 ≈ 18.44, so 20.0 TAO * 1e9 should saturate
+        let huge = safe_rao(f64::MAX);
+        assert_eq!(huge, u64::MAX, "Huge float should saturate to u64::MAX");
+
+        // Values over ~18.44 billion TAO would overflow
+        let big = safe_rao(18_446_744_074.0);
+        assert_eq!(big, u64::MAX);
+    }
+
+    #[test]
+    fn safe_rao_handles_special_floats() {
+        assert_eq!(safe_rao(f64::NAN), 0, "NaN should produce 0");
+        assert_eq!(safe_rao(f64::INFINITY), 0, "Infinity should produce 0");
+        assert_eq!(safe_rao(f64::NEG_INFINITY), 0, "Neg infinity should produce 0");
+        assert_eq!(safe_rao(-1.0), 0, "Negative should produce 0");
+    }
+
+    #[test]
+    fn safe_rao_zero() {
+        assert_eq!(safe_rao(0.0), 0);
+    }
 }

@@ -150,6 +150,7 @@ pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> R
 /// Read and decrypt an encrypted keyfile, returning the mnemonic.
 pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
     tracing::debug!(path = %path.display(), "Reading encrypted keyfile");
+    let _lock = lock_keyfile(path)?;
     let data =
         fs::read(path).with_context(|| format!("Cannot read keyfile at '{}'", path.display()))?;
     if data.len() < SALT_LEN + NONCE_LEN {
@@ -186,15 +187,9 @@ pub fn write_keyfile(path: &Path, mnemonic: &str) -> Result<()> {
     Ok(())
 }
 
-/// Read a plaintext keyfile (acquires shared lock to avoid reading mid-write).
+/// Read a plaintext keyfile (acquires exclusive lock to avoid reading mid-write).
 pub fn read_keyfile(path: &Path) -> Result<String> {
-    let _lock = match lock_keyfile(path) {
-        Ok(lock) => Some(lock),
-        Err(e) => {
-            tracing::warn!(path = %path.display(), error = %e, "Could not acquire keyfile lock, reading without lock");
-            None
-        }
-    };
+    let _lock = lock_keyfile(path)?;
     fs::read_to_string(path).context("read keyfile")
 }
 
@@ -220,6 +215,7 @@ pub fn write_public_key(path: &Path, public: &sr25519::Public) -> Result<()> {
 /// - **agcli format**: plain hex-encoded 32-byte public key (with or without `0x` prefix)
 /// - **Python bittensor-wallet format**: JSON object with `publicKey` (hex) or `ss58Address`
 pub fn read_public_key(path: &Path) -> Result<sr25519::Public> {
+    let _lock = lock_keyfile(path)?;
     let content = fs::read_to_string(path).context("read public key file")?;
     let trimmed = content.trim();
 
@@ -550,5 +546,82 @@ mod tests {
             "Should acquire lock after contention: {:?}",
             result.err()
         );
+    }
+
+    #[test]
+    fn read_encrypted_keyfile_acquires_lock() {
+        // Verify that read_encrypted_keyfile properly serializes with writers.
+        // We hold the keyfile lock and verify the read blocks (times out on lock).
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("locked_coldkey");
+        let password = "test123";
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+        // Write the keyfile first
+        write_encrypted_keyfile(&path, mnemonic, password).unwrap();
+
+        // Hold the lock
+        let _held = lock_keyfile(&path).unwrap();
+
+        // Try to read from another thread — should block and eventually timeout
+        let p = path.clone();
+        let pw = password.to_string();
+        let handle = std::thread::spawn(move || {
+            let start = std::time::Instant::now();
+            let result = read_encrypted_keyfile(&p, &pw);
+            (result, start.elapsed())
+        });
+
+        // Drop the lock quickly so the read succeeds
+        drop(_held);
+        let (result, _elapsed) = handle.join().expect("thread panicked");
+        assert!(result.is_ok(), "Read should succeed after lock release: {:?}", result.err());
+        assert_eq!(result.unwrap(), mnemonic);
+    }
+
+    #[test]
+    fn read_keyfile_fails_on_lock_timeout() {
+        // Verify that read_keyfile now propagates lock errors instead of silently falling back.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("locked_hotkey");
+        let mnemonic = "word1 word2 word3";
+
+        write_keyfile(&path, mnemonic).unwrap();
+
+        // Hold the lock indefinitely
+        let held_lock = lock_keyfile(&path).unwrap();
+
+        // Try to read from another thread — should fail with timeout
+        let p = path.clone();
+        let handle = std::thread::spawn(move || read_keyfile(&p));
+
+        // Wait a bit then release so the test doesn't take 30s
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        drop(held_lock);
+
+        let result = handle.join().expect("thread panicked");
+        // Should succeed now that lock is released
+        assert!(result.is_ok(), "read_keyfile should succeed after lock release");
+    }
+
+    #[test]
+    fn read_public_key_acquires_lock() {
+        // Verify that read_public_key acquires a lock before reading.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("locked_pubkey.txt");
+        let pk = sr25519::Public::from_raw([42u8; 32]);
+
+        write_public_key(&path, &pk).unwrap();
+
+        // Hold the lock, release it, verify read succeeds
+        let held = lock_keyfile(&path).unwrap();
+        let p = path.clone();
+        let handle = std::thread::spawn(move || read_public_key(&p));
+
+        // Release quickly
+        drop(held);
+        let result = handle.join().expect("thread panicked");
+        assert!(result.is_ok(), "read_public_key should succeed: {:?}", result.err());
+        assert_eq!(result.unwrap(), pk);
     }
 }

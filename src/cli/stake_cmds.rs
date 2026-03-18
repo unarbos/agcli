@@ -274,7 +274,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             let bal = Balance::from_tao(amount);
-            let lp = (price * 1_000_000_000.0) as u64;
+            let lp = safe_rao(price);
             println!(
                 "Adding stake limit: {} at {:.4} on SN{} (partial={})",
                 bal.display_tao(),
@@ -308,8 +308,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_limit_price(price, "limit price")?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
-            let lp = (price * 1_000_000_000.0) as u64;
-            let amt = (amount * 1_000_000_000.0) as u64;
+            let lp = safe_rao(price);
+            let amt = safe_rao(amount);
             println!(
                 "Removing stake limit: {:.4} at {:.4} on SN{} (partial={})",
                 amount, price, netuid, partial
@@ -384,7 +384,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 "recycled",
                 &hk,
                 client
-                    .recycle_alpha(&pair, &hk, NetUid(netuid), (amount * 1e9) as u64)
+                    .recycle_alpha(&pair, &hk, NetUid(netuid), safe_rao(amount))
                     .await,
                 &format!("Recycled {:.4} alpha on SN{}", amount, netuid),
             )
@@ -414,7 +414,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 "burned",
                 &hk,
                 client
-                    .burn_alpha(&pair, &hk, (amount * 1e9) as u64, NetUid(netuid))
+                    .burn_alpha(&pair, &hk, safe_rao(amount), NetUid(netuid))
                     .await,
                 &format!(
                     "Burned {:.4} alpha on SN{} (permanently destroyed)",
@@ -439,8 +439,8 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             }
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
-            let amt = (amount * 1_000_000_000.0) as u64;
-            let lp = (price * 1_000_000_000.0) as u64;
+            let amt = safe_rao(amount);
+            let lp = safe_rao(price);
             println!(
                 "Swap-limit {:.4} from SN{} to SN{} at price {:.4} (partial={})",
                 amount, from, to, price, partial
@@ -714,7 +714,7 @@ async fn check_slippage(
     is_buy: bool,
 ) -> Result<()> {
     let nuid = NetUid(netuid);
-    let rao = (amount * 1e9) as u64;
+    let rao = safe_rao(amount);
     let slippage = if is_buy {
         // Staking: TAO → Alpha — parallel fetch price + simulation
         let (price_raw, (out, _tf, _af)) = tokio::try_join!(

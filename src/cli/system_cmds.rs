@@ -374,7 +374,7 @@ pub(super) async fn handle_utils(
                 })?;
                 let c = client.ok_or_else(|| anyhow::anyhow!("Chain connection required"))?;
                 let (alpha_out, _, _) = c
-                    .sim_swap_tao_for_alpha(crate::types::NetUid(nid), (tao_amount * 1e9) as u64)
+                    .sim_swap_tao_for_alpha(crate::types::NetUid(nid), safe_rao(tao_amount))
                     .await?;
                 let alpha_display = alpha_out as f64 / 1e9;
                 if output.is_json() {
@@ -397,7 +397,7 @@ pub(super) async fn handle_utils(
                 })?;
                 let c = client.ok_or_else(|| anyhow::anyhow!("Chain connection required"))?;
                 let (tao_out, _, _) = c
-                    .sim_swap_alpha_for_tao(crate::types::NetUid(nid), (alpha_amount * 1e9) as u64)
+                    .sim_swap_alpha_for_tao(crate::types::NetUid(nid), safe_rao(alpha_amount))
                     .await?;
                 let tao_display = tao_out as f64 / 1e9;
                 if output.is_json() {
@@ -417,7 +417,7 @@ pub(super) async fn handle_utils(
             // TAO↔RAO conversion
             let amount = amount.unwrap_or(0.0);
             if to_rao {
-                let rao = (amount * 1e9) as u64;
+                let rao = safe_rao(amount);
                 if output.is_json() {
                     print_json(&serde_json::json!({
                         "tao": amount,

@@ -154,6 +154,15 @@ impl Wallet {
         std::fs::create_dir_all(dir.join("hotkeys"))?;
         let _dir_lock = keyfile::lock_wallet_dir(&dir)?;
 
+        // Check if wallet already exists (under the lock — prevents TOCTOU race)
+        if dir.join("coldkey").exists() {
+            anyhow::bail!(
+                "Wallet '{}' already exists at {}.\n  Use a different name or remove it first.",
+                name,
+                dir.display()
+            );
+        }
+
         let coldkey_ss58 = keypair::to_ss58(&pair.public(), 42);
         let hotkey_ss58 = coldkey_ss58.clone();
 
@@ -187,6 +196,15 @@ impl Wallet {
 
         // Acquire directory-level lock to prevent concurrent imports
         let _dir_lock = keyfile::lock_wallet_dir(&dir)?;
+
+        // Check if wallet already exists (under the lock — prevents TOCTOU race)
+        if dir.join("coldkey").exists() {
+            anyhow::bail!(
+                "Wallet '{}' already exists at {}.\n  Use `--force` or remove it first.",
+                name,
+                dir.display()
+            );
+        }
 
         let pair = keypair::pair_from_mnemonic(mnemonic)?;
         let ss58 = keypair::to_ss58(&pair.public(), 42);
@@ -416,4 +434,67 @@ fn expand_tilde(path: &Path) -> PathBuf {
         }
     }
     path.to_path_buf()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_from_uri_rejects_existing_wallet() {
+        let dir = tempfile::tempdir().unwrap();
+        // First creation should succeed
+        let w = Wallet::create_from_uri(dir.path(), "//Alice", "pass123");
+        assert!(w.is_ok(), "First create_from_uri should succeed: {:?}", w.err());
+
+        // Second creation of the same wallet should fail
+        let w2 = Wallet::create_from_uri(dir.path(), "//Alice", "pass456");
+        assert!(w2.is_err(), "create_from_uri should reject existing wallet");
+        let msg = w2.unwrap_err().to_string();
+        assert!(
+            msg.contains("already exists"),
+            "Error should mention 'already exists', got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn import_from_mnemonic_rejects_existing_wallet() {
+        let dir = tempfile::tempdir().unwrap();
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+        // First import should succeed
+        let w = Wallet::import_from_mnemonic(dir.path(), "test_wallet", mnemonic, "pass123");
+        assert!(w.is_ok(), "First import should succeed: {:?}", w.err());
+
+        // Second import of the same wallet name should fail
+        let w2 = Wallet::import_from_mnemonic(dir.path(), "test_wallet", mnemonic, "pass456");
+        assert!(w2.is_err(), "import_from_mnemonic should reject existing wallet");
+        let msg = w2.unwrap_err().to_string();
+        assert!(
+            msg.contains("already exists"),
+            "Error should mention 'already exists', got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn create_rejects_existing_wallet() {
+        // Verify the existing protection in create() still works
+        let dir = tempfile::tempdir().unwrap();
+        let w1 = Wallet::create(dir.path(), "mywallet", "pass123", "default");
+        assert!(w1.is_ok(), "First create should succeed: {:?}", w1.err());
+
+        let w2 = Wallet::create(dir.path(), "mywallet", "pass456", "default");
+        assert!(w2.is_err(), "create should reject existing wallet");
+    }
+
+    #[test]
+    fn create_from_uri_different_names_ok() {
+        let dir = tempfile::tempdir().unwrap();
+        let w1 = Wallet::create_from_uri(dir.path(), "//Alice", "pass");
+        assert!(w1.is_ok());
+        let w2 = Wallet::create_from_uri(dir.path(), "//Bob", "pass");
+        assert!(w2.is_ok(), "Different URIs should create separate wallets");
+    }
 }
