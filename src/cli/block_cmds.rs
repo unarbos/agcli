@@ -202,10 +202,10 @@ pub(super) async fn handle_diff(
                 client.get_stake_for_coldkey_at_block(&addr, hash2),
             )?;
 
-            let total_stake1: u64 = stakes1.iter().map(|s| s.stake.rao()).sum();
-            let total_stake2: u64 = stakes2.iter().map(|s| s.stake.rao()).sum();
-            let total1 = bal1.rao() + total_stake1;
-            let total2 = bal2.rao() + total_stake2;
+            let total_stake1: u64 = stakes1.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+            let total_stake2: u64 = stakes2.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+            let total1 = bal1.rao().saturating_add(total_stake1);
+            let total2 = bal2.rao().saturating_add(total_stake2);
 
             if output.is_json() {
                 print_json(&serde_json::json!({
@@ -308,7 +308,7 @@ pub(super) async fn handle_diff(
                     "price": [d1.price, d2.price],
                     "price_diff": d2.price - d1.price,
                     "emission": [d1.emission, d2.emission],
-                    "emission_diff": d2.emission as i64 - d1.emission as i64,
+                    "emission_diff": d2.emission as i128 - d1.emission as i128,
                 }));
             } else {
                 println!(
@@ -367,7 +367,7 @@ pub(super) async fn handle_diff(
                     "Emission",
                     d1.emission,
                     d2.emission,
-                    format!("{:+}", d2.emission as i64 - d1.emission as i64)
+                    format!("{:+}", d2.emission as i128 - d1.emission as i128)
                 );
                 println!("  {:>18}  {:>14}  {:>14}", "Tempo", d1.tempo, d2.tempo);
                 println!(
@@ -553,5 +553,38 @@ mod tests {
         let block_num: u64 = u32::MAX as u64 + 1;
         let result: Result<u32, _> = block_num.try_into();
         assert!(result.is_err(), "block number exceeding u32::MAX should fail");
+    }
+
+    // ── Issue 131: stake sum should use saturating_add not wrapping ──
+
+    #[test]
+    fn saturating_add_prevents_stake_sum_overflow() {
+        let values: Vec<u64> = vec![u64::MAX - 1, 2, 3];
+        let sum: u64 = values.iter().fold(0u64, |acc, v| acc.saturating_add(*v));
+        assert_eq!(sum, u64::MAX, "Saturating fold should cap at u64::MAX");
+    }
+
+    #[test]
+    fn saturating_add_total_prevents_overflow() {
+        let bal: u64 = u64::MAX - 100;
+        let stake: u64 = 200;
+        let total = bal.saturating_add(stake);
+        assert_eq!(total, u64::MAX, "Saturating add should cap at u64::MAX");
+    }
+
+    // ── Issue 132: emission diff should use i128 not i64 ──
+
+    #[test]
+    fn emission_diff_large_values_no_truncation() {
+        let e1: u64 = u64::MAX;
+        let e2: u64 = 0;
+        // i128 gives correct result
+        let diff_i128 = e2 as i128 - e1 as i128;
+        assert_eq!(diff_i128, -(u64::MAX as i128), "i128 diff should be exact");
+        // i64 would give wrong result: u64::MAX as i64 wraps to -1, so diff = 0 - (-1) = 1
+        let diff_i64 = e2 as i64 - e1 as i64;
+        assert_eq!(diff_i64, 1, "i64 would give wrong value due to truncation");
+        // The i128 and i64 diffs are fundamentally different
+        assert_ne!(diff_i128, diff_i64 as i128, "i128 and i64 diffs must differ for large values");
     }
 }

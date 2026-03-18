@@ -2029,13 +2029,15 @@ pub fn validate_config_network(value: &str) -> Result<()> {
 
 /// Validate a spending limit value for config (must be non-negative and finite).
 pub fn validate_spending_limit(value: f64, netuid_str: &str) -> Result<()> {
-    // Validate netuid suffix is a valid u16
-    let _: u16 = netuid_str.parse().map_err(|_| {
-        anyhow::anyhow!(
-            "Invalid netuid '{}' in spending_limit key. Must be a number 0-65535.",
-            netuid_str
-        )
-    })?;
+    // Validate netuid suffix is a valid u16 or the wildcard "*"
+    if netuid_str != "*" {
+        let _: u16 = netuid_str.parse().map_err(|_| {
+            anyhow::anyhow!(
+                "Invalid netuid '{}' in spending_limit key. Must be a number 0-65535 or '*' for global limit.",
+                netuid_str
+            )
+        })?;
+    }
     if value.is_nan() || value.is_infinite() {
         anyhow::bail!("Spending limit must be a finite number, got: {}", value);
     }
@@ -2155,10 +2157,11 @@ pub fn validate_docker_name(name: &str, label: &str) -> Result<()> {
         anyhow::bail!("{} cannot be empty.", label);
     }
     if name.len() > 128 {
+        let preview: String = name.chars().take(32).collect();
         anyhow::bail!(
             "{} '{}...' is too long ({} chars, max 128).",
             label,
-            &name[..32],
+            preview,
             name.len()
         );
     }
@@ -2191,9 +2194,10 @@ pub fn validate_docker_image(image: &str) -> Result<()> {
         anyhow::bail!("Docker image cannot be empty.");
     }
     if image.len() > 256 {
+        let preview: String = image.chars().take(32).collect();
         anyhow::bail!(
             "Docker image '{}...' is too long ({} chars, max 256).",
-            &image[..32],
+            preview,
             image.len()
         );
     }
@@ -2592,5 +2596,57 @@ mod tests {
         let args = vec![json!("5abc123"), json!(1), json!(50_000_000_000u64)];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
         assert!(result.is_ok(), "Numeric args should pass: {:?}", result);
+    }
+
+    // ── Issue 127: validate_docker_name UTF-8 panic ──
+
+    #[test]
+    fn validate_docker_name_multibyte_long_name_no_panic() {
+        // 2-byte chars: 65 of them = 130 bytes > 128, but should not panic
+        let name: String = std::iter::repeat('é').take(65).collect();
+        let result = validate_docker_name(&name, "container");
+        assert!(result.is_err(), "Should reject name > 128 chars");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("too long"), "Error message should mention too long: {}", msg);
+    }
+
+    #[test]
+    fn validate_docker_name_ascii_long_name() {
+        let name: String = std::iter::repeat('a').take(129).collect();
+        let result = validate_docker_name(&name, "container");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("too long"));
+    }
+
+    // ── Issue 128: validate_docker_image UTF-8 panic ──
+
+    #[test]
+    fn validate_docker_image_multibyte_long_no_panic() {
+        // 3-byte chars: 86 of them = 258 bytes > 256
+        let image: String = std::iter::repeat('中').take(86).collect();
+        let result = validate_docker_image(&image);
+        assert!(result.is_err(), "Should reject image > 256 chars");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("too long"), "Error message should mention too long: {}", msg);
+    }
+
+    // ── Issue 129: validate_spending_limit wildcard ──
+
+    #[test]
+    fn validate_spending_limit_accepts_wildcard() {
+        let result = validate_spending_limit(100.0, "*");
+        assert!(result.is_ok(), "Wildcard '*' should be accepted: {:?}", result);
+    }
+
+    #[test]
+    fn validate_spending_limit_rejects_invalid_netuid() {
+        let result = validate_spending_limit(100.0, "abc");
+        assert!(result.is_err(), "Invalid netuid should be rejected");
+    }
+
+    #[test]
+    fn validate_spending_limit_accepts_numeric_netuid() {
+        let result = validate_spending_limit(100.0, "1");
+        assert!(result.is_ok(), "Numeric netuid should be accepted: {:?}", result);
     }
 }

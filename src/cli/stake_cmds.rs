@@ -357,7 +357,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_take_pct(take)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
-            let take_u16 = (take / 100.0 * 65535.0).min(65535.0) as u16;
+            let take_u16 = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
             println!(
                 "Setting childkey take to {:.2}% on SN{} for {}",
                 take,
@@ -1052,5 +1052,32 @@ mod tests {
             }
         }
         assert_eq!(ids, vec![1, 3], "empty entries should be skipped without error");
+    }
+
+    // ── Issue 130: childkey take should round, not truncate ──
+
+    #[test]
+    fn childkey_take_rounds_correctly() {
+        // 0.01% = 0.0001 * 65535 = 6.5535, should round to 7, not truncate to 6
+        let take: f64 = 0.01;
+        let take_u16 = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
+        assert_eq!(take_u16, 7, "0.01% should round to 7, not truncate to 6");
+    }
+
+    #[test]
+    fn childkey_take_18_percent() {
+        let take: f64 = 18.0;
+        let take_u16_round = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
+        let take_u16_trunc = (take / 100.0 * 65535.0).min(65535.0) as u16;
+        // 18/100*65535 = 11796.3 — both round and truncate give 11796
+        assert_eq!(take_u16_round, 11796);
+        assert_eq!(take_u16_trunc, 11796);
+    }
+
+    #[test]
+    fn childkey_take_100_percent() {
+        let take: f64 = 100.0;
+        let take_u16 = (take / 100.0 * 65535.0).round().min(65535.0) as u16;
+        assert_eq!(take_u16, 65535, "100% should map to u16::MAX");
     }
 }

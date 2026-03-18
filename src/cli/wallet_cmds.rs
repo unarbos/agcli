@@ -5,6 +5,7 @@ use crate::cli::WalletCommands;
 use crate::wallet::Wallet;
 use anyhow::Result;
 use sp_core::Pair as _;
+use zeroize::Zeroize;
 
 pub async fn handle_wallet(
     cmd: WalletCommands,
@@ -269,12 +270,19 @@ pub async fn handle_wallet(
         }
         WalletCommands::NewHotkey { name } => {
             crate::cli::helpers::validate_name(&name, "hotkey")?;
-            let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
-            let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             let hotkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
                 .join(wallet_name)
                 .join("hotkeys")
                 .join(&name);
+            if hotkey_path.exists() {
+                anyhow::bail!(
+                    "Hotkey '{}' already exists at {}. Use a different name or remove the existing hotkey first.",
+                    name,
+                    hotkey_path.display()
+                );
+            }
+            let (pair, mnemonic) = crate::wallet::keypair::generate_mnemonic_keypair()?;
+            let ss58 = crate::wallet::keypair::to_ss58(&pair.public(), 42);
             if let Some(parent) = hotkey_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
@@ -358,9 +366,9 @@ pub async fn handle_wallet(
             let coldkey_path = crate::wallet::expand_tilde(std::path::Path::new(wallet_dir))
                 .join(wallet_name)
                 .join("coldkey");
-            let decrypted =
+            let mut decrypted =
                 crate::wallet::keyfile::read_any_encrypted_keyfile(&coldkey_path, &password)?;
-            let mnemonic = crate::wallet::keyfile::extract_secret_phrase(&decrypted)?;
+            let mut mnemonic = crate::wallet::keyfile::extract_secret_phrase(&decrypted)?;
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({
                     "mnemonic": mnemonic,
@@ -368,6 +376,8 @@ pub async fn handle_wallet(
             } else {
                 println!("{}", mnemonic);
             }
+            mnemonic.zeroize();
+            decrypted.zeroize();
             Ok(())
         }
         // These variants are handled in commands.rs with a Client connection
