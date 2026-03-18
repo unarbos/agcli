@@ -531,6 +531,157 @@ pub(super) async fn handle_weights(
 
             Ok(())
         }
+        WeightCommands::SetMechanism {
+            netuid,
+            mechanism_id,
+            weights,
+            version_key,
+        } => {
+            validate_netuid(netuid)?;
+            validate_weight_input(&weights)?;
+            let (uids, wts) = resolve_weights(&weights)?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            wallet.load_hotkey(hotkey_name)?;
+
+            let mech_name = match mechanism_id {
+                0 => "Yuma",
+                1 => "Oracle",
+                _ => "Unknown",
+            };
+
+            if client.is_dry_run() {
+                print_json(&serde_json::json!({
+                    "dry_run": true,
+                    "netuid": netuid,
+                    "mechanism_id": mechanism_id,
+                    "mechanism": mech_name,
+                    "num_weights": uids.len(),
+                    "version_key": version_key,
+                }));
+                return Ok(());
+            }
+
+            println!(
+                "Setting {} mechanism weights on SN{} (mechanism={}, version_key={})",
+                uids.len(),
+                netuid,
+                mech_name,
+                version_key
+            );
+            let hash = client
+                .set_mechanism_weights(
+                    wallet.hotkey()?,
+                    NetUid(netuid),
+                    mechanism_id,
+                    &uids,
+                    &wts,
+                    version_key,
+                )
+                .await?;
+            println!(
+                "Mechanism weights set on SN{} ({}, {} UIDs).\n  Tx: {}",
+                netuid, mech_name, uids.len(), hash
+            );
+            Ok(())
+        }
+        WeightCommands::CommitMechanism {
+            netuid,
+            mechanism_id,
+            hash: hash_hex,
+        } => {
+            validate_netuid(netuid)?;
+            let hash_bytes: [u8; 32] = hex::decode(hash_hex.trim_start_matches("0x"))
+                .map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?
+                .try_into()
+                .map_err(|v: Vec<u8>| {
+                    anyhow::anyhow!(
+                        "Hash must be exactly 32 bytes, got {} bytes",
+                        v.len()
+                    )
+                })?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            wallet.load_hotkey(hotkey_name)?;
+
+            let mech_name = match mechanism_id {
+                0 => "Yuma",
+                1 => "Oracle",
+                _ => "Unknown",
+            };
+
+            println!(
+                "Committing mechanism weights on SN{} (mechanism={})",
+                netuid, mech_name
+            );
+            println!("  Hash: 0x{}", hex::encode(hash_bytes));
+            let tx = client
+                .commit_mechanism_weights(
+                    wallet.hotkey()?,
+                    NetUid(netuid),
+                    mechanism_id,
+                    hash_bytes,
+                )
+                .await?;
+            println!(
+                "Mechanism weights committed on SN{} ({}).\n  Tx: {}",
+                netuid, mech_name, tx
+            );
+            Ok(())
+        }
+        WeightCommands::RevealMechanism {
+            netuid,
+            mechanism_id,
+            weights,
+            salt,
+            version_key,
+        } => {
+            validate_netuid(netuid)?;
+            validate_weight_input(&weights)?;
+            let (uids, wts) = resolve_weights(&weights)?;
+            let salt_u16: Vec<u16> = salt
+                .as_bytes()
+                .chunks(2)
+                .map(|chunk| {
+                    let b0 = chunk[0] as u16;
+                    let b1 = if chunk.len() > 1 { chunk[1] as u16 } else { 0 };
+                    (b1 << 8) | b0
+                })
+                .collect();
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            wallet.load_hotkey(hotkey_name)?;
+
+            let mech_name = match mechanism_id {
+                0 => "Yuma",
+                1 => "Oracle",
+                _ => "Unknown",
+            };
+
+            println!(
+                "Revealing {} mechanism weights on SN{} (mechanism={}, version_key={})",
+                uids.len(),
+                netuid,
+                mech_name,
+                version_key
+            );
+            let tx = client
+                .reveal_mechanism_weights(
+                    wallet.hotkey()?,
+                    NetUid(netuid),
+                    mechanism_id,
+                    &uids,
+                    &wts,
+                    &salt_u16,
+                    version_key,
+                )
+                .await?;
+            println!(
+                "Mechanism weights revealed on SN{} ({}, {} UIDs).\n  Tx: {}",
+                netuid, mech_name, uids.len(), tx
+            );
+            Ok(())
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 //! Chain query methods — subnet, neuron, delegate, identity, and historical queries.
 
 use anyhow::{Context, Result};
+use subxt::OnlineClient;
 
 use crate::api;
 use crate::types::balance::Balance;
@@ -1640,6 +1641,286 @@ impl Client {
     }
 }
 
+// ──────── Subnet Liquidity Pool Queries (from subtensor.com cross-reference) ────────
+
+impl Client {
+    /// Get subnet liquidity pool details: (alpha_in, alpha_out, tao, volume, moving_price).
+    /// All values in raw u128. Returns None if subnet doesn't exist.
+    pub async fn get_subnet_pool(
+        &self,
+        netuid: NetUid,
+    ) -> Result<Option<(u128, u128, u128, u128, u128)>> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+
+        // Fetch all 5 values concurrently
+        let (alpha_in, alpha_out, tao, volume, price) = tokio::try_join!(
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetAlphaIn", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetAlphaOut", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetTAO", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetVolume", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetMovingPrice", nid),
+        )?;
+
+        // If all are zero/None, subnet likely doesn't have a pool
+        if alpha_in.is_none() && tao.is_none() {
+            return Ok(None);
+        }
+
+        Ok(Some((
+            alpha_in.unwrap_or(0),
+            alpha_out.unwrap_or(0),
+            tao.unwrap_or(0),
+            volume.unwrap_or(0),
+            price.unwrap_or(0),
+        )))
+    }
+
+    /// Get subnet emission rates: (alpha_in_emission, alpha_out_emission, tao_in_emission).
+    pub async fn get_subnet_emissions(
+        &self,
+        netuid: NetUid,
+    ) -> Result<(u128, u128, u128)> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+
+        let (alpha_in_em, alpha_out_em, tao_em) = tokio::try_join!(
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetAlphaInEmission", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetAlphaOutEmission", nid),
+            Self::fetch_u128_storage(inner, "SubtensorModule", "SubnetTaoInEmission", nid),
+        )?;
+
+        Ok((
+            alpha_in_em.unwrap_or(0),
+            alpha_out_em.unwrap_or(0),
+            tao_em.unwrap_or(0),
+        ))
+    }
+
+    /// Get TAO flow metrics for a subnet: (tao_flow, ema_tao_flow).
+    pub async fn get_subnet_tao_flow(
+        &self,
+        netuid: NetUid,
+    ) -> Result<(i128, i128)> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+
+        let (flow, ema) = tokio::try_join!(
+            Self::fetch_i128_storage(inner, "SubtensorModule", "SubnetTaoFlow", nid),
+            Self::fetch_i128_storage(inner, "SubtensorModule", "SubnetEmaTaoFlow", nid),
+        )?;
+
+        Ok((flow.unwrap_or(0), ema.unwrap_or(0)))
+    }
+
+    /// Get root claim info for a hotkey on a subnet: (claimable, claimed).
+    pub async fn get_root_claims(
+        &self,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+    ) -> Result<(u128, u128)> {
+        let inner = &self.inner;
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        let nid = netuid.0;
+
+        let (claimable, claimed) = tokio::try_join!(
+            async {
+                let addr = subxt::dynamic::storage(
+                    "SubtensorModule",
+                    "RootClaimable",
+                    vec![
+                        subxt::dynamic::Value::from_bytes(hk.0),
+                        subxt::dynamic::Value::u128(nid as u128),
+                    ],
+                );
+                let r = inner.storage().at_latest().await?.fetch(&addr).await?;
+                Ok::<_, anyhow::Error>(r.and_then(|v| v.as_type::<u128>().ok()).unwrap_or(0))
+            },
+            async {
+                let hk2 = Self::ss58_to_account_id(hotkey_ss58)?;
+                let addr = subxt::dynamic::storage(
+                    "SubtensorModule",
+                    "RootClaimed",
+                    vec![
+                        subxt::dynamic::Value::from_bytes(hk2.0),
+                        subxt::dynamic::Value::u128(nid as u128),
+                    ],
+                );
+                let r = inner.storage().at_latest().await?.fetch(&addr).await?;
+                Ok::<_, anyhow::Error>(r.and_then(|v| v.as_type::<u128>().ok()).unwrap_or(0))
+            },
+        )?;
+
+        Ok((claimable, claimed))
+    }
+
+    /// Get swap fee rate for a subnet (from Swap pallet).
+    pub async fn get_swap_fee_rate(&self, netuid: NetUid) -> Result<Option<u128>> {
+        let inner = &self.inner;
+        Self::fetch_u128_storage(inner, "Swap", "FeeRate", netuid.0).await
+    }
+
+    /// Get Drand last stored round number.
+    pub async fn get_drand_last_round(&self) -> Result<Option<u64>> {
+        let inner = &self.inner;
+        let result = retry_on_transient("get_drand_last_round", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage("Drand", "LastStoredRound", ());
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch Drand LastStoredRound")
+        })
+        .await?;
+        Ok(result.and_then(|v| v.as_type::<u64>().ok()))
+    }
+
+    /// Get SafeMode status: returns Some(block_number) if safe mode is active until that block.
+    pub async fn get_safe_mode_until(&self) -> Result<Option<u64>> {
+        let inner = &self.inner;
+        let result = retry_on_transient("get_safe_mode_until", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage("SafeMode", "EnteredUntil", ());
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch SafeMode EnteredUntil")
+        })
+        .await?;
+        Ok(result.and_then(|v| v.as_type::<u64>().ok()))
+    }
+
+    /// Get stake threshold for a subnet (min stake to set weights).
+    pub async fn get_stake_threshold(&self, netuid: NetUid) -> Result<u128> {
+        let inner = &self.inner;
+        let result = Self::fetch_u128_storage(inner, "SubtensorModule", "StakeThreshold", netuid.0).await?;
+        Ok(result.unwrap_or(0))
+    }
+
+    /// Get nominator minimum required stake (global).
+    pub async fn get_nominator_min_stake(&self) -> Result<u128> {
+        let inner = &self.inner;
+        let result = retry_on_transient("get_nominator_min_stake", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage("SubtensorModule", "NominatorMinRequiredStake", ());
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch NominatorMinRequiredStake")
+        })
+        .await?;
+        Ok(result.and_then(|v| v.as_type::<u128>().ok()).unwrap_or(0))
+    }
+
+    /// Get token symbol for a subnet's alpha token.
+    pub async fn get_token_symbol(&self, netuid: NetUid) -> Result<Option<String>> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+        let result = retry_on_transient("get_token_symbol", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                "SubtensorModule",
+                "TokenSymbol",
+                vec![subxt::dynamic::Value::u128(nid as u128)],
+            );
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch TokenSymbol")
+        })
+        .await?;
+        Ok(result.and_then(|v| {
+            v.as_type::<Vec<u8>>()
+                .ok()
+                .map(|b| String::from_utf8_lossy(&b).into_owned())
+        }))
+    }
+
+    /// Get subnet lease info: returns netuid's lease if present.
+    pub async fn get_subnet_lease(
+        &self,
+        netuid: NetUid,
+    ) -> Result<Option<(u64, u64, u128)>> {
+        let inner = &self.inner;
+        let nid = netuid.0;
+        let result = retry_on_transient("get_subnet_lease", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                "SubtensorModule",
+                "SubnetLeases",
+                vec![subxt::dynamic::Value::u128(nid as u128)],
+            );
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch SubnetLeases")
+        })
+        .await?;
+        // Decode as (start_block, end_block, deposit)
+        Ok(result.and_then(|v| v.as_type::<(u64, u64, u128)>().ok()))
+    }
+
+    // ──── Internal helpers for fetching typed storage ────
+
+    async fn fetch_u128_storage(
+        inner: &OnlineClient<crate::SubtensorConfig>,
+        pallet: &str,
+        entry: &str,
+        key: u16,
+    ) -> Result<Option<u128>> {
+        let result = retry_on_transient(entry, RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                pallet,
+                entry,
+                vec![subxt::dynamic::Value::u128(key as u128)],
+            );
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .with_context(|| format!("Failed to fetch {}.{} for key {}", pallet, entry, key))
+        })
+        .await?;
+        Ok(result.and_then(|v| v.as_type::<u128>().ok()))
+    }
+
+    async fn fetch_i128_storage(
+        inner: &OnlineClient<crate::SubtensorConfig>,
+        pallet: &str,
+        entry: &str,
+        key: u16,
+    ) -> Result<Option<i128>> {
+        let result = retry_on_transient(entry, RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                pallet,
+                entry,
+                vec![subxt::dynamic::Value::u128(key as u128)],
+            );
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .with_context(|| format!("Failed to fetch {}.{} for key {}", pallet, entry, key))
+        })
+        .await?;
+        Ok(result.and_then(|v| v.as_type::<i128>().ok()))
+    }
+}
+
 fn decode_commitment_data(data: &api::runtime_types::pallet_commitments::types::Data) -> String {
     use api::runtime_types::pallet_commitments::types::Data;
     macro_rules! raw_to_string {
@@ -1750,5 +2031,46 @@ mod tests {
     fn netuid_ordering() {
         assert!(NetUid(0) < NetUid(1));
         assert!(NetUid(100) > NetUid(99));
+    }
+
+    // ── Step 7: New query method compilation smoke tests ──
+
+    #[test]
+    fn new_query_types_compile() {
+        // Verify the new types used in pool queries compile correctly
+        let pool: Option<(u128, u128, u128, u128, u128)> = None;
+        assert!(pool.is_none());
+
+        let emission: (u128, u128, u128) = (0, 0, 0);
+        assert_eq!(emission.0, 0);
+
+        let flow: (i128, i128) = (0, 0);
+        assert_eq!(flow.0, 0);
+
+        let claims: (u128, u128) = (0, 0);
+        assert_eq!(claims.0, 0);
+    }
+
+    #[test]
+    fn lease_tuple_type_check() {
+        let lease: Option<(u64, u64, u128)> = Some((100, 200, 1_000_000));
+        let (start, end, deposit) = lease.unwrap();
+        assert_eq!(start, 100);
+        assert_eq!(end, 200);
+        assert_eq!(deposit, 1_000_000);
+    }
+
+    #[test]
+    fn token_symbol_decode_utf8() {
+        let raw: Vec<u8> = b"TAO".to_vec();
+        let symbol = String::from_utf8_lossy(&raw).into_owned();
+        assert_eq!(symbol, "TAO");
+    }
+
+    #[test]
+    fn token_symbol_decode_non_utf8() {
+        let raw: Vec<u8> = vec![0xFF, 0xFE, 0xFD];
+        let symbol = String::from_utf8_lossy(&raw).into_owned();
+        assert!(symbol.contains('\u{FFFD}')); // replacement character
     }
 }

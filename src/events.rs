@@ -29,6 +29,12 @@ pub enum EventFilter {
     Delegation,
     /// Key lifecycle events (swap, associate, identity)
     Keys,
+    /// Swap/DEX events (liquidity, swaps, fees)
+    Swap,
+    /// Governance events (safe mode, sudo, scheduler, proxy)
+    Governance,
+    /// Crowdloan events
+    Crowdloan,
 }
 
 impl std::str::FromStr for EventFilter {
@@ -41,7 +47,10 @@ impl std::str::FromStr for EventFilter {
             "weights" | "weight" => Self::Weights,
             "subnet" | "subnets" => Self::Subnet,
             "delegation" | "delegate" | "delegates" => Self::Delegation,
-            "keys" | "key" | "swap" => Self::Keys,
+            "keys" | "key" => Self::Keys,
+            "swap" | "dex" | "liquidity" => Self::Swap,
+            "governance" | "gov" | "sudo" | "safemode" => Self::Governance,
+            "crowdloan" | "crowdloans" | "fund" => Self::Crowdloan,
             _ => Self::All,
         })
     }
@@ -126,6 +135,51 @@ const KEY_VARIANTS: &[&str] = &[
     "ChainIdentitySet",
 ];
 
+/// Known Swap/DEX pallet event variant names.
+const SWAP_VARIANTS: &[&str] = &[
+    "SwapExecuted",
+    "LiquidityAdded",
+    "LiquidityRemoved",
+    "PositionCreated",
+    "PositionClosed",
+    "FeesCollected",
+];
+
+/// Known governance-related event variant names (across pallets).
+const GOVERNANCE_VARIANTS: &[(&str, &str)] = &[
+    ("SafeMode", "Entered"),
+    ("SafeMode", "Exited"),
+    ("SafeMode", "DepositPlaced"),
+    ("SafeMode", "DepositReleased"),
+    ("Sudo", "Sudid"),
+    ("Sudo", "KeyChanged"),
+    ("Sudo", "KeyRotated"),
+    ("Sudo", "SudoAsDone"),
+    ("Scheduler", "Scheduled"),
+    ("Scheduler", "Canceled"),
+    ("Scheduler", "Dispatched"),
+    ("Proxy", "ProxyExecuted"),
+    ("Proxy", "PureCreated"),
+    ("Proxy", "Announced"),
+    ("Proxy", "ProxyAdded"),
+    ("Proxy", "ProxyRemoved"),
+    ("Multisig", "NewMultisig"),
+    ("Multisig", "MultisigApproval"),
+    ("Multisig", "MultisigExecuted"),
+    ("Multisig", "MultisigCancelled"),
+];
+
+/// Known Crowdloan pallet event variant names.
+const CROWDLOAN_VARIANTS: &[&str] = &[
+    "Created",
+    "Contributed",
+    "Withdrew",
+    "PartiallyRefunded",
+    "AllRefunded",
+    "Dissolved",
+    "Edited",
+];
+
 impl EventFilter {
     fn matches(&self, pallet: &str, variant: &str) -> bool {
         match self {
@@ -141,6 +195,11 @@ impl EventFilter {
                 pallet == "SubtensorModule" && DELEGATION_VARIANTS.contains(&variant)
             }
             Self::Keys => pallet == "SubtensorModule" && KEY_VARIANTS.contains(&variant),
+            Self::Swap => pallet == "Swap" && SWAP_VARIANTS.contains(&variant),
+            Self::Governance => {
+                GOVERNANCE_VARIANTS.iter().any(|(p, v)| *p == pallet && *v == variant)
+            }
+            Self::Crowdloan => pallet == "Crowdloan" && CROWDLOAN_VARIANTS.contains(&variant),
         }
     }
 }
@@ -1363,5 +1422,182 @@ mod tests {
         // These should not panic
         let _ = last.saturating_add(1);
         let _ = block_number.saturating_sub(1);
+    }
+
+    // ========== Step 7: New event filter categories ==========
+
+    // -- Swap filter --
+
+    #[test]
+    fn from_str_swap() {
+        assert_eq!(EventFilter::from_str("swap").unwrap(), EventFilter::Swap);
+    }
+
+    #[test]
+    fn from_str_dex() {
+        assert_eq!(EventFilter::from_str("dex").unwrap(), EventFilter::Swap);
+    }
+
+    #[test]
+    fn from_str_liquidity() {
+        assert_eq!(EventFilter::from_str("liquidity").unwrap(), EventFilter::Swap);
+    }
+
+    #[test]
+    fn swap_matches_swap_executed() {
+        assert!(EventFilter::Swap.matches("Swap", "SwapExecuted"));
+    }
+
+    #[test]
+    fn swap_matches_liquidity_added() {
+        assert!(EventFilter::Swap.matches("Swap", "LiquidityAdded"));
+    }
+
+    #[test]
+    fn swap_matches_position_created() {
+        assert!(EventFilter::Swap.matches("Swap", "PositionCreated"));
+    }
+
+    #[test]
+    fn swap_matches_fees_collected() {
+        assert!(EventFilter::Swap.matches("Swap", "FeesCollected"));
+    }
+
+    #[test]
+    fn swap_rejects_wrong_pallet() {
+        assert!(!EventFilter::Swap.matches("Balances", "SwapExecuted"));
+    }
+
+    #[test]
+    fn swap_rejects_wrong_variant() {
+        assert!(!EventFilter::Swap.matches("Swap", "StakeAdded"));
+    }
+
+    // -- Governance filter --
+
+    #[test]
+    fn from_str_governance() {
+        assert_eq!(EventFilter::from_str("governance").unwrap(), EventFilter::Governance);
+    }
+
+    #[test]
+    fn from_str_gov() {
+        assert_eq!(EventFilter::from_str("gov").unwrap(), EventFilter::Governance);
+    }
+
+    #[test]
+    fn from_str_sudo() {
+        assert_eq!(EventFilter::from_str("sudo").unwrap(), EventFilter::Governance);
+    }
+
+    #[test]
+    fn from_str_safemode() {
+        assert_eq!(EventFilter::from_str("safemode").unwrap(), EventFilter::Governance);
+    }
+
+    #[test]
+    fn governance_matches_safe_mode_entered() {
+        assert!(EventFilter::Governance.matches("SafeMode", "Entered"));
+    }
+
+    #[test]
+    fn governance_matches_safe_mode_exited() {
+        assert!(EventFilter::Governance.matches("SafeMode", "Exited"));
+    }
+
+    #[test]
+    fn governance_matches_sudo_sudid() {
+        assert!(EventFilter::Governance.matches("Sudo", "Sudid"));
+    }
+
+    #[test]
+    fn governance_matches_scheduler_dispatched() {
+        assert!(EventFilter::Governance.matches("Scheduler", "Dispatched"));
+    }
+
+    #[test]
+    fn governance_matches_proxy_executed() {
+        assert!(EventFilter::Governance.matches("Proxy", "ProxyExecuted"));
+    }
+
+    #[test]
+    fn governance_matches_multisig_executed() {
+        assert!(EventFilter::Governance.matches("Multisig", "MultisigExecuted"));
+    }
+
+    #[test]
+    fn governance_rejects_wrong_combo() {
+        assert!(!EventFilter::Governance.matches("SubtensorModule", "Entered"));
+    }
+
+    #[test]
+    fn governance_rejects_balance_pallet() {
+        assert!(!EventFilter::Governance.matches("Balances", "Transfer"));
+    }
+
+    // -- Crowdloan filter --
+
+    #[test]
+    fn from_str_crowdloan() {
+        assert_eq!(EventFilter::from_str("crowdloan").unwrap(), EventFilter::Crowdloan);
+    }
+
+    #[test]
+    fn from_str_crowdloans() {
+        assert_eq!(EventFilter::from_str("crowdloans").unwrap(), EventFilter::Crowdloan);
+    }
+
+    #[test]
+    fn from_str_fund() {
+        assert_eq!(EventFilter::from_str("fund").unwrap(), EventFilter::Crowdloan);
+    }
+
+    #[test]
+    fn crowdloan_matches_created() {
+        assert!(EventFilter::Crowdloan.matches("Crowdloan", "Created"));
+    }
+
+    #[test]
+    fn crowdloan_matches_contributed() {
+        assert!(EventFilter::Crowdloan.matches("Crowdloan", "Contributed"));
+    }
+
+    #[test]
+    fn crowdloan_matches_dissolved() {
+        assert!(EventFilter::Crowdloan.matches("Crowdloan", "Dissolved"));
+    }
+
+    #[test]
+    fn crowdloan_rejects_wrong_pallet() {
+        assert!(!EventFilter::Crowdloan.matches("SubtensorModule", "Created"));
+    }
+
+    #[test]
+    fn crowdloan_rejects_wrong_variant() {
+        assert!(!EventFilter::Crowdloan.matches("Crowdloan", "StakeAdded"));
+    }
+
+    // -- Cross-filter isolation for new categories --
+
+    #[test]
+    fn swap_does_not_match_staking() {
+        assert!(!EventFilter::Swap.matches("SubtensorModule", "StakeAdded"));
+    }
+
+    #[test]
+    fn governance_does_not_match_swap() {
+        assert!(!EventFilter::Governance.matches("Swap", "SwapExecuted"));
+    }
+
+    #[test]
+    fn crowdloan_does_not_match_governance() {
+        assert!(!EventFilter::Crowdloan.matches("SafeMode", "Entered"));
+    }
+
+    #[test]
+    fn all_still_matches_new_pallets() {
+        assert!(EventFilter::All.matches("Swap", "SwapExecuted"));
+        assert!(EventFilter::All.matches("SafeMode", "Entered"));
+        assert!(EventFilter::All.matches("Crowdloan", "Created"));
     }
 }

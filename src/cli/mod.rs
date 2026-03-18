@@ -1218,6 +1218,51 @@ pub enum WeightCommands {
         #[arg(long)]
         wait: bool,
     },
+    /// Set mechanism-specific weights directly (no commit-reveal)
+    SetMechanism {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Mechanism ID (0 = Yuma, 1 = Oracle)
+        #[arg(long)]
+        mechanism_id: u16,
+        /// Weights as "uid:weight" pairs, comma-separated
+        #[arg(long)]
+        weights: String,
+        /// Version key
+        #[arg(long, default_value = "0")]
+        version_key: u64,
+    },
+    /// Commit mechanism-specific weights (for commit-reveal enabled subnets)
+    CommitMechanism {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Mechanism ID (0 = Yuma, 1 = Oracle)
+        #[arg(long)]
+        mechanism_id: u16,
+        /// Commit hash (hex string, 32 bytes)
+        #[arg(long)]
+        hash: String,
+    },
+    /// Reveal mechanism-specific weights
+    RevealMechanism {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Mechanism ID (0 = Yuma, 1 = Oracle)
+        #[arg(long)]
+        mechanism_id: u16,
+        /// Weights as "uid:weight" pairs, comma-separated
+        #[arg(long)]
+        weights: String,
+        /// Salt used in commit
+        #[arg(long)]
+        salt: String,
+        /// Version key
+        #[arg(long, default_value = "0")]
+        version_key: u64,
+    },
 }
 
 #[derive(Subcommand, Debug)]
