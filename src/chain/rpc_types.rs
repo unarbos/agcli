@@ -38,7 +38,9 @@ fn ip_to_string(ip: u128, ip_type: u8) -> String {
             ip4 & 0xFF
         )
     } else {
-        format!("{:x}", ip)
+        // Format as proper IPv6 colon notation
+        let addr = std::net::Ipv6Addr::from(ip.to_be_bytes());
+        format!("{}", addr)
     }
 }
 
@@ -294,8 +296,23 @@ mod tests {
     }
 
     #[test]
-    fn ip_to_string_ipv6_formats_hex() {
+    fn ip_to_string_ipv6_formats_colon_notation() {
+        // Issue 100: IPv6 should be formatted as proper colon notation, not raw hex
         let ip: u128 = 0x20010db8000000000000000000000001;
-        assert_eq!(ip_to_string(ip, 6), "20010db8000000000000000000000001");
+        assert_eq!(ip_to_string(ip, 6), "2001:db8::1");
+    }
+
+    #[test]
+    fn ip_to_string_ipv6_loopback() {
+        let ip: u128 = 1; // ::1
+        assert_eq!(ip_to_string(ip, 6), "::1");
+    }
+
+    #[test]
+    fn ip_to_string_ipv6_full() {
+        // All groups non-zero
+        let ip: u128 = 0x20010db800010002000300040005000f;
+        let result = ip_to_string(ip, 6);
+        assert!(result.contains(':'), "IPv6 must use colon notation: {}", result);
     }
 }

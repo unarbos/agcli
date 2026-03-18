@@ -121,7 +121,10 @@ fn extract_netuid<T: Clone>(composite: &Composite<T>) -> Option<u16> {
             for (name, val) in fields {
                 if name == "netuid" {
                     if let ValueDef::Primitive(Primitive::U128(n)) = &val.value {
-                        return Some(*n as u16);
+                        if *n <= u16::MAX as u128 {
+                            return Some(*n as u16);
+                        }
+                        return None; // out of u16 range — not a valid netuid
                     }
                 }
             }
@@ -229,7 +232,7 @@ fn composite_to_json<T: Clone>(composite: &Composite<T>) -> serde_json::Value {
                 let bytes: Vec<u8> = fields
                     .iter()
                     .filter_map(|v| match &v.value {
-                        ValueDef::Primitive(Primitive::U128(n)) => Some(*n as u8),
+                        ValueDef::Primitive(Primitive::U128(n)) if *n <= 255 => Some(*n as u8),
                         _ => None,
                     })
                     .collect();
@@ -546,7 +549,9 @@ pub async fn subscribe_blocks(
     client: &OnlineClient<SubtensorConfig>,
     json_output: bool,
 ) -> Result<()> {
-    println!("Subscribed to finalized blocks. Ctrl+C to stop.\n");
+    if !json_output {
+        println!("Subscribed to finalized blocks. Ctrl+C to stop.\n");
+    }
 
     // Run the block subscription loop with Ctrl+C handling (Issue 721)
     tokio::select! {
@@ -1233,5 +1238,45 @@ mod tests {
     fn compute_block_gap_overflow_protection() {
         // Current < last (shouldn't happen, saturating_sub protects)
         assert_eq!(compute_block_gap(Some(200), 100), 0);
+    }
+
+    // ──── Issue 100: extract_netuid rejects out-of-u16-range values ────
+
+    #[test]
+    fn extract_netuid_valid_value() {
+        use subxt::ext::scale_value::Composite;
+        let composite = Composite::Named(vec![
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(42)),
+        ]);
+        assert_eq!(extract_netuid(&composite), Some(42));
+    }
+
+    #[test]
+    fn extract_netuid_max_u16() {
+        use subxt::ext::scale_value::Composite;
+        let composite = Composite::Named(vec![
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(65535)),
+        ]);
+        assert_eq!(extract_netuid(&composite), Some(65535));
+    }
+
+    #[test]
+    fn extract_netuid_rejects_above_u16() {
+        use subxt::ext::scale_value::Composite;
+        // Value 65536 is above u16::MAX — should return None, not silently truncate to 0
+        let composite = Composite::Named(vec![
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(65536)),
+        ]);
+        assert_eq!(extract_netuid(&composite), None);
+    }
+
+    #[test]
+    fn extract_netuid_rejects_large_value() {
+        use subxt::ext::scale_value::Composite;
+        // 0x0001_0001 would truncate to 1 without the guard
+        let composite = Composite::Named(vec![
+            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(0x0001_0001)),
+        ]);
+        assert_eq!(extract_netuid(&composite), None);
     }
 }

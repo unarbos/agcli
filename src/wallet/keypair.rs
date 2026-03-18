@@ -30,10 +30,12 @@ pub fn pair_from_mnemonic(mnemonic: &str) -> Result<sr25519::Pair> {
 pub fn pair_from_seed_hex(seed: &str) -> Result<sr25519::Pair> {
     let seed = seed.strip_prefix("0x").unwrap_or(seed);
     let mut bytes = hex::decode(seed).context("Invalid hex seed")?;
-    let mut seed_arr: [u8; 32] = bytes
-        .clone()
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("Seed must be 32 bytes"))?;
+    if bytes.len() != 32 {
+        bytes.zeroize();
+        anyhow::bail!("Seed must be 32 bytes");
+    }
+    let mut seed_arr = [0u8; 32];
+    seed_arr.copy_from_slice(&bytes);
     bytes.zeroize(); // Wipe decoded seed bytes
     let pair = sr25519::Pair::from_seed(&seed_arr);
     seed_arr.zeroize(); // Wipe seed array
@@ -146,5 +148,24 @@ mod tests {
     fn pair_from_seed_hex_invalid_length() {
         let result = pair_from_seed_hex("0x1234");
         assert!(result.is_err(), "Short seed should fail");
+    }
+
+    // ──── Issue 105: pair_from_seed_hex uses copy_from_slice instead of clone ────
+
+    #[test]
+    fn pair_from_seed_hex_no_clone_leak() {
+        // Verify the function still works correctly after replacing clone() with copy_from_slice()
+        let alice_seed = "0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a";
+        let pair1 = pair_from_seed_hex(alice_seed).unwrap();
+        let pair2 = pair_from_seed_hex(alice_seed).unwrap();
+        assert_eq!(pair1.public(), pair2.public(), "Same seed must produce same key");
+    }
+
+    #[test]
+    fn pair_from_seed_hex_too_long_rejected() {
+        // 33 bytes — should fail
+        let long_seed = "0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0aff";
+        let result = pair_from_seed_hex(long_seed);
+        assert!(result.is_err(), "33-byte seed should be rejected");
     }
 }

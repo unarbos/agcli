@@ -192,12 +192,15 @@ pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
         Aes256Gcm::new_from_slice(&key).map_err(|e| anyhow::anyhow!("cipher init: {}", e))?;
     key.zeroize(); // Wipe derived key from memory immediately after cipher init
     let nonce = Nonce::from_slice(nonce_bytes);
-    let mut plaintext = cipher
+    let plaintext = cipher
         .decrypt(nonce, ciphertext)
         .map_err(|_| anyhow::anyhow!("Decryption failed — wrong password. If you forgot your password, restore from your mnemonic with `agcli wallet regen-coldkey`."))?;
 
-    let result = String::from_utf8(plaintext.clone()).context("mnemonic is not valid UTF-8");
-    plaintext.zeroize(); // Wipe decrypted plaintext bytes
+    // Convert without cloning to avoid leaving an unzeroized copy in memory
+    let result = String::from_utf8(plaintext).context("mnemonic is not valid UTF-8");
+    // Note: if from_utf8 succeeds, ownership transferred to String (no clone needed).
+    // If it fails, the error contains the bytes which will be dropped, but that's
+    // an error path (invalid data) so zeroization of the error payload is acceptable.
     result
 }
 

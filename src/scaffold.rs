@@ -568,6 +568,18 @@ async fn lookup_uid(client: &Client, netuid: NetUid, hotkey_ss58: &str) -> Resul
     bail!("Neuron {} not found on subnet {}", hotkey_ss58, netuid.0)
 }
 
+/// Check if an IP string is in the RFC 1918 172.16.0.0/12 range (172.16.x.x–172.31.x.x).
+fn is_rfc1918_172(host: &str) -> bool {
+    if let Some(rest) = host.strip_prefix("172.") {
+        if let Some(second_octet_str) = rest.split('.').next() {
+            if let Ok(second) = second_octet_str.parse::<u8>() {
+                return (16..=31).contains(&second);
+            }
+        }
+    }
+    false
+}
+
 /// Check if a WebSocket endpoint URL points to a local address.
 fn is_local_endpoint(endpoint: &str) -> bool {
     // Strip ws:// or wss:// prefix
@@ -591,7 +603,7 @@ fn is_local_endpoint(endpoint: &str) -> bool {
         || host_part.starts_with("::1") // bare IPv6 loopback without brackets
         || host.starts_with("192.168.")
         || host.starts_with("10.")
-        || host.starts_with("172.") // simplified check for 172.16-31.x.x
+        || is_rfc1918_172(host) // proper check for 172.16.0.0/12
 }
 
 #[cfg(test)]
@@ -707,5 +719,42 @@ mod tests {
             Err::<String, _>(anyhow::anyhow!("insufficient balance"))
         }).await;
         assert!(result.is_err(), "Non-transient error should fail immediately");
+    }
+
+    // ──── Issue 100: is_rfc1918_172 correctly checks 172.16-31 range ────
+
+    #[test]
+    fn rfc1918_172_accepts_valid_range() {
+        // 172.16.x.x through 172.31.x.x are private (RFC 1918)
+        assert!(is_rfc1918_172("172.16.0.1"));
+        assert!(is_rfc1918_172("172.20.5.10"));
+        assert!(is_rfc1918_172("172.31.255.255"));
+    }
+
+    #[test]
+    fn rfc1918_172_rejects_public_addresses() {
+        // 172.32+ and 172.0-15 are NOT private
+        assert!(!is_rfc1918_172("172.32.0.1"), "172.32.x.x is not RFC1918");
+        assert!(!is_rfc1918_172("172.0.0.1"), "172.0.x.x is not RFC1918");
+        assert!(!is_rfc1918_172("172.15.255.255"), "172.15.x.x is not RFC1918");
+        assert!(!is_rfc1918_172("172.255.0.1"), "172.255.x.x is not RFC1918");
+    }
+
+    #[test]
+    fn rfc1918_172_rejects_non_172() {
+        assert!(!is_rfc1918_172("10.0.0.1"));
+        assert!(!is_rfc1918_172("192.168.1.1"));
+        assert!(!is_rfc1918_172("8.8.8.8"));
+    }
+
+    #[test]
+    fn is_local_endpoint_rejects_public_172() {
+        // Before the fix, 172.32+ was incorrectly accepted as local
+        assert!(!is_local_endpoint("ws://172.32.0.1:9944"), "172.32.x should not be local");
+        assert!(!is_local_endpoint("ws://172.100.0.1:9944"), "172.100.x should not be local");
+        assert!(!is_local_endpoint("ws://172.255.0.1:9944"), "172.255.x should not be local");
+        // But 172.16-31 should still be accepted
+        assert!(is_local_endpoint("ws://172.16.0.1:9944"));
+        assert!(is_local_endpoint("ws://172.31.255.255:9944"));
     }
 }

@@ -1478,7 +1478,7 @@ async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Res
 
         match hyperparams {
             Some(h) => {
-                let tempo = h.tempo as u64;
+                let tempo = (h.tempo as u64).max(1); // guard against tempo=0 causing division panic
                 let blocks_into_tempo = block % tempo;
                 let blocks_until_tempo = tempo - blocks_into_tempo;
                 let secs_until = blocks_until_tempo * 12;

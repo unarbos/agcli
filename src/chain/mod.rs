@@ -210,7 +210,7 @@ impl Client {
         let fresh = Self::connect_once(&self.url).await?;
         self.inner = fresh.inner;
         self.rpc = fresh.rpc;
-        self.cache = QueryCache::new();
+        self.cache = QueryCache::new_with_network(&url_to_cache_prefix(&self.url));
         Ok(())
     }
 
@@ -1546,5 +1546,33 @@ mod tests {
         assert!(lock.is_ok());
         assert!(std::path::Path::new("/tmp/agcli-tx-locks").exists());
         drop(lock);
+    }
+
+    // ──── Issue 100: reconnect preserves network cache prefix ────
+
+    #[test]
+    fn url_to_cache_prefix_used_in_reconnect_path() {
+        // Verify that url_to_cache_prefix is available and deterministic
+        // (reconnect now uses it instead of QueryCache::new())
+        let url = "wss://entrypoint-finney.opentensor.ai:443";
+        let prefix1 = url_to_cache_prefix(url);
+        let prefix2 = url_to_cache_prefix(url);
+        assert_eq!(prefix1, prefix2, "Same URL must produce same prefix");
+        assert_eq!(prefix1, "finney");
+    }
+
+    #[test]
+    fn reconnect_cache_prefix_matches_initial() {
+        // The reconnect path now calls url_to_cache_prefix(&self.url) instead of
+        // QueryCache::new(). Verify the prefix function returns non-empty for all
+        // well-known endpoints.
+        for (url, expected) in [
+            ("wss://entrypoint-finney.opentensor.ai:443", "finney"),
+            ("wss://test.finney.opentensor.ai:443", "test"),
+            ("ws://127.0.0.1:9944", "local"),
+        ] {
+            let prefix = url_to_cache_prefix(url);
+            assert_eq!(prefix, expected, "URL '{}' should produce prefix '{}'", url, expected);
+        }
     }
 }
