@@ -15,6 +15,21 @@ use anyhow::{Context, Result};
 use sp_core::{sr25519, Pair as _};
 use std::path::{Path, PathBuf};
 
+/// Reject hotkey names that contain path traversal sequences or path separators.
+/// (audit fix: prevent path traversal via crafted hotkey names like "../../../etc/passwd")
+fn validate_hotkey_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        anyhow::bail!("Hotkey name cannot be empty.");
+    }
+    if name.contains('/') || name.contains('\\') || name.contains("..") || name.contains('\0') {
+        anyhow::bail!(
+            "Invalid hotkey name '{}': must not contain '/', '\\', '..', or null bytes.",
+            name
+        );
+    }
+    Ok(())
+}
+
 /// A Bittensor wallet containing coldkey and hotkey.
 pub struct Wallet {
     /// Display name.
@@ -86,6 +101,7 @@ impl Wallet {
         password: &str,
         hotkey_name: &str,
     ) -> Result<(Self, String, String)> {
+        validate_hotkey_name(hotkey_name)?;
         let dir = expand_tilde(wallet_dir.as_ref()).join(name);
         // Create directory structure first (idempotent, needed so lock file can be placed)
         std::fs::create_dir_all(dir.join("hotkeys"))?;
@@ -257,6 +273,7 @@ impl Wallet {
     /// 1. `hotkeys/{name}` — full keypair (mnemonic, JSON with secretPhrase/secretSeed, or dev URI)
     /// 2. `hotkeys/{name}pub.txt` — public key only (Python btcli convention); sets SS58 but no pair
     pub fn load_hotkey(&mut self, hotkey_name: &str) -> Result<()> {
+        validate_hotkey_name(hotkey_name)?;
         let keypair_path = self.path.join("hotkeys").join(hotkey_name);
         if keypair_path.exists() {
             let data = keyfile::read_keyfile(&keypair_path)?;
@@ -408,6 +425,9 @@ impl Wallet {
 /// 1. `hotkeys/{name}` — may be a full JSON keypair (extract publicKey/ss58Address) or mnemonic
 /// 2. `hotkeys/{name}pub.txt` — Python btcli pub-key sidecar file
 fn read_hotkey_ss58(wallet_path: &Path, hotkey_name: &str) -> Option<String> {
+    if validate_hotkey_name(hotkey_name).is_err() {
+        return None;
+    }
     let hotkey_dir = wallet_path.join("hotkeys");
 
     // Try main keypair file — if it's a Python JSON, extract ss58Address directly
@@ -568,5 +588,57 @@ mod tests {
         let path = std::path::Path::new("wallets/default");
         let expanded = expand_tilde(path);
         assert_eq!(expanded, path.to_path_buf(), "relative paths without ~ should be unchanged");
+    }
+
+    // ── Audit fix: hotkey name path traversal prevention ──
+
+    #[test]
+    fn validate_hotkey_name_rejects_path_traversal() {
+        assert!(validate_hotkey_name("../../../etc/passwd").is_err());
+        assert!(validate_hotkey_name("..").is_err());
+        assert!(validate_hotkey_name("foo/../bar").is_err());
+    }
+
+    #[test]
+    fn validate_hotkey_name_rejects_slashes() {
+        assert!(validate_hotkey_name("foo/bar").is_err());
+        assert!(validate_hotkey_name("foo\\bar").is_err());
+    }
+
+    #[test]
+    fn validate_hotkey_name_rejects_empty() {
+        assert!(validate_hotkey_name("").is_err());
+    }
+
+    #[test]
+    fn validate_hotkey_name_rejects_null_bytes() {
+        assert!(validate_hotkey_name("foo\0bar").is_err());
+    }
+
+    #[test]
+    fn validate_hotkey_name_accepts_valid_names() {
+        assert!(validate_hotkey_name("default").is_ok());
+        assert!(validate_hotkey_name("my-hotkey").is_ok());
+        assert!(validate_hotkey_name("hotkey_01").is_ok());
+        assert!(validate_hotkey_name("HOTKEY").is_ok());
+    }
+
+    #[test]
+    fn load_hotkey_rejects_traversal_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut wallet, _, _) = Wallet::create(dir.path(), "test", "pass", "default").unwrap();
+        let result = wallet.load_hotkey("../../../etc/passwd");
+        assert!(result.is_err(), "load_hotkey must reject path traversal");
+        assert!(
+            format!("{}", result.unwrap_err()).contains("must not contain"),
+            "error should mention invalid characters"
+        );
+    }
+
+    #[test]
+    fn create_wallet_rejects_traversal_hotkey_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = Wallet::create(dir.path(), "test", "pass", "../escape");
+        assert!(result.is_err(), "create must reject path traversal in hotkey name");
     }
 }

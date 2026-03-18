@@ -638,10 +638,23 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
             // Parse optional netuid filter
+            // (audit fix: warn on invalid IDs instead of silently dropping, matching SetClaim pattern)
             let filter_netuids: Option<Vec<u16>> = netuids.as_ref().map(|s| {
-                s.split(',')
-                    .filter_map(|n| n.trim().parse::<u16>().ok())
-                    .collect()
+                let mut ids = Vec::new();
+                for n in s.split(',') {
+                    let trimmed = n.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    match trimmed.parse::<u16>() {
+                        Ok(id) => ids.push(id),
+                        Err(_) => {
+                            eprintln!("Warning: ignoring invalid subnet ID '{}'", trimmed);
+                            tracing::warn!(input = trimmed, "Ignoring invalid subnet ID in process-claim");
+                        }
+                    }
+                }
+                ids
             });
 
             // Fetch stakes to find all netuids where this hotkey has root emissions
@@ -997,5 +1010,47 @@ mod tests {
         // staking_wizard is private (async fn) — verify it exists in this module.
         // The actual cache invalidation is tested in query_cache::tests::invalidate_forces_fresh_dynamic_fetch.
         // This test just confirms the module still compiles after the change.
+    }
+
+    // ── Audit fix: process_claim netuid parsing must warn on invalid IDs ──
+
+    /// Verify the fixed netuid parsing pattern warns instead of silently dropping invalid entries.
+    /// Matches the SetClaim pattern (explicit match with warning).
+    #[test]
+    fn process_claim_netuid_parse_pattern_rejects_invalid() {
+        let input = "1,2,invalid,4";
+        let mut ids = Vec::new();
+        let mut warnings = Vec::new();
+        for n in input.split(',') {
+            let trimmed = n.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            match trimmed.parse::<u16>() {
+                Ok(id) => ids.push(id),
+                Err(_) => {
+                    warnings.push(format!("ignoring invalid subnet ID '{}'", trimmed));
+                }
+            }
+        }
+        assert_eq!(ids, vec![1, 2, 4], "valid IDs should be collected");
+        assert_eq!(warnings.len(), 1, "should produce warning for 'invalid'");
+        assert!(warnings[0].contains("invalid"), "warning should mention the bad input");
+    }
+
+    #[test]
+    fn process_claim_netuid_parse_handles_empty_entries() {
+        let input = "1,,3,";
+        let mut ids = Vec::new();
+        for n in input.split(',') {
+            let trimmed = n.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if let Ok(id) = trimmed.parse::<u16>() {
+                ids.push(id);
+            }
+        }
+        assert_eq!(ids, vec![1, 3], "empty entries should be skipped without error");
     }
 }

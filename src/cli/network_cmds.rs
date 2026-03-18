@@ -406,10 +406,13 @@ pub(super) async fn handle_multisig(
             args,
         } => {
             // Enforce spending limits on staking calls within multisig
-            let raw_args: Vec<serde_json::Value> = args
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok())
-                .unwrap_or_default();
+            // (audit fix: reject malformed JSON early instead of silently skipping limit check)
+            let raw_args: Vec<serde_json::Value> = match args.as_ref() {
+                Some(s) => serde_json::from_str(s).map_err(|e| {
+                    anyhow::anyhow!("Multisig submit: invalid --args JSON: {e}.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'.")
+                })?,
+                None => vec![],
+            };
             check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
                 .map_err(|e| anyhow::anyhow!("Multisig submit: {}", e))?;
 
@@ -492,10 +495,13 @@ pub(super) async fn handle_multisig(
             timepoint_index,
         } => {
             // Enforce spending limits on staking calls within multisig
-            let raw_args: Vec<serde_json::Value> = args
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok())
-                .unwrap_or_default();
+            // (audit fix: reject malformed JSON early instead of silently skipping limit check)
+            let raw_args: Vec<serde_json::Value> = match args.as_ref() {
+                Some(s) => serde_json::from_str(s).map_err(|e| {
+                    anyhow::anyhow!("Multisig execute: invalid --args JSON: {e}.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'.")
+                })?,
+                None => vec![],
+            };
             check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
                 .map_err(|e| anyhow::anyhow!("Multisig execute: {}", e))?;
 
@@ -634,10 +640,13 @@ pub(super) async fn handle_scheduler(
                 ),
             };
             // Enforce spending limits on staking calls before scheduling
-            let raw_args: Vec<serde_json::Value> = args
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok())
-                .unwrap_or_default();
+            // (audit fix: reject malformed JSON early instead of silently skipping limit check)
+            let raw_args: Vec<serde_json::Value> = match args.as_ref() {
+                Some(s) => serde_json::from_str(s).map_err(|e| {
+                    anyhow::anyhow!("Scheduler: invalid --args JSON: {e}.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'.")
+                })?,
+                None => vec![],
+            };
             check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
                 .map_err(|e| anyhow::anyhow!("Scheduler: {}", e))?;
 
@@ -696,10 +705,13 @@ pub(super) async fn handle_scheduler(
                 ),
             };
             // Enforce spending limits on staking calls before scheduling
-            let raw_args: Vec<serde_json::Value> = args
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok())
-                .unwrap_or_default();
+            // (audit fix: reject malformed JSON early instead of silently skipping limit check)
+            let raw_args: Vec<serde_json::Value> = match args.as_ref() {
+                Some(s) => serde_json::from_str(s).map_err(|e| {
+                    anyhow::anyhow!("Scheduler: invalid --args JSON: {e}.\n  Tip: pass a JSON array, e.g. '[1, \"0x...\"]'.")
+                })?,
+                None => vec![],
+            };
             check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
                 .map_err(|e| anyhow::anyhow!("Scheduler: {}", e))?;
 
@@ -2171,5 +2183,62 @@ mod tests {
     fn price_to_tick_normal_price_is_sane() {
         let tick = super::price_to_tick(1.0);
         assert_eq!(tick, 0, "price=1.0 should give tick=0 (ln(1)=0)");
+    }
+
+    // ── Audit fix: multisig/scheduler --args JSON must not silently swallow parse errors ──
+
+    /// Verify the fixed pattern: malformed JSON must produce an error, not silently become `vec![]`.
+    #[test]
+    fn malformed_json_args_rejects_instead_of_silent_default() {
+        let bad_json = Some("not valid json{".to_string());
+        // The OLD pattern: .and_then(|s| serde_json::from_str(s).ok()).unwrap_or_default()
+        // would return vec![] here — silently skipping spending limit checks.
+        // The NEW pattern must produce an Err:
+        let result: Result<Vec<serde_json::Value>, _> = match bad_json.as_ref() {
+            Some(s) => serde_json::from_str(s).map_err(|e| {
+                anyhow::anyhow!("invalid --args JSON: {e}")
+            }),
+            None => Ok(vec![]),
+        };
+        assert!(result.is_err(), "malformed JSON must be rejected, not silently defaulted to empty");
+    }
+
+    #[test]
+    fn valid_json_array_args_parses_correctly() {
+        let good_json = Some("[1, \"0xabc\", true]".to_string());
+        let result: Result<Vec<serde_json::Value>, _> = match good_json.as_ref() {
+            Some(s) => serde_json::from_str(s).map_err(|e| {
+                anyhow::anyhow!("invalid --args JSON: {e}")
+            }),
+            None => Ok(vec![]),
+        };
+        assert!(result.is_ok(), "valid JSON array should parse successfully");
+        assert_eq!(result.unwrap().len(), 3);
+    }
+
+    #[test]
+    fn none_args_yields_empty_vec() {
+        let no_json: Option<String> = None;
+        let result: Result<Vec<serde_json::Value>, _> = match no_json.as_ref() {
+            Some(s) => serde_json::from_str(s).map_err(|e| {
+                anyhow::anyhow!("invalid --args JSON: {e}")
+            }),
+            None => Ok(vec![]),
+        };
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn json_object_instead_of_array_rejects() {
+        // A JSON object is valid JSON but not an array — should fail deserialization to Vec
+        let obj_json = Some("{\"amount\": 100}".to_string());
+        let result: Result<Vec<serde_json::Value>, _> = match obj_json.as_ref() {
+            Some(s) => serde_json::from_str(s).map_err(|e| {
+                anyhow::anyhow!("invalid --args JSON: {e}")
+            }),
+            None => Ok(vec![]),
+        };
+        assert!(result.is_err(), "JSON object (not array) must be rejected");
     }
 }
