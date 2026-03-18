@@ -622,6 +622,10 @@ pub(super) async fn handle_batch(
             .and_then(|v| v.as_array())
             .ok_or_else(|| anyhow::anyhow!("Call #{}: missing \"args\" array", i))?;
 
+        // Enforce spending limits on staking calls within the batch
+        check_spending_limit_for_raw_call(pallet, call_name, args)
+            .map_err(|e| anyhow::anyhow!("Batch call #{} ({}.{}): {}", i, pallet, call_name, e))?;
+
         let fields: Vec<subxt::dynamic::Value> = args.iter().map(json_to_subxt_value).collect();
 
         let tx = subxt::dynamic::tx(pallet, call_name, fields);

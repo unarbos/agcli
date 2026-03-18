@@ -32,7 +32,8 @@ pub async fn execute(cli: Cli) -> Result<()> {
     let best = cli.best;
 
     // Set global mode flags so helpers can check them
-    set_batch_mode(batch || cli.yes);
+    set_batch_mode(batch);
+    set_yes_mode(cli.yes);
     set_pretty_mode(cli.pretty);
 
     // Build shared command context — eliminates 6-9 repeated parameters across handlers
@@ -301,7 +302,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 balance.display_tao(),
                 crate::utils::short_ss58(&dest)
             );
-            if !is_batch_mode() {
+            if !is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Proceed?")
                     .default(true)
@@ -333,7 +334,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 crate::utils::short_ss58(&dest),
                 keep_alive
             );
-            if !is_batch_mode() {
+            if !is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Transfer ALL funds? This will empty your account.")
                     .default(false)

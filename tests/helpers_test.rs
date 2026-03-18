@@ -5415,3 +5415,156 @@ fn spending_limit_wizard() {
     let result = agcli::cli::helpers::check_spending_limit(12, 50.0);
     assert!(result.is_ok(), "wizard spending check should pass without config");
 }
+
+// ──── Issue 636/637/638: Spending limit enforcement for raw calls ────
+
+#[test]
+fn raw_call_spending_limit_add_stake_passes_without_config() {
+    // Without any spending limits configured, all calls should pass
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),        // netuid
+        serde_json::json!(50_000_000_000u64), // 50 TAO in rao
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "add_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_non_subtensor_passes() {
+    // Non-SubtensorModule calls should always pass
+    let args: Vec<serde_json::Value> = vec![serde_json::json!(1000)];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "Balances", "transfer", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_unknown_call_passes() {
+    // Unknown calls on SubtensorModule should pass (we only gate known staking calls)
+    let args: Vec<serde_json::Value> = vec![serde_json::json!(1000)];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "unknown_extrinsic", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_remove_stake() {
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(2),           // netuid
+        serde_json::json!(100_000_000_000u64), // 100 TAO
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "remove_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_move_stake() {
+    // move_stake(hotkey_o, hotkey_d, origin_netuid, dest_netuid, amount_rao)
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),           // from
+        serde_json::json!(2),           // to
+        serde_json::json!(25_000_000_000u64), // 25 TAO
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "move_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_swap_stake() {
+    // swap_stake(hotkey, origin_netuid, dest_netuid, amount_rao)
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),
+        serde_json::json!(2),
+        serde_json::json!(10_000_000_000u64), // 10 TAO
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "swap_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_transfer_stake() {
+    // transfer_stake(dest, hotkey, origin_netuid, dest_netuid, amount_rao)
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),
+        serde_json::json!(2),
+        serde_json::json!(5_000_000_000u64), // 5 TAO
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "transfer_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_add_stake_limit() {
+    // add_stake_limit(hotkey, netuid, amount_rao, limit_price, allow_partial)
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(3),
+        serde_json::json!(75_000_000_000u64), // 75 TAO
+        serde_json::json!(1000),
+        serde_json::json!(true),
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "add_stake_limit", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_too_few_args() {
+    // If args are too few, should pass (let encoding fail later)
+    let args: Vec<serde_json::Value> = vec![serde_json::json!("hotkey")];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "add_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_zero_amount() {
+    // 0 TAO should always pass
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),
+        serde_json::json!(0),
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "add_stake", &args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn raw_call_spending_limit_swap_stake_limit() {
+    // swap_stake_limit(hotkey, origin_netuid, dest_netuid, amount_rao, ...)
+    let args: Vec<serde_json::Value> = vec![
+        serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+        serde_json::json!(1),
+        serde_json::json!(2),
+        serde_json::json!(20_000_000_000u64), // 20 TAO
+        serde_json::json!(500),
+        serde_json::json!(true),
+    ];
+    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
+        "SubtensorModule", "swap_stake_limit", &args,
+    );
+    assert!(result.is_ok());
+}

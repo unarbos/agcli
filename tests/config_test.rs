@@ -51,7 +51,9 @@ fn config_apply_defaults() {
         wallet: Some("mywallet".to_string()),
         ..Default::default()
     };
-    cli.apply_config(&cfg);
+    // No explicit flags on command line — config should apply
+    let args: Vec<String> = vec!["agcli".to_string(), "balance".to_string()];
+    cli.apply_config_with_args(&cfg, &args);
     assert_eq!(cli.network, "test");
     assert_eq!(cli.wallet, "mywallet");
 }
@@ -72,7 +74,15 @@ fn cli_flags_override_config() {
         wallet: Some("config_wallet".to_string()),
         ..Default::default()
     };
-    cli.apply_config(&cfg);
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--network".to_string(),
+        "local".to_string(),
+        "--wallet".to_string(),
+        "explicit".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
     // CLI flags should take precedence
     assert_eq!(cli.network, "local");
     assert_eq!(cli.wallet, "explicit");
@@ -101,7 +111,8 @@ fn config_batch_default_applies() {
         batch: Some(true),
         ..Default::default()
     };
-    cli.apply_config(&cfg);
+    let args: Vec<String> = vec!["agcli".to_string(), "balance".to_string()];
+    cli.apply_config_with_args(&cfg, &args);
     assert!(cli.batch);
 }
 
@@ -113,8 +124,162 @@ fn config_batch_cli_overrides() {
         batch: Some(false),
         ..Default::default()
     };
-    cli.apply_config(&cfg);
+    let args: Vec<String> = vec!["agcli".to_string(), "--batch".to_string(), "balance".to_string()];
+    cli.apply_config_with_args(&cfg, &args);
     assert!(cli.batch);
+}
+
+#[test]
+/// Issue 639: Explicit --network finney should NOT be overridden by config.
+/// Previously, `apply_config` compared against the clap default ("finney")
+/// and couldn't distinguish "user passed finney" from "clap filled default".
+fn config_explicit_finney_not_overridden() {
+    let mut cli = Cli::try_parse_from(["agcli", "--network", "finney", "balance"]).unwrap();
+    let cfg = agcli::Config {
+        network: Some("test".to_string()),
+        ..Default::default()
+    };
+    // Use apply_config_with_args to simulate the explicit flag being in argv
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--network".to_string(),
+        "finney".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
+    // CLI explicitly passed finney — must NOT be overridden by config
+    assert_eq!(cli.network, "finney");
+}
+
+#[test]
+/// Issue 639: Explicit --wallet default should NOT be overridden by config.
+fn config_explicit_default_wallet_not_overridden() {
+    let mut cli = Cli::try_parse_from(["agcli", "--wallet", "default", "balance"]).unwrap();
+    let cfg = agcli::Config {
+        wallet: Some("config_wallet".to_string()),
+        ..Default::default()
+    };
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--wallet".to_string(),
+        "default".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
+    assert_eq!(cli.wallet, "default");
+}
+
+#[test]
+/// Issue 639: Explicit --hotkey-name default should NOT be overridden by config.
+fn config_explicit_default_hotkey_not_overridden() {
+    let mut cli = Cli::try_parse_from(["agcli", "--hotkey-name", "default", "balance"]).unwrap();
+    let cfg = agcli::Config {
+        hotkey: Some("config_hotkey".to_string()),
+        ..Default::default()
+    };
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--hotkey-name".to_string(),
+        "default".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
+    assert_eq!(cli.hotkey_name, "default");
+}
+
+#[test]
+/// Issue 639: Explicit --wallet-dir with default value should NOT be overridden.
+fn config_explicit_default_wallet_dir_not_overridden() {
+    let mut cli = Cli::try_parse_from([
+        "agcli",
+        "--wallet-dir",
+        "~/.bittensor/wallets",
+        "balance",
+    ])
+    .unwrap();
+    let cfg = agcli::Config {
+        wallet_dir: Some("/custom/path".to_string()),
+        ..Default::default()
+    };
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--wallet-dir".to_string(),
+        "~/.bittensor/wallets".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
+    assert_eq!(cli.wallet_dir, "~/.bittensor/wallets");
+}
+
+#[test]
+/// Issue 639: When no flag is passed, config values should apply.
+fn config_applies_when_no_flags() {
+    let mut cli = Cli::try_parse_from(["agcli", "balance"]).unwrap();
+    let cfg = agcli::Config {
+        network: Some("test".to_string()),
+        wallet: Some("mywallet".to_string()),
+        hotkey: Some("myhotkey".to_string()),
+        wallet_dir: Some("/custom/dir".to_string()),
+        ..Default::default()
+    };
+    let args: Vec<String> = vec!["agcli".to_string(), "balance".to_string()];
+    cli.apply_config_with_args(&cfg, &args);
+    assert_eq!(cli.network, "test");
+    assert_eq!(cli.wallet, "mywallet");
+    assert_eq!(cli.hotkey_name, "myhotkey");
+    assert_eq!(cli.wallet_dir, "/custom/dir");
+}
+
+#[test]
+/// Issue 639: --wallet short form (-w) should be preserved.
+fn config_short_wallet_flag_not_overridden() {
+    let mut cli = Cli::try_parse_from(["agcli", "-w", "explicit", "balance"]).unwrap();
+    let cfg = agcli::Config {
+        wallet: Some("config_wallet".to_string()),
+        ..Default::default()
+    };
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "-w".to_string(),
+        "explicit".to_string(),
+        "balance".to_string(),
+    ];
+    cli.apply_config_with_args(&cfg, &args);
+    assert_eq!(cli.wallet, "explicit");
+}
+
+#[test]
+/// Issue 642: --batch and --yes should be separate modes.
+fn batch_and_yes_modes_separate() {
+    use agcli::cli::helpers::{is_batch_mode, is_yes_mode, set_batch_mode, set_yes_mode};
+
+    // Only --batch: batch mode on, yes mode off (but is_yes_mode includes batch)
+    set_batch_mode(true);
+    set_yes_mode(false);
+    assert!(is_batch_mode());
+    assert!(is_yes_mode()); // batch implies yes
+
+    // Only --yes: yes mode on, batch mode off
+    set_batch_mode(false);
+    set_yes_mode(true);
+    assert!(!is_batch_mode()); // --yes alone should NOT trigger batch mode
+    assert!(is_yes_mode());
+
+    // Neither: both off
+    set_batch_mode(false);
+    set_yes_mode(false);
+    assert!(!is_batch_mode());
+    assert!(!is_yes_mode());
+
+    // Both: both on
+    set_batch_mode(true);
+    set_yes_mode(true);
+    assert!(is_batch_mode());
+    assert!(is_yes_mode());
+
+    // Reset
+    set_batch_mode(false);
+    set_yes_mode(false);
 }
 
 #[test]

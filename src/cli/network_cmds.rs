@@ -406,6 +406,14 @@ pub(super) async fn handle_multisig(
             call,
             args,
         } => {
+            // Enforce spending limits on staking calls within multisig
+            let raw_args: Vec<serde_json::Value> = args
+                .as_ref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_default();
+            check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
+                .map_err(|e| anyhow::anyhow!("Multisig submit: {}", e))?;
+
             let mut client = Client::connect_network(network).await?;
             client.set_dry_run(dry_run);
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
@@ -484,6 +492,14 @@ pub(super) async fn handle_multisig(
             timepoint_height,
             timepoint_index,
         } => {
+            // Enforce spending limits on staking calls within multisig
+            let raw_args: Vec<serde_json::Value> = args
+                .as_ref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_default();
+            check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
+                .map_err(|e| anyhow::anyhow!("Multisig execute: {}", e))?;
+
             let mut client = Client::connect_network(network).await?;
             client.set_dry_run(dry_run);
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
@@ -618,6 +634,14 @@ pub(super) async fn handle_scheduler(
                     "Both --repeat-every and --repeat-count must be provided together"
                 ),
             };
+            // Enforce spending limits on staking calls before scheduling
+            let raw_args: Vec<serde_json::Value> = args
+                .as_ref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_default();
+            check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
+                .map_err(|e| anyhow::anyhow!("Scheduler: {}", e))?;
+
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             let fields = parse_json_args(&args)?;
@@ -672,6 +696,14 @@ pub(super) async fn handle_scheduler(
                     "Both --repeat-every and --repeat-count must be provided together"
                 ),
             };
+            // Enforce spending limits on staking calls before scheduling
+            let raw_args: Vec<serde_json::Value> = args
+                .as_ref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_default();
+            check_spending_limit_for_raw_call(&pallet, &call, &raw_args)
+                .map_err(|e| anyhow::anyhow!("Scheduler: {}", e))?;
+
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             let fields = parse_json_args(&args)?;

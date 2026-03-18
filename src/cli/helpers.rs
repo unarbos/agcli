@@ -668,6 +668,68 @@ pub fn check_spending_limit(netuid: u16, tao_amount: f64) -> Result<()> {
     Ok(())
 }
 
+/// Check spending limits for a raw pallet call (used by batch, scheduler, multisig).
+///
+/// Inspects the pallet/call name and args to extract the TAO amount and netuid
+/// for known staking operations. Unknown calls are allowed through (they may not
+/// involve TAO spending).
+///
+/// Known staking calls on SubtensorModule:
+///   add_stake(hotkey, netuid, amount_rao)
+///   remove_stake(hotkey, netuid, amount_rao)
+///   move_stake(hotkey_origin, hotkey_dest, origin_netuid, dest_netuid, amount_rao)
+///   swap_stake(hotkey, origin_netuid, dest_netuid, amount_rao)
+///   transfer_stake(dest, hotkey, origin_netuid, dest_netuid, amount_rao)
+///   add_stake_limit(hotkey, netuid, amount_rao, limit_price, allow_partial)
+///   remove_stake_limit(hotkey, netuid, amount_rao, limit_price, allow_partial)
+///   swap_stake_limit(hotkey, origin_netuid, dest_netuid, amount_rao, limit_price, allow_partial)
+pub fn check_spending_limit_for_raw_call(
+    pallet: &str,
+    call: &str,
+    args: &[serde_json::Value],
+) -> Result<()> {
+    if pallet != "SubtensorModule" {
+        return Ok(());
+    }
+
+    // Extract (netuid_index, amount_rao_index) for each known call
+    let (netuid_idx, amount_idx) = match call {
+        // add_stake(hotkey, netuid, amount_rao)
+        // remove_stake(hotkey, netuid, amount_rao)
+        "add_stake" | "remove_stake" => (1, 2),
+        // add_stake_limit(hotkey, netuid, amount_rao, limit_price, allow_partial)
+        // remove_stake_limit(hotkey, netuid, amount_rao, limit_price, allow_partial)
+        "add_stake_limit" | "remove_stake_limit" => (1, 2),
+        // move_stake(hotkey_o, hotkey_d, origin_netuid, dest_netuid, amount_rao)
+        "move_stake" => (3, 4), // check dest_netuid
+        // swap_stake(hotkey, origin_netuid, dest_netuid, amount_rao)
+        "swap_stake" => (2, 3), // check dest_netuid
+        // transfer_stake(dest, hotkey, origin_netuid, dest_netuid, amount_rao)
+        "transfer_stake" => (3, 4), // check dest_netuid
+        // swap_stake_limit(hotkey, origin_netuid, dest_netuid, amount_rao, ...)
+        "swap_stake_limit" => (2, 3), // check dest_netuid
+        _ => return Ok(()), // unknown call, no spending limit to check
+    };
+
+    if args.len() <= amount_idx {
+        // Not enough args to extract amount — let the call fail at encoding time
+        return Ok(());
+    }
+
+    let netuid = args[netuid_idx]
+        .as_u64()
+        .unwrap_or(0) as u16;
+    let amount_rao = args[amount_idx]
+        .as_u64()
+        .unwrap_or(0);
+    let tao_amount = amount_rao as f64 / 1_000_000_000.0;
+
+    if tao_amount > 0.0 {
+        check_spending_limit(netuid, tao_amount)?;
+    }
+    Ok(())
+}
+
 /// Print a JSON value to stdout. Respects the global pretty-print flag.
 pub fn print_json(value: &serde_json::Value) {
     if is_pretty_mode() {
@@ -727,17 +789,31 @@ pub fn is_pretty_mode() -> bool {
     PRETTY_MODE.load(std::sync::atomic::Ordering::Relaxed)
 }
 
-/// Thread-local batch mode flag (set by main before dispatch).
+/// Global batch mode flag: all missing args are hard errors, never prompt for input.
 static BATCH_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Global yes mode flag: skip confirmation prompts (auto-confirm).
+static YES_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Set batch mode globally (called from execute()).
 pub fn set_batch_mode(batch: bool) {
     BATCH_MODE.store(batch, std::sync::atomic::Ordering::Relaxed);
 }
 
-/// Check if batch mode is active.
+/// Set yes mode globally (called from execute()).
+pub fn set_yes_mode(yes: bool) {
+    YES_MODE.store(yes, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Check if batch mode is active (--batch: hard error on missing args).
 pub fn is_batch_mode() -> bool {
     BATCH_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Check if confirmation prompts should be skipped (--yes or --batch).
+pub fn is_yes_mode() -> bool {
+    YES_MODE.load(std::sync::atomic::Ordering::Relaxed)
+        || BATCH_MODE.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 pub fn resolve_coldkey_address(

@@ -2311,9 +2311,17 @@ pub enum AdminCommands {
 
 impl Cli {
     /// Apply config file defaults to CLI args (CLI flags take precedence).
+    ///
+    /// Uses the raw command-line args to detect explicit user flags, so that
+    /// `--network finney` (explicit) is not overridden by config `network = "test"`.
+    /// Previously the code compared against the clap default_value which could
+    /// not distinguish "user passed the default" from "clap filled in the default".
     pub fn apply_config(&mut self, cfg: &crate::config::Config) {
-        // Only apply config if CLI still has the clap default
-        if self.network == "finney" {
+        let args: Vec<String> = std::env::args().collect();
+        let has = |flag: &str| cli_has_flag(&args, flag);
+
+        // Only apply config if the user did NOT explicitly pass the flag
+        if !has("--network") {
             if let Some(ref n) = cfg.network {
                 self.network = n.clone();
             }
@@ -2321,27 +2329,73 @@ impl Cli {
         if self.endpoint.is_none() {
             self.endpoint = cfg.endpoint.clone();
         }
-        if self.wallet_dir == "~/.bittensor/wallets" {
+        if !has("--wallet-dir") {
             if let Some(ref d) = cfg.wallet_dir {
                 self.wallet_dir = d.clone();
             }
         }
-        if self.wallet == "default" {
+        if !has("--wallet") && !has("-w") {
             if let Some(ref w) = cfg.wallet {
                 self.wallet = w.clone();
             }
         }
-        if self.hotkey_name == "default" {
+        if !has("--hotkey-name") && !has("--hotkey") {
             if let Some(ref h) = cfg.hotkey {
                 self.hotkey_name = h.clone();
             }
         }
-        if self.output == OutputFormat::Table {
+        if !has("--output") {
             if let Some(ref o) = cfg.output {
                 match o.as_str() {
                     "json" => self.output = OutputFormat::Json,
                     "csv" => self.output = OutputFormat::Csv,
                     _ => {} // keep Table for unknown values
+                }
+            }
+        }
+        if self.proxy.is_none() {
+            self.proxy = cfg.proxy.clone();
+        }
+        if !self.batch {
+            if let Some(true) = cfg.batch {
+                self.batch = true;
+            }
+        }
+    }
+
+    /// Apply config using explicit args list (for testing without relying on std::env::args).
+    pub fn apply_config_with_args(&mut self, cfg: &crate::config::Config, args: &[String]) {
+        let has = |flag: &str| cli_has_flag(args, flag);
+
+        if !has("--network") {
+            if let Some(ref n) = cfg.network {
+                self.network = n.clone();
+            }
+        }
+        if self.endpoint.is_none() {
+            self.endpoint = cfg.endpoint.clone();
+        }
+        if !has("--wallet-dir") {
+            if let Some(ref d) = cfg.wallet_dir {
+                self.wallet_dir = d.clone();
+            }
+        }
+        if !has("--wallet") && !has("-w") {
+            if let Some(ref w) = cfg.wallet {
+                self.wallet = w.clone();
+            }
+        }
+        if !has("--hotkey-name") && !has("--hotkey") {
+            if let Some(ref h) = cfg.hotkey {
+                self.hotkey_name = h.clone();
+            }
+        }
+        if !has("--output") {
+            if let Some(ref o) = cfg.output {
+                match o.as_str() {
+                    "json" => self.output = OutputFormat::Json,
+                    "csv" => self.output = OutputFormat::Csv,
+                    _ => {}
                 }
             }
         }
@@ -2374,4 +2428,10 @@ impl Cli {
             }
         }
     }
+}
+
+/// Check whether a flag (e.g. "--network") was explicitly passed on the command line.
+/// Handles both `--flag value` and `--flag=value` forms.
+fn cli_has_flag(args: &[String], flag: &str) -> bool {
+    args.iter().any(|a| a == flag || a.starts_with(&format!("{}=", flag)))
 }

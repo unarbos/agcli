@@ -530,7 +530,7 @@ pub(super) async fn handle_subnet(
             unlock_coldkey(&mut wallet, password)?;
             println!("Dissolving subnet SN{} (owner only)", netuid);
             println!("WARNING: This action cannot be undone. The subnet and all its state will be permanently removed.");
-            if !is_batch_mode() {
+            if !is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Are you sure you want to dissolve this subnet?")
                     .default(false)
@@ -770,7 +770,7 @@ pub(super) async fn handle_subnet(
                 "Trimming SN{} to max {} UIDs (subnet owner only)",
                 netuid, max_uids
             );
-            if !crate::cli::helpers::is_batch_mode() {
+            if !crate::cli::helpers::is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("This will deregister neurons above the limit. Proceed?")
                     .default(false)
@@ -913,7 +913,7 @@ pub(super) async fn handle_subnet(
                 let pct = *w as f64 / total as f64 * 100.0;
                 println!("  Mechanism {}: {} ({:.1}%)", i, w, pct);
             }
-            if !crate::cli::helpers::is_batch_mode() {
+            if !crate::cli::helpers::is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Proceed?")
                     .default(true)
@@ -2966,7 +2966,7 @@ async fn handle_subnet_set_param(
         netuid, def.name, value_str, current_display, def.call
     );
 
-    if !crate::cli::helpers::is_batch_mode() {
+    if !crate::cli::helpers::is_yes_mode() {
         let proceed = dialoguer::Confirm::new()
             .with_prompt("Proceed?")
             .default(true)
