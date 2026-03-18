@@ -445,14 +445,9 @@ pub fn validate_password_strength(password: &str) -> Result<()> {
         );
     }
     if password.len() < 8 {
-        eprintln!(
-            "Warning: password is only {} characters. Consider using at least 8 characters for better security.",
-            password.len()
-        );
-    }
-    if password.len() < 4 {
-        eprintln!(
-            "Warning: password is very short ({} chars). Your wallet encryption may be easily brute-forced.",
+        anyhow::bail!(
+            "Password too short ({} characters). Minimum 8 characters required to protect wallet encryption.\n  \
+             Short passwords can be brute-forced against Argon2id in minutes on modern GPUs.",
             password.len()
         );
     }
@@ -464,7 +459,7 @@ pub fn validate_password_strength(password: &str) -> Result<()> {
         .iter()
         .filter(|&&b| b)
         .count();
-    if variety < 2 && password.len() >= 4 {
+    if variety < 2 {
         eprintln!(
             "Warning: password uses only one character type. Mix uppercase, lowercase, numbers, and symbols for stronger security."
         );
@@ -488,8 +483,9 @@ pub fn validate_password_strength(password: &str) -> Result<()> {
         "shadow",
     ];
     if common.contains(&password.to_lowercase().as_str()) {
-        eprintln!(
-            "Warning: this is a commonly used password. Choose something unique to protect your wallet."
+        anyhow::bail!(
+            "Refusing commonly used password — your wallet would be vulnerable to dictionary attacks.\n  \
+             Choose a unique password with at least 8 characters."
         );
     }
     Ok(())
@@ -2314,5 +2310,102 @@ mod tests {
         // We can't easily set batch mode in tests, but we can verify the Some() path
         let result = require_mnemonic(Some("a b c d e f g h i j k l".to_string()));
         assert!(result.is_err(), "Should still reject via CLI flag");
+    }
+
+    // ========== Issue 661: Password strength rejects short/common passwords ==========
+
+    #[test]
+    fn password_strength_rejects_empty() {
+        let result = validate_password_strength("");
+        assert!(result.is_err(), "Empty password should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("Empty password"), "Error: {}", msg);
+    }
+
+    #[test]
+    fn password_strength_rejects_short_password() {
+        let result = validate_password_strength("abc");
+        assert!(result.is_err(), "3-char password should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("too short") || msg.contains("Minimum 8"), "Error: {}", msg);
+    }
+
+    #[test]
+    fn password_strength_rejects_7_char_password() {
+        let result = validate_password_strength("1234567");
+        assert!(result.is_err(), "7-char password should be rejected");
+    }
+
+    #[test]
+    fn password_strength_rejects_common_8_char() {
+        let result = validate_password_strength("12345678");
+        // "12345678" is in the common password list, should be rejected even though >= 8 chars
+        assert!(result.is_err(), "Common password '12345678' should be rejected");
+    }
+
+    #[test]
+    fn password_strength_accepts_strong_password() {
+        let result = validate_password_strength("MyStr0ng!Pass");
+        assert!(result.is_ok(), "Strong password should be accepted: {:?}", result.err());
+    }
+
+    #[test]
+    fn password_strength_rejects_common_password() {
+        let result = validate_password_strength("password");
+        assert!(result.is_err(), "Common password 'password' should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("commonly used"), "Error: {}", msg);
+    }
+
+    #[test]
+    fn password_strength_rejects_common_case_insensitive() {
+        let result = validate_password_strength("PASSWORD");
+        assert!(result.is_err(), "Case-insensitive common password should be rejected");
+    }
+
+    #[test]
+    fn password_strength_rejects_common_qwerty() {
+        assert!(validate_password_strength("qwerty").is_err());
+    }
+
+    #[test]
+    fn password_strength_accepts_8_char_unique() {
+        // Not in common list, >= 8 chars
+        let result = validate_password_strength("xK9!mZ2q");
+        assert!(result.is_ok(), "Unique 8-char password should pass: {:?}", result.err());
+    }
+
+    // ========== Issue 658: is_yes_mode checks both --yes and --batch ==========
+
+    #[test]
+    fn is_yes_mode_false_when_neither_set() {
+        set_yes_mode(false);
+        set_batch_mode(false);
+        assert!(!is_yes_mode());
+    }
+
+    #[test]
+    fn is_yes_mode_true_when_only_batch_set() {
+        set_yes_mode(false);
+        set_batch_mode(true);
+        assert!(is_yes_mode(), "--batch should also enable yes mode");
+        set_batch_mode(false);
+    }
+
+    #[test]
+    fn is_yes_mode_true_when_only_yes_set() {
+        set_batch_mode(false);
+        set_yes_mode(true);
+        assert!(is_yes_mode());
+        set_yes_mode(false);
+    }
+
+    #[test]
+    fn confirm_action_auto_confirms_in_batch_mode() {
+        set_yes_mode(false);
+        set_batch_mode(true);
+        assert!(confirm_action("Delete everything?").is_ok(),
+            "confirm_action should auto-confirm in batch mode");
+        set_batch_mode(false);
     }
 }

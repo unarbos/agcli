@@ -816,12 +816,11 @@ async fn staking_wizard(
     amount_arg: Option<f64>,
     hotkey_arg: Option<String>,
 ) -> Result<()> {
-    let (wallet_dir, wallet_name, hotkey_name, password, yes) = (
+    let (wallet_dir, wallet_name, hotkey_name, password) = (
         ctx.wallet_dir,
         ctx.wallet_name,
         ctx.hotkey_name,
         ctx.password,
-        ctx.yes,
     );
     println!("=== Staking Wizard ===\n");
 
@@ -916,8 +915,8 @@ async fn staking_wizard(
         crate::utils::short_ss58(&hotkey_ss58)
     );
 
-    // Confirm: skip if --yes, otherwise prompt
-    if !yes {
+    // Confirm: skip if --yes or --batch, otherwise prompt
+    if !is_yes_mode() {
         let confirm = dialoguer::Confirm::new()
             .with_prompt("Proceed?")
             .default(true)

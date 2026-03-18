@@ -271,20 +271,31 @@ where
     for (i, subnet_cfg) in config.subnet.iter().enumerate() {
         on_progress(&format!("Creating subnet {}...", i + 1));
 
-        // 4. Register subnet
-        let networks_before = client.get_total_networks().await?;
+        // 4. Register subnet — collect netuids before and after to find the new one
+        //    (avoids race condition: `total_networks - 1` assumes sequential assignment
+        //     which breaks under concurrent registrations)
+        let netuids_before: std::collections::HashSet<u16> = client
+            .get_all_subnets()
+            .await?
+            .iter()
+            .map(|s| s.netuid.0)
+            .collect();
         retry_idempotent_extrinsic(|| client.register_network(&alice, &alice_ss58)).await?;
         wait_blocks(&client, 2).await;
-        let networks_after = client.get_total_networks().await?;
-
-        if networks_after <= networks_before {
+        // Pin a fresh block to bypass query cache and see the newly created subnet
+        let pin_hash = client.pin_latest_block().await?;
+        let subnets_after = client.get_all_subnets_at_block(pin_hash).await?;
+        let netuids_after: std::collections::HashSet<u16> =
+            subnets_after.iter().map(|s| s.netuid.0).collect();
+        let new_netuids: Vec<u16> = netuids_after.difference(&netuids_before).copied().collect();
+        if new_netuids.is_empty() {
             bail!(
-                "Subnet registration failed: network count did not increase ({} -> {})",
-                networks_before,
-                networks_after
+                "Subnet registration failed: no new netuid appeared (before: {:?}, after: {:?})",
+                netuids_before,
+                netuids_after
             );
         }
-        let netuid = networks_after - 1;
+        let netuid = new_netuids[0];
         on_progress(&format!("Subnet created: netuid {}", netuid));
 
         // 5. Set hyperparameters via sudo
