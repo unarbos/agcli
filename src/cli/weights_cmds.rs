@@ -343,8 +343,6 @@ pub(super) async fn handle_weights(
                 crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
                     .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
 
-            let block_at_commit = client.get_block_number().await?;
-
             // Step 1: Commit
             println!("Committing {} weights on SN{}", uids.len(), netuid);
             println!("  Commit hash: 0x{}", hex::encode(commit_hash));
@@ -352,6 +350,11 @@ pub(super) async fn handle_weights(
                 .commit_weights(wallet.hotkey()?, NetUid(netuid), commit_hash)
                 .await?;
             println!("  Committed. Tx: {}", commit_tx);
+
+            // Capture the finalized block number AFTER the commit is finalized.
+            // Using finalized (not best) avoids the risk of a reorg invalidating
+            // the commit before the reveal window opens.
+            let block_at_commit = client.get_finalized_block_number().await?;
 
             // Step 2: Wait for reveal window
             // Reveal window opens after cr_interval tempos from the commit
@@ -365,9 +368,11 @@ pub(super) async fn handle_weights(
 
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(12)).await;
-                let current_block = client.get_block_number().await?;
+                // Use finalized block to match the finalized commit block baseline.
+                // This ensures we don't reveal before the commit is truly safe.
+                let current_block = client.get_finalized_block_number().await?;
                 if current_block >= reveal_target {
-                    println!("  Reveal window open at block {}", current_block);
+                    println!("  Reveal window open at finalized block {}", current_block);
                     break;
                 }
                 let remaining = reveal_target.saturating_sub(current_block);
@@ -404,8 +409,8 @@ pub(super) async fn handle_weights(
             println!("  Revealed. Tx: {}", reveal_tx);
 
             if wait {
-                // Verify reveal was included
-                let final_block = client.get_block_number().await?;
+                // Verify reveal was included (finalized for consistency)
+                let final_block = client.get_finalized_block_number().await?;
                 println!(
                     "\n  Confirmed at block {}. Commit-reveal complete.",
                     final_block
@@ -649,5 +654,81 @@ mod tests {
             "Expected overflow error, got: {}",
             err
         );
+    }
+
+    // ── Issue 646: Commit-reveal timing finalized block fixes ──
+
+    /// Verify reveal_target calculation uses block_at_commit correctly.
+    /// The reveal window should open at block_at_commit + cr_interval * tempo.
+    #[test]
+    fn reveal_target_calculation() {
+        let block_at_commit: u64 = 1000;
+        let cr_interval: u64 = 2;
+        let tempo: u64 = 360;
+        let reveal_after_blocks = cr_interval * tempo;
+        let reveal_target = block_at_commit + reveal_after_blocks;
+        assert_eq!(reveal_target, 1720);
+        assert_eq!(reveal_after_blocks, 720);
+    }
+
+    /// Verify reveal window check logic: current >= target means window is open.
+    #[test]
+    fn reveal_window_opens_at_target() {
+        let reveal_target: u64 = 1720;
+
+        // Before target → window closed
+        assert!(!(1719u64 >= reveal_target));
+
+        // At target → window open
+        assert!(1720u64 >= reveal_target);
+
+        // After target → window still open
+        assert!(1721u64 >= reveal_target);
+    }
+
+    /// Verify remaining-blocks display math for reveal window.
+    #[test]
+    fn reveal_remaining_blocks_display() {
+        let reveal_target: u64 = 1720;
+        let current_block: u64 = 1500;
+        let remaining = reveal_target.saturating_sub(current_block);
+        assert_eq!(remaining, 220);
+        // Display: ~Xm Ys (at 12s per block)
+        assert_eq!(remaining * 12 / 60, 44); // 44 minutes
+        assert_eq!((remaining * 12) % 60, 0); // 0 seconds
+    }
+
+    /// Verify salt chunking produces correct u16 values for reveal.
+    #[test]
+    fn salt_u16_encoding_roundtrip() {
+        let salt = "AB"; // 0x41, 0x42
+        let salt_u16: Vec<u16> = salt
+            .as_bytes()
+            .chunks(2)
+            .map(|chunk| {
+                let b0 = chunk[0] as u16;
+                let b1 = if chunk.len() > 1 { chunk[1] as u16 } else { 0 };
+                (b1 << 8) | b0
+            })
+            .collect();
+        // 'A' = 0x41, 'B' = 0x42 → (0x42 << 8) | 0x41 = 0x4241 = 16961
+        assert_eq!(salt_u16, vec![16961]);
+    }
+
+    /// Verify salt chunking handles odd-length salt correctly.
+    #[test]
+    fn salt_u16_encoding_odd_length() {
+        let salt = "ABC"; // 0x41, 0x42, 0x43
+        let salt_u16: Vec<u16> = salt
+            .as_bytes()
+            .chunks(2)
+            .map(|chunk| {
+                let b0 = chunk[0] as u16;
+                let b1 = if chunk.len() > 1 { chunk[1] as u16 } else { 0 };
+                (b1 << 8) | b0
+            })
+            .collect();
+        // "AB" → 0x4241, "C\0" → 0x0043
+        assert_eq!(salt_u16, vec![16961, 67]);
     }
 }

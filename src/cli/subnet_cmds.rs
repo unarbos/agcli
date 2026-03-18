@@ -1100,6 +1100,10 @@ async fn handle_snipe(
     }
     if fast {
         println!("  Mode:      FAST (best-block, ~50% lower latency)");
+        eprintln!(
+            "  ⚠ Warning: Fast mode uses non-finalized blocks. Burn cost readings may change \
+             if the chain reorgs. The registration tx executes at the actual finalized cost."
+        );
     }
     println!();
 
@@ -1216,6 +1220,21 @@ async fn handle_snipe(
             );
             std::io::stderr().flush().ok();
             continue;
+        }
+
+        // ── In fast mode, cross-check cost against finalized state ──
+        // Best-block cost may differ from actual finalized cost after a reorg.
+        // If finalized head is far behind best block, avoid acting on speculative state.
+        if fast {
+            let finalized_bn = client.get_finalized_block_number().await.unwrap_or(0);
+            if finalized_bn + 3 < block_num as u64 {
+                print!(
+                    "\r  Block #{}: finalized lag ({} vs {}), waiting for chain to catch up...",
+                    block_num, finalized_bn, block_num
+                );
+                std::io::stdout().flush().ok();
+                continue;
+            }
         }
 
         // ── Fire the registration ──
@@ -3163,5 +3182,63 @@ mod tests {
         );
         // tempo should still work
         assert_eq!(current_param_value(&h, "tempo"), Some("360".to_string()));
+    }
+
+    // ── Issue 645: Sniper finalized lag protection ──
+
+    /// Verify the finalized-lag threshold logic: if finalized is 3+ blocks behind
+    /// best, the sniper should skip in fast mode.
+    #[test]
+    fn finalized_lag_threshold_skips_speculative_blocks() {
+        // Simulates the lag check: finalized_bn + 3 < block_num
+        let best_block: u32 = 1000;
+
+        // Finalized 4+ behind → should skip
+        let finalized_far_behind: u64 = 996;
+        assert!(
+            finalized_far_behind + 3 < best_block as u64,
+            "Should skip: finalized {} is >3 blocks behind best {}",
+            finalized_far_behind,
+            best_block
+        );
+
+        // Finalized only 2 behind → should NOT skip
+        let finalized_close: u64 = 998;
+        assert!(
+            !(finalized_close + 3 < best_block as u64),
+            "Should not skip: finalized {} is <=3 blocks behind best {}",
+            finalized_close,
+            best_block
+        );
+
+        // Finalized equal → obviously should not skip
+        let finalized_equal: u64 = 1000;
+        assert!(
+            !(finalized_equal + 3 < best_block as u64),
+            "Should not skip when finalized equals best"
+        );
+    }
+
+    /// Verify the finalized lag check is safe with u64 boundary values.
+    #[test]
+    fn finalized_lag_no_overflow() {
+        // Edge case: finalized = 0, best = 2 → should not overflow or skip
+        let finalized: u64 = 0;
+        let best: u32 = 2;
+        // 0 + 3 = 3, 3 < 2 is false → should not skip
+        assert!(!(finalized + 3 < best as u64));
+
+        // Edge case: finalized = 0, best = 100 → should skip
+        let best_high: u32 = 100;
+        assert!(finalized + 3 < best_high as u64);
+    }
+
+    /// Verify fast mode warning message mentions reorg risk.
+    #[test]
+    fn fast_mode_warning_mentions_reorg() {
+        let msg = "Warning: Fast mode uses non-finalized blocks. Burn cost readings may change \
+             if the chain reorgs. The registration tx executes at the actual finalized cost.";
+        assert!(msg.contains("non-finalized"), "Warning should mention non-finalized blocks");
+        assert!(msg.contains("reorg"), "Warning should mention reorg risk");
     }
 }

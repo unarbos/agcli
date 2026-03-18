@@ -482,6 +482,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 &file,
                 no_atomic,
                 force,
+                ctx.mev,
                 ctx.output,
             )
             .await

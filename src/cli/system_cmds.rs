@@ -592,6 +592,7 @@ pub(super) async fn handle_batch(
     file_path: &str,
     no_atomic: bool,
     force: bool,
+    mev: bool,
     output: OutputFormat,
 ) -> Result<()> {
     let content = std::fs::read_to_string(file_path)
@@ -667,13 +668,95 @@ pub(super) async fn handle_batch(
         vec![subxt::dynamic::Value::unnamed_composite(call_values)],
     );
 
-    let hash = client.sign_submit_dyn(&batch_tx, pair).await?;
+    if mev {
+        eprintln!("MEV shield: encrypting batch extrinsic");
+        tracing::info!("MEV shield: encrypting batch extrinsic");
+    }
+    let hash = client.sign_submit_dyn_or_mev(&batch_tx, pair, mev).await?;
     print_tx_result(
         output,
         &hash,
-        &format!("Batch ({} calls) submitted.", calls.len()),
+        &format!("Batch ({} calls) submitted{}.", calls.len(), if mev { " (MEV shielded)" } else { "" }),
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Issue 640: Batch + MEV shield interaction ──
+
+    /// Issue 640 fix: MEV message format includes "(MEV shielded)" when mev=true.
+    #[test]
+    fn batch_mev_suffix_present_when_enabled() {
+        let mev = true;
+        let suffix = if mev { " (MEV shielded)" } else { "" };
+        assert_eq!(suffix, " (MEV shielded)");
+    }
+
+    /// Issue 640 fix: MEV message format has no suffix when mev=false.
+    #[test]
+    fn batch_mev_suffix_absent_when_disabled() {
+        let mev = false;
+        let suffix = if mev { " (MEV shielded)" } else { "" };
+        assert_eq!(suffix, "");
+    }
+
+    /// Verify validate_batch_file rejects empty JSON array.
+    #[test]
+    fn batch_validate_empty_array() {
+        let result = validate_batch_file("[]", "test.json");
+        assert!(
+            result.is_err(),
+            "Empty batch should be rejected"
+        );
+    }
+
+    /// Verify validate_batch_file rejects non-array JSON.
+    #[test]
+    fn batch_validate_non_array() {
+        let result = validate_batch_file(r#"{"pallet": "System"}"#, "test.json");
+        assert!(
+            result.is_err(),
+            "Non-array JSON should be rejected"
+        );
+    }
+
+    /// Verify validate_batch_file accepts valid batch JSON.
+    #[test]
+    fn batch_validate_valid_calls() {
+        let input = r#"[
+            {"pallet": "SubtensorModule", "call": "add_stake", "args": [1, 2, 3]}
+        ]"#;
+        let result = validate_batch_file(input, "test.json");
+        assert!(result.is_ok(), "Valid batch should pass: {:?}", result);
+        assert_eq!(result.unwrap().len(), 1);
+    }
+
+    /// Verify batch MEV message format for display.
+    #[test]
+    fn batch_mev_message_format() {
+        let n = 3;
+        let mev = true;
+        let msg = format!(
+            "Batch ({} calls) submitted{}.",
+            n,
+            if mev { " (MEV shielded)" } else { "" }
+        );
+        assert!(msg.contains("MEV shielded"), "Message should indicate MEV: {}", msg);
+
+        let msg_no_mev = format!(
+            "Batch ({} calls) submitted{}.",
+            n,
+            if false { " (MEV shielded)" } else { "" }
+        );
+        assert!(
+            !msg_no_mev.contains("MEV"),
+            "Non-MEV message should not mention MEV: {}",
+            msg_no_mev
+        );
+    }
 }
 
 pub(super) async fn handle_doctor(

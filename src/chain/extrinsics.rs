@@ -1343,6 +1343,17 @@ impl Client {
         self.sign_submit(tx, pair).await
     }
 
+    /// Sign and submit any Payload, optionally wrapping through MEV shield.
+    /// Public entry point for batch/dynamic calls that need to honor the `--mev` flag.
+    pub async fn sign_submit_dyn_or_mev<T: subxt::tx::Payload>(
+        &self,
+        tx: &T,
+        pair: &sr25519::Pair,
+        use_mev: bool,
+    ) -> Result<String> {
+        self.sign_submit_or_mev(tx, pair, use_mev).await
+    }
+
     /// Submit a raw SCALE-encoded call via dynamic dispatch (for pallets not in compile-time metadata).
     pub async fn submit_raw_call(
         &self,
