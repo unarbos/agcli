@@ -39,6 +39,9 @@ pub fn format_tao(balance: Balance) -> String {
 
 /// Truncate a string to `max` chars, appending ellipsis if needed.
 pub fn truncate(s: &str, max: usize) -> String {
+    if max == 0 {
+        return String::new();
+    }
     if s.chars().count() <= max {
         return s.to_string();
     }
@@ -206,5 +209,22 @@ mod tests {
         let b = Balance::from_rao(999_000_000_000);
         let s = format_tao(b);
         assert_eq!(s, "999.0000", "got: {}", s);
+    }
+
+    // ──── Issue 126 (v24): truncate(s, 0) must not panic ────
+
+    #[test]
+    fn truncate_zero_max_returns_empty() {
+        assert_eq!(truncate("hello world", 0), "");
+        assert_eq!(truncate("", 0), "");
+    }
+
+    #[test]
+    fn truncate_max_one() {
+        // max=1: Should take 0 chars and append ellipsis? No — take max-1=0 chars + ellipsis
+        // Actually the function takes max-1 chars boundary + ellipsis for strings > max
+        let result = truncate("hello", 1);
+        // "hello" has 5 chars > 1, so truncate to 0 chars + ellipsis
+        assert_eq!(result, "…");
     }
 }

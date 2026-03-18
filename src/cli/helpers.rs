@@ -725,10 +725,16 @@ pub fn check_spending_limit_for_raw_call(
 
     let netuid = args[netuid_idx]
         .as_u64()
-        .unwrap_or(0) as u16;
+        .ok_or_else(|| anyhow::anyhow!(
+            "Spending limit check: expected numeric netuid at arg index {}, got: {}",
+            netuid_idx, args[netuid_idx]
+        ))? as u16;
     let amount_rao = args[amount_idx]
         .as_u64()
-        .unwrap_or(0);
+        .ok_or_else(|| anyhow::anyhow!(
+            "Spending limit check: expected numeric amount at arg index {}, got: {}",
+            amount_idx, args[amount_idx]
+        ))?;
     let tao_amount = amount_rao as f64 / 1_000_000_000.0;
 
     if tao_amount > 0.0 {
@@ -2553,5 +2559,38 @@ mod tests {
         let long = "a".repeat(257);
         let err = validate_docker_image(&long).unwrap_err();
         assert!(err.to_string().contains("too long"), "{}", err);
+    }
+
+    // ──── Issue 120 (v24): Spending limit bypass via JSON string types ────
+
+    #[test]
+    fn check_spending_limit_rejects_string_netuid() {
+        use serde_json::json;
+        // If netuid is passed as a string instead of number, the check must error
+        // rather than silently defaulting to 0
+        let args = vec![json!("5abc123"), json!("1"), json!(50_000_000_000u64)];
+        let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
+        assert!(result.is_err(), "String netuid should be rejected, got: {:?}", result);
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("numeric netuid"), "Error should mention numeric netuid: {}", msg);
+    }
+
+    #[test]
+    fn check_spending_limit_rejects_string_amount() {
+        use serde_json::json;
+        let args = vec![json!("5abc123"), json!(1), json!("50000000000")];
+        let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
+        assert!(result.is_err(), "String amount should be rejected, got: {:?}", result);
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("numeric amount"), "Error should mention numeric amount: {}", msg);
+    }
+
+    #[test]
+    fn check_spending_limit_accepts_numeric_args() {
+        use serde_json::json;
+        // Numeric args should pass through without error (spending limit not configured in test)
+        let args = vec![json!("5abc123"), json!(1), json!(50_000_000_000u64)];
+        let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
+        assert!(result.is_ok(), "Numeric args should pass: {:?}", result);
     }
 }

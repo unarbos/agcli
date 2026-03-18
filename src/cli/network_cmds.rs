@@ -1314,9 +1314,10 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             validate_proxy_type(&proxy_type)?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
-            println!(
-                "WARNING: Killing pure proxy will make all funds in it permanently inaccessible!"
-            );
+            confirm_action(
+                "WARNING: Killing pure proxy will make ALL funds in it PERMANENTLY inaccessible.\n\
+                 This operation CANNOT be undone. Type 'yes' to confirm:"
+            )?;
             let hash = client
                 .kill_pure_proxy(
                     wallet.coldkey()?,
@@ -1345,10 +1346,12 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
                 print_json_ser(&json);
             } else {
                 render_rows(
-                    OutputFormat::Table,
+                    output,
                     &proxies,
-                    "",
-                    |_| String::new(),
+                    "delegate,proxy_type,delay",
+                    |(delegate, proxy_type, delay)| {
+                        format!("{},{},{}", delegate, proxy_type, delay)
+                    },
                     &["Delegate", "Type", "Delay"],
                     |(delegate, proxy_type, delay)| {
                         vec![

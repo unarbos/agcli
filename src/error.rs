@@ -75,19 +75,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         return exit_code::VALIDATION;
     }
 
-    if msg.contains("connect")
-        || msg.contains("dns")
-        || msg.contains("websocket")
-        || msg.contains("endpoint")
-        || msg.contains("unreachable")
-    {
-        return exit_code::NETWORK;
-    }
-
-    if msg.contains("timeout") || msg.contains("timed out") {
-        return exit_code::TIMEOUT;
-    }
-
+    // Chain errors checked BEFORE network — "insufficient" or "extrinsic" in a
+    // message like "failed to connect extrinsic …" must classify as CHAIN, not NETWORK.
     if msg.contains("insufficient")
         || msg.contains("rate limit")
         || msg.contains("extrinsic")
@@ -95,6 +84,21 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("nonce")
     {
         return exit_code::CHAIN;
+    }
+
+    if msg.contains("timeout") || msg.contains("timed out") {
+        return exit_code::TIMEOUT;
+    }
+
+    // Use more specific patterns to avoid false positives on words like "endpoint"
+    // appearing in unrelated chain error messages.
+    if msg.contains("connection refused")
+        || msg.contains("failed to connect")
+        || msg.contains("dns")
+        || msg.contains("websocket")
+        || msg.contains("unreachable")
+    {
+        return exit_code::NETWORK;
     }
 
     if msg.contains("permission denied")
@@ -399,5 +403,34 @@ mod tests {
         let h = hint(exit_code::AUTH, "wallet locked");
         assert!(h.is_some());
         assert!(h.unwrap().contains("wallet"));
+    }
+
+    // ──── Issue 122 (v24): Error classify heuristic ordering ────
+
+    #[test]
+    fn classify_chain_before_network_insufficient() {
+        // "insufficient" should classify as CHAIN even when "connect" also appears
+        let err = anyhow::anyhow!("Failed to connect extrinsic to mempool: insufficient fee");
+        assert_eq!(classify(&err), exit_code::CHAIN, "Chain errors must take priority over network heuristics");
+    }
+
+    #[test]
+    fn classify_chain_before_network_extrinsic() {
+        // "extrinsic" alone should be CHAIN, not matched by "connect"
+        let err = anyhow::anyhow!("Extrinsic dispatch error from endpoint");
+        assert_eq!(classify(&err), exit_code::CHAIN, "'extrinsic' should match CHAIN before 'endpoint' matches NETWORK");
+    }
+
+    #[test]
+    fn classify_connection_refused_still_network() {
+        // Specific network patterns should still work
+        let err = anyhow::anyhow!("connection refused on wss://entrypoint.finney");
+        assert_eq!(classify(&err), exit_code::NETWORK);
+    }
+
+    #[test]
+    fn classify_failed_to_connect_still_network() {
+        let err = anyhow::anyhow!("failed to connect to chain endpoint");
+        assert_eq!(classify(&err), exit_code::NETWORK);
     }
 }

@@ -563,9 +563,10 @@ async fn handle_validators(
             output,
             &ranked,
             "rank,hotkey,owner,take_pct,total_stake_rao,nominators,registrations",
-            |(_, d)| {
+            |(i, d)| {
                 format!(
-                    "{},{},{:.2},{},{},{}",
+                    "{},{},{},{:.2},{},{},{}",
+                    i + 1,
                     d.hotkey,
                     d.owner,
                     d.take * 100.0,

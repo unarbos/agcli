@@ -15,7 +15,11 @@ async fn main() {
             .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"))
     };
 
-    // Set up logging: stderr always, file optionally
+    // Set up logging: stderr always, file optionally.
+    // _file_guard must live until process exit so the non-blocking writer's
+    // background thread keeps flushing.  Declared here so it outlives all
+    // subsequent code that emits log events.
+    let _file_guard;
     if let Some(ref log_path) = cli.log_file {
         let path = std::path::Path::new(log_path);
         let dir = path.parent().unwrap_or(std::path::Path::new("."));
@@ -25,10 +29,8 @@ async fn main() {
             .to_string_lossy();
 
         let file_appender = tracing_appender::rolling::daily(dir, filename.as_ref());
-        let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-
-        // Keep _guard alive for the duration of main
-        let _file_guard = _guard;
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        _file_guard = Some(guard);
 
         tracing_subscriber::registry()
             .with(filter)
@@ -40,6 +42,7 @@ async fn main() {
             .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
             .init();
     } else {
+        _file_guard = None;
         tracing_subscriber::fmt().with_env_filter(filter).init();
     }
 
