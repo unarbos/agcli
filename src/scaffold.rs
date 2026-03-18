@@ -241,6 +241,18 @@ where
         (ep, None)
     };
 
+    // Safety: Scaffold uses deterministic dev-key URIs (e.g. //validator1_sn1).
+    // These keys are predictable and must NEVER hold real funds. Reject non-local endpoints.
+    if !is_local_endpoint(&endpoint) {
+        bail!(
+            "Scaffold refuses to run against non-local endpoint '{}'.\n  \
+             Scaffold uses deterministic dev keys — connecting to mainnet/testnet \
+             would put real funds at predictable addresses anyone can derive.\n  \
+             Use a local chain (127.0.0.1/localhost) or set chain.start = true.",
+            endpoint
+        );
+    }
+
     // 2. Connect client
     let client = Client::connect(&endpoint).await?;
 
@@ -540,6 +552,32 @@ async fn lookup_uid(client: &Client, netuid: NetUid, hotkey_ss58: &str) -> Resul
     bail!("Neuron {} not found on subnet {}", hotkey_ss58, netuid.0)
 }
 
+/// Check if a WebSocket endpoint URL points to a local address.
+fn is_local_endpoint(endpoint: &str) -> bool {
+    // Strip ws:// or wss:// prefix
+    let host_part = endpoint
+        .strip_prefix("wss://")
+        .or_else(|| endpoint.strip_prefix("ws://"))
+        .unwrap_or(endpoint);
+    // Handle IPv6 in brackets: [::1]:9944
+    let host = if host_part.starts_with('[') {
+        host_part
+            .split(']')
+            .next()
+            .unwrap_or(host_part)
+            .trim_start_matches('[')
+    } else {
+        // IPv4 or hostname: extract before port or path
+        let h = host_part.split(':').next().unwrap_or(host_part);
+        h.split('/').next().unwrap_or(h)
+    };
+    matches!(host, "127.0.0.1" | "localhost" | "0.0.0.0" | "::1")
+        || host_part.starts_with("::1") // bare IPv6 loopback without brackets
+        || host.starts_with("192.168.")
+        || host.starts_with("10.")
+        || host.starts_with("172.") // simplified check for 172.16-31.x.x
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -569,5 +607,40 @@ mod tests {
         // Other fields should still be present
         assert!(json.contains("alice"));
         assert!(json.contains("5GrwvaEF"));
+    }
+
+    // ──── Issue 694: Scaffold local-endpoint guard ────
+
+    #[test]
+    fn is_local_endpoint_allows_localhost() {
+        assert!(is_local_endpoint("ws://127.0.0.1:9944"));
+        assert!(is_local_endpoint("ws://localhost:9944"));
+        assert!(is_local_endpoint("ws://0.0.0.0:9944"));
+        assert!(is_local_endpoint("ws://::1:9944"));
+        assert!(is_local_endpoint("ws://192.168.1.100:9944"));
+        assert!(is_local_endpoint("ws://10.0.0.1:9944"));
+        assert!(is_local_endpoint("ws://172.16.0.1:9944"));
+    }
+
+    #[test]
+    fn is_local_endpoint_rejects_remote() {
+        assert!(!is_local_endpoint("ws://subtensor.example.com:9944"));
+        assert!(!is_local_endpoint("wss://entrypoint-finney.opentensor.ai:443"));
+        assert!(!is_local_endpoint("ws://8.8.8.8:9944"));
+        assert!(!is_local_endpoint("wss://mainnet.bittensor.com:443"));
+    }
+
+    #[test]
+    fn is_local_endpoint_handles_wss() {
+        assert!(is_local_endpoint("wss://127.0.0.1:9944"));
+        assert!(is_local_endpoint("wss://localhost:9944"));
+        assert!(!is_local_endpoint("wss://external.host:443"));
+    }
+
+    #[test]
+    fn is_local_endpoint_handles_no_scheme() {
+        assert!(is_local_endpoint("127.0.0.1:9944"));
+        assert!(is_local_endpoint("localhost:9944"));
+        assert!(!is_local_endpoint("subtensor.example.com:9944"));
     }
 }

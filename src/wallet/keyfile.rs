@@ -14,6 +14,7 @@ use rand::RngCore;
 use sp_core::sr25519;
 use std::fs;
 use std::path::Path;
+use zeroize::Zeroize;
 
 const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
@@ -137,7 +138,15 @@ fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
 }
 
 /// Write mnemonic encrypted with password.
+///
+/// Rejects empty passwords to prevent trivially-breakable encryption.
 pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> Result<()> {
+    if password.is_empty() {
+        anyhow::bail!(
+            "Empty password is not allowed for coldkey encryption. \
+             Choose a strong password to protect your funds."
+        );
+    }
     tracing::debug!(path = %path.display(), "Writing encrypted keyfile");
     let _lock = lock_keyfile(path)?;
 
@@ -146,13 +155,14 @@ pub fn write_encrypted_keyfile(path: &Path, mnemonic: &str, password: &str) -> R
     rand::thread_rng().fill_bytes(&mut salt);
     rand::thread_rng().fill_bytes(&mut nonce_bytes);
 
-    let key = derive_key(password, &salt)?;
+    let mut key = derive_key(password, &salt)?;
     let cipher =
         Aes256Gcm::new_from_slice(&key).map_err(|e| anyhow::anyhow!("cipher init: {}", e))?;
     let nonce = Nonce::from_slice(&nonce_bytes);
     let ciphertext = cipher
         .encrypt(nonce, mnemonic.as_bytes())
         .map_err(|e| anyhow::anyhow!("encryption failed: {}", e))?;
+    key.zeroize(); // Wipe derived key from memory immediately after use
 
     // Format: salt || nonce || ciphertext
     let mut data = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
@@ -177,15 +187,18 @@ pub fn read_encrypted_keyfile(path: &Path, password: &str) -> Result<String> {
     let (salt, rest) = data.split_at(SALT_LEN);
     let (nonce_bytes, ciphertext) = rest.split_at(NONCE_LEN);
 
-    let key = derive_key(password, salt)?;
+    let mut key = derive_key(password, salt)?;
     let cipher =
         Aes256Gcm::new_from_slice(&key).map_err(|e| anyhow::anyhow!("cipher init: {}", e))?;
+    key.zeroize(); // Wipe derived key from memory immediately after cipher init
     let nonce = Nonce::from_slice(nonce_bytes);
-    let plaintext = cipher
+    let mut plaintext = cipher
         .decrypt(nonce, ciphertext)
         .map_err(|_| anyhow::anyhow!("Decryption failed — wrong password. If you forgot your password, restore from your mnemonic with `agcli wallet regen-coldkey`."))?;
 
-    String::from_utf8(plaintext).context("mnemonic is not valid UTF-8")
+    let result = String::from_utf8(plaintext.clone()).context("mnemonic is not valid UTF-8");
+    plaintext.zeroize(); // Wipe decrypted plaintext bytes
+    result
 }
 
 /// Write a plaintext keyfile (for hotkeys).
@@ -253,6 +266,9 @@ pub fn read_public_key(path: &Path) -> Result<sr25519::Public> {
     Ok(sr25519::Public::from_raw(arr))
 }
 
+/// Derive a 256-bit AES key from password + salt using Argon2id.
+///
+/// **Caller is responsible for zeroizing the returned key when done.**
 fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
     let mut key = [0u8; KEY_LEN];
     Argon2::default()
@@ -319,16 +335,20 @@ pub fn decrypt_nacl_keyfile_data(data: &[u8], password: &str) -> Result<String> 
         XSalsa20Poly1305,
     };
     if encrypted.len() < 24 {
+        key.zeroize();
         anyhow::bail!("NaCl keyfile too short");
     }
     let (nonce_bytes, ciphertext) = encrypted.split_at(24);
     let cipher = XSalsa20Poly1305::new_from_slice(&key)
         .map_err(|e| anyhow::anyhow!("cipher init: {}", e))?;
+    key.zeroize(); // Wipe derived key from memory immediately after cipher init
     let nonce = crypto_secretbox::Nonce::from_slice(nonce_bytes);
-    let plaintext = cipher.decrypt(nonce, ciphertext)
+    let mut plaintext = cipher.decrypt(nonce, ciphertext)
         .map_err(|_| anyhow::anyhow!("Decryption failed — wrong password for Python wallet. If you forgot your password, restore from your mnemonic with `agcli wallet regen-coldkey`."))?;
 
-    String::from_utf8(plaintext).context("decrypted data is not valid UTF-8")
+    let result = String::from_utf8(plaintext.clone()).context("decrypted data is not valid UTF-8");
+    plaintext.zeroize(); // Wipe decrypted plaintext bytes
+    result
 }
 
 /// Detect keyfile format and decrypt accordingly.
@@ -622,5 +642,81 @@ mod tests {
         let result = handle.join().expect("thread panicked");
         assert!(result.is_ok(), "read_public_key should succeed: {:?}", result.err());
         assert_eq!(result.unwrap(), pk);
+    }
+
+    // ──── Issue 729: Empty password rejection ────
+
+    #[test]
+    fn empty_password_rejected_on_encrypt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("empty_pw_coldkey");
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let result = write_encrypted_keyfile(&path, mnemonic, "");
+        assert!(result.is_err(), "Empty password should be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("Empty password"),
+            "Error should mention empty password, got: {}",
+            msg
+        );
+        // File should NOT have been created
+        assert!(!path.exists(), "Keyfile should not be created with empty password");
+    }
+
+    #[test]
+    fn whitespace_only_password_allowed() {
+        // A password of spaces is technically non-empty (user's choice, even if weak)
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("space_pw_coldkey");
+        let mnemonic = "test words";
+        let result = write_encrypted_keyfile(&path, mnemonic, " ");
+        assert!(result.is_ok(), "Whitespace password should be allowed (non-empty)");
+        // Verify roundtrip
+        let recovered = read_encrypted_keyfile(&path, " ").unwrap();
+        assert_eq!(recovered, mnemonic);
+    }
+
+    // ──── Issues 662-665: Key material zeroization ────
+
+    #[test]
+    fn encrypt_decrypt_still_works_with_zeroization() {
+        // Verify the zeroization changes didn't break encrypt/decrypt roundtrip
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("zeroize_test_coldkey");
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let password = "strong_password_123";
+
+        write_encrypted_keyfile(&path, mnemonic, password).unwrap();
+        let recovered = read_encrypted_keyfile(&path, password).unwrap();
+        assert_eq!(mnemonic, recovered, "Zeroization should not break roundtrip");
+    }
+
+    #[test]
+    fn read_any_encrypted_still_works_with_zeroization() {
+        // Verify read_any_encrypted_keyfile (which dispatches between AES-GCM and NaCl)
+        // still works correctly after zeroization changes
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("zeroize_any_coldkey");
+        let mnemonic = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
+        let password = "test_pass";
+
+        write_encrypted_keyfile(&path, mnemonic, password).unwrap();
+        let recovered = read_any_encrypted_keyfile(&path, password).unwrap();
+        assert_eq!(mnemonic, recovered, "read_any_encrypted should work with zeroization");
+    }
+
+    #[test]
+    fn extract_secret_phrase_from_json() {
+        // Verify extract_secret_phrase still works (covers the mnemonic String path)
+        let json_data = r#"{"secretPhrase":"hello world mnemonic","publicKey":"0x1234"}"#;
+        let phrase = extract_secret_phrase(json_data).unwrap();
+        assert_eq!(phrase, "hello world mnemonic");
+    }
+
+    #[test]
+    fn extract_secret_phrase_from_plain() {
+        let plain = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let phrase = extract_secret_phrase(plain).unwrap();
+        assert_eq!(phrase, plain);
     }
 }
