@@ -321,6 +321,52 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             Ok(())
         }
 
+        AdminCommands::SetAdjustmentAlpha { netuid, alpha, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_adjustment_alpha(client, &pair, netuid, alpha).await?;
+            print_tx_result(ctx.output, &hash, &format!("Adjustment alpha set to {} on SN{}", alpha, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetSubnetMovingAlpha { alpha, sudo_key } => {
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_subnet_moving_alpha(client, &pair, alpha).await?;
+            print_tx_result(ctx.output, &hash, &format!("Subnet moving alpha set to {}", alpha));
+            Ok(())
+        }
+
+        AdminCommands::SetMechanismCount { netuid, count, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_mechanism_count(client, &pair, netuid, count).await?;
+            print_tx_result(ctx.output, &hash, &format!("Mechanism count set to {} on SN{}", count, netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetMechanismEmissionSplit { netuid, weights, sudo_key } => {
+            validate_netuid(netuid)?;
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let emission_weights: Vec<u64> = weights
+                .split(',')
+                .map(|s| {
+                    s.trim()
+                        .parse::<u64>()
+                        .map_err(|e| anyhow::anyhow!("Invalid emission weight '{}': {}", s, e))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let hash = admin::set_mechanism_emission_split(client, &pair, netuid, emission_weights).await?;
+            print_tx_result(ctx.output, &hash, &format!("Mechanism emission split set on SN{}", netuid));
+            Ok(())
+        }
+
+        AdminCommands::SetNominatorMinStake { stake, sudo_key } => {
+            let pair = resolve_sudo_key(&sudo_key, ctx)?;
+            let hash = admin::set_nominator_min_required_stake(client, &pair, stake).await?;
+            print_tx_result(ctx.output, &hash, &format!("Nominator min required stake set to {}", stake));
+            Ok(())
+        }
+
         AdminCommands::Raw {
             call,
             args,

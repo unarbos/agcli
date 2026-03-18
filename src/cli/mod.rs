@@ -793,6 +793,18 @@ pub enum StakeCommands {
         #[arg(long)]
         hotkey: Option<String>,
     },
+    /// Remove all stake from a hotkey on a subnet with a limit price (no partial fills)
+    RemoveFullLimit {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Limit price (minimum TAO per alpha)
+        #[arg(long)]
+        price: f64,
+        /// Hotkey SS58
+        #[arg(long)]
+        hotkey: Option<String>,
+    },
     /// Full staking wizard (interactive or non-interactive with flags)
     Wizard {
         /// Subnet UID (skip interactive subnet selection)
@@ -901,6 +913,48 @@ pub enum SubnetCommands {
     },
     /// Register a new subnet
     Register,
+    /// Register a new subnet with identity metadata
+    RegisterWithIdentity {
+        /// Subnet name
+        #[arg(long)]
+        name: String,
+        /// GitHub repository URL
+        #[arg(long, default_value = "")]
+        github: String,
+        /// Contact info (email, Telegram, etc.)
+        #[arg(long, default_value = "")]
+        contact: String,
+        /// Subnet URL (website)
+        #[arg(long, default_value = "")]
+        url: String,
+        /// Discord invite link or handle
+        #[arg(long, default_value = "")]
+        discord: String,
+        /// Short description of the subnet
+        #[arg(long, default_value = "")]
+        description: String,
+        /// Additional info
+        #[arg(long, default_value = "")]
+        additional: String,
+    },
+    /// Register a leased subnet (temporary subnet with optional end block)
+    RegisterLeased {
+        /// End block for the lease (omit for permanent)
+        #[arg(long)]
+        end_block: Option<u32>,
+    },
+    /// Terminate a subnet lease (owner only)
+    TerminateLease {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
+    /// Root dissolve a network (root origin only)
+    RootDissolve {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+    },
     /// Register a neuron on a subnet (burn)
     RegisterNeuron {
         /// Subnet UID
@@ -1131,6 +1185,21 @@ pub enum WeightCommands {
         /// Subnet UID
         #[arg(long)]
         netuid: u16,
+    },
+    /// Commit timelocked weights (reveal at a specific drand round)
+    CommitTimelocked {
+        /// Subnet UID
+        #[arg(long)]
+        netuid: u16,
+        /// Weights as "uid:weight" pairs, comma-separated
+        #[arg(long)]
+        weights: String,
+        /// Drand round number for reveal
+        #[arg(long)]
+        round: u64,
+        /// Salt (random if not specified)
+        #[arg(long)]
+        salt: Option<String>,
     },
     /// Atomic commit-reveal: commit weights, wait for reveal window, then auto-reveal
     CommitReveal {
@@ -1584,6 +1653,19 @@ pub enum SwapCommands {
         /// New coldkey SS58
         #[arg(long)]
         new_coldkey: String,
+    },
+    /// Associate an EVM (Ethereum) address with your SS58 account
+    #[command(name = "evm-key")]
+    EvmKey {
+        /// EVM address (0x-prefixed hex, 20 bytes)
+        #[arg(long)]
+        evm_address: String,
+        /// Block number used when creating the signature
+        #[arg(long)]
+        block_number: u32,
+        /// EVM signature (0x-prefixed hex, 65 bytes: r+s+v)
+        #[arg(long)]
+        signature: String,
     },
 }
 
@@ -2493,6 +2575,48 @@ pub enum AdminCommands {
         netuid: u16,
         #[arg(long)]
         allowed: bool,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set difficulty adjustment alpha (smoothing factor)
+    SetAdjustmentAlpha {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        alpha: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set global subnet moving alpha (EMA smoothing for all subnets)
+    SetSubnetMovingAlpha {
+        #[arg(long)]
+        alpha: u64,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set mechanism count for a subnet
+    SetMechanismCount {
+        #[arg(long)]
+        netuid: u16,
+        #[arg(long)]
+        count: u16,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set emission split weights across mechanisms
+    SetMechanismEmissionSplit {
+        #[arg(long)]
+        netuid: u16,
+        /// Emission weights as comma-separated u64 values (e.g. "50,50")
+        #[arg(long)]
+        weights: String,
+        #[arg(long)]
+        sudo_key: Option<String>,
+    },
+    /// Set minimum required stake for nominators (global)
+    SetNominatorMinStake {
+        #[arg(long)]
+        stake: u64,
         #[arg(long)]
         sudo_key: Option<String>,
     },

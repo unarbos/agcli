@@ -464,6 +464,89 @@ pub(super) async fn handle_subnet(
             );
             Ok(())
         }
+        SubnetCommands::RegisterWithIdentity {
+            name,
+            github,
+            contact,
+            url,
+            discord,
+            description,
+            additional,
+        } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            let identity = crate::types::chain_data::SubnetIdentity {
+                subnet_name: name.clone(),
+                github_repo: github,
+                subnet_contact: contact,
+                subnet_url: url,
+                discord,
+                description,
+                additional,
+            };
+            println!("Registering new subnet '{}' with identity...", name);
+            let hash = client
+                .register_network_with_identity(&pair, &hk, &identity)
+                .await?;
+            println!(
+                "Subnet registered with identity. Check `agcli subnet list` for your new subnet ID.\n  Tx: {}",
+                hash
+            );
+            Ok(())
+        }
+        SubnetCommands::RegisterLeased { end_block } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
+            match end_block {
+                Some(block) => println!("Registering leased subnet (ends at block {})...", block),
+                None => println!("Registering leased subnet (no end block)..."),
+            }
+            let hash = client
+                .register_leased_network(&pair, &hk, end_block)
+                .await?;
+            println!(
+                "Leased subnet registered. Check `agcli subnet list` for your new subnet ID.\n  Tx: {}",
+                hash
+            );
+            Ok(())
+        }
+        SubnetCommands::TerminateLease { netuid } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!(
+                "Terminating lease on SN{} (owner only)",
+                netuid
+            );
+            let hash = client
+                .terminate_lease(wallet.coldkey()?, NetUid(netuid))
+                .await?;
+            print_tx_result(output, &hash, &format!("Lease terminated on SN{}", netuid));
+            Ok(())
+        }
+        SubnetCommands::RootDissolve { netuid } => {
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!(
+                "Root dissolving subnet SN{} (root origin only)",
+                netuid
+            );
+            println!("WARNING: This action cannot be undone. The subnet and all its state will be permanently removed.");
+            if !is_yes_mode() {
+                let proceed = dialoguer::Confirm::new()
+                    .with_prompt("Are you sure you want to root-dissolve this subnet?")
+                    .default(false)
+                    .interact()?;
+                if !proceed {
+                    println!("Cancelled.");
+                    return Ok(());
+                }
+            }
+            let hash = client
+                .root_dissolve_network(wallet.coldkey()?, NetUid(netuid))
+                .await?;
+            print_tx_result(output, &hash, &format!("Subnet SN{} root-dissolved", netuid));
+            Ok(())
+        }
         SubnetCommands::RegisterNeuron { netuid } => {
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;

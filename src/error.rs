@@ -82,6 +82,25 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("extrinsic")
         || msg.contains("dispatch")
         || msg.contains("nonce")
+        // Subtensor-specific dispatch errors
+        || msg.contains("notenoughstake")
+        || msg.contains("not enough stake")
+        || msg.contains("hotkey not registered")
+        || msg.contains("hotkeynotregistered")
+        || msg.contains("slippagetoo")
+        || msg.contains("slippage too")
+        || msg.contains("subnet not exist")
+        || msg.contains("subnetnotexist")
+        || msg.contains("not subnet owner")
+        || msg.contains("notsubnetowner")
+        || msg.contains("registration disabled")
+        || msg.contains("registrationdisabled")
+        || msg.contains("calldisabled")
+        || msg.contains("call disabled")
+        || msg.contains("insufficientliquidity")
+        || msg.contains("liquidity")
+        || msg.contains("delegatetaketoo")
+        || msg.contains("invalidchild")
     {
         return exit_code::CHAIN;
     }
@@ -145,6 +164,20 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Wait a few blocks before retrying. Use `agcli block latest` to check block progress")
             } else if lower.contains("nonce") {
                 Some("Tip: Another transaction may be pending. Wait for it to finalize before retrying")
+            } else if lower.contains("not enough stake") || lower.contains("notenoughstake") {
+                Some("Tip: Check your stake with `agcli stake list`. You may need more stake to perform this operation")
+            } else if lower.contains("hotkey not registered") || lower.contains("hotkeynotregistered") {
+                Some("Tip: Register your hotkey on the subnet first: `agcli subnet register-neuron --netuid <N>`")
+            } else if lower.contains("slippage") {
+                Some("Tip: The price moved too much. Use a higher --max-slippage or --price to allow more slippage")
+            } else if lower.contains("subnet not exist") || lower.contains("subnetnotexist") {
+                Some("Tip: Check available subnets with `agcli subnet list`")
+            } else if lower.contains("not subnet owner") || lower.contains("notsubnetowner") {
+                Some("Tip: Only the subnet owner can perform this operation. Check ownership with `agcli subnet show`")
+            } else if lower.contains("registration disabled") || lower.contains("registrationdisabled") {
+                Some("Tip: Registration is currently disabled on this subnet. Check `agcli subnet hyperparams`")
+            } else if lower.contains("call disabled") || lower.contains("calldisabled") {
+                Some("Tip: This call is currently disabled on this subnet")
             } else {
                 Some("Tip: The chain rejected this operation. Check `agcli doctor` for diagnostic info")
             }
@@ -432,5 +465,111 @@ mod tests {
     fn classify_failed_to_connect_still_network() {
         let err = anyhow::anyhow!("failed to connect to chain endpoint");
         assert_eq!(classify(&err), exit_code::NETWORK);
+    }
+
+    // ──── Subtensor-specific dispatch error classification ────
+
+    #[test]
+    fn classify_not_enough_stake() {
+        let err = anyhow::anyhow!("Dispatch error: NotEnoughStake");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_hotkey_not_registered() {
+        let err = anyhow::anyhow!("Dispatch error: HotKeyNotRegisteredInSubNet");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_slippage_too_high() {
+        let err = anyhow::anyhow!("Dispatch error: SlippageTooHigh");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_subnet_not_exists() {
+        let err = anyhow::anyhow!("Dispatch error: SubnetNotExists");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_not_subnet_owner() {
+        let err = anyhow::anyhow!("Dispatch error: NotSubnetOwner");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_registration_disabled() {
+        let err = anyhow::anyhow!("Dispatch error: SubNetRegistrationDisabled");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_call_disabled() {
+        let err = anyhow::anyhow!("Dispatch error: CallDisabled");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_insufficient_liquidity() {
+        let err = anyhow::anyhow!("Dispatch error: InsufficientLiquidity");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_delegate_take_too_high() {
+        let err = anyhow::anyhow!("Dispatch error: DelegateTakeTooHigh");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_invalid_child() {
+        let err = anyhow::anyhow!("Dispatch error: InvalidChild");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    // ──── Subtensor-specific hint tests ────
+
+    #[test]
+    fn hint_chain_not_enough_stake() {
+        let h = hint(exit_code::CHAIN, "NotEnoughStake: need more stake");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("stake"));
+    }
+
+    #[test]
+    fn hint_chain_hotkey_not_registered() {
+        let h = hint(exit_code::CHAIN, "HotKeyNotRegisteredInSubNet");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("register"));
+    }
+
+    #[test]
+    fn hint_chain_slippage() {
+        let h = hint(exit_code::CHAIN, "SlippageTooHigh on swap");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("slippage"));
+    }
+
+    #[test]
+    fn hint_chain_subnet_not_exists() {
+        let h = hint(exit_code::CHAIN, "Subnet not exist error");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("subnet list"));
+    }
+
+    #[test]
+    fn hint_chain_not_owner() {
+        let h = hint(exit_code::CHAIN, "NotSubnetOwner: not authorized");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("owner"));
+    }
+
+    #[test]
+    fn hint_chain_registration_disabled() {
+        let h = hint(exit_code::CHAIN, "Registration disabled on subnet");
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("disabled"));
     }
 }

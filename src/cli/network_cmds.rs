@@ -324,6 +324,49 @@ pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_
             println!("Coldkey swap scheduled to {}. Check status with `agcli wallet check-swap`.\n  Tx: {}", crate::utils::short_ss58(&new_coldkey), hash);
             Ok(())
         }
+        SwapCommands::EvmKey {
+            evm_address,
+            block_number,
+            signature,
+        } => {
+            // Parse EVM address (20 bytes hex, optionally 0x-prefixed)
+            let addr_hex = evm_address.strip_prefix("0x").unwrap_or(&evm_address);
+            let addr_bytes: [u8; 20] = hex::decode(addr_hex)
+                .map_err(|e| anyhow::anyhow!("Invalid EVM address hex: {}", e))?
+                .try_into()
+                .map_err(|v: Vec<u8>| {
+                    anyhow::anyhow!(
+                        "EVM address must be 20 bytes, got {}",
+                        v.len()
+                    )
+                })?;
+            // Parse signature (65 bytes hex, optionally 0x-prefixed)
+            let sig_hex = signature.strip_prefix("0x").unwrap_or(&signature);
+            let sig_bytes: [u8; 65] = hex::decode(sig_hex)
+                .map_err(|e| anyhow::anyhow!("Invalid signature hex: {}", e))?
+                .try_into()
+                .map_err(|v: Vec<u8>| {
+                    anyhow::anyhow!(
+                        "Signature must be 65 bytes (r+s+v), got {}",
+                        v.len()
+                    )
+                })?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            println!(
+                "Associating EVM address 0x{} with your account",
+                addr_hex
+            );
+            let hash = client
+                .associate_evm_key(wallet.coldkey()?, addr_bytes, block_number, sig_bytes)
+                .await?;
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("EVM key 0x{} associated", addr_hex),
+            );
+            Ok(())
+        }
     }
 }
 

@@ -736,6 +736,34 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             );
             Ok(())
         }
+        StakeCommands::RemoveFullLimit {
+            netuid,
+            price,
+            hotkey,
+        } => {
+            let (pair, hk) =
+                unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
+            let limit_price = Balance::from_tao(price).rao();
+            println!(
+                "Removing all stake from SN{} hotkey {} (limit price {} TAO/α)",
+                netuid,
+                crate::utils::short_ss58(&hk),
+                price
+            );
+            // amount is 0 for full removal — the chain handles the "full" part
+            let hash = client
+                .remove_stake_full_limit(&pair, &hk, NetUid(netuid), 0, limit_price)
+                .await?;
+            print_tx_result(
+                output,
+                &hash,
+                &format!(
+                    "Full unstake from SN{} (limit {})",
+                    netuid, price
+                ),
+            );
+            Ok(())
+        }
         StakeCommands::Wizard {
             netuid,
             amount,

@@ -295,6 +295,46 @@ pub(super) async fn handle_weights(
             );
             Ok(())
         }
+        WeightCommands::CommitTimelocked {
+            netuid,
+            weights,
+            round,
+            salt,
+        } => {
+            validate_netuid(netuid)?;
+            validate_weight_input(&weights)?;
+            let mut wallet = open_wallet(wallet_dir, wallet_name)?;
+            unlock_coldkey(&mut wallet, password)?;
+            wallet.load_hotkey(hotkey_name)?;
+            let (uids, wts) = resolve_weights(&weights)?;
+            let salt_str = salt.unwrap_or_else(|| {
+                use rand::Rng;
+                let s: String = rand::thread_rng()
+                    .sample_iter(&rand::distributions::Alphanumeric)
+                    .take(32)
+                    .map(char::from)
+                    .collect();
+                println!("Generated salt: {}", s);
+                s
+            });
+            let hash_out =
+                crate::extrinsics::compute_weight_commit_hash(&uids, &wts, salt_str.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("blake2 hash error: {:?}", e))?;
+            println!(
+                "Committing timelocked weights on SN{} for drand round {}",
+                netuid, round
+            );
+            println!("  Commit hash: 0x{}", hex::encode(hash_out));
+            println!("  Save this salt for reveal: {}", salt_str);
+            let hash = client
+                .commit_timelocked_weights(wallet.hotkey()?, NetUid(netuid), hash_out, round)
+                .await?;
+            println!(
+                "Timelocked weights committed on SN{} (round {}). Salt: {}\n  Tx: {}",
+                netuid, round, salt_str, hash
+            );
+            Ok(())
+        }
         WeightCommands::CommitReveal {
             netuid,
             weights,
