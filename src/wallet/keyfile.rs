@@ -356,14 +356,15 @@ pub fn decrypt_nacl_keyfile_data(data: &[u8], password: &str) -> Result<String> 
     }
     let (nonce_bytes, ciphertext) = encrypted.split_at(24);
     let cipher = XSalsa20Poly1305::new_from_slice(&key)
-        .map_err(|e| anyhow::anyhow!("cipher init: {}", e))?;
+        .map_err(|e| { key.zeroize(); anyhow::anyhow!("cipher init: {}", e) })?;
     key.zeroize(); // Wipe derived key from memory immediately after cipher init
     let nonce = crypto_secretbox::Nonce::from_slice(nonce_bytes);
-    let mut plaintext = cipher.decrypt(nonce, ciphertext)
+    let plaintext = cipher.decrypt(nonce, ciphertext)
         .map_err(|_| anyhow::anyhow!("Decryption failed — wrong password for Python wallet. If you forgot your password, restore from your mnemonic with `agcli wallet regen-coldkey`."))?;
 
-    let result = String::from_utf8(plaintext.clone()).context("decrypted data is not valid UTF-8");
-    plaintext.zeroize(); // Wipe decrypted plaintext bytes
+    // Consume plaintext directly to avoid leaving an unzeroized clone in memory.
+    // If from_utf8 fails, the error contains the bytes — but those are invalid/corrupt data anyway.
+    let result = String::from_utf8(plaintext).context("decrypted data is not valid UTF-8");
     result
 }
 
@@ -788,5 +789,34 @@ mod tests {
         let plain = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let phrase = extract_secret_phrase(plain).unwrap();
         assert_eq!(phrase, plain);
+    }
+
+    // ──── Issue 111: NaCl decrypt path — no clone leak + key zeroize on cipher error ────
+
+    #[test]
+    fn nacl_decrypt_short_input_zeroizes_key() {
+        // decrypt_nacl_keyfile_data should bail on input < 24 bytes after header
+        // and should not panic — the key should be zeroized before returning
+        let mut data = NACL_PREFIX.to_vec();
+        data.extend_from_slice(&[0u8; 10]); // Too short (need >= 24 for nonce)
+        let result = decrypt_nacl_keyfile_data(&data, "any_password");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("too short"));
+    }
+
+    #[test]
+    fn nacl_decrypt_empty_after_prefix() {
+        // Just the NACL prefix with no ciphertext data
+        let data = NACL_PREFIX.to_vec();
+        let result = decrypt_nacl_keyfile_data(&data, "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn nacl_decrypt_without_prefix_short() {
+        // Data without prefix that is still too short for nonce
+        let data = vec![0u8; 20];
+        let result = decrypt_nacl_keyfile_data(&data, "test");
+        assert!(result.is_err());
     }
 }

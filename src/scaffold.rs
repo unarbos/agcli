@@ -295,7 +295,9 @@ where
                 netuids_after
             );
         }
-        let netuid = new_netuids[0];
+        // Use min() for determinism when multiple subnets appear concurrently
+        // (HashSet iteration order is non-deterministic; Substrate assigns netuids incrementally)
+        let netuid = *new_netuids.iter().min().unwrap();
         on_progress(&format!("Subnet created: netuid {}", netuid));
 
         // 5. Set hyperparameters via sudo
@@ -318,10 +320,11 @@ where
                             || msg.contains("not found")
                             || msg.contains("Bad origin")
                         {
+                            let truncated = crate::utils::truncate(&msg, 80);
                             $cb(&format!(
                                 "Warning: {} skipped — {}",
                                 $label,
-                                &msg[..80.min(msg.len())]
+                                truncated
                             ));
                         } else {
                             return Err(e);
@@ -756,5 +759,36 @@ mod tests {
         // But 172.16-31 should still be accepted
         assert!(is_local_endpoint("ws://172.16.0.1:9944"));
         assert!(is_local_endpoint("ws://172.31.255.255:9944"));
+    }
+
+    // ──── Issue 113: scaffold warning truncation uses char-safe truncate ────
+
+    #[test]
+    fn truncate_handles_multibyte_utf8() {
+        // Verify crate::utils::truncate doesn't panic on multi-byte chars
+        let multibyte = "Error: 操作が拒否されました。以下の理由で失敗しました。管理アクションが禁止されています。";
+        let truncated = crate::utils::truncate(multibyte, 20);
+        // Should not panic and should be <= 20 chars (plus ellipsis)
+        assert!(truncated.chars().count() <= 21, "truncated: {}", truncated);
+    }
+
+    #[test]
+    fn truncate_short_string_unchanged() {
+        let short = "WeightsWindow error";
+        let result = crate::utils::truncate(short, 80);
+        assert_eq!(result, short);
+    }
+
+    // ──── Issue 114: deterministic netuid selection from HashSet ────
+
+    #[test]
+    fn min_netuid_is_deterministic() {
+        // Simulate the fix: when multiple netuids appear, min() gives deterministic result
+        use std::collections::HashSet;
+        let before: HashSet<u16> = [1, 2, 5, 10].into_iter().collect();
+        let after: HashSet<u16> = [1, 2, 5, 7, 10, 12].into_iter().collect();
+        let new_netuids: Vec<u16> = after.difference(&before).copied().collect();
+        let netuid = *new_netuids.iter().min().unwrap();
+        assert_eq!(netuid, 7, "Should deterministically pick lowest new netuid");
     }
 }

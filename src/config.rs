@@ -75,6 +75,12 @@ impl Config {
         let tmp_name = format!(".config.{}.{:?}.tmp", pid, tid,);
         let tmp_path = path.with_file_name(tmp_name);
         std::fs::write(&tmp_path, &content)?;
+        // Restrict permissions before atomic rename (config may contain wallet paths/names)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))?;
+        }
         std::fs::rename(&tmp_path, path).map_err(|e| {
             // Clean up temp file on rename failure
             let _ = std::fs::remove_file(&tmp_path);
@@ -190,6 +196,31 @@ mod tests {
         // Verify the saved file is valid TOML
         let loaded = Config::load_from(&path).unwrap();
         assert_eq!(loaded.network.as_deref(), Some("finney"));
+    }
+
+    // ──── Issue 112: Config file permissions should be 0o600 ────
+
+    #[cfg(unix)]
+    #[test]
+    fn config_file_has_restricted_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        let cfg = Config {
+            network: Some("finney".into()),
+            wallet: Some("mywallet".into()),
+            ..Default::default()
+        };
+        cfg.save_to(&path).unwrap();
+
+        let meta = std::fs::metadata(&path).unwrap();
+        let mode = meta.permissions().mode() & 0o777;
+        assert_eq!(
+            mode, 0o600,
+            "Config file should be owner-only (0o600), got: {:o}",
+            mode
+        );
     }
 
     /// Atomic write: concurrent writers produce a valid config (not corrupted).

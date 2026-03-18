@@ -17,13 +17,13 @@ pub fn short_ss58(addr: &str) -> String {
 
 /// Format TAO balance with commas: "1,234.5678"
 pub fn format_tao(balance: Balance) -> String {
-    let tao = balance.tao();
-    if tao >= 1_000.0 {
-        let whole = tao as u64;
-        let frac = tao - whole as f64;
-        let frac_part = (frac * 10000.0).round() as u64;
+    let rao = balance.rao();
+    let whole_tao = rao / crate::types::balance::RAO_PER_TAO;
+    // 4 decimal places: divide remaining rao by 100_000 (1e9 / 1e4)
+    let frac_part = (rao % crate::types::balance::RAO_PER_TAO) / 100_000;
+    if whole_tao >= 1_000 {
         // Build whole part with proper comma separators for any magnitude
-        let whole_str = whole.to_string();
+        let whole_str = whole_tao.to_string();
         let mut comma_str = String::with_capacity(whole_str.len() + whole_str.len() / 3);
         for (i, c) in whole_str.chars().enumerate() {
             if i > 0 && (whole_str.len() - i) % 3 == 0 {
@@ -33,7 +33,7 @@ pub fn format_tao(balance: Balance) -> String {
         }
         format!("{}.{:04}", comma_str, frac_part)
     } else {
-        format!("{:.4}", tao)
+        format!("{}.{:04}", whole_tao, frac_part)
     }
 }
 
@@ -162,5 +162,49 @@ mod tests {
         let u = float_to_u16(0.5);
         let back = u16_to_float(u);
         assert!((back - 0.5).abs() < 0.0001, "got: {}", back);
+    }
+
+    // ──── Issue 115: format_tao uses integer arithmetic (no float precision loss) ────
+
+    #[test]
+    fn format_tao_integer_precision_exact() {
+        // Exactly 1234.5678 TAO = 1_234_567_800_000 RAO
+        let b = Balance::from_rao(1_234_567_800_000);
+        let s = format_tao(b);
+        assert_eq!(s, "1,234.5678", "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_zero() {
+        let b = Balance::from_rao(0);
+        let s = format_tao(b);
+        assert_eq!(s, "0.0000", "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_sub_tao() {
+        // 0.1234 TAO = 123_400_000 RAO
+        let b = Balance::from_rao(123_400_000);
+        let s = format_tao(b);
+        assert_eq!(s, "0.1234", "got: {}", s);
+    }
+
+    #[test]
+    fn format_tao_large_value_no_float_error() {
+        // 18,446,744,073 TAO (near u64::MAX / 1e9) using integer arithmetic
+        let rao = 18_446_744_073_000_000_000u64;
+        let b = Balance::from_rao(rao);
+        let s = format_tao(b);
+        // Should start with "18,446,744,073" and not produce negative frac
+        assert!(s.starts_with("18,446,744,073"), "got: {}", s);
+        assert!(!s.contains('-'), "Should not contain negative sign: {}", s);
+    }
+
+    #[test]
+    fn format_tao_exactly_999() {
+        // 999 TAO — should not have commas
+        let b = Balance::from_rao(999_000_000_000);
+        let s = format_tao(b);
+        assert_eq!(s, "999.0000", "got: {}", s);
     }
 }

@@ -1194,7 +1194,7 @@ async fn handle_snipe(
                 "\r  Block #{}: Registration disabled, waiting...          ",
                 block_num
             );
-            std::io::stderr().flush().ok();
+            std::io::stdout().flush().ok();
             continue;
         }
 
@@ -1209,7 +1209,7 @@ async fn handle_snipe(
                     current_burn.display_tao(),
                     cap.display_tao()
                 );
-                std::io::stderr().flush().ok();
+                std::io::stdout().flush().ok();
                 continue;
             }
         }
@@ -1222,7 +1222,7 @@ async fn handle_snipe(
                 bal.display_tao(),
                 current_burn.display_tao()
             );
-            std::io::stderr().flush().ok();
+            std::io::stdout().flush().ok();
             continue;
         }
 
@@ -1507,7 +1507,7 @@ async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Res
                 println!(
                     "\n  Weights rate limit: {} blocks (~{}m)",
                     h.weights_rate_limit,
-                    h.weights_rate_limit * 12 / 60
+                    h.weights_rate_limit.saturating_mul(12) / 60
                 );
 
                 // Commit-reveal status

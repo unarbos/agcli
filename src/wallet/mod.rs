@@ -155,8 +155,9 @@ impl Wallet {
         // Save hotkey (unencrypted)
         keyfile::write_keyfile(&dir.join("hotkeys").join(hotkey_name), &hotkey.1)?;
 
-        let coldkey_mnemonic = coldkey.1.clone();
-        let hotkey_mnemonic = hotkey.1.clone();
+        // Move mnemonics out of tuples to avoid leaving unzeroized copies on drop
+        let coldkey_mnemonic = coldkey.1;
+        let hotkey_mnemonic = hotkey.1;
 
         Ok((
             Self {
