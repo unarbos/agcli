@@ -276,6 +276,15 @@ fn value_to_json<T: Clone>(val: &subxt::ext::scale_value::Value<T>) -> serde_jso
     }
 }
 
+/// Compute the gap (number of missed blocks) between the last processed block and the current one.
+/// Returns 0 if there is no gap or if `last_processed` is None (first block).
+pub(crate) fn compute_block_gap(last_processed: Option<u64>, current: u64) -> u64 {
+    match last_processed {
+        Some(last) => current.saturating_sub(last + 1),
+        None => 0,
+    }
+}
+
 /// Subscribe to new blocks and stream events matching the filter.
 pub async fn subscribe_events(
     client: &OnlineClient<SubtensorConfig>,
@@ -314,6 +323,7 @@ pub async fn subscribe_events_filtered(
     }
 
     let mut reconnect_attempts = 0u32;
+    let mut last_processed_block: Option<u64> = None;
     loop {
         let sub_result = client.blocks().subscribe_finalized().await;
         let mut block_sub = match sub_result {
@@ -375,6 +385,37 @@ pub async fn subscribe_events_filtered(
                 }
             };
             let block_number = block.number() as u64;
+
+            // Detect and warn about gaps in block sequence (Issue 644)
+            if let Some(last) = last_processed_block {
+                let gap = block_number.saturating_sub(last + 1);
+                if gap > 0 {
+                    tracing::warn!(
+                        last_block = last,
+                        current_block = block_number,
+                        missed_blocks = gap,
+                        "Gap detected: {} blocks missed between #{} and #{}",
+                        gap, last, block_number
+                    );
+                    if !json_output {
+                        eprintln!(
+                            "Warning: {} block(s) missed (#{} to #{}) — events in those blocks were not captured",
+                            gap, last + 1, block_number - 1
+                        );
+                    } else {
+                        println!(
+                            "{}",
+                            serde_json::json!({
+                                "warning": "gap_detected",
+                                "missed_from": last + 1,
+                                "missed_to": block_number - 1,
+                                "missed_count": gap,
+                            })
+                        );
+                    }
+                }
+            }
+            last_processed_block = Some(block_number);
             let block_hash = format!("{:?}", block.hash());
 
             let events = match block.events().await {
@@ -488,6 +529,7 @@ pub async fn subscribe_blocks(
     println!("Subscribed to finalized blocks. Ctrl+C to stop.\n");
 
     let mut reconnect_attempts = 0u32;
+    let mut last_processed_block: Option<u64> = None;
     loop {
         let sub_result = client.blocks().subscribe_finalized().await;
         let mut block_sub = match sub_result {
@@ -531,6 +573,36 @@ pub async fn subscribe_blocks(
                 }
             };
             let number = block.number() as u64;
+
+            // Detect and warn about gaps in block sequence (Issue 644)
+            if let Some(last) = last_processed_block {
+                let gap = number.saturating_sub(last + 1);
+                if gap > 0 {
+                    tracing::warn!(
+                        last_block = last,
+                        current_block = number,
+                        missed_blocks = gap,
+                        "Gap detected in block stream"
+                    );
+                    if !json_output {
+                        eprintln!(
+                            "Warning: {} block(s) missed (#{} to #{})",
+                            gap, last + 1, number - 1
+                        );
+                    } else {
+                        println!(
+                            "{}",
+                            serde_json::json!({
+                                "warning": "gap_detected",
+                                "missed_from": last + 1,
+                                "missed_to": number - 1,
+                                "missed_count": gap,
+                            })
+                        );
+                    }
+                }
+            }
+            last_processed_block = Some(number);
             let hash = format!("{:?}", block.hash());
             let extrinsic_count = match block.extrinsics().await {
                 Ok(exts) => exts.len(),
@@ -1086,5 +1158,43 @@ mod tests {
             .collect();
         let composite = Composite::Unnamed(bytes);
         assert!(try_composite_as_ss58(&composite).is_none());
+    }
+
+    // ========== Issue 644: Block gap detection tests ==========
+
+    #[test]
+    fn compute_block_gap_no_previous() {
+        // First block ever — no gap possible
+        assert_eq!(compute_block_gap(None, 100), 0);
+    }
+
+    #[test]
+    fn compute_block_gap_consecutive() {
+        // Consecutive blocks — no gap
+        assert_eq!(compute_block_gap(Some(99), 100), 0);
+    }
+
+    #[test]
+    fn compute_block_gap_one_missed() {
+        // Block 101 follows 99 — missed block 100
+        assert_eq!(compute_block_gap(Some(99), 101), 1);
+    }
+
+    #[test]
+    fn compute_block_gap_many_missed() {
+        // Block 200 follows 100 — missed blocks 101..199
+        assert_eq!(compute_block_gap(Some(100), 200), 99);
+    }
+
+    #[test]
+    fn compute_block_gap_same_block() {
+        // Same block number (shouldn't happen, but handle gracefully)
+        assert_eq!(compute_block_gap(Some(100), 100), 0);
+    }
+
+    #[test]
+    fn compute_block_gap_overflow_protection() {
+        // Current < last (shouldn't happen, saturating_sub protects)
+        assert_eq!(compute_block_gap(Some(200), 100), 0);
     }
 }

@@ -11,6 +11,13 @@ use crate::{api, AccountId};
 
 use super::Client;
 
+/// Default max_weight ref_time for multisig as_multi execution (10 billion = ~10s of compute).
+/// Substrate charges actual weight consumed, not the max — this is just an upper bound.
+const DEFAULT_MULTISIG_MAX_REF_TIME: u128 = 10_000_000_000;
+
+/// Default max_weight proof_size for multisig as_multi execution (1 MB).
+const DEFAULT_MULTISIG_MAX_PROOF_SIZE: u128 = 1_048_576;
+
 impl Client {
     // ──────── Extrinsic Submission ────────
     // All extrinsics use sign_submit() to reduce boilerplate.
@@ -1540,6 +1547,10 @@ impl Client {
 
     /// Execute a multisig call (Multisig::as_multi) — the final signatory calls this
     /// to actually execute the underlying call once threshold is met.
+    ///
+    /// `max_weight` specifies the maximum weight the inner call is allowed to consume.
+    /// If `None`, uses a generous default (10B ref_time, 1MB proof_size) to avoid
+    /// unexpected failures from zero-weight limits (Issue 684).
     pub async fn execute_multisig(
         &self,
         pair: &sr25519::Pair,
@@ -1567,6 +1578,13 @@ impl Client {
             ),
             None => Value::unnamed_variant("None", []),
         };
+        // Use generous default weight to avoid zero-weight rejection (Issue 684).
+        // 10 billion ref_time (~10s of computation) and 1MB proof_size covers virtually
+        // all pallet calls. The runtime will still charge the actual weight consumed.
+        let max_weight = Value::named_composite([
+            ("ref_time", Value::u128(DEFAULT_MULTISIG_MAX_REF_TIME)),
+            ("proof_size", Value::u128(DEFAULT_MULTISIG_MAX_PROOF_SIZE)),
+        ]);
         let tx = subxt::dynamic::tx(
             "Multisig",
             "as_multi",
@@ -1575,10 +1593,7 @@ impl Client {
                 Value::unnamed_composite(others),
                 maybe_timepoint,
                 Value::from_bytes(encoded),
-                Value::named_composite([
-                    ("ref_time", Value::u128(0)),
-                    ("proof_size", Value::u128(0)),
-                ]),
+                max_weight,
             ],
         );
         self.sign_submit(&tx, pair).await
@@ -2181,5 +2196,31 @@ mod tests {
                 v
             );
         }
+    }
+
+    // ========== Issue 684: Multisig weight constants tests ==========
+
+    #[test]
+    fn multisig_default_ref_time_is_nonzero() {
+        assert!(DEFAULT_MULTISIG_MAX_REF_TIME > 0, "Default ref_time must be non-zero");
+    }
+
+    #[test]
+    fn multisig_default_proof_size_is_nonzero() {
+        assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE > 0, "Default proof_size must be non-zero");
+    }
+
+    #[test]
+    fn multisig_default_ref_time_is_reasonable() {
+        // Should be at least 1 billion (1 second) and at most 100 billion
+        assert!(DEFAULT_MULTISIG_MAX_REF_TIME >= 1_000_000_000);
+        assert!(DEFAULT_MULTISIG_MAX_REF_TIME <= 100_000_000_000);
+    }
+
+    #[test]
+    fn multisig_default_proof_size_is_reasonable() {
+        // Should be at least 1KB and at most 50MB
+        assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE >= 1024);
+        assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE <= 50 * 1024 * 1024);
     }
 }

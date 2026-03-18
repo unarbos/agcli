@@ -816,6 +816,27 @@ pub fn is_yes_mode() -> bool {
         || BATCH_MODE.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// Prompt the user to confirm a destructive or admin action.
+/// Returns Ok(()) if confirmed (or --yes/--batch mode), Err if user declines.
+pub fn confirm_action(message: &str) -> Result<()> {
+    if is_yes_mode() {
+        return Ok(());
+    }
+    eprint!("{} [y/N] ", message);
+    use std::io::Write;
+    std::io::stderr().flush().ok();
+    let mut input = String::new();
+    std::io::stdin()
+        .read_line(&mut input)
+        .map_err(|e| anyhow::anyhow!("Failed to read confirmation input: {}", e))?;
+    let trimmed = input.trim().to_lowercase();
+    if trimmed == "y" || trimmed == "yes" {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("Operation cancelled by user"))
+    }
+}
+
 pub fn resolve_coldkey_address(
     address: Option<String>,
     wallet_dir: &str,
@@ -2155,5 +2176,42 @@ mod tests {
     #[test]
     fn safe_rao_zero() {
         assert_eq!(safe_rao(0.0), 0);
+    }
+
+    // ========== Issue 709: confirm_action tests ==========
+
+    #[test]
+    fn confirm_action_yes_mode_bypasses() {
+        set_yes_mode(true);
+        assert!(confirm_action("Destroy everything?").is_ok());
+        set_yes_mode(false);
+    }
+
+    #[test]
+    fn confirm_action_batch_mode_bypasses() {
+        set_batch_mode(true);
+        assert!(confirm_action("Destroy everything?").is_ok());
+        set_batch_mode(false);
+    }
+
+    #[test]
+    fn is_yes_mode_default_false() {
+        set_yes_mode(false);
+        set_batch_mode(false);
+        assert!(!is_yes_mode());
+    }
+
+    #[test]
+    fn is_yes_mode_true_when_yes_set() {
+        set_yes_mode(true);
+        assert!(is_yes_mode());
+        set_yes_mode(false);
+    }
+
+    #[test]
+    fn is_yes_mode_true_when_batch_set() {
+        set_batch_mode(true);
+        assert!(is_yes_mode());
+        set_batch_mode(false);
     }
 }

@@ -201,6 +201,11 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             // Parse args as JSON array of values
             let values = parse_raw_args(&args)?;
+            // Require explicit confirmation for raw admin calls (Issue 709)
+            confirm_action(&format!(
+                "Execute sudo AdminUtils.{} with args {}?",
+                call, args
+            ))?;
             let hash = admin::raw_admin_call(client, &pair, &call, values).await?;
             print_tx_result(ctx.output, &hash, &format!("AdminUtils.{} executed", call));
             Ok(())
@@ -266,5 +271,80 @@ fn json_to_value(v: &serde_json::Value) -> Result<Value> {
         serde_json::Value::Bool(b) => Ok(Value::bool(*b)),
         serde_json::Value::String(s) => Ok(Value::string(s.clone())),
         _ => anyhow::bail!("Unsupported arg type: {}", v),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========== parse_raw_args tests ==========
+
+    #[test]
+    fn parse_raw_args_empty_array() {
+        let result = parse_raw_args("[]").unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_raw_args_single_number() {
+        let result = parse_raw_args("[42]").unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn parse_raw_args_multiple_types() {
+        let result = parse_raw_args("[1, true, \"hello\"]").unwrap();
+        assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn parse_raw_args_rejects_non_array() {
+        assert!(parse_raw_args("42").is_err());
+        assert!(parse_raw_args("\"hello\"").is_err());
+        assert!(parse_raw_args("{}").is_err());
+    }
+
+    #[test]
+    fn parse_raw_args_rejects_invalid_json() {
+        assert!(parse_raw_args("not json").is_err());
+        assert!(parse_raw_args("[1, 2,]").is_err()); // trailing comma
+    }
+
+    #[test]
+    fn parse_raw_args_rejects_negative_numbers() {
+        let result = parse_raw_args("[-1]");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Negative"), "Error should mention negative: {}", err);
+    }
+
+    #[test]
+    fn parse_raw_args_rejects_nested_objects() {
+        assert!(parse_raw_args("[{\"a\": 1}]").is_err());
+    }
+
+    #[test]
+    fn parse_raw_args_rejects_nested_arrays() {
+        assert!(parse_raw_args("[[1, 2]]").is_err());
+    }
+
+    // ========== confirm_action tests ==========
+
+    #[test]
+    fn confirm_action_skips_in_yes_mode() {
+        // Enable yes mode, confirm should pass without reading stdin
+        set_yes_mode(true);
+        let result = confirm_action("Test?");
+        set_yes_mode(false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn confirm_action_skips_in_batch_mode() {
+        set_batch_mode(true);
+        let result = confirm_action("Test?");
+        set_batch_mode(false);
+        assert!(result.is_ok());
     }
 }
