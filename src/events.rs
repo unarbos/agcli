@@ -25,6 +25,10 @@ pub enum EventFilter {
     Weights,
     /// Subnet events (hyperparams, identity)
     Subnet,
+    /// Delegation events (take, children)
+    Delegation,
+    /// Key lifecycle events (swap, associate, identity)
+    Keys,
 }
 
 impl std::str::FromStr for EventFilter {
@@ -36,6 +40,8 @@ impl std::str::FromStr for EventFilter {
             "transfer" | "transfers" => Self::Transfer,
             "weights" | "weight" => Self::Weights,
             "subnet" | "subnets" => Self::Subnet,
+            "delegation" | "delegate" | "delegates" => Self::Delegation,
+            "keys" | "key" | "swap" => Self::Keys,
             _ => Self::All,
         })
     }
@@ -48,6 +54,12 @@ const STAKING_VARIANTS: &[&str] = &[
     "StakeMoved",
     "StakeSwapped",
     "AllStakeRemoved",
+    "StakeTransferred",
+    "AlphaRecycled",
+    "AlphaBurned",
+    "RootClaimed",
+    "AutoStakeAdded",
+    "AutoStakeDestinationSet",
 ];
 
 /// Known registration-related event variant names.
@@ -56,6 +68,7 @@ const REGISTRATION_VARIANTS: &[&str] = &[
     "BurnedRegister",
     "SubnetRegistered",
     "PowRegistered",
+    "BulkNeuronsRegistered",
 ];
 
 /// Known weight-related event variant names.
@@ -64,6 +77,15 @@ const WEIGHT_VARIANTS: &[&str] = &[
     "WeightsCommitted",
     "WeightsRevealed",
     "WeightsBatchRevealed",
+    "CRV3WeightsCommitted",
+    "CRV3WeightsRevealed",
+    "TimelockedWeightsCommitted",
+    "TimelockedWeightsRevealed",
+    "BatchWeightsCompleted",
+    "BatchCompletedWithErrors",
+    "BatchWeightItemFailed",
+    "CommitRevealEnabled",
+    "CommitRevealPeriodsSet",
 ];
 
 /// Known subnet management event variant names.
@@ -74,6 +96,34 @@ const SUBNET_VARIANTS: &[&str] = &[
     "NetworkAdded",
     "NetworkRemoved",
     "TempoSet",
+    "DissolveNetworkScheduled",
+    "SubnetLeaseCreated",
+    "SubnetLeaseTerminated",
+    "SubnetLeaseDividendsDistributed",
+    "SymbolUpdated",
+    "FirstEmissionBlockNumberSet",
+    "TransferToggle",
+    "SubnetOwnerHotkeySet",
+];
+
+/// Known delegation-related event variant names.
+const DELEGATION_VARIANTS: &[&str] = &[
+    "DelegateAdded",
+    "TakeDecreased",
+    "TakeIncreased",
+    "ChildKeyTakeSet",
+    "SetChildren",
+    "SetChildrenScheduled",
+];
+
+/// Known key lifecycle event variant names.
+const KEY_VARIANTS: &[&str] = &[
+    "HotkeySwapped",
+    "HotkeySwappedOnSubnet",
+    "ColdkeySwapped",
+    "ColdkeySwapScheduled",
+    "EvmKeyAssociated",
+    "ChainIdentitySet",
 ];
 
 impl EventFilter {
@@ -87,6 +137,10 @@ impl EventFilter {
             Self::Transfer => pallet == "Balances",
             Self::Weights => pallet == "SubtensorModule" && WEIGHT_VARIANTS.contains(&variant),
             Self::Subnet => pallet == "SubtensorModule" && SUBNET_VARIANTS.contains(&variant),
+            Self::Delegation => {
+                pallet == "SubtensorModule" && DELEGATION_VARIANTS.contains(&variant)
+            }
+            Self::Keys => pallet == "SubtensorModule" && KEY_VARIANTS.contains(&variant),
         }
     }
 }

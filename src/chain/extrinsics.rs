@@ -2131,6 +2131,631 @@ impl Client {
         );
         self.sign_submit(&tx, pair).await
     }
+
+    // ──────── Missing SubtensorModule Calls (from subtensor.com audit) ────────
+
+    /// Serve prometheus metadata on a subnet.
+    pub async fn serve_prometheus(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        version: u32,
+        ip: u128,
+        port: u16,
+        ip_type: u8,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "serve_prometheus",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(version as u128),
+                Value::u128(ip),
+                Value::u128(port as u128),
+                Value::u128(ip_type as u128),
+            ],
+        )
+        .await
+    }
+
+    /// Serve axon with TLS certificate.
+    pub async fn serve_axon_tls(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        axon: &AxonInfo,
+        certificate: &[u8],
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let ip: u128 = axon
+            .ip
+            .parse()
+            .with_context(|| format!("Invalid IP address for axon: {:?}", axon.ip))?;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "serve_axon_tls",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(axon.version as u128),
+                Value::u128(ip),
+                Value::u128(axon.port as u128),
+                Value::u128(axon.ip_type as u128),
+                Value::u128(axon.protocol as u128),
+                Value::u128(0u128), // placeholder1
+                Value::u128(0u128), // placeholder2
+                Value::from_bytes(certificate),
+            ],
+        )
+        .await
+    }
+
+    /// Register a network with identity in a single call.
+    pub async fn register_network_with_identity(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        identity: &SubnetIdentity,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        let ident = Value::named_composite([
+            ("subnet_name", Value::from_bytes(identity.subnet_name.as_bytes())),
+            ("github_repo", Value::from_bytes(identity.github_repo.as_bytes())),
+            ("subnet_contact", Value::from_bytes(identity.subnet_contact.as_bytes())),
+            ("subnet_url", Value::from_bytes(identity.subnet_url.as_bytes())),
+            ("discord", Value::from_bytes(identity.discord.as_bytes())),
+            ("description", Value::from_bytes(identity.description.as_bytes())),
+            ("additional", Value::from_bytes(identity.additional.as_bytes())),
+        ]);
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "register_network_with_identity",
+            vec![
+                Value::from_bytes(hk.0),
+                Value::unnamed_variant("Some", [ident]),
+            ],
+        )
+        .await
+    }
+
+    /// Associate an EVM key with the signer's SS58 account.
+    pub async fn associate_evm_key(
+        &self,
+        pair: &sr25519::Pair,
+        evm_address: [u8; 20],
+        block_number: u32,
+        signature: [u8; 65],
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "associate_evm_key",
+            vec![
+                Value::from_bytes(evm_address),
+                Value::u128(block_number as u128),
+                Value::from_bytes(signature),
+            ],
+        )
+        .await
+    }
+
+    /// Start call for subnet initialization.
+    pub async fn start_call(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "start_call",
+            vec![Value::u128(netuid.0 as u128)],
+        )
+        .await
+    }
+
+    /// Remove stake with full limit (no partial fills).
+    pub async fn remove_stake_full_limit(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        netuid: NetUid,
+        amount: u64,
+        limit_price: u64,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "remove_stake_full_limit",
+            vec![
+                Value::from_bytes(hk.0),
+                Value::u128(netuid.0 as u128),
+                Value::u128(amount as u128),
+                Value::u128(limit_price as u128),
+            ],
+        )
+        .await
+    }
+
+    /// Commit timelocked weights (reveal at a specific round).
+    pub async fn commit_timelocked_weights(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        commit_hash: [u8; 32],
+        reveal_round: u64,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "commit_timelocked_weights",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::from_bytes(commit_hash),
+                Value::u128(reveal_round as u128),
+            ],
+        )
+        .await
+    }
+
+    /// Root dissolve a network (root origin only).
+    pub async fn root_dissolve_network(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "root_dissolve_network",
+            vec![Value::u128(netuid.0 as u128)],
+        )
+        .await
+    }
+
+    // ──────── Mechanism Weights (new from subtensor.com) ────────
+
+    /// Commit mechanism-specific weights.
+    pub async fn commit_mechanism_weights(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        mechanism_id: u16,
+        commit_hash: [u8; 32],
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "commit_mechanism_weights",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(mechanism_id as u128),
+                Value::from_bytes(commit_hash),
+            ],
+        )
+        .await
+    }
+
+    /// Reveal mechanism-specific weights.
+    pub async fn reveal_mechanism_weights(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        mechanism_id: u16,
+        uids: &[u16],
+        values: &[u16],
+        salt: &[u16],
+        version_key: u64,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let uids_val: Vec<Value> = uids.iter().map(|u| Value::u128(*u as u128)).collect();
+        let vals_val: Vec<Value> = values.iter().map(|v| Value::u128(*v as u128)).collect();
+        let salt_val: Vec<Value> = salt.iter().map(|s| Value::u128(*s as u128)).collect();
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "reveal_mechanism_weights",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(mechanism_id as u128),
+                Value::unnamed_composite(uids_val),
+                Value::unnamed_composite(vals_val),
+                Value::unnamed_composite(salt_val),
+                Value::u128(version_key as u128),
+            ],
+        )
+        .await
+    }
+
+    /// Set mechanism weights directly (no commit-reveal).
+    pub async fn set_mechanism_weights(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        mechanism_id: u16,
+        uids: &[u16],
+        values: &[u16],
+        version_key: u64,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let uids_val: Vec<Value> = uids.iter().map(|u| Value::u128(*u as u128)).collect();
+        let vals_val: Vec<Value> = values.iter().map(|v| Value::u128(*v as u128)).collect();
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "set_mechanism_weights",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(mechanism_id as u128),
+                Value::unnamed_composite(uids_val),
+                Value::unnamed_composite(vals_val),
+                Value::u128(version_key as u128),
+            ],
+        )
+        .await
+    }
+
+    // ──────── Lease System (new from subtensor.com) ────────
+
+    /// Register a leased network.
+    pub async fn register_leased_network(
+        &self,
+        pair: &sr25519::Pair,
+        hotkey_ss58: &str,
+        end_block: Option<u32>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let hk = Self::ss58_to_account_id(hotkey_ss58)?;
+        let end = match end_block {
+            Some(b) => Value::unnamed_variant("Some", [Value::u128(b as u128)]),
+            None => Value::unnamed_variant("None", []),
+        };
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "register_leased_network",
+            vec![Value::from_bytes(hk.0), end],
+        )
+        .await
+    }
+
+    /// Terminate a subnet lease.
+    pub async fn terminate_lease(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "terminate_lease",
+            vec![Value::u128(netuid.0 as u128)],
+        )
+        .await
+    }
+
+    // ──────── Balances: transfer_keep_alive ────────
+
+    /// Transfer TAO keeping the sender account alive (ensures existential deposit remains).
+    pub async fn transfer_keep_alive(
+        &self,
+        pair: &sr25519::Pair,
+        dest_ss58: &str,
+        amount: Balance,
+    ) -> Result<String> {
+        let dest = subxt::utils::MultiAddress::Id(Self::ss58_to_account_id(dest_ss58)?);
+        self.sign_submit(
+            &api::tx()
+                .balances()
+                .transfer_keep_alive(dest, amount.rao()),
+            pair,
+        )
+        .await
+    }
+
+    // ──────── Proxy: missing calls ────────
+
+    /// Execute a call as a proxy.
+    pub async fn proxy_call(
+        &self,
+        pair: &sr25519::Pair,
+        real_ss58: &str,
+        force_proxy_type: Option<&str>,
+        pallet: &str,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let real = Self::ss58_to_account_id(real_ss58)?;
+        let inner = subxt::dynamic::tx(pallet, call, fields);
+        let inner_value = inner.into_value();
+        let proxy_type = match force_proxy_type {
+            Some(pt) => {
+                let variant = parse_proxy_type(pt)?;
+                Value::unnamed_variant("Some", [Value::unnamed_variant(variant, [])])
+            }
+            None => Value::unnamed_variant("None", []),
+        };
+        let tx = subxt::dynamic::tx(
+            "Proxy",
+            "proxy",
+            vec![
+                Value::unnamed_variant("Id", [Value::from_bytes(real.0)]),
+                proxy_type,
+                inner_value,
+            ],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    /// Remove all proxy delegations for the sender.
+    pub async fn remove_proxies(&self, pair: &sr25519::Pair) -> Result<String> {
+        let tx = subxt::dynamic::tx("Proxy", "remove_proxies", Vec::<subxt::dynamic::Value>::new());
+        self.sign_submit(&tx, pair).await
+    }
+
+    /// Remove a pending announcement.
+    pub async fn remove_announcement(
+        &self,
+        pair: &sr25519::Pair,
+        real_ss58: &str,
+        call_hash: [u8; 32],
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let real = Self::ss58_to_account_id(real_ss58)?;
+        let tx = subxt::dynamic::tx(
+            "Proxy",
+            "remove_announcement",
+            vec![
+                Value::unnamed_variant("Id", [Value::from_bytes(real.0)]),
+                Value::from_bytes(call_hash),
+            ],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    // ──────── Registry ────────
+
+    /// Set on-chain identity (Registry pallet).
+    pub async fn set_registry_identity(
+        &self,
+        pair: &sr25519::Pair,
+        name: &str,
+        url: &str,
+        description: &str,
+        github: &str,
+        image: &str,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let info = Value::named_composite([
+            ("name", Value::from_bytes(name.as_bytes())),
+            ("url", Value::from_bytes(url.as_bytes())),
+            ("description", Value::from_bytes(description.as_bytes())),
+            ("github_repo", Value::from_bytes(github.as_bytes())),
+            ("image", Value::from_bytes(image.as_bytes())),
+        ]);
+        self.submit_raw_call(pair, "Registry", "set_identity", vec![info])
+            .await
+    }
+
+    /// Clear on-chain identity (Registry pallet).
+    pub async fn clear_registry_identity(&self, pair: &sr25519::Pair) -> Result<String> {
+        self.submit_raw_call(pair, "Registry", "clear_identity", vec![])
+            .await
+    }
+
+    // ──────── Utility: batch variants ────────
+
+    /// Execute a batch of calls (stops on first failure).
+    pub async fn batch_all(
+        &self,
+        pair: &sr25519::Pair,
+        calls: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let tx = subxt::dynamic::tx(
+            "Utility",
+            "batch_all",
+            vec![Value::unnamed_composite(calls)],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    /// Execute a batch of calls (continues even if some fail).
+    pub async fn batch(
+        &self,
+        pair: &sr25519::Pair,
+        calls: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let tx = subxt::dynamic::tx(
+            "Utility",
+            "batch",
+            vec![Value::unnamed_composite(calls)],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    // ──────── Scheduler: schedule_after ────────
+
+    /// Schedule a call after a given number of blocks (relative scheduling).
+    pub async fn schedule_after(
+        &self,
+        pair: &sr25519::Pair,
+        after: u32,
+        maybe_periodic: Option<(u32, u32)>,
+        priority: u8,
+        pallet: &str,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let inner_call = subxt::dynamic::tx(pallet, call, fields);
+        let encoded = self.inner.tx().call_data(&inner_call)?;
+        let periodic = match maybe_periodic {
+            Some((period, count)) => Value::unnamed_variant(
+                "Some",
+                [Value::unnamed_composite([
+                    Value::u128(period as u128),
+                    Value::u128(count as u128),
+                ])],
+            ),
+            None => Value::unnamed_variant("None", []),
+        };
+        let tx = subxt::dynamic::tx(
+            "Scheduler",
+            "schedule_after",
+            vec![
+                Value::u128(after as u128),
+                periodic,
+                Value::u128(priority as u128),
+                Value::from_bytes(encoded),
+            ],
+        );
+        self.sign_submit(&tx, pair).await
+    }
+
+    // ──────── EVM: create / create2 ────────
+
+    /// Deploy an EVM contract via CREATE.
+    pub async fn evm_create(
+        &self,
+        pair: &sr25519::Pair,
+        source: [u8; 20],
+        init: Vec<u8>,
+        value: u128,
+        gas_limit: u64,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: Option<u128>,
+        nonce: Option<u128>,
+        access_list: Vec<(Vec<u8>, Vec<Vec<u8>>)>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let max_priority = match max_priority_fee_per_gas {
+            Some(v) => Value::unnamed_variant("Some", [Value::u128(v)]),
+            None => Value::unnamed_variant("None", []),
+        };
+        let nonce_val = match nonce {
+            Some(v) => Value::unnamed_variant("Some", [Value::u128(v)]),
+            None => Value::unnamed_variant("None", []),
+        };
+        let access: Vec<Value> = access_list
+            .into_iter()
+            .map(|(addr, slots)| {
+                let slot_vals: Vec<Value> = slots.into_iter().map(|s| Value::from_bytes(s)).collect();
+                Value::unnamed_composite([
+                    Value::from_bytes(addr),
+                    Value::unnamed_composite(slot_vals),
+                ])
+            })
+            .collect();
+        self.submit_raw_call(
+            pair,
+            "EVM",
+            "create",
+            vec![
+                Value::from_bytes(source),
+                Value::from_bytes(init),
+                Value::u128(value),
+                Value::u128(gas_limit as u128),
+                Value::u128(max_fee_per_gas),
+                max_priority,
+                nonce_val,
+                Value::unnamed_composite(access),
+            ],
+        )
+        .await
+    }
+
+    /// Deploy an EVM contract via CREATE2 (deterministic address).
+    pub async fn evm_create2(
+        &self,
+        pair: &sr25519::Pair,
+        source: [u8; 20],
+        init: Vec<u8>,
+        salt: [u8; 32],
+        value: u128,
+        gas_limit: u64,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: Option<u128>,
+        nonce: Option<u128>,
+        access_list: Vec<(Vec<u8>, Vec<Vec<u8>>)>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let max_priority = match max_priority_fee_per_gas {
+            Some(v) => Value::unnamed_variant("Some", [Value::u128(v)]),
+            None => Value::unnamed_variant("None", []),
+        };
+        let nonce_val = match nonce {
+            Some(v) => Value::unnamed_variant("Some", [Value::u128(v)]),
+            None => Value::unnamed_variant("None", []),
+        };
+        let access: Vec<Value> = access_list
+            .into_iter()
+            .map(|(addr, slots)| {
+                let slot_vals: Vec<Value> = slots.into_iter().map(|s| Value::from_bytes(s)).collect();
+                Value::unnamed_composite([
+                    Value::from_bytes(addr),
+                    Value::unnamed_composite(slot_vals),
+                ])
+            })
+            .collect();
+        self.submit_raw_call(
+            pair,
+            "EVM",
+            "create2",
+            vec![
+                Value::from_bytes(source),
+                Value::from_bytes(init),
+                Value::from_bytes(salt),
+                Value::u128(value),
+                Value::u128(gas_limit as u128),
+                Value::u128(max_fee_per_gas),
+                max_priority,
+                nonce_val,
+                Value::unnamed_composite(access),
+            ],
+        )
+        .await
+    }
+
+    // ──────── Multisig: as_multi_threshold_1 ────────
+
+    /// Execute a call directly for 1-of-N multisig (no approval needed).
+    pub async fn multisig_as_threshold_1(
+        &self,
+        pair: &sr25519::Pair,
+        other_signatories: &[AccountId],
+        pallet: &str,
+        call: &str,
+        fields: Vec<subxt::dynamic::Value>,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let inner = subxt::dynamic::tx(pallet, call, fields);
+        let inner_value = inner.into_value();
+        let others: Vec<Value> = other_signatories
+            .iter()
+            .map(|id| Value::from_bytes(id.0))
+            .collect();
+        let tx = subxt::dynamic::tx(
+            "Multisig",
+            "as_multi_threshold_1",
+            vec![Value::unnamed_composite(others), inner_value],
+        );
+        self.sign_submit(&tx, pair).await
+    }
 }
 
 /// Parse a proxy type string to the on-chain variant name.
