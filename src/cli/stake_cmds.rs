@@ -465,7 +465,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             validate_netuid(from)?;
             validate_netuid(to)?;
             validate_amount(amount, "swap-limit amount")?;
-            validate_amount(price, "swap-limit price")?;
+            validate_limit_price(price, "swap-limit price")?;
             if from == to {
                 anyhow::bail!("Source and destination subnets are the same (SN{}). Use a different --to subnet.", from);
             }

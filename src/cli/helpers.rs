@@ -314,7 +314,7 @@ pub fn validate_ipv4(ip: &str) -> Result<u128> {
                 "Invalid IPv4 address: \"{}\" — octet {} has leading zeros. Use {} instead.",
                 ip,
                 i + 1,
-                part.trim_start_matches('0')
+                { let trimmed = part.trim_start_matches('0'); if trimmed.is_empty() { "0" } else { trimmed } }
             );
         }
         octets[i] = part.parse::<u8>().map_err(|_| {
@@ -723,12 +723,19 @@ pub fn check_spending_limit_for_raw_call(
         return Ok(());
     }
 
-    let netuid = args[netuid_idx]
+    let netuid_u64 = args[netuid_idx]
         .as_u64()
         .ok_or_else(|| anyhow::anyhow!(
             "Spending limit check: expected numeric netuid at arg index {}, got: {}",
             netuid_idx, args[netuid_idx]
-        ))? as u16;
+        ))?;
+    if netuid_u64 > u16::MAX as u64 {
+        anyhow::bail!(
+            "Spending limit check: netuid {} exceeds maximum ({})",
+            netuid_u64, u16::MAX
+        );
+    }
+    let netuid = netuid_u64 as u16;
     let amount_rao = args[amount_idx]
         .as_u64()
         .ok_or_else(|| anyhow::anyhow!(
@@ -1469,10 +1476,16 @@ pub fn validate_event_filter(filter: &str) -> Result<()> {
     const VALID_FILTERS: &[&str] = &[
         "all",
         "staking",
+        "stake",
         "registration",
+        "register",
+        "reg",
         "transfer",
+        "transfers",
         "weights",
+        "weight",
         "subnet",
+        "subnets",
     ];
     let lower = filter.trim().to_lowercase();
     if !VALID_FILTERS.contains(&lower.as_str()) {
@@ -2715,5 +2728,83 @@ mod tests {
         ];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "transfer_stake", &args);
         assert!(result.is_ok());
+    }
+
+    // ---- v29 regression tests ----
+
+    #[test]
+    fn validate_event_filter_accepts_aliases() {
+        // Issue 160: aliases like "stake", "reg", "transfers" were rejected
+        for alias in &["stake", "register", "reg", "transfers", "weight", "subnets"] {
+            assert!(
+                validate_event_filter(alias).is_ok(),
+                "validate_event_filter should accept alias '{}'",
+                alias
+            );
+        }
+    }
+
+    #[test]
+    fn validate_event_filter_rejects_invalid() {
+        assert!(validate_event_filter("stak").is_err());
+        assert!(validate_event_filter("foo").is_err());
+        assert!(validate_event_filter("").is_err());
+    }
+
+    #[test]
+    fn validate_event_filter_accepts_canonical_names() {
+        for name in &["all", "staking", "registration", "transfer", "weights", "subnet"] {
+            assert!(
+                validate_event_filter(name).is_ok(),
+                "validate_event_filter should accept canonical name '{}'",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn spending_limit_raw_call_rejects_oversized_netuid() {
+        // Issue 161: netuid > u16::MAX should be rejected, not silently truncated
+        use serde_json::json;
+        let args = vec![
+            json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+            json!(65537u64),  // netuid > u16::MAX
+            json!(1_000_000_000u64),
+        ];
+        let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
+        assert!(result.is_err(), "should reject netuid > u16::MAX");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("exceeds maximum"), "error should mention exceeds maximum: {}", msg);
+    }
+
+    #[test]
+    fn spending_limit_raw_call_accepts_valid_netuid() {
+        // Ensure normal netuids still work
+        use serde_json::json;
+        let args = vec![
+            json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
+            json!(1u64),
+            json!(1_000_000_000u64),
+        ];
+        let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_ipv4_leading_zeros_suggest_nonzero() {
+        // Issue 165: "00" should suggest "0", not empty string
+        let result = validate_ipv4("1.00.0.1");
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("Use 0 instead") || msg.contains("Use 0"), "error should suggest '0', got: {}", msg);
+    }
+
+    #[test]
+    fn validate_ipv4_leading_zeros_suggest_number() {
+        // "01" should suggest "1"
+        let result = validate_ipv4("10.01.0.1");
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("1"), "error should suggest '1', got: {}", msg);
     }
 }

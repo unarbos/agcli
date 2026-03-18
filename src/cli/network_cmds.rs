@@ -594,6 +594,7 @@ pub(super) async fn handle_multisig(
             Ok(())
         }
         MultisigCommands::List { address } => {
+            validate_ss58(&address, "multisig list address")?;
             let client = Client::connect_network(network).await?;
             let pending = client.list_multisig_pending(&address).await?;
             if pending.is_empty() {
