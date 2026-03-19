@@ -30,6 +30,10 @@ pub struct Config {
     pub batch: Option<bool>,
     /// Per-subnet spending limits in TAO (key = netuid as string).
     pub spending_limits: Option<std::collections::HashMap<String, f64>>,
+    /// Finalization timeout in seconds (default: 30).
+    pub finalization_timeout: Option<u64>,
+    /// Extrinsic mortality in blocks (0 = default, ~64 blocks).
+    pub mortality_blocks: Option<u64>,
 }
 
 impl Config {

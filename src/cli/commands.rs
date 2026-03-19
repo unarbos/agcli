@@ -6,9 +6,15 @@ use crate::cli::*;
 use crate::types::Balance;
 use anyhow::Result;
 
-/// Connect to the network and apply dry-run flag.
+/// Connect to the network and apply configuration.
 /// When `best` is true, tests all endpoints concurrently and uses the fastest.
-async fn connect(network: &crate::types::Network, dry_run: bool, best: bool) -> Result<Client> {
+async fn connect(
+    network: &crate::types::Network,
+    dry_run: bool,
+    best: bool,
+    finalization_timeout: Option<u64>,
+    mortality_blocks: Option<u64>,
+) -> Result<Client> {
     let urls = network.ws_urls();
     let mut client = if best && urls.len() > 1 {
         tracing::info!(
@@ -20,6 +26,12 @@ async fn connect(network: &crate::types::Network, dry_run: bool, best: bool) -> 
         Client::connect_with_retry(&urls).await?
     };
     client.set_dry_run(dry_run);
+    if let Some(timeout) = finalization_timeout {
+        client.set_finalization_timeout(timeout);
+    }
+    if let Some(blocks) = mortality_blocks {
+        client.set_mortality_blocks(blocks);
+    }
     Ok(client)
 }
 
@@ -30,6 +42,8 @@ pub async fn execute(cli: Cli) -> Result<()> {
     let batch = cli.batch;
     let dry_run = cli.dry_run;
     let best = cli.best;
+    let finalization_timeout = cli.finalization_timeout;
+    let mortality_blocks = cli.mortality_blocks;
 
     // Set global mode flags so helpers can check them
     set_batch_mode(batch);
@@ -107,7 +121,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
 
     match cli.command {
         Commands::Wallet(WalletCommands::AssociateHotkey { hotkey }) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let (pair, hk) = unlock_and_resolve(
                 ctx.wallet_dir,
                 ctx.wallet_name,
@@ -124,7 +138,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::Wallet(WalletCommands::CheckSwap { address }) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let addr = resolve_and_validate_coldkey_address(
                 address,
                 ctx.wallet_dir,
@@ -179,7 +193,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             if let Some(t) = threshold {
                 validate_threshold(t, "balance --threshold")?;
             }
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let addr = resolve_and_validate_coldkey_address(
                 address,
                 ctx.wallet_dir,
@@ -291,7 +305,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::Transfer { dest, amount } => {
             validate_ss58(&dest, "destination")?;
             validate_amount(amount, "transfer amount")?;
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             let balance = Balance::from_tao(amount);
@@ -335,7 +349,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         }
         Commands::TransferAll { dest, keep_alive } => {
             validate_ss58(&dest, "destination")?;
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             println!(
@@ -369,7 +383,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
         Commands::TransferKeepAlive { dest, amount } => {
             validate_ss58(&dest, "destination")?;
             validate_amount(amount, "transfer amount")?;
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             let balance = Balance::from_tao(amount);
@@ -413,55 +427,55 @@ pub async fn execute(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::Stake(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             stake_cmds::handle_stake(cmd, &client, &ctx).await
         }
         Commands::Subnet(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             subnet_cmds::handle_subnet(cmd, &client, &ctx).await
         }
         Commands::Weights(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             weights_cmds::handle_weights(cmd, &client, &ctx).await
         }
         Commands::Root(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_root(cmd, &client, &ctx).await
         }
         Commands::Delegate(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_delegate(cmd, &client, &ctx).await
         }
         Commands::View(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             view_cmds::handle_view(cmd, &client, &ctx).await
         }
         Commands::Identity(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_identity(cmd, &client, &ctx).await
         }
         Commands::Serve(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_serve(cmd, &client, &ctx).await
         }
         Commands::Proxy(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_proxy(cmd, &client, &ctx).await
         }
         Commands::Crowdloan(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_crowdloan(cmd, &client, &ctx).await
         }
         Commands::Liquidity(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_liquidity(cmd, &client, &ctx).await
         }
         Commands::Swap(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_swap(cmd, &client, &ctx).await
         }
         Commands::Subscribe(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_subscribe(cmd, &client, ctx.output).await
         }
         Commands::Multisig(cmd) => {
@@ -483,7 +497,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                     | UtilsCommands::Convert { alpha: Some(_), .. }
             );
             if needs_chain {
-                let client = connect(&network, dry_run, best).await?;
+                let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
                 system_cmds::handle_utils(cmd, &network, ctx.output, Some(&client)).await
             } else {
                 system_cmds::handle_utils(cmd, &network, ctx.output, None).await
@@ -502,7 +516,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             system_cmds::handle_explain(topic.as_deref(), ctx.output, full)
         }
         Commands::Audit { address } => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let addr = resolve_and_validate_coldkey_address(
                 address,
                 ctx.wallet_dir,
@@ -512,15 +526,15 @@ pub async fn execute(cli: Cli) -> Result<()> {
             view_cmds::handle_audit(&client, &addr, ctx.output).await
         }
         Commands::Commitment(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_commitment(cmd, &client, &ctx).await
         }
         Commands::Block(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             block_cmds::handle_block(cmd, &client, ctx.output).await
         }
         Commands::Diff(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             block_cmds::handle_diff(cmd, &client, ctx.output, ctx.wallet_dir, ctx.wallet_name).await
         }
         Commands::Batch {
@@ -528,7 +542,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
             no_atomic,
             force,
         } => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             let mut wallet = open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
             unlock_coldkey(&mut wallet, ctx.password)?;
             system_cmds::handle_batch(
@@ -543,32 +557,32 @@ pub async fn execute(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Scheduler(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_scheduler(cmd, &client, &ctx).await
         }
         Commands::Preimage(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_preimage(cmd, &client, &ctx).await
         }
         Commands::Contracts(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_contracts(cmd, &client, &ctx).await
         }
         Commands::Evm(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_evm(cmd, &client, &ctx).await
         }
         Commands::SafeMode(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_safe_mode(cmd, &client, &ctx).await
         }
         Commands::Drand(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             network_cmds::handle_drand(cmd, &client, &ctx).await
         }
         Commands::Localnet(cmd) => localnet_cmds::handle_localnet(cmd, &ctx).await,
         Commands::Admin(cmd) => {
-            let client = connect(&network, dry_run, best).await?;
+            let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             admin_cmds::handle_admin(cmd, &client, &ctx).await
         }
     }

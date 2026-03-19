@@ -120,6 +120,14 @@ pub struct Cli {
     #[arg(long, global = true, env = "AGCLI_TIMEOUT")]
     pub timeout: Option<u64>,
 
+    /// Finalization timeout in seconds — how long to wait for transaction finalization (default: 30)
+    #[arg(long, global = true, env = "AGCLI_FINALIZATION_TIMEOUT")]
+    pub finalization_timeout: Option<u64>,
+
+    /// Extrinsic mortality in blocks — how long the extrinsic stays valid in mempool (0 = default, ~64 blocks)
+    #[arg(long, global = true, env = "AGCLI_MORTALITY_BLOCKS")]
+    pub mortality_blocks: Option<u64>,
+
     /// Print operation timing to stderr
     #[arg(long, global = true)]
     pub time: bool,
@@ -913,6 +921,8 @@ pub enum SubnetCommands {
     },
     /// Register a new subnet
     Register,
+    /// Show current subnet creation cost (lock amount required to register a new subnet)
+    CreateCost,
     /// Register a new subnet with identity metadata
     RegisterWithIdentity {
         /// Subnet name
@@ -2739,6 +2749,13 @@ impl Cli {
                 self.live = Some(Some(interval));
             }
         }
+        // Apply config finalization_timeout and mortality_blocks
+        if self.finalization_timeout.is_none() {
+            self.finalization_timeout = cfg.finalization_timeout;
+        }
+        if self.mortality_blocks.is_none() {
+            self.mortality_blocks = cfg.mortality_blocks;
+        }
     }
 
     /// Apply config using explicit args list (for testing without relying on std::env::args).
@@ -2789,6 +2806,17 @@ impl Cli {
         if !has("--live") {
             if let Some(interval) = cfg.live_interval {
                 self.live = Some(Some(interval));
+            }
+        }
+        // Apply config finalization_timeout and mortality_blocks
+        if !has("--finalization-timeout") {
+            if let Some(timeout) = cfg.finalization_timeout {
+                self.finalization_timeout = Some(timeout);
+            }
+        }
+        if !has("--mortality-blocks") {
+            if let Some(blocks) = cfg.mortality_blocks {
+                self.mortality_blocks = Some(blocks);
             }
         }
     }

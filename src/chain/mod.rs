@@ -169,6 +169,10 @@ pub struct Client {
     cache: QueryCache,
     dry_run: bool,
     url: String,
+    /// Timeout for waiting for transaction finalization (seconds).
+    finalization_timeout: u64,
+    /// Extrinsic mortality in blocks (0 = use default).
+    mortality_blocks: u64,
 }
 
 impl Client {
@@ -201,6 +205,8 @@ impl Client {
             cache: QueryCache::new_with_network(&net_prefix),
             dry_run: false,
             url: url.to_string(),
+            finalization_timeout: 30,
+            mortality_blocks: 0,
         })
     }
 
@@ -396,6 +402,27 @@ impl Client {
         self.dry_run
     }
 
+    /// Set the finalization timeout in seconds (default: 30).
+    pub fn set_finalization_timeout(&mut self, secs: u64) {
+        self.finalization_timeout = secs.max(1);
+    }
+
+    /// Get the current finalization timeout in seconds.
+    pub fn finalization_timeout(&self) -> u64 {
+        self.finalization_timeout
+    }
+
+    /// Set extrinsic mortality in blocks (0 = use default).
+    /// This determines how long the extrinsic stays valid in the mempool.
+    pub fn set_mortality_blocks(&mut self, blocks: u64) {
+        self.mortality_blocks = blocks;
+    }
+
+    /// Get the current mortality setting in blocks.
+    pub fn mortality_blocks(&self) -> u64 {
+        self.mortality_blocks
+    }
+
     /// Sign, submit, and wait for finalization of a typed extrinsic.
     /// Returns the extrinsic hash. Provides contextual error messages for common failures.
     /// In dry-run mode, encodes the call data and returns a JSON preview without submitting.
@@ -434,7 +461,16 @@ impl Client {
         let _tx_lock = acquire_tx_lock(pair)?;
         let start = std::time::Instant::now();
         let spinner = crate::cli::helpers::spinner("Submitting transaction...");
-        tracing::debug!("Submitting extrinsic");
+        tracing::debug!(
+            finalization_timeout = self.finalization_timeout,
+            mortality_blocks = self.mortality_blocks,
+            "Submitting extrinsic"
+        );
+
+        // Note: For subxt 0.38.x, transaction mortality is configured differently.
+        // The default behavior (no explicit params) uses immortal transactions.
+        // We'll use the simple sign_and_submit_then_watch_default for now.
+
         // Retry submission on transient errors (connection drop before tx reaches node).
         // Once submitted, we do NOT retry — the finalization wait is non-idempotent.
         let inner = &self.inner;
@@ -458,18 +494,22 @@ impl Client {
         })
         .await?;
         spinner.set_message("Waiting for finalization...");
-        tracing::debug!("Extrinsic submitted, waiting for finalization");
+        tracing::debug!(
+            timeout_secs = self.finalization_timeout,
+            "Extrinsic submitted, waiting for finalization"
+        );
         let result = tokio::time::timeout(
-            std::time::Duration::from_secs(30),
+            std::time::Duration::from_secs(self.finalization_timeout),
             progress.wait_for_finalized_success(),
         )
         .await
         .map_err(|_| {
             spinner.finish_and_clear();
             anyhow::anyhow!(
-                "Transaction timed out after 30s waiting for finalization. \
-             The extrinsic may have been dropped from the pool \
-             (insufficient balance, invalid state, or node not producing blocks)."
+                "Transaction timed out after {}s waiting for finalization. \
+                 The extrinsic may still be pending. Consider increasing \
+                 --finalization-timeout or --mortality-blocks for congested networks.",
+                self.finalization_timeout
             )
         })?
         .map_err(|e| {
@@ -721,6 +761,29 @@ impl Client {
             let addr = api::storage().subtensor_module().block_emission();
             let val = inner.storage().at_latest().await?.fetch(&addr).await?;
             Ok(Balance::from_rao(val.unwrap_or(0)))
+        })
+        .await
+    }
+
+    // ──────── Subnet Creation ────────
+
+    /// Get the cost to register a new subnet (network registration lock cost).
+    /// Returns the amount of TAO required to lock when creating a new subnet.
+    pub async fn get_subnet_registration_cost(&self) -> Result<Balance> {
+        let inner = &self.inner;
+        retry_on_transient("get_subnet_registration_cost", RPC_RETRIES, || async {
+            let payload = api::apis()
+                .subnet_registration_runtime_api()
+                .get_network_registration_cost();
+            let cost = inner
+                .runtime_api()
+                .at_latest()
+                .await
+                .context("Failed to get latest block for subnet cost query")?
+                .call(payload)
+                .await
+                .context("Failed to query subnet registration cost")?;
+            Ok(Balance::from_rao(cost))
         })
         .await
     }

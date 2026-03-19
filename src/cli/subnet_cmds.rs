@@ -464,6 +464,21 @@ pub(super) async fn handle_subnet(
             );
             Ok(())
         }
+        SubnetCommands::CreateCost => {
+            let cost = client.get_subnet_registration_cost().await?;
+            if output.is_json() {
+                print_json(&serde_json::json!({
+                    "cost_rao": cost.rao(),
+                    "cost_tao": cost.tao(),
+                }));
+            } else {
+                println!("=== Subnet Creation Cost ===\n");
+                println!("  Lock amount: {}", cost.display_tao());
+                println!("\n  This is the amount of TAO required to create a new subnet.");
+                println!("  The lock is returned when the subnet is dissolved.");
+            }
+            Ok(())
+        }
         SubnetCommands::RegisterWithIdentity {
             name,
             github,
