@@ -660,6 +660,7 @@ async fn e2e_local_chain() {
     test_stake_remove_preflight(&mut client).await;
     test_stake_move_preflight(&mut client).await;
     test_stake_swap_preflight(&mut client).await;
+    test_stake_unstake_all_preflight(&mut client).await;
     test_view_portfolio_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
@@ -5912,6 +5913,23 @@ async fn test_stake_swap_preflight(client: &mut Client) {
 
     println!(
         "[PASS] stake_swap_preflight — mirrors pre-wallet checks in `handle_stake` Swap (`stake_cmds.rs`)"
+    );
+}
+
+/// Preflight for `agcli stake unstake-all` — optional `validate_ss58(..., "hotkey-address")`
+/// inside `unlock_and_resolve` / `resolve_hotkey_ss58` when `--hotkey-address` is set.
+/// No `validate_netuid` / `validate_amount` / spending-limit pre-reads on this path.
+async fn test_stake_unstake_all_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    validate_ss58(ALICE_SS58, "hotkey-address")
+        .expect("stake_unstake_all_preflight validate_ss58 (explicit --hotkey-address path)");
+    println!(
+        "  stake_unstake_all_preflight (`StakeCommands::UnstakeAll`): validate_ss58 (`hotkey-address`) when `--hotkey-address` set — only pre-RPC validation; else wallet default hotkey"
+    );
+
+    println!(
+        "[PASS] stake_unstake_all_preflight — mirrors `resolve_hotkey_ss58` label used by `unlock_and_resolve` (`stake_cmds.rs` UnstakeAll)"
     );
 }
 

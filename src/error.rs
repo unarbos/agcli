@@ -87,6 +87,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("stake list --address")
         // `validate_ss58(..., "portfolio --address")` on `view portfolio --address`
         || msg.contains("portfolio --address")
+        // `validate_ss58(..., "hotkey-address")` when `--hotkey-address` is set (e.g. `stake unstake-all`)
+        || msg.contains("invalid hotkey-address")
         // `validate_amount(..., "stake amount")` on `stake add` / related stake writes
         || msg.contains("stake amount")
         // `validate_amount(..., "unstake amount")` on `stake remove`
@@ -232,6 +234,8 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Use `--address` with a valid SS58 coldkey (see `docs/commands/stake.md` and `agcli stake list --help`)")
             } else if lower.contains("portfolio --address") {
                 Some("Tip: Use `--address` with a valid SS58 coldkey (see `docs/commands/view.md` and `agcli view portfolio --help`)")
+            } else if lower.contains("invalid hotkey-address") {
+                Some("Tip: Use `--hotkey-address` with a valid SS58 hotkey, or omit it for the wallet default hotkey (see `docs/commands/stake.md` and `agcli stake unstake-all --help`)")
             } else if lower.contains("unstake amount") {
                 // Must be before `stake amount` — "unstake amount" contains the substring "stake amount".
                 Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake remove --help`)")
@@ -360,6 +364,16 @@ mod tests {
         assert_eq!(classify(&err), exit_code::VALIDATION);
         let msg = format!("{err:#}");
         assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake swap")));
+    }
+
+    #[test]
+    fn classify_hotkey_address_validation_hint() {
+        let err = anyhow::anyhow!(
+            "Invalid hotkey-address: address cannot be empty.\n  Tip: provide a valid Bittensor SS58 address (48 characters, starts with '5')."
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake unstake-all")));
     }
 
     #[test]

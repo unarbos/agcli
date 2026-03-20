@@ -255,6 +255,51 @@ Invalid **`--amount`** messages use the **`swap amount`** label — **`classify`
 
 Log lines **`stake_swap_preflight`** in Phase 20 [`test_stake_swap_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_netuid(2)`**, **`validate_amount`** with label **`swap amount`**, **`check_spending_limit(2, amount)`** — same pre-wallet sequence as **`StakeCommands::Swap`**. A live **`swap_stake`** extrinsic is not required for this preflight.
 
+---
+
+## stake unstake-all — Unstake all alpha for one hotkey (wallet)
+
+Remove **all subnet stake** tied to a **hotkey** in a single **`unstake_all`** extrinsic (coldkey signs; every alpha position for that hotkey is unwound). There is **no** per-subnet **`--netuid`** or **`--amount`** — only which **hotkey** (default wallet hotkey vs explicit **`--hotkey-address`**).
+
+**Discoverability:** `agcli stake unstake-all --help`; Tier 1 in [`docs/llm.txt`](../llm.txt); `agcli explain` Phase 6; Stake row in `llm.txt`.
+
+### After `cargo install`
+
+```bash
+cargo install --path .   # or: cargo install agcli --locked
+agcli stake unstake-all --password p --yes
+agcli stake unstake-all --hotkey-address 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty --password p --yes
+```
+
+Global flags (`--network`, `--endpoint`, `--wallet-dir`, `--wallet`, `--mev`, …) apply like other stake writes.
+
+## Read path (wallet → submit)
+
+Order matches [`StakeCommands::UnstakeAll`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (`handle_stake`, `UnstakeAll` branch, lines 250–260):
+
+1. **`connect`** (from `commands.rs` dispatch).
+2. **`unlock_and_resolve`** — `open_wallet` → `unlock_coldkey` → **`resolve_hotkey_ss58`**. If **`--hotkey-address`** is set, **`validate_ss58(..., "hotkey-address")`** runs before any RPC submit (`src/cli/helpers.rs`). Omitted → load default hotkey from the wallet.
+3. **`unstake_all`** — extrinsic via `stake_op` (human **Unstaking all from …** / **Tx:** on success). **No** `validate_netuid`, **no** `validate_amount`, **no** spending-limit or slippage pre-reads (unlike **`stake remove`**).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Extrinsic submitted and finalized path OK (including **no stake** outcomes depending on chain rules). |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on **`connect`** or hard RPC errors after unlock. |
+| **11** | Auth: wallet / password / missing hotkey file when **`--hotkey-address`** omitted. |
+| **12** | Validation: invalid **`--hotkey-address`** (messages contain **`Invalid hotkey-address`** / [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs)). |
+| **13** | Chain: dispatch errors after submit (rate limits, liquidity, …). |
+| **15** | Timeout when applicable. |
+| **1** | Generic / uncategorized. |
+
+## E2E
+
+Log lines **`stake_unstake_all_preflight`** in Phase 20 [`test_stake_unstake_all_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_ss58`** with label **`hotkey-address`** — the only pre-submit validation when an explicit hotkey is passed; mirrors **`resolve_hotkey_ss58`** inside **`unlock_and_resolve`**. A live **`unstake_all`** extrinsic is not required for this preflight.
+
+**Related:** **`stake unstake-all-alpha`** (separate subcommand) uses **`unstake_all_alpha`** — different on-chain entrypoint; document when that command is covered.
+
 ## Subcommands
 
 ### stake add
@@ -288,11 +333,10 @@ See **[stake swap](#stake-swap--swap-alpha-between-subnets-same-hotkey)** (read 
 **On-chain**: `SubtensorModule::swap_stake` — same hotkey, **`from_netuid`** → **`to_netuid`**; differs from **`move_stake`** (internal transition) in how liquidity is crossed.
 
 ### stake unstake-all
-Unstake all alpha from a hotkey across all subnets.
 
-```bash
-agcli stake unstake-all [--hotkey-address SS58]
-```
+See **[stake unstake-all](#stake-unstake-all--unstake-all-alpha-for-one-hotkey-wallet)** (read path, exit codes, e2e).
+
+**On-chain**: `SubtensorModule::unstake_all` — coldkey origin, single hotkey; unwinds stake across subnets in one call (vs per-**`netuid`** **`remove_stake`**).
 
 ### stake add-limit / remove-limit / swap-limit
 Limit orders for staking operations. Execute when AMM price reaches target.

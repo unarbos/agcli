@@ -35,6 +35,7 @@ Stake TAO on subnet       → agcli stake add --amount 10 --netuid 1 --password 
 Unstake                   → agcli stake remove --amount 5 --netuid 1 --password p --yes   # e2e Phase 20 `stake_remove_preflight` in tests/e2e_test.rs; full add/remove Phase 8 `test_add_remove_stake`
 Move alpha SN→SN         → agcli stake move --amount 1 --from 1 --to 2 --password p --yes   # e2e Phase 20 `stake_move_preflight` in tests/e2e_test.rs
 Swap alpha SN→SN (AMM)    → agcli stake swap --amount 1 --from 1 --to 2 --password p --yes   # e2e Phase 20 `stake_swap_preflight` in tests/e2e_test.rs
+Unstake all (one hotkey)  → agcli stake unstake-all --password p --yes   # e2e Phase 20 `stake_unstake_all_preflight` in tests/e2e_test.rs
 View all stakes           → agcli --output json stake list   # e2e Phase 20 `stake_list_preflight` in tests/e2e_test.rs
 Full portfolio            → agcli --output json view portfolio   # e2e Phase 20 `view_portfolio_preflight` in tests/e2e_test.rs; docs/commands/view.md
 Transfer TAO              → agcli transfer --dest 5FHn... --amount 10 --password p --yes   # e2e Phase 20 `transfer_preflight`; see docs/commands/transfer.md
@@ -121,7 +122,7 @@ Detailed per-command docs: `docs/commands/*.md` (on-chain behavior, pallet refs,
 | Wallet | [wallet.md](commands/wallet.md) | create, list, show, import, sign, verify, derive |
 | Balance | [balance.md](commands/balance.md) | one-shot / `--at-block` / `--watch` + `--threshold`; e2e Phase 20 `balance_preflight` |
 | Transfer | [transfer.md](commands/transfer.md) | `transfer` (allow_death), `transfer-all`, `transfer-keep-alive`; e2e Phase 20 `transfer_preflight` + Phase 2 `test_transfer` + Phase 16 `test_transfer_all` |
-| Stake | [stake.md](commands/stake.md) | **`stake list`** (e2e `stake_list_preflight`); **`stake add`** (e2e `stake_add_preflight` + Phase 8 `test_add_remove_stake`); **`stake remove`** (e2e `stake_remove_preflight` + same Phase 8); **`stake move`** (e2e `stake_move_preflight`); **`stake swap`** (e2e `stake_swap_preflight`); wizard, limits, childkeys |
+| Stake | [stake.md](commands/stake.md) | **`stake list`** (e2e `stake_list_preflight`); **`stake add`** (e2e `stake_add_preflight` + Phase 8 `test_add_remove_stake`); **`stake remove`** (e2e `stake_remove_preflight` + same Phase 8); **`stake move`** (e2e `stake_move_preflight`); **`stake swap`** (e2e `stake_swap_preflight`); **`stake unstake-all`** (e2e `stake_unstake_all_preflight`); wizard, limits, childkeys |
 | Subnet | [subnet.md](commands/subnet.md) | list, show, metagraph, register, register-leased, register-neuron, pow, snipe, hyperparams, watch, monitor, health, emissions, cost, liquidity, set-param, set-symbol, trim, terminate-lease |
 | Weights | [weights.md](commands/weights.md) | show, set, commit, reveal, commit-reveal, status |
 | Commitment | [commitment.md](commands/commitment.md) | set, get, list |
@@ -186,7 +187,7 @@ agcli config set --key spending_limit.* --value 500.0     # Global max
 - `stake list [--address SS58] [--at-block N]` → JSON array of `StakeInfo` (latest or pinned); archive for old heights; e2e `stake_list_preflight`
 - `stake move --amount AMT --from SRC --to DST [--hotkey-address SS58]` → validate_netuid×2 → reject same from/to → validate_amount (`move amount`) → check_spending_limit(**destination** `--to`) → unlock → move_stake; no balance/slippage RPC preflight; e2e `stake_move_preflight`
 - `stake swap --amount AMT --from SRC --to DST [--hotkey-address SS58]` → same pre-wallet order as `stake move` but **`swap amount`** + **`swap_stake_mev`**; e2e `stake_swap_preflight`
-- `stake unstake-all [--hotkey-address SS58]`
+- `stake unstake-all [--hotkey-address SS58]` → **`unlock_and_resolve`** only (optional **`validate_ss58`(`hotkey-address`)**); no netuid/amount/spending-limit pre-read; e2e `stake_unstake_all_preflight`
 - `stake claim-root --netuid N` (uses wallet hotkey)
 - `stake add-limit / remove-limit --amount AMT --netuid N --price P [--partial]`
 - `stake childkey-take --take PCT --netuid N`

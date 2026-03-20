@@ -642,7 +642,7 @@ pub enum StakeCommands {
         #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
-    /// Unstake all from a hotkey
+    /// Unstake all alpha for one hotkey across every subnet (`unstake_all` extrinsic)
     UnstakeAll {
         /// Hotkey SS58
         #[arg(long = "hotkey-address")]

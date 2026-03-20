@@ -1156,6 +1156,7 @@ PHASE 6: ONGOING OPERATIONS
   agcli stake remove --amount τ --netuid N [--max-slippage PCT]   # validate_netuid + validate_amount (`unstake amount`) → unlock → optional sell-path slippage try_join (`current_alpha_price` + `sim_swap_alpha_for_tao`); slippage → exit 13; e2e Phase 20 `stake_remove_preflight` in `test_stake_remove_preflight`
   agcli stake move --amount α --from SRC --to DST [--hotkey-address SS58]   # validate_netuid×2 → same SN bail → validate_amount (`move amount`) → check_spending_limit(`--to`) → unlock → move_stake; no slippage/balance pre-read; invalid amount → exit 12 + stake.md hint; e2e Phase 20 `stake_move_preflight` in `test_stake_move_preflight`
   agcli stake swap --amount α --from SRC --to DST [--hotkey-address SS58]   # validate_netuid×2 → same SN bail → validate_amount (`swap amount`) → check_spending_limit(`--to`) → unlock → swap_stake; no slippage/balance pre-read; invalid amount → exit 12 + stake.md hint; e2e Phase 20 `stake_swap_preflight` in `test_stake_swap_preflight`
+  agcli stake unstake-all [--hotkey-address SS58]   # unlock_and_resolve only (validate_ss58 `hotkey-address` when flag set); no netuid/amount/spending-limit pre-read; bad hotkey SS58 → exit 12 + stake.md hint; e2e Phase 20 `stake_unstake_all_preflight` in `test_stake_unstake_all_preflight`
   agcli view portfolio [--address SS58]   # resolve/validate coldkey; latest: pin_latest_block → try_join(balance, stakes, dynamic); --at-block: get_block_hash → try_join(balance, stakes); invalid --address → exit 12 + view.md hint; e2e Phase 20 `view_portfolio_preflight` in `test_view_portfolio_preflight`
 
   # Security audit your account
@@ -1174,6 +1175,7 @@ TIPS FOR OWNERS:
 - Use `agcli stake remove` to convert alpha back to free TAO (`docs/commands/stake.md`; e2e `stake_remove_preflight`, same Phase 8 extrinsic test).
 - Use `agcli stake move` to shift alpha between subnets on the same hotkey (`docs/commands/stake.md`; e2e `stake_move_preflight`).
 - Use `agcli stake swap` for the AMM **`swap_stake`** path between subnets on the same hotkey (`docs/commands/stake.md`; e2e `stake_swap_preflight`).
+- Use `agcli stake unstake-all` to exit every subnet position for one hotkey in one extrinsic (`docs/commands/stake.md`; e2e `stake_unstake_all_preflight`).
 - Use `agcli view portfolio` for balance + priced stake positions (`docs/commands/view.md`; e2e `view_portfolio_preflight`).
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
 
@@ -1332,6 +1334,15 @@ mod tests {
         assert!(
             t.contains("stake_swap_preflight"),
             "Phase 6 cheat sheet should reference e2e stake swap preflight"
+        );
+    }
+
+    #[test]
+    fn owner_workflow_mentions_stake_unstake_all_preflight() {
+        let t = explain("ow").expect("owner workflow topic");
+        assert!(
+            t.contains("stake_unstake_all_preflight"),
+            "Phase 6 cheat sheet should reference e2e stake unstake-all preflight"
         );
     }
 
