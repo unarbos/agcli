@@ -1198,12 +1198,15 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Insufficient free balance to pay the hotkey or coldkey swap fee. Fund the signing account and retry."
     } else if msg.contains("Registry::NotRegistered") {
         "No on-chain identity is registered for this account (pallet Registry). Use `agcli network identity set` or pass the correct SS58."
-    } else if msg.contains("NotRegistered")
-        || msg.contains("HotKeyNotRegisteredInSubNet")
-        || msg.contains("HotKeyNotRegisteredInNetwork")
+    } else if msg.contains("HotKeyNotRegisteredInNetwork") {
+        "This hotkey is not registered on any subnet yet. Pick a target netuid and register with `agcli subnet register-neuron --netuid <N>`."
+    } else if msg.contains("HotKeyNotRegisteredInSubNet") || msg.contains("NotRegistered") {
+        "This hotkey is not registered on this subnet. Register with `agcli subnet register-neuron` (check `--netuid`)."
+    } else if msg.contains("NotEnoughBalance")
+        || (msg.contains("InsufficientBalance")
+            && !msg.contains("Swap::InsufficientBalance")
+            && !msg.contains("Crowdloan::InsufficientBalance"))
     {
-        "Hotkey is not registered on this subnet. Register first with `agcli subnet register-neuron`."
-    } else if msg.contains("NotEnoughBalance") || msg.contains("InsufficientBalance") {
         "Insufficient TAO balance. Check your balance with `agcli balance`."
     } else if msg.contains("AlreadyRegistered") {
         "This hotkey is already registered on the subnet."
@@ -1591,8 +1594,10 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Cannot create subnet: either the subnet limit is reached or you cannot afford the lock cost. Check the current lock with `agcli subnet create-cost`."
     } else if msg.contains("AddStakeBurnRateLimitExceeded") {
         "Add-stake-burn rate limit exceeded. Wait a few blocks before retrying."
-    } else if msg.contains("LeaseNetuidNotFound") || msg.contains("LeaseDoesNotExist") {
-        "Subnet lease not found. Verify the subnet ID and that a lease exists."
+    } else if msg.contains("LeaseNetuidNotFound") {
+        "No lease is indexed for this netuid on-chain. Confirm the subnet is a leased network, the netuid is correct (`agcli subnet list`, `agcli subnet show --netuid <N>`), and you are using the right lease registration / terminate flow."
+    } else if msg.contains("LeaseDoesNotExist") {
+        "That lease entry does not exist in chain storage (wrong id, already cleared, or never created). Re-check lease state for this operation before resubmitting."
     } else if msg.contains("SymbolAlreadyInUse") {
         "This token symbol is already taken. Choose a different symbol."
     } else if msg.contains("SymbolDoesNotExist") {
@@ -1626,7 +1631,16 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
     // 2. The hint (from pattern matching on known error types)
     // 3. The raw error message for debugging
     if !hint_resolved.is_empty() {
-        anyhow::anyhow!("Transaction failed: {}\n  Hint: {}", msg, hint_resolved)
+        if let Some(desc) = decoded_desc {
+            anyhow::anyhow!(
+                "Transaction failed: {}\n  Reason: {}\n  Hint: {}",
+                msg,
+                desc,
+                hint_resolved
+            )
+        } else {
+            anyhow::anyhow!("Transaction failed: {}\n  Hint: {}", msg, hint_resolved)
+        }
     } else if let Some(desc) = decoded_desc {
         anyhow::anyhow!("Transaction failed: {}\n  Reason: {}", msg, desc)
     } else {
@@ -1841,6 +1855,34 @@ mod tests {
         assert!(
             msg.contains("Hint:") && msg.to_lowercase().contains("pool"),
             "expected AMM pool liquidity hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_swap_insufficient_balance_not_tao_only_hint() {
+        let err = subxt::Error::Other("Pallet error: Swap::InsufficientBalance".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:")
+                && msg.to_lowercase().contains("amm")
+                && !msg.to_lowercase().contains("tao balance"),
+            "Swap::InsufficientBalance must not use the early Subtensor TAO-only hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_crowdloan_insufficient_balance_not_tao_only_hint() {
+        let err = subxt::Error::Other("Pallet error: Crowdloan::InsufficientBalance".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:")
+                && msg.to_lowercase().contains("crowdloan")
+                && !msg.to_lowercase().contains("tao balance"),
+            "Crowdloan::InsufficientBalance must not use the early Subtensor TAO-only hint: {}",
             msg
         );
     }
@@ -2276,9 +2318,36 @@ mod tests {
         let result = format_dispatch_error(err);
         let msg = format!("{:#}", result);
         assert!(
-            msg.contains("not registered"),
-            "Custom error: 6 should decode to NotRegistered hint: {}",
+            msg.contains("Reason:") && msg.contains("HotKeyNotRegisteredInNetwork"),
+            "Custom error: 6 should include decoded variant name in Reason: {}",
             msg
+        );
+        assert!(
+            msg.contains("any subnet yet") || msg.to_lowercase().contains("any network"),
+            "Custom error: 6 is network-wide (not on this subnet only): {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_lease_netuid_distinct_from_lease_missing() {
+        let e1 = format_dispatch_error(subxt::Error::Other(
+            "SubtensorModule::LeaseNetuidNotFound".to_string(),
+        ));
+        let m1 = format!("{:#}", e1);
+        assert!(
+            m1.contains("indexed") && m1.contains("netuid"),
+            "LeaseNetuidNotFound should explain missing lease index for netuid: {}",
+            m1
+        );
+        let e2 = format_dispatch_error(subxt::Error::Other(
+            "SubtensorModule::LeaseDoesNotExist".to_string(),
+        ));
+        let m2 = format!("{:#}", e2);
+        assert!(
+            m2.contains("storage") || m2.contains("entry"),
+            "LeaseDoesNotExist should explain absent lease record: {}",
+            m2
         );
     }
 

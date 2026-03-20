@@ -143,6 +143,16 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("adminactionprohibitedduringweightswindow")
         || msg.contains("transactoraccountshouldbehotkey")
         || msg.contains("rootnetworkdoesnotexist")
+        // SubtensorModule — leased-subnet flows (`terminate-lease`, registration, etc.)
+        || msg.contains("leasenetuidnotfound")
+        || msg.contains("leasedoesnotexist")
+        || msg.contains("leasehasnoendblock")
+        || msg.contains("leasehasnotended")
+        || msg.contains("invalidleasebeneficiary")
+        || msg.contains("leasecannotendinthepast")
+        || msg.contains("expectedbeneficiaryorigin")
+        || msg.contains("beneficiarydoesnotownhotkey")
+        || msg.contains("needwaitingmoreblockstostarcall")
         // AdminUtils / Commitments / Proxy (named dispatch errors from metadata)
         || msg.contains("subnetdoesnotexist")
         || msg.contains("adminutils::invalidvalue")
@@ -291,6 +301,8 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Another transaction may be pending. Wait for it to finalize before retrying")
             } else if lower.contains("not enough stake") || lower.contains("notenoughstake") {
                 Some("Tip: Check your stake with `agcli stake list`. You may need more stake to perform this operation")
+            } else if lower.contains("hotkeynotregisteredinnetwork") {
+                Some("Tip: Hotkey is not registered on any subnet — pick a netuid and run `agcli subnet register-neuron --netuid <N>`")
             } else if lower.contains("hotkey not registered") || lower.contains("hotkeynotregistered") {
                 Some("Tip: Register your hotkey on the subnet first: `agcli subnet register-neuron --netuid <N>`")
             } else if lower.contains("slippage") {
@@ -317,6 +329,21 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Submit this call signed as the hotkey that owns the neuron, not the coldkey")
             } else if lower.contains("rootnetworkdoesnotexist") {
                 Some("Tip: Wrong network or node — confirm `--endpoint` points at a full subtensor Finney/test node with SN0")
+            } else if lower.contains("leasenetuidnotfound") {
+                Some("Tip: This netuid has no on-chain lease record — verify leased subnet setup and netuid (`agcli subnet list`, lease docs)")
+            } else if lower.contains("leasedoesnotexist") {
+                Some("Tip: That lease is missing from storage — confirm lease id / timing and that the subnet is still leased")
+            } else if lower.contains("leasehasnoendblock") || lower.contains("leasehasnotended") {
+                Some("Tip: Lease lifecycle mismatch — open-ended vs fixed-end leases use different extrinsics; check lease end block on-chain")
+            } else if lower.contains("invalidleasebeneficiary")
+                || lower.contains("beneficiarydoesnotownhotkey")
+                || lower.contains("expectedbeneficiaryorigin")
+            {
+                Some("Tip: Leased-subnet calls must use the registered beneficiary and the hotkey they control — check `agcli subnet show` / lease registration")
+            } else if lower.contains("leasecannotendinthepast") {
+                Some("Tip: Set lease end to a future block height")
+            } else if lower.contains("needwaitingmoreblockstostarcall") {
+                Some("Tip: Wait until enough blocks after subnet creation before `subnet start` / emission start — see `agcli subnet check-start --netuid <N>`")
             } else if lower.contains("subnetdoesnotexist") || lower.contains("subnetnotexist") {
                 Some("Tip: Verify `--netuid` with `agcli subnet list` / `agcli subnet show --netuid <N>`")
             } else if lower.contains("adminutils::invalidvalue") {
@@ -986,6 +1013,15 @@ mod tests {
     fn classify_coldkey_swap_announced() {
         let err = anyhow::anyhow!("Transaction failed: Custom error: 131 [ColdkeySwapAnnounced]");
         assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_lease_netuid_not_found() {
+        let err = anyhow::anyhow!("Dispatch failed: LeaseNetuidNotFound");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+        let msg = format!("{:#}", err);
+        let h = hint(exit_code::CHAIN, &msg);
+        assert!(h.is_some_and(|s| s.contains("lease")));
     }
 
     // ──── Subtensor-specific hint tests ────
