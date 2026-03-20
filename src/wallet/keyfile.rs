@@ -23,6 +23,11 @@ const KEY_LEN: usize = 32;
 /// Maximum time to wait for a keyfile lock before giving up.
 const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
+/// Wallet directory lock — held for the whole of `Wallet::create` / import, including
+/// hardened Argon2id (256 MiB). On slow CI runners that can exceed [`LOCK_TIMEOUT`], which
+/// made concurrent-create tests flaky (`concurrent_wallet_create_same_name_one_wins`).
+const WALLET_DIR_LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(180);
+
 /// Acquire an exclusive advisory lock on a keyfile path with timeout.
 /// Returns the lock file handle (lock released on drop).
 /// Times out after 10 seconds to prevent indefinite hangs if another process
@@ -95,7 +100,7 @@ pub fn lock_wallet_dir(dir: &Path) -> Result<fs::File> {
         std::thread::sleep(std::time::Duration::from_millis(sleep_ms));
         match lock_file.try_lock_exclusive() {
             Ok(()) => return Ok(lock_file),
-            Err(_) if start.elapsed() >= LOCK_TIMEOUT => {
+            Err(_) if start.elapsed() >= WALLET_DIR_LOCK_TIMEOUT => {
                 anyhow::bail!(
                     "Timed out waiting for wallet directory lock on '{}'.\n  \
                      Another agcli process may be creating this wallet. If not, remove: rm '{}'",
