@@ -205,6 +205,56 @@ Invalid **`--amount`** messages use the **`move amount`** label — **`classify`
 
 Log lines **`stake_move_preflight`** in Phase 20 [`test_stake_move_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_netuid(2)`**, **`validate_amount`** with label **`move amount`**, **`check_spending_limit(2, amount)`** — same pre-wallet sequence as **`StakeCommands::Move`** (no RPC bundle before wallet). A real **`move_stake`** extrinsic is not required for this preflight; use a funded wallet against subnets where you hold alpha.
 
+---
+
+## stake swap — Swap alpha between subnets (same hotkey)
+
+**Swap stake** rebalances alpha across subnets via the on-chain **`swap_stake`** path (AMM-based), for the wallet **hotkey** (default wallet hotkey or **`--hotkey-address`**). Preflight and flags mirror **`stake move`** (`--amount`, **`--from`**, **`--to`**); the CLI prints a **`Swapping stake:`** line before submit.
+
+**Discoverability:** `agcli stake swap --help`; Tier 1 line in [`docs/llm.txt`](../llm.txt); `agcli explain` Phase 6; Stake row in `llm.txt` links here.
+
+### After `cargo install`
+
+```bash
+cargo install --path .   # or: cargo install agcli --locked
+agcli stake swap --amount 1.0 --from 1 --to 2 --password p --yes
+agcli stake swap --amount 0.5 --from 1 --to 2 --hotkey-address 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty --password p --yes
+```
+
+Global flags (`--network`, `--endpoint`, `--wallet-dir`, `--wallet`, `--mev`, …) apply like other stake writes.
+
+## Read path (validation → submit)
+
+Order matches [`StakeCommands::Swap`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (`handle_stake`, `Swap` branch, lines 210–248):
+
+1. **`connect`** (from `commands.rs` dispatch).
+2. **`validate_netuid(from)`** — **SN0** rejected before wallet.
+3. **`validate_netuid(to)`** — same.
+4. If **`from == to`**, bail with a clear message (**not** classified as exit **12**; treated as a generic pre-wallet error → typically exit **1**).
+5. **`validate_amount(amount, "swap amount")`** — positive, finite amount (error text contains **`swap amount`** for [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs)).
+6. **`check_spending_limit(to, amount)`** — optional caps from `agcli config`, keyed on the **destination** subnet **`--to`** (same helper as **`stake add`** / **`stake move`**).
+7. **`unlock_and_resolve`** — coldkey + hotkey SS58.
+8. **`swap_stake_mev`** — direct extrinsic call (human **Tx:** on success; not global `--output json` today). **No** client-side balance or **`--max-slippage`** pre-read before unlock (same as **`stake move`**).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Swap-stake extrinsic submitted and finalized path OK. |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on **`connect`** or hard RPC errors after unlock (e.g. submit path). |
+| **11** | Auth: wallet / password / hotkey resolution (`unlock_and_resolve`). |
+| **12** | Validation: invalid **`--from`** / **`--to`**, invalid **`--amount`** (**`swap amount`** in the error text), **spending limit exceeded**, and other messages classified in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **13** | Chain / client: dispatch errors after submit (stake / liquidity / rate limits / subnet existence, …). |
+| **15** | Timeout when applicable. |
+| **1** | e.g. **`from == to`**, or uncategorized errors. |
+
+Invalid **`--amount`** messages use the **`swap amount`** label — **`classify`** → **12** with a **`hint`** pointing at **`docs/commands/stake.md`** / **`stake swap --help`**.
+
+## E2E
+
+Log lines **`stake_swap_preflight`** in Phase 20 [`test_stake_swap_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_netuid(2)`**, **`validate_amount`** with label **`swap amount`**, **`check_spending_limit(2, amount)`** — same pre-wallet sequence as **`StakeCommands::Swap`**. A live **`swap_stake`** extrinsic is not required for this preflight.
+
 ## Subcommands
 
 ### stake add
@@ -232,13 +282,10 @@ See **[stake move](#stake-move--move-alpha-between-subnets-same-hotkey)** (read 
 - All move/swap/transfer operations funnel through `transition_stake_internal()`
 
 ### stake swap
-Swap stake between hotkeys on the same subnet.
 
-```bash
-agcli stake swap --amount 5.0 --netuid 1 --from-hotkey HK1 --to-hotkey HK2
-```
+See **[stake swap](#stake-swap--swap-alpha-between-subnets-same-hotkey)** (read path, spending limit on **`--to`**, exit codes, e2e).
 
-**On-chain**: `SubtensorModule::swap_stake(origin, from_hotkey, from_netuid, to_netuid, alpha_amount)`
+**On-chain**: `SubtensorModule::swap_stake` — same hotkey, **`from_netuid`** → **`to_netuid`**; differs from **`move_stake`** (internal transition) in how liquidity is crossed.
 
 ### stake unstake-all
 Unstake all alpha from a hotkey across all subnets.

@@ -93,6 +93,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("unstake amount")
         // `validate_amount(..., "move amount")` on `stake move` (label must stay distinct from `stake amount`)
         || msg.contains("move amount")
+        // `validate_amount(..., "swap amount")` on `stake swap`
+        || msg.contains("swap amount")
         // `validate_netuid` — root / invalid user netuid before stake commands
         || msg.contains("invalid netuid")
         // `check_spending_limit` in helpers.rs (local config guard)
@@ -235,6 +237,8 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake remove --help`)")
             } else if lower.contains("move amount") {
                 Some("Tip: Use `--amount` with a positive finite alpha amount (see `docs/commands/stake.md` and `agcli stake move --help`)")
+            } else if lower.contains("swap amount") {
+                Some("Tip: Use `--amount` with a positive finite alpha amount (see `docs/commands/stake.md` and `agcli stake swap --help`)")
             } else if lower.contains("stake amount") {
                 Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake add --help`)")
             } else if lower.contains("invalid netuid") {
@@ -348,6 +352,14 @@ mod tests {
         assert_eq!(classify(&err), exit_code::VALIDATION);
         let msg = format!("{err:#}");
         assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake move")));
+    }
+
+    #[test]
+    fn classify_swap_amount_validation_hint() {
+        let err = anyhow::anyhow!("Invalid swap amount: -1. Amount cannot be negative.");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake swap")));
     }
 
     #[test]

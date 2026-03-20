@@ -629,7 +629,7 @@ pub enum StakeCommands {
     },
     /// Swap stake between subnets for the same hotkey
     Swap {
-        /// Amount of TAO
+        /// Amount of alpha to swap (same `Balance::from_tao` scale as `stake move`)
         #[arg(long)]
         amount: f64,
         /// Source subnet
