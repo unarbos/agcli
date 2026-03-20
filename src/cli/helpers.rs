@@ -82,7 +82,7 @@ pub fn open_wallet(wallet_dir: &str, wallet_name: &str) -> Result<Wallet> {
     };
     if !std::path::Path::new(&path).exists() {
         anyhow::bail!(
-            "Wallet '{}' not found in {}.\n  Create one with: agcli wallet create --name {}\n  List existing:   agcli wallet list",
+            "Wallet '{}' not found in {}.\n  Create one with: agcli wallet create --name {}\n  List existing:   agcli wallet list\n  To use a different wallet directory set AGCLI_WALLET_DIR.",
             wallet_name, wallet_dir, wallet_name
         );
     }
