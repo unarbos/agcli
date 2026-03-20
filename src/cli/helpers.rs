@@ -2,8 +2,29 @@
 
 use crate::wallet::Wallet;
 use anyhow::Result;
+use std::io::IsTerminal;
 
 use crate::cli::{cli_has_flag, OutputFormat};
+
+/// True when stdin is a terminal (interactive password/confirm prompts can run).
+pub fn stdin_is_tty() -> bool {
+    std::io::stdin().is_terminal()
+}
+
+/// For flows that use `dialoguer` or read-line confirmation: fail fast when stdin is not a TTY
+/// and the user did not pass `--yes` / `--batch`.
+pub fn require_confirm_prompt_capability() -> Result<()> {
+    if is_yes_mode() {
+        return Ok(());
+    }
+    if stdin_is_tty() {
+        return Ok(());
+    }
+    anyhow::bail!(
+        "Cannot show a confirmation prompt: stdin is not a TTY (non-interactive environment). \
+         Pass --yes or --batch to confirm without a prompt, or run from an interactive terminal."
+    );
+}
 
 /// Common context passed to all command handlers, reducing parameter sprawl.
 ///
@@ -98,6 +119,13 @@ pub fn unlock_coldkey(wallet: &mut Wallet, password: Option<&str>) -> Result<()>
             if is_batch_mode() {
                 anyhow::bail!(
                     "Password required in batch mode. Pass --password <pw> or set AGCLI_PASSWORD."
+                );
+            }
+            if !stdin_is_tty() {
+                anyhow::bail!(
+                    "Cannot prompt for coldkey password: stdin is not a TTY (non-interactive). \
+                     Set AGCLI_PASSWORD or pass --password. \
+                     For scripts/agents/CI, use --batch together with AGCLI_PASSWORD so missing inputs fail fast."
                 );
             }
             dialoguer::Password::new()
@@ -852,6 +880,7 @@ pub fn confirm_action(message: &str) -> Result<()> {
     if is_yes_mode() {
         return Ok(());
     }
+    require_confirm_prompt_capability()?;
     eprint!("{} [y/N] ", message);
     use std::io::Write;
     std::io::stderr().flush().ok();
@@ -1173,6 +1202,11 @@ pub fn require_mnemonic(provided: Option<String>) -> Result<String> {
             if is_batch_mode() {
                 anyhow::bail!("Mnemonic required in batch mode. Set AGCLI_MNEMONIC env var.");
             }
+            if !stdin_is_tty() {
+                anyhow::bail!(
+                    "Cannot prompt for mnemonic: stdin is not a TTY. Set AGCLI_MNEMONIC, or run from a terminal."
+                );
+            }
             dialoguer::Input::<String>::new()
                 .with_prompt("Enter mnemonic phrase")
                 .interact_text()
@@ -1197,6 +1231,11 @@ pub fn require_password(
             if is_batch_mode() {
                 return Err(anyhow::anyhow!(
                     "Password required in batch mode. Pass --password <pw> or set AGCLI_PASSWORD."
+                ));
+            }
+            if !stdin_is_tty() {
+                return Err(anyhow::anyhow!(
+                    "Cannot prompt for password: stdin is not a TTY. Set AGCLI_PASSWORD or pass --password (global or command-level)."
                 ));
             }
             if confirm {

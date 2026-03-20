@@ -3,7 +3,11 @@
 [![CI](https://github.com/unarbos/agcli/actions/workflows/ci.yml/badge.svg)](https://github.com/unarbos/agcli/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/unarbos/agcli/graph/badge.svg)](https://codecov.io/gh/unarbos/agcli)
 
-Fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
+Fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network.
+
+## Coverage
+
+CI generates reports with [`cargo llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) (library + `wallet_test` / `cli_weights`) and uploads them to **[Codecov](https://codecov.io/gh/unarbos/agcli)**. Use the Codecov badge above or open **Coverage** in the [CI workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) for the latest tree, PR diffs, and file-level line coverage. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
 
 ## Install
 

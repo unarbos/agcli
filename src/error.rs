@@ -112,6 +112,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("extrinsic")
         || msg.contains("dispatch")
         || msg.contains("nonce")
+        // `format_dispatch_error` / subxt user-facing text (no "extrinsic" substring)
+        || msg.contains("transaction failed")
         // Subtensor-specific dispatch errors
         || msg.contains("notenoughstake")
         || msg.contains("not enough stake")
@@ -133,6 +135,89 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("liquidity")
         || msg.contains("delegatetaketoo")
         || msg.contains("invalidchild")
+        // SubtensorModule — pending coldkey swap blocks subnet-owner writes (set-param, trim, …)
+        || msg.contains("coldkeyswapannounced")
+        || msg.contains("coldkeyswapalreadydisputed")
+        || msg.contains("coldkeyswapdisputed")
+        || msg.contains("coldkeyswapcleartooearly")
+        || msg.contains("adminactionprohibitedduringweightswindow")
+        || msg.contains("transactoraccountshouldbehotkey")
+        || msg.contains("rootnetworkdoesnotexist")
+        // AdminUtils / Commitments / Proxy (named dispatch errors from metadata)
+        || msg.contains("subnetdoesnotexist")
+        || msg.contains("adminutils::invalidvalue")
+        || msg.contains("valuenotinbounds")
+        || msg.contains("maxvalidatorslargerthanmaxuids")
+        || msg.contains("toomanyfieldsincommitmentinfo")
+        || msg.contains("accountnotallowedcommit")
+        || msg.contains("spacelimitexceeded")
+        || msg.contains("unproxyable")
+        || msg.contains("notproxy")
+        || msg.contains("proxy::toomany")
+        || msg.contains("proxy::notfound")
+        || msg.contains("proxy::duplicate")
+        || msg.contains("proxy::nopermission")
+        || msg.contains("delegatetaketoolow")
+        // Swap / DEX pallet (subnet AMM)
+        || msg.contains("feeratetoohigh")
+        || msg.contains("insufficientinputamount")
+        || msg.contains("pricelimitexceeded")
+        || msg.contains("liquiditynotfound")
+        || msg.contains("invalidtickrange")
+        || msg.contains("maxpositionsexceeded")
+        || msg.contains("toomanyswapsteps")
+        || msg.contains("invalidliquidityvalue")
+        || msg.contains("reservestoolow")
+        || msg.contains("userliquiditydisabled")
+        || msg.contains("swap::mechanismdoesnotexist")
+        || msg.contains("swap::insufficientbalance")
+        || msg.contains("swap::subtokendisabled")
+        || msg.contains("swap::insufficientliquidity")
+        // Registry identity pallet
+        || msg.contains("registry::notregistered")
+        || msg.contains("registry::cannotregister")
+        || msg.contains("cannotregister")
+        || msg.contains("toomanyfieldsinidentityinfo")
+        // Crowdloan pallet
+        || msg.contains("deposittoolow")
+        || msg.contains("captoolow")
+        || msg.contains("minimumcontributiontoolow")
+        || msg.contains("cannotendinpast")
+        || msg.contains("blockdurationtooshort")
+        || msg.contains("blockdurationtoolong")
+        || msg.contains("invalidcrowdloanid")
+        || msg.contains("capraised")
+        || msg.contains("capnotraised")
+        || msg.contains("contributionperiodended")
+        || msg.contains("contributionperiodnotended")
+        || msg.contains("contributiontoolow")
+        || msg.contains("alreadyfinalized")
+        || msg.contains("nocontribution")
+        || msg.contains("callunavailable")
+        || msg.contains("notreadytodissolve")
+        || msg.contains("depositcannotbewithdrawn")
+        || msg.contains("maxcontributorsreached")
+        || msg.contains("invalidorigin")
+        || msg.contains("crowdloan::invalidorigin")
+        || msg.contains("crowdloan::underflow")
+        || msg.contains("crowdloan::overflow")
+        || msg.contains("crowdloan::insufficientbalance")
+        // Drand pallet
+        || msg.contains("drandconnectionfailure")
+        || msg.contains("drand::nonevalue")
+        || msg.contains("drand::storageoverflow")
+        || msg.contains("unverifiedpulse")
+        || msg.contains("invalidroundnumber")
+        || msg.contains("pulseverificationerror")
+        // Utility pallet (batch)
+        || msg.contains("toomanycalls")
+        || msg.contains("invalidderivedaccount")
+        // Shield pallet
+        || msg.contains("badenckeylen")
+        // Must be before generic `unreachable` → NETWORK heuristic
+        || msg.contains("shield::unreachable")
+        // Any other `Pallet::Variant` from metadata (e.g. frame pallets not listed above)
+        || (msg.contains("::") && !msg.contains("://"))
     {
         return exit_code::CHAIN;
     }
@@ -190,7 +275,15 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
             Some("Tip: Increase timeout with --timeout <seconds> (default: none). The chain may be congested")
         }
         exit_code::CHAIN => {
-            if lower.contains("insufficient") {
+            if lower.contains("swap::insufficientliquidity") {
+                Some("Tip: AMM pool depth — reduce trade size, adjust price/tick range, or wait for liquidity")
+            } else if lower.contains("insufficientliquidity") {
+                Some("Tip: Subtensor liquidity constraint (stake/swap path) — try a smaller amount or looser slippage; not always the same as DEX pool depth")
+            } else if lower.contains("swap::subtokendisabled") {
+                Some("Tip: This subnet’s subtoken mode is not enabled for the on-chain AMM — check subnet token/subtoken config before swaps")
+            } else if lower.contains("registry::notregistered") {
+                Some("Tip: Set on-chain identity first (`agcli network identity set`) or use an SS58 that already has one")
+            } else if lower.contains("insufficient") {
                 Some("Tip: Check your balance with `agcli balance`. Transaction fees require a small reserve")
             } else if lower.contains("rate limit") {
                 Some("Tip: Wait a few blocks before retrying. Use `agcli block latest` to check block progress")
@@ -210,6 +303,65 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Registration is currently disabled on this subnet. Check `agcli subnet hyperparams --netuid <N>`")
             } else if lower.contains("call disabled") || lower.contains("calldisabled") {
                 Some("Tip: This call is currently disabled on this subnet")
+            } else if lower.contains("coldkeyswapannounced") {
+                Some("Tip: A coldkey swap is pending — subnet-owner hyperparameter writes fail until it completes. Run `agcli wallet check-swap` (see `docs/commands/wallet.md`)")
+            } else if lower.contains("coldkeyswapalreadydisputed") {
+                Some("Tip: Swap was already disputed — execute/clear paths fail until resolved. Check `agcli wallet check-swap`")
+            } else if lower.contains("coldkeyswapdisputed") {
+                Some("Tip: Coldkey swap is disputed — resolve on-chain before retrying owner operations. Status: `agcli wallet check-swap`")
+            } else if lower.contains("coldkeyswapcleartooearly") {
+                Some("Tip: Wait until announce block + reannouncement delay, then retry clear; `agcli wallet check-swap` shows timing")
+            } else if lower.contains("adminactionprohibitedduringweightswindow") {
+                Some("Tip: Owner admin calls are paused during the weights window — retry after the tempo boundary (`agcli subnet hyperparams --netuid <N>`)")
+            } else if lower.contains("transactoraccountshouldbehotkey") {
+                Some("Tip: Submit this call signed as the hotkey that owns the neuron, not the coldkey")
+            } else if lower.contains("rootnetworkdoesnotexist") {
+                Some("Tip: Wrong network or node — confirm `--endpoint` points at a full subtensor Finney/test node with SN0")
+            } else if lower.contains("subnetdoesnotexist") || lower.contains("subnetnotexist") {
+                Some("Tip: Verify `--netuid` with `agcli subnet list` / `agcli subnet show --netuid <N>`")
+            } else if lower.contains("adminutils::invalidvalue") {
+                Some("Tip: AdminUtils rejected this owner `set-param` value — compare to bounds in `agcli subnet hyperparams --netuid <N>`")
+            } else if lower.contains("valuenotinbounds") || lower.contains("maxvalidatorslargerthanmaxuids") {
+                Some("Tip: Owner hyperparameters must satisfy runtime ordering and bounds — compare to `agcli subnet hyperparams --netuid <N>`")
+            } else if lower.contains("proxy::toomany") {
+                Some("Tip: Reduce proxies or pending announcements for this account — see proxy limits in chain metadata")
+            } else if lower.contains("proxy::notfound") {
+                Some("Tip: Confirm the delegate is registered as a proxy and the call targets the right delegator")
+            } else if lower.contains("proxy::duplicate") {
+                Some("Tip: Remove the existing proxy entry before re-adding the same delegate")
+            } else if lower.contains("proxy::nopermission") {
+                Some("Tip: This proxy type cannot perform that privileged call — sign with the sovereign account or adjust proxy type")
+            } else if lower.contains("unproxyable") || lower.contains("notproxy") {
+                Some("Tip: Check proxy type and filter, or sign with the primary account — see `agcli proxy` / Polkadot proxy docs")
+            } else if lower.contains("delegatetaketoolow") || lower.contains("delegatetaketoohigh") {
+                Some("Tip: Delegate take must stay within the chain band (min up to 11.11%) — see `agcli subnet hyperparams`")
+            } else if lower.contains("feeratetoohigh")
+                || lower.contains("pricelimitexceeded")
+                || lower.contains("toomanyswapsteps")
+            {
+                Some("Tip: DEX swap rejected — adjust amount, slippage/price limit, or route; see subnet swap / liquidity docs")
+            } else if lower.contains("toomanycalls") {
+                Some("Tip: Batch fewer extrinsics per `utility.batch` — the runtime enforces a maximum batch size")
+            } else if lower.contains("drandconnectionfailure") || lower.contains("unverifiedpulse") {
+                Some("Tip: Randomness beacon (drand) issue — validators/operators should verify drand connectivity and pulse data")
+            } else if lower.contains("invalidcrowdloanid") || lower.contains("contributionperiod") {
+                Some("Tip: Crowdloan id or timing is wrong — confirm the crowdloan exists and the contribution window on-chain")
+            } else if lower.contains("crowdloan::underflow") {
+                Some("Tip: Amount or state does not allow this crowdloan step — check your contribution and crowdloan phase on-chain")
+            } else if lower.contains("swap::mechanismdoesnotexist") {
+                Some("Tip: That netuid is not a subnet the AMM recognizes — confirm with `agcli subnet list` / `agcli subnet show --netuid <N>`")
+            } else if lower.contains("crowdloan::insufficientbalance") {
+                Some("Tip: Fund the signing account for the crowdloan deposit or contribution (`agcli balance`)")
+            } else if lower.contains("swap::insufficientbalance") {
+                Some("Tip: Not enough free balance for this swap or liquidity action (including fees)")
+            } else if lower.contains("crowdloan::overflow") {
+                Some("Tip: Crowdloan cap or contribution math overflowed — check amounts and on-chain crowdloan state")
+            } else if lower.contains("drand::nonevalue") || lower.contains("drand::storageoverflow") {
+                Some("Tip: Drand beacon state issue on-chain — operators should verify drand config, OCW, and node logs")
+            } else if lower.contains("shield::unreachable") {
+                Some("Tip: Shield pallet internal error — try another RPC node, update software, and report with full error text if it persists")
+            } else if lower.contains("runtime pallet `") && lower.contains("returned error `") {
+                Some("Tip: Search the subtensor (and Substrate frame) source for that pallet’s `#[pallet::error]` enum; confirm the extrinsic exists on this `--endpoint`")
             } else {
                 Some("Tip: The chain rejected this operation. Check `agcli doctor` for diagnostic info")
             }
@@ -680,6 +832,24 @@ mod tests {
     }
 
     #[test]
+    fn classify_shield_unreachable_is_chain_not_network() {
+        let err = anyhow::anyhow!("Transaction failed: Pallet error: Shield::Unreachable");
+        assert_eq!(
+            classify(&err),
+            exit_code::CHAIN,
+            "qualified Shield error must not hit generic 'unreachable' → NETWORK"
+        );
+        let h = hint(exit_code::CHAIN, &format!("{:#}", err));
+        assert!(h.is_some_and(|s| s.to_lowercase().contains("shield")));
+    }
+
+    #[test]
+    fn classify_qualified_pallet_variant_chain() {
+        let err = anyhow::anyhow!("Dispatch failed: Treasury::InsufficientBalance");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
     fn classify_cannot_read() {
         // "Cannot read" matches IO, but "keyfile" matches AUTH first — AUTH takes priority
         let err = anyhow::anyhow!("Cannot read wallet keyfile");
@@ -812,6 +982,12 @@ mod tests {
         assert_eq!(classify(&err), exit_code::CHAIN);
     }
 
+    #[test]
+    fn classify_coldkey_swap_announced() {
+        let err = anyhow::anyhow!("Transaction failed: Custom error: 131 [ColdkeySwapAnnounced]");
+        assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
     // ──── Subtensor-specific hint tests ────
 
     #[test]
@@ -854,5 +1030,15 @@ mod tests {
         let h = hint(exit_code::CHAIN, "Registration disabled on subnet");
         assert!(h.is_some());
         assert!(h.unwrap().contains("disabled"));
+    }
+
+    #[test]
+    fn hint_chain_coldkey_swap_announced() {
+        let h = hint(
+            exit_code::CHAIN,
+            "Transaction failed: … [ColdkeySwapAnnounced]\n  Hint: …",
+        );
+        assert!(h.is_some());
+        assert!(h.unwrap().contains("check-swap"));
     }
 }

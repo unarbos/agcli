@@ -6,6 +6,7 @@ pub mod rpc_types;
 
 use anyhow::{Context, Result};
 use sp_core::sr25519;
+use std::borrow::Cow;
 use subxt::backend::legacy::rpc_methods::LegacyRpcMethods;
 use subxt::backend::rpc::RpcClient;
 use subxt::tx::PairSigner;
@@ -1074,7 +1075,10 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
         85 => ("ActivityCutoffTooLow", "The activity cutoff parameter is below the minimum"),
         86 => ("CallDisabled", "This operation is currently disabled on the chain"),
         87 => ("FirstEmissionBlockNumberAlreadySet", "The emission start block has already been configured for this subnet"),
-        88 => ("NeedWaitingMoreBlocksToStarCall", "Not enough blocks have passed since subnet creation. Wait before starting emissions"),
+        88 => (
+            "NeedWaitingMoreBlocksToStarCall",
+            "Subnet emissions `start` call is not allowed yet — wait until enough blocks have passed after subnet creation (see subnet start / check-start docs)",
+        ),
         89 => ("NotEnoughAlphaOutToRecycle", "Not enough alpha available to recycle"),
         90 => ("CannotBurnOrRecycleOnRootSubnet", "Burn and recycle operations are not allowed on the root subnet (SN0)"),
         91 => ("UnableToRecoverPublicKey", "Could not recover the public key from the provided signature"),
@@ -1119,9 +1123,50 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
         130 => ("AddStakeBurnRateLimitExceeded", "Add-stake-burn operations are rate-limited. Wait a few blocks before retrying"),
         131 => ("ColdkeySwapAnnounced", "A coldkey swap is already announced for this account"),
         132 => ("ColdkeySwapDisputed", "This coldkey swap has been disputed"),
+        133 => (
+            "ColdkeySwapClearTooEarly",
+            "Cannot clear the coldkey swap announcement yet — wait until current block ≥ announce block + reannouncement delay (see `agcli wallet check-swap`)",
+        ),
         _ => return None,
     };
     Some(DecodedError { name, desc })
+}
+
+/// Last `Pallet::Variant`-style token in `msg` (non-empty ASCII idents on both sides of `::`).
+/// Used when subxt/metadata reports a qualified pallet error we do not match explicitly.
+fn last_qualified_pallet_variant(msg: &str) -> Option<(&str, &str)> {
+    let bytes = msg.as_bytes();
+    let mut best: Option<(usize, usize, usize, usize)> = None;
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+        if bytes[i] == b':' && bytes[i + 1] == b':' {
+            let left_end = i;
+            let mut left_start = left_end;
+            while left_start > 0 {
+                let c = bytes[left_start - 1];
+                if c.is_ascii_alphanumeric() || c == b'_' {
+                    left_start -= 1;
+                } else {
+                    break;
+                }
+            }
+            let variant_start = i + 2;
+            let mut variant_end = variant_start;
+            while variant_end < bytes.len() {
+                let c = bytes[variant_end];
+                if c.is_ascii_alphanumeric() || c == b'_' {
+                    variant_end += 1;
+                } else {
+                    break;
+                }
+            }
+            if left_end > left_start && variant_end > variant_start {
+                best = Some((left_start, left_end, variant_start, variant_end));
+            }
+        }
+        i += 1;
+    }
+    best.map(|(ls, le, vs, ve)| (&msg[ls..le], &msg[vs..ve]))
 }
 
 /// Format dispatch errors (tx reached chain but execution failed) with contextual hints.
@@ -1147,6 +1192,12 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Stake is below the minimum required to set childkeys on this subnet."
     } else if msg.contains("NotEnoughBalanceToStake") || msg.contains("NotEnoughStake") {
         "Insufficient balance or stake for this operation. Check `agcli balance` and `agcli stake list`."
+    } else if msg.contains("NotEnoughBalanceToPaySwapHotKey")
+        || msg.contains("NotEnoughBalanceToPaySwapColdKey")
+    {
+        "Insufficient free balance to pay the hotkey or coldkey swap fee. Fund the signing account and retry."
+    } else if msg.contains("Registry::NotRegistered") {
+        "No on-chain identity is registered for this account (pallet Registry). Use `agcli network identity set` or pass the correct SS58."
     } else if msg.contains("NotRegistered")
         || msg.contains("HotKeyNotRegisteredInSubNet")
         || msg.contains("HotKeyNotRegisteredInNetwork")
@@ -1158,6 +1209,274 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "This hotkey is already registered on the subnet."
     } else if msg.contains("TooManyRegistrationsThisBlock") {
         "Registration limit reached for this block. Try again in the next block (~12 seconds)."
+    } else if msg.contains("RootNetworkDoesNotExist") {
+        "The root network (SN0) is missing from this runtime — wrong chain, incomplete genesis, or metadata mismatch. Verify `--endpoint` and that this is a Bittensor/subtensor node."
+    } else if msg.contains("InvalidIpType")
+        || msg.contains("InvalidIpAddress")
+        || msg.contains("InvalidPort")
+    {
+        "Axon/prometheus endpoint fields were rejected: use a reachable IP, port 1–65535, and protocol 4 (IPv4) or 6 (IPv6) for axon. See `agcli network serve axon` / `agcli network serve prometheus`."
+    } else if msg.contains("InvalidWorkBlock")
+        || msg.contains("InvalidDifficulty")
+        || msg.contains("InvalidSeal")
+    {
+        "PoW registration failed: the work block must be current, difficulty must match the subnet requirement, and the seal must match the computed work. Re-run `agcli subnet pow` for a fresh template."
+    } else if msg.contains("ServingRateLimitExceeded") {
+        "Axon or prometheus `serve` updates are rate-limited on this subnet. Wait more blocks (see `min_blocks_between_serve_axon` / prometheus equivalent in `agcli subnet hyperparams --netuid <N>`) before retrying."
+    } else if msg.contains("NetworkTxRateLimitExceeded") {
+        "Subnet-creation / network-level transactions are globally rate-limited. Wait several blocks and retry."
+    } else if msg.contains("DelegateTxRateLimitExceeded") {
+        "Delegate-related transactions are rate-limited. Wait more blocks before changing delegate or take again."
+    } else if msg.contains("HotKeySetTxRateLimitExceeded") {
+        "Hotkey swap/update transactions are rate-limited. Wait more blocks before another hotkey change."
+    } else if msg.contains("EvmKeyAssociateRateLimitExceeded") {
+        "EVM key association is rate-limited. Wait before associating another EVM key from this account."
+    } else if msg.contains("TxChildkeyTakeRateLimitExceeded") {
+        "Childkey take changes are rate-limited. Wait before updating childkey take again."
+    } else if msg.contains("FaucetDisabled") {
+        "The chain faucet is disabled — funding via faucet extrinsics is not available on this network."
+    } else if msg.contains("NotSubnetOwner") {
+        "Only the subnet owner can run this extrinsic. Confirm ownership with `agcli subnet show --netuid <N>` and sign with the owner coldkey."
+    } else if msg.contains("LiquidAlphaDisabled")
+        || msg.contains("AlphaHighTooLow")
+        || msg.contains("AlphaLowOutOfRange")
+    {
+        "Liquid-alpha parameter change rejected: liquid alpha must be enabled on the subnet, and alpha_high / alpha_low must satisfy on-chain bounds. Inspect current values with `agcli subnet hyperparams --netuid <N>`."
+    } else if msg.contains("NewColdKeyIsHotkey") {
+        "Coldkey swap destination cannot be an address that is already registered as a hotkey. Choose a different coldkey account."
+    } else if msg.contains("HotKeyAlreadyDelegate") {
+        "This hotkey is already a delegate; no need to become delegate again."
+    } else if msg.contains("NewHotKeyIsSameWithOld") {
+        "The proposed hotkey matches the current one — the chain will not apply a no-op swap."
+    } else if msg.contains("RegistrationNotPermittedOnRootSubnet") {
+        "Direct neuron registration on the root subnet (SN0) is not allowed. Register on a user subnet instead."
+    } else if msg.contains("StakeTooLowForRoot") {
+        "Total stake is below the minimum required for root-network participation. Stake more before using root-only flows."
+    } else if msg.contains("AllNetworksInImmunity") {
+        "Every subnet is in its immunity window, so no subnet can be pruned/replaced right now. Wait until at least one subnet exits immunity."
+    } else if msg.contains("NotRootSubnet") {
+        "This extrinsic only applies on the root subnet (netuid 0). Check `--netuid` and command docs."
+    } else if msg.contains("BalanceWithdrawalError") {
+        "The chain could not debit the coldkey for this stake operation (transfer failed internally). Check free balance and account locks."
+    } else if msg.contains("ZeroBalanceAfterWithdrawn") {
+        "This operation would leave a required account with zero balance, which the runtime disallows. Leave a small reserve or reduce the amount."
+    } else if msg.contains("Swap::MechanismDoesNotExist") {
+        "Swap/AMM: that netuid has no subnet (or the subnet is not available to the DEX). Confirm with `agcli subnet list` / `agcli subnet show --netuid <N>`."
+    } else if msg.contains("MechanismDoesNotExist") {
+        "The subnet has no mechanism with the given index. Check `agcli subnet mechanism-count --netuid <N>` (or hyperparams) for valid mechanism IDs."
+    } else if msg.contains("CannotUnstakeLock") {
+        "Unstaking is blocked by a lock (e.g. immunity window or staking lock). Wait until the lock ends or reduce the requested amount."
+    } else if msg.contains("TransferDisallowed") {
+        "This transfer path is disallowed by subnet/token rules. Check subnet transfer settings and token mode."
+    } else if msg.contains("ActivityCutoffTooLow") {
+        "The activity cutoff hyperparameter is below the chain minimum. Increase it in the owner `subnet set-param` flow."
+    } else if msg.contains("CallDisabled") {
+        "This pallet call is disabled on-chain (runtime or subnet configuration). It cannot be executed until re-enabled."
+    } else if msg.contains("FirstEmissionBlockNumberAlreadySet") {
+        "Emission start for this subnet was already configured; the extrinsic cannot set it twice."
+    } else if msg.contains("NeedWaitingMoreBlocksToStarCall") {
+        "Too few blocks have passed since subnet creation to start emissions. Wait for the required delay and retry."
+    } else if msg.contains("Swap::SubtokenDisabled") {
+        "Swap/AMM: this subnet does not have subtoken mode enabled for the DEX. Enable/configure subnet subtoken support before AMM swaps on this netuid."
+    } else if msg.contains("SubtokenDisabled") {
+        "Subtoken operations are disabled on this subnet (SubtensorModule)."
+    } else if msg.contains("HotKeySwapOnSubnetIntervalNotPassed") {
+        "Minimum blocks between hotkey swaps on this subnet have not elapsed. Wait and retry."
+    } else if msg.contains("ZeroMaxStakeAmount") {
+        "Maximum stake cannot be set to zero; use a positive cap or a different hyperparameter flow."
+    } else if msg.contains("SameNetuid") {
+        "Source and destination netuids must differ for this cross-subnet operation."
+    } else if msg.contains("InvalidLeaseBeneficiary") {
+        "The lease beneficiary SS58 is invalid or not allowed for this leased-subnet registration."
+    } else if msg.contains("LeaseCannotEndInThePast") {
+        "Lease end block must be strictly in the future."
+    } else if msg.contains("LeaseHasNoEndBlock") {
+        "This lease has no fixed end block; use the extrinsic that matches open-ended leases."
+    } else if msg.contains("LeaseHasNotEnded") {
+        "The lease is still active — wait until the end block before this cleanup step."
+    } else if msg.contains("BeneficiaryDoesNotOwnHotkey") {
+        "The lease beneficiary must control the hotkey used in this lease flow."
+    } else if msg.contains("ExpectedBeneficiaryOrigin") {
+        "Sign this call with the lease beneficiary account, not another key."
+    } else if msg.contains("RevealPeriodTooLarge") || msg.contains("RevealPeriodTooSmall") {
+        "Commit–reveal reveal period is out of allowed bounds. Adjust the value to match chain limits (see subnet hyperparams / owner set-param)."
+    } else if msg.contains("AdminUtils::InvalidValue") {
+        "AdminUtils rejected this subnet-owner `set-param` value: it is not valid for the target field. Compare your argument to on-chain bounds with `agcli subnet hyperparams --netuid <N>`."
+    } else if msg.contains("InvalidValue") {
+        "A numeric or enum hyperparameter is out of range for this extrinsic. Compare your argument to on-chain min/max in `agcli subnet hyperparams`."
+    } else if msg.contains("ValueNotInBounds") {
+        "Subnet owner set-param rejected: value is outside the allowed bounds for this field. Re-check min/max against `agcli subnet hyperparams --netuid <N>` and pallet docs."
+    } else if msg.contains("MaxValidatorsLargerThanMaxUIds") {
+        "`max_allowed_validators` must be strictly less than `max_allowed_uids`. Lower validators or raise max UIDs in the owner hyperparameter flow."
+    } else if msg.contains("MaxAllowedUIdsLessThanCurrentUIds") {
+        "`max_allowed_uids` cannot be set below the current number of neurons on the subnet. Wait for deregistrations or choose a higher value."
+    } else if msg.contains("BondsMovingAverageMaxReached") {
+        "Bonds moving-average parameter is at or above the runtime maximum. Pick a smaller value."
+    } else if msg.contains("NegativeSigmoidSteepness") {
+        "Negative sigmoid steepness can only be set by root/sudo — use a non-negative value for subnet-owner calls."
+    } else if msg.contains("MinAllowedUidsGreaterThanCurrentUids") {
+        "Minimum allowed UIDs cannot be greater than the current neuron count on the subnet. Lower the minimum or wait for more registrations."
+    } else if msg.contains("MinAllowedUidsGreaterThanMaxAllowedUids") {
+        "Minimum allowed UIDs/weights cannot be greater than maximum allowed UIDs. Fix the pair so min ≤ max."
+    } else if msg.contains("MaxAllowedUidsLessThanMinAllowedUids") {
+        "Maximum allowed UIDs must be at least the minimum allowed UIDs. Increase max or decrease min."
+    } else if msg.contains("MaxAllowedUidsGreaterThanDefaultMaxAllowedUids") {
+        "`max_allowed_uids` cannot exceed the chain default cap. Lower the requested maximum."
+    } else if msg.contains("TooManyFieldsInCommitmentInfo") {
+        "Commitment payload has too many extra fields for this subnet/runtime. Remove optional fields or shorten the commitment metadata."
+    } else if msg.contains("AccountNotAllowedCommit") {
+        "This account is not allowed to post commitments on this subnet (permissions or registration rules)."
+    } else if msg.contains("SpaceLimitExceeded") {
+        "On-chain commitment storage quota for this interval is full. Wait for the next interval or reduce commitment size."
+    } else if msg.contains("UnexpectedUnreserveLeftover") {
+        "Commitment pallet reserve accounting failed (unexpected leftover). Retry; if it persists, the runtime may be in an inconsistent state."
+    } else if msg.contains("Unproxyable") {
+        "This call is not allowed through the configured proxy type’s filter. Use the real account or a proxy with a compatible type."
+    } else if msg.contains("NotProxy") {
+        "The signing account is not registered as a proxy for the target. Add the proxy first or sign with the delegating account."
+    } else if msg.contains("Unannounced") {
+        "This proxy call requires a prior announcement, or the announcement delay has not passed. Use the proxy announcement flow for delayed proxies."
+    } else if msg.contains("NoSelfProxy") {
+        "Cannot add your own account as a proxy. Use a different delegate address."
+    } else if msg.contains("AnnouncementDepositInvariantViolated") {
+        "Proxy announcement deposit accounting failed internally. Retry; report if it keeps happening."
+    } else if msg.contains("InvalidDerivedAccountId") {
+        "Could not derive a valid proxy/pure account from the supplied entropy or salt. Check inputs to pure-proxy creation."
+    } else if msg.contains("Proxy::TooMany") {
+        "Proxy pallet limit hit: too many proxies for this account or too many pending announcements. Remove a proxy, complete/cancel announcements, or wait."
+    } else if msg.contains("Proxy::NotFound") {
+        "No matching proxy relationship or announcement — verify delegate SS58, proxy type, and that `proxy.add_proxy` succeeded."
+    } else if msg.contains("Proxy::Duplicate") {
+        "That delegate is already a proxy for this account — remove it first or choose another delegate."
+    } else if msg.contains("Proxy::NoPermission") {
+        "This call cannot run through this proxy type (would escalate privileges). Sign with the real account or use a proxy type that allows it."
+    } else if msg.contains("TooManyCalls") {
+        "Utility batch exceeds the runtime batched-calls limit — split into smaller `utility.batch` calls."
+    } else if msg.contains("InvalidDerivedAccount") && !msg.contains("InvalidDerivedAccountId") {
+        "Utility pallet rejected derived-account inputs (e.g. pure-proxy preimage). Check salt/entropy and call encoding."
+    } else if msg.contains("FeeRateTooHigh") {
+        "Subnet swap fee rate exceeds the chain maximum — use a lower rate (owner `set_fee_rate`)."
+    } else if msg.contains("InsufficientInputAmount") {
+        "DEX swap input is too small after fees or for the pool curve — increase amount or check minimum trade size."
+    } else if msg.contains("PriceLimitExceeded") {
+        "Swap would violate the price/slippage bound — loosen the limit, reduce size, or retry with a better quote."
+    } else if msg.contains("LiquidityNotFound") {
+        "No liquidity position matches this key or tick range — verify position id / subnet and that you own the position."
+    } else if msg.contains("InvalidTickRange") {
+        "Concentrated-liquidity tick range is invalid (lower ≥ upper or out of bounds)."
+    } else if msg.contains("MaxPositionsExceeded") {
+        "Maximum user LP positions on this subnet — close or consolidate a position before opening another."
+    } else if msg.contains("TooManySwapSteps") {
+        "Multi-hop swap has too many steps — use a shorter path or fewer intermediate pools."
+    } else if msg.contains("InvalidLiquidityValue") {
+        "Liquidity mint/burn parameter is invalid or below the minimum the pool accepts."
+    } else if msg.contains("ReservesTooLow") {
+        "Pool reserves are too low for this swap or liquidity action — reduce size or wait for liquidity."
+    } else if msg.contains("UserLiquidityDisabled") {
+        "Subnet owner disabled user add/remove liquidity on this subnet."
+    } else if msg.contains("TooManyFieldsInIdentityInfo") {
+        "On-chain identity has too many additional fields — trim optional fields to the runtime maximum."
+    } else if msg.contains("Registry::CannotRegister") {
+        "Registry pallet: identity registration failed requirements (deposit, permissions, or eligibility)."
+    } else if msg.contains("CannotRegister") {
+        "Registry identity registration failed requirements (deposit, permissions, or eligibility)."
+    } else if msg.contains("NotRegistered")
+        && !msg.contains("HotKey")
+        && !msg.contains("ColdkeySwapAnnouncement")
+    {
+        "No on-chain identity registered for this account — register first or use the correct SS58."
+    } else if msg.contains("DepositTooLow")
+        || msg.contains("CapTooLow")
+        || msg.contains("MinimumContributionTooLow")
+        || msg.contains("CannotEndInPast")
+        || msg.contains("BlockDurationTooShort")
+        || msg.contains("BlockDurationTooLong")
+    {
+        "Crowdloan parameters are out of allowed bounds (deposit, cap, minimum contribution, duration, or end block)."
+    } else if msg.contains("InvalidCrowdloanId") {
+        "Unknown or invalid crowdloan id — list active crowdloans or verify the id from chain state."
+    } else if msg.contains("CapRaised") || msg.contains("CapNotRaised") {
+        "Crowdloan cap state mismatch — either the cap is already fully raised or the cap was not reached for the next step."
+    } else if msg.contains("ContributionPeriodEnded") || msg.contains("ContributionPeriodNotEnded")
+    {
+        "Crowdloan contribution window is closed or not finished yet — check the crowdloan schedule on-chain."
+    } else if msg.contains("ContributionTooLow") {
+        "Crowdloan contribution is below the minimum required for this crowdloan."
+    } else if msg.contains("Crowdloan::AlreadyFinalized") || msg.contains("AlreadyFinalized") {
+        "This crowdloan is already finalized — no further contributions or creator steps apply."
+    } else if msg.contains("NoContribution") {
+        "No contribution record for this account on this crowdloan."
+    } else if msg.contains("CallUnavailable") {
+        "Crowdloan success preimage/call is missing from storage — the configured dispatch may not be registered."
+    } else if msg.contains("NotReadyToDissolve") {
+        "Crowdloan cannot be dissolved yet — contributions may still be active or cap not handled."
+    } else if msg.contains("DepositCannotBeWithdrawn") {
+        "Crowdloan deposit cannot be withdrawn in the current state (success path or locks)."
+    } else if msg.contains("MaxContributorsReached") {
+        "Crowdloan contributor cap reached — no new contributors until rules change."
+    } else if msg.contains("Crowdloan::InvalidOrigin") {
+        "Crowdloan: this extrinsic must be signed by the crowdloan creator, a contributor, or another allowed role — check which origin the call expects."
+    } else if msg.contains("InvalidOrigin") {
+        "This extrinsic must be signed by the crowdloan creator, a contributor, or another allowed role — check which origin the call expects."
+    } else if msg.contains("Crowdloan::Underflow") {
+        "Crowdloan arithmetic underflowed (e.g. withdrawing more than contributed or inconsistent cap/state). Verify amounts and on-chain crowdloan status."
+    } else if msg.contains("DrandConnectionFailure") {
+        "Drand pallet could not reach the randomness beacon (node/network) — operators should check drand connectivity."
+    } else if msg.contains("UnverifiedPulse") || msg.contains("PulseVerificationError") {
+        "Drand pulse failed verification — wrong signature, stale data, or misconfigured beacon."
+    } else if msg.contains("InvalidRoundNumber") {
+        "Drand round number did not advance as expected — pulses must be submitted in order."
+    } else if msg.contains("Drand::NoneValue") {
+        "Drand pallet expected on-chain state that is missing (beacon config or round data not initialized). Operators should verify drand setup and runtime migrations."
+    } else if msg.contains("Drand::StorageOverflow") {
+        "Drand internal counter/storage limit exceeded — beacon state may need pruning or a runtime fix; report if this persists on a healthy node."
+    } else if msg.contains("BadEncKeyLen") {
+        "Shield pallet rejected an author encryption key length (inherent / validator key rotation)."
+    } else if msg.contains("Shield::Unreachable") {
+        "Shield pallet hit an internal unreachable path (runtime bug, corrupted storage, or incompatible node). Retry with another `--endpoint`, update the node/agcli, and report with logs if it persists."
+    } else if msg.contains("TrimmingWouldExceedMaxImmunePercentage") {
+        "`subnet trim` would leave too high a share of immune neurons. Reduce the trim request or wait for immunity changes."
+    } else if msg.contains("ChildParentInconsistency") {
+        "Childkey/parent relationships are inconsistent with on-chain state. Re-fetch children and fix parent/child bindings before resubmitting."
+    } else if msg.contains("InvalidNumRootClaim") || msg.contains("InvalidRootClaimThreshold") {
+        "Root-claim parameters are invalid for this runtime. Check allowed ranges in pallet docs or adjust counts/thresholds."
+    } else if msg.contains("InvalidSubnetNumber") {
+        "The subnet count or index in this call is not allowed (e.g. exceeds runtime limits)."
+    } else if msg.contains("TooManyUIDsPerMechanism") {
+        "UID capacity for this mechanism would exceed the chain limit (UIDs × mechanisms ≤ 256). Reduce registrations or mechanism count."
+    } else if msg.contains("VotingPowerTrackingNotEnabled") {
+        "Voting-power tracking is not enabled on this subnet; VP-only extrinsics will fail until it is turned on."
+    } else if msg.contains("InvalidVotingPowerEmaAlpha") {
+        "Voting power EMA alpha must be ≤ 10^18 (fixed-point). Use a smaller alpha value."
+    } else if msg.contains("Deprecated") {
+        "This extrinsic or feature is deprecated on this runtime. Use the supported replacement flow if one exists."
+    } else if msg.contains("InvalidIdentity") {
+        "Subnet or user identity fields failed validation (length, charset, or required fields). Trim values and retry `agcli network identity set` / `agcli network identity set-subnet`."
+    } else if msg.contains("InvalidChildkeyTake") {
+        "Childkey take is outside 0–18% (or other runtime bounds). Pick a valid take percentage."
+    } else if msg.contains("InvalidChild") {
+        "The child hotkey/UID is not valid for this parent on this subnet. Verify UIDs with `agcli view neurons --netuid <N>` and the `proportion:hotkey` list passed to `agcli stake set-children`."
+    } else if msg.contains("DuplicateChild") {
+        "The same child appears twice in the child list; each child must be unique."
+    } else if msg.contains("ProportionOverflow") {
+        "Child proportions sum to more than 100% — reduce proportions so the total fits the runtime cap."
+    } else if msg.contains("TooManyChildren") {
+        "At most five childkeys are allowed per parent on this subnet; remove a child before adding another."
+    } else if msg.contains("NotEnoughAlphaOutToRecycle") {
+        "Not enough subnet alpha is available to recycle at the requested amount. Lower the amount or wait for more alpha."
+    } else if msg.contains("CannotBurnOrRecycleOnRootSubnet") {
+        "Burn/recycle flows are not allowed on the root subnet (SN0)."
+    } else if msg.contains("UnableToRecoverPublicKey") || msg.contains("InvalidRecoveredPublicKey")
+    {
+        "Signature recovery failed or the recovered key does not match the claimed account. Re-sign with the correct keypair or check the message/hash you signed."
+    } else if msg.contains("SameAutoStakeHotkeyAlreadySet") {
+        "Auto-stake is already configured to this hotkey."
+    } else if msg.contains("UidMapCouldNotBeCleared") {
+        "Internal UID-map cleanup failed on-chain (unexpected state). Retry later or report if persistent."
+    } else if msg.contains("AdminActionProhibitedDuringWeightsWindow") {
+        "Subnet-owner admin calls are blocked during the protected weights window. Retry after the current tempo interval ends (see subnet tempo / `agcli subnet hyperparams --netuid <N>`)."
+    } else if msg.contains("TransactorAccountShouldBeHotKey") {
+        "This extrinsic must be signed by the hotkey account, not the coldkey. Use the hotkey that owns the neuron (see `agcli wallet` / signing flags for your command)."
     } else if msg.contains("InvalidNetuid") || msg.contains("NetworkDoesNotExist") {
         "Invalid subnet ID. List available subnets with `agcli subnet list`."
     } else if msg.contains("BadOrigin") || msg.contains("NotOwner") {
@@ -1170,8 +1489,11 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Rate limit exceeded. Wait before retrying this operation."
     } else if msg.contains("StakeRateLimitExceeded") {
         "Staking rate limit exceeded. Wait before staking/unstaking again."
-    } else if msg.contains("InvalidTake") || msg.contains("DelegateTakeTooHigh") {
-        "Invalid delegate take percentage. Take must be between 0% and 11.11%."
+    } else if msg.contains("InvalidTake")
+        || msg.contains("DelegateTakeTooHigh")
+        || msg.contains("DelegateTakeTooLow")
+    {
+        "Invalid delegate take percentage. Take must be within the chain’s allowed band (above minimum, at or below 11.11%). Check `agcli subnet hyperparams --netuid <N>` for current limits."
     } else if msg.contains("NonAssociatedColdKey") {
         "This coldkey is not associated with the specified hotkey."
     } else if msg.contains("CommitRevealEnabled") {
@@ -1216,12 +1538,16 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Subnet capacity reached or does not exist. Check `agcli subnet list` for current subnets."
     } else if msg.contains("HotKeyAlreadyRegistered") {
         "This hotkey is already registered. Use a different hotkey or deregister the existing one first."
-    } else if msg.contains("ColdKeySwapScheduled")
-        || msg.contains("ColdKeyAlreadyAssociated")
-        || msg.contains("ColdkeySwapAnnounced")
-        || msg.contains("ColdkeySwapDisputed")
-    {
-        "A coldkey swap operation is already scheduled or disputed. Wait for it to complete."
+    } else if msg.contains("ColdkeySwapAnnounced") || msg.contains("ColdKeySwapScheduled") {
+        "A coldkey swap is announced for this coldkey. Subnet-owner AdminUtils calls (`agcli subnet set-param`, `subnet set-symbol`, `subnet trim`, …) are rejected until the swap executes or is cleared. Check `agcli wallet check-swap` (add `--address` if not the default wallet)."
+    } else if msg.contains("ColdkeySwapAlreadyDisputed") {
+        "This coldkey swap was already disputed — the execute step cannot proceed. Check `agcli wallet check-swap` and wait for on-chain resolution."
+    } else if msg.contains("ColdkeySwapDisputed") {
+        "This coldkey swap is disputed. Owner/admin extrinsics from this coldkey stay blocked until the dispute is resolved on-chain."
+    } else if msg.contains("ColdkeySwapClearTooEarly") {
+        "Clearing the swap announcement is too soon. The chain requires `announce_block + ColdkeySwapReannouncementDelay` blocks to pass. Check status with `agcli wallet check-swap` and retry after the delay."
+    } else if msg.contains("ColdKeyAlreadyAssociated") {
+        "Coldkey association conflict for this operation. If you scheduled a swap, check `agcli wallet check-swap`."
     } else if msg.contains("ColdkeySwapAnnouncementNotFound") {
         "No coldkey swap has been announced for this account."
     } else if msg.contains("ColdkeySwapTooEarly") || msg.contains("ColdkeySwapReannouncedTooEarly")
@@ -1237,10 +1563,18 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Registration is disabled on this subnet."
     } else if msg.contains("NoNeuronIdAvailable") {
         "No neuron UID slots available on this subnet. Wait for a slot to open or try a different subnet."
-    } else if msg.contains("InsufficientBalance") || msg.contains("InsufficientLiquidity") {
+    } else if msg.contains("Crowdloan::InsufficientBalance") {
+        "Crowdloan: not enough free balance for the creator deposit or a contribution. Fund the signing account (`agcli balance`)."
+    } else if msg.contains("Swap::InsufficientBalance") {
+        "AMM/swap: insufficient free balance for this trade or liquidity add/remove (including fees). Check `agcli balance`."
+    } else if msg.contains("Swap::InsufficientLiquidity") {
+        "AMM: not enough liquidity in the pool (or in-range) for this swap or burn. Reduce size, adjust ticks/price bounds, wait for depth, or add liquidity."
+    } else if msg.contains("InsufficientLiquidity") {
+        "Not enough on-chain liquidity for this Subtensor operation (stake/swap/slippage path). Try a smaller amount, better price/slippage settings, or wait — this is not always the same as AMM `Swap::InsufficientLiquidity`."
+    } else if msg.contains("InsufficientBalance") {
         "Insufficient balance for this operation. Check your balance with `agcli balance`."
-    } else if msg.contains("SubnetNotExists") {
-        "Subnet does not exist. Check available subnets with `agcli subnet list`."
+    } else if msg.contains("SubnetNotExists") || msg.contains("SubnetDoesNotExist") {
+        "Subnet does not exist for this netuid (SubtensorModule or AdminUtils owner call). Check `agcli subnet list` and `agcli subnet show --netuid <N>`."
     } else if msg.contains("HotKeyAccountNotExists") {
         "Hotkey account does not exist on chain. Fund it or register first."
     } else if msg.contains("StakingOperationRateLimitExceeded")
@@ -1263,18 +1597,36 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "This token symbol is already taken. Choose a different symbol."
     } else if msg.contains("SymbolDoesNotExist") {
         "The specified symbol does not exist."
+    } else if msg.contains("Crowdloan::Overflow") {
+        "Crowdloan accounting overflow (cap, contributions, or reserves). Verify amounts and on-chain crowdloan state."
     } else if msg.contains("Overflow") || msg.contains("PrecisionLoss") {
         "Arithmetic overflow or precision loss. Try a smaller amount."
     } else {
         "" // no special hint
     };
 
+    let hint_resolved: Cow<'static, str> = if !hint.is_empty() {
+        Cow::Borrowed(hint)
+    } else if msg.contains("::") && !msg.contains("://") {
+        if let Some((pallet, variant)) = last_qualified_pallet_variant(&msg) {
+            Cow::Owned(format!(
+                "Runtime pallet `{pallet}` returned error `{variant}` (qualified metadata error). Look up `{variant}` in that pallet’s `#[pallet::error]` enum in the subtensor repo for this extrinsic; verify `--endpoint` matches the network and update agcli if nodes run a newer runtime."
+            ))
+        } else {
+            Cow::Borrowed(
+                "Named runtime/pallet error (see message for `Pallet::Variant`). Check pallet docs for this extrinsic, verify `--endpoint` matches the network, and upgrade agcli if the runtime is newer.",
+            )
+        }
+    } else {
+        Cow::Borrowed(hint)
+    };
+
     // Build the error message with all available context:
     // 1. The decoded human-readable description (from error code mapping)
     // 2. The hint (from pattern matching on known error types)
     // 3. The raw error message for debugging
-    if !hint.is_empty() {
-        anyhow::anyhow!("Transaction failed: {}\n  Hint: {}", msg, hint)
+    if !hint_resolved.is_empty() {
+        anyhow::anyhow!("Transaction failed: {}\n  Hint: {}", msg, hint_resolved)
     } else if let Some(desc) = decoded_desc {
         anyhow::anyhow!("Transaction failed: {}\n  Reason: {}", msg, desc)
     } else {
@@ -1382,6 +1734,41 @@ mod tests {
     }
 
     #[test]
+    fn format_dispatch_error_proxy_qualified_variants_hint() {
+        let cases = [
+            ("Pallet error: Proxy::TooMany", "too many proxies"),
+            ("Pallet error: Proxy::NotFound", "No matching proxy"),
+            ("Pallet error: Proxy::Duplicate", "already a proxy"),
+            (
+                "Pallet error: Proxy::NoPermission",
+                "cannot run through this proxy type",
+            ),
+            (
+                "Pallet error: Crowdloan::Underflow",
+                "Crowdloan arithmetic underflowed",
+            ),
+            ("Pallet error: Drand::NoneValue", "missing"),
+            (
+                "Pallet error: Drand::StorageOverflow",
+                "Drand internal counter",
+            ),
+        ];
+        for (raw, needle) in cases {
+            let err = subxt::Error::Other(raw.to_string());
+            let result = format_dispatch_error(err);
+            let msg = format!("{:#}", result);
+            let lower = msg.to_lowercase();
+            let n = needle.to_lowercase();
+            assert!(
+                msg.contains("Hint:") && lower.contains(n.as_str()),
+                "expected hint containing {:?} in: {}",
+                needle,
+                msg
+            );
+        }
+    }
+
+    #[test]
     fn format_dispatch_error_unknown() {
         let err = subxt::Error::Other("SomeTotallyNewError".to_string());
         let result = format_dispatch_error(err);
@@ -1389,6 +1776,87 @@ mod tests {
         assert!(
             msg.contains("Transaction failed on chain"),
             "unknown errors get generic message: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_shield_unreachable_hint() {
+        let err = subxt::Error::Other("Pallet error: Shield::Unreachable".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:") && msg.to_lowercase().contains("shield"),
+            "expected shield-specific hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_registry_not_registered_identity_hint() {
+        let err = subxt::Error::Other("Pallet error: Registry::NotRegistered".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:") && msg.to_lowercase().contains("identity"),
+            "expected Registry identity hint, got: {}",
+            msg
+        );
+        assert!(
+            !msg.contains("register-neuron"),
+            "must not mis-route to subnet neuron registration: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_admin_utils_invalid_value_hint() {
+        let err = subxt::Error::Other("Pallet error: AdminUtils::InvalidValue".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:") && msg.to_lowercase().contains("adminutils"),
+            "expected AdminUtils owner set-param hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_swap_subtoken_disabled_hint() {
+        let err = subxt::Error::Other("Pallet error: Swap::SubtokenDisabled".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:") && msg.to_lowercase().contains("amm"),
+            "expected Swap/AMM subtoken hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_swap_insufficient_liquidity_hint() {
+        let err = subxt::Error::Other("Pallet error: Swap::InsufficientLiquidity".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:") && msg.to_lowercase().contains("pool"),
+            "expected AMM pool liquidity hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_named_pallet_fallback_hint() {
+        let err =
+            subxt::Error::Other("Pallet error: HypotheticalPallet::FutureVariant".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("Hint:")
+                && msg.contains("HypotheticalPallet")
+                && msg.contains("FutureVariant")
+                && msg.contains("qualified metadata"),
+            "unknown pallet variants should name pallet+variant in the Hint: {}",
             msg
         );
     }
@@ -1694,14 +2162,101 @@ mod tests {
     }
 
     #[test]
+    fn decode_custom_error_133_coldkey_swap_clear_too_early() {
+        let d = decode_custom_error("Custom error: 133").expect("should decode 133");
+        assert_eq!(d.name, "ColdkeySwapClearTooEarly");
+    }
+
+    #[test]
+    fn format_dispatch_error_coldkey_swap_clear_too_early_hint() {
+        let err = subxt::Error::Other("Custom error: 133".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("reannouncement") || msg.contains("check-swap"),
+            "ColdkeySwapClearTooEarly should explain delay / check-swap: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_coldkey_swap_announced_hint() {
+        let err = subxt::Error::Other("Custom error: 131".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("set-param") && msg.contains("check-swap"),
+            "ColdkeySwapAnnounced should mention owner writes and check-swap: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn decode_custom_error_68_distinct_from_132_disputed() {
+        let d68 = decode_custom_error("Custom error: 68").expect("68");
+        let d132 = decode_custom_error("Custom error: 132").expect("132");
+        assert_eq!(d68.name, "ColdkeySwapAlreadyDisputed");
+        assert_eq!(d132.name, "ColdkeySwapDisputed");
+        assert_ne!(d68.name, d132.name);
+    }
+
+    #[test]
+    fn format_dispatch_error_coldkey_swap_already_disputed_hint() {
+        let err = subxt::Error::Other("Custom error: 68".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("already disputed") || msg.contains("check-swap"),
+            "ColdkeySwapAlreadyDisputed should explain execute blocked: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_admin_weights_window_hint() {
+        let err = subxt::Error::Other("Custom error: 108".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("weights window") || msg.contains("tempo"),
+            "AdminActionProhibitedDuringWeightsWindow should mention window/tempo: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_transactor_must_be_hotkey_hint() {
+        let err = subxt::Error::Other("Custom error: 38".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("hotkey") && msg.contains("coldkey"),
+            "TransactorAccountShouldBeHotKey should contrast signing keys: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_root_network_missing_hint() {
+        let err = subxt::Error::Other("Custom error: 0".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("SN0") || msg.contains("root network"),
+            "RootNetworkDoesNotExist should mention SN0/root: {}",
+            msg
+        );
+    }
+
+    #[test]
     fn decode_custom_error_no_match() {
         assert!(decode_custom_error("some other error text").is_none());
     }
 
     #[test]
     fn decode_custom_error_all_have_descriptions() {
-        // Verify every error code 0-132 has a non-empty description
-        for i in 0..=132u32 {
+        // Verify every SubtensorModule error code has a non-empty description (sync with pallet `errors.rs`)
+        for i in 0..=133u32 {
             let msg = format!("Custom error: {}", i);
             let d =
                 decode_custom_error(&msg).unwrap_or_else(|| panic!("error {} should decode", i));

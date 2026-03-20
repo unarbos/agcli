@@ -594,6 +594,7 @@ pub(super) async fn handle_subnet(
             println!("Root dissolving subnet SN{} (root origin only)", netuid);
             println!("WARNING: This action cannot be undone. The subnet and all its state will be permanently removed.");
             if !is_yes_mode() {
+                crate::cli::helpers::require_confirm_prompt_capability()?;
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Are you sure you want to root-dissolve this subnet?")
                     .default(false)
@@ -690,6 +691,7 @@ pub(super) async fn handle_subnet(
             println!("Dissolving subnet SN{} (owner only)", netuid);
             println!("WARNING: This action cannot be undone. The subnet and all its state will be permanently removed.");
             if !is_yes_mode() {
+                crate::cli::helpers::require_confirm_prompt_capability()?;
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Are you sure you want to dissolve this subnet?")
                     .default(false)
@@ -974,6 +976,7 @@ pub(super) async fn handle_subnet(
                 netuid, max_uids
             );
             if !crate::cli::helpers::is_yes_mode() {
+                crate::cli::helpers::require_confirm_prompt_capability()?;
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("This will deregister neurons above the limit. Proceed?")
                     .default(false)
@@ -1123,6 +1126,7 @@ pub(super) async fn handle_subnet(
                 println!("  Mechanism {}: {} ({:.1}%)", i, w, pct);
             }
             if !crate::cli::helpers::is_yes_mode() {
+                crate::cli::helpers::require_confirm_prompt_capability()?;
                 let proceed = dialoguer::Confirm::new()
                     .with_prompt("Proceed?")
                     .default(true)
@@ -3262,6 +3266,7 @@ async fn handle_subnet_set_param(
     }
 
     if !crate::cli::helpers::is_yes_mode() {
+        crate::cli::helpers::require_confirm_prompt_capability()?;
         let proceed = dialoguer::Confirm::new()
             .with_prompt("Proceed?")
             .default(true)

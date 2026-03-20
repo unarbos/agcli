@@ -7,6 +7,29 @@
 use agcli::wallet::keypair;
 use agcli::Wallet;
 use sp_core::{sr25519, Pair as _};
+use std::sync::{Mutex, MutexGuard};
+
+/// Serialize tests that touch `AGCLI_MNEMONIC` — parallel runs would otherwise clear the var mid-test.
+static AGCLI_MNEMONIC_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+/// `require_mnemonic(Some(...))` only accepts CLI-filled mnemonics when `AGCLI_MNEMONIC` is set.
+struct AgcliMnemonicGuard<'a> {
+    _lock: MutexGuard<'a, ()>,
+}
+
+impl<'a> AgcliMnemonicGuard<'a> {
+    fn set(mnemonic: &str) -> Self {
+        let lock = AGCLI_MNEMONIC_TEST_LOCK.lock().unwrap();
+        std::env::set_var("AGCLI_MNEMONIC", mnemonic);
+        Self { _lock: lock }
+    }
+}
+
+impl Drop for AgcliMnemonicGuard<'_> {
+    fn drop(&mut self) {
+        std::env::remove_var("AGCLI_MNEMONIC");
+    }
+}
 
 #[test]
 fn create_wallet_and_read_keys() {
@@ -205,19 +228,14 @@ fn create_wallet_with_custom_hotkey_name() {
 }
 
 #[test]
-fn create_wallet_empty_password_works() {
-    // Empty password should still work (encrypt with empty passphrase)
+fn create_wallet_empty_password_rejected() {
     let dir = tempfile::tempdir().unwrap();
-    let (_, _, _) =
-        Wallet::create(dir.path().to_str().unwrap(), "empty_pw", "", "default").unwrap();
-    let mut w = Wallet::open(format!("{}/empty_pw", dir.path().to_str().unwrap())).unwrap();
+    let err = Wallet::create(dir.path().to_str().unwrap(), "empty_pw", "", "default").unwrap_err();
+    let msg = format!("{:#}", err);
     assert!(
-        w.unlock_coldkey("").is_ok(),
-        "Should unlock with empty password"
-    );
-    assert!(
-        w.unlock_coldkey("wrong").is_err(),
-        "Should NOT unlock with non-empty password"
+        msg.contains("Empty password") || msg.contains("empty password"),
+        "expected empty-password rejection: {}",
+        msg
     );
 }
 
@@ -1083,20 +1101,20 @@ fn wrong_password_gives_helpful_error() {
 }
 
 #[test]
-fn empty_password_works_but_warns() {
+fn empty_password_rejected_on_create() {
     let dir = tempfile::tempdir().unwrap();
     let base = dir.path().to_str().unwrap();
-    // Empty password should work (we just warn about it)
     let result = Wallet::create(base, "empty_pw", "", "default");
     assert!(
-        result.is_ok(),
-        "empty password should be allowed: {:?}",
-        result.err()
+        result.is_err(),
+        "empty password must be rejected for encrypted coldkey: {:?}",
+        result.ok()
     );
-    let mut wallet = Wallet::open(format!("{}/empty_pw", base)).unwrap();
+    let msg = format!("{:#}", result.unwrap_err());
     assert!(
-        wallet.unlock_coldkey("").is_ok(),
-        "empty password unlock should work"
+        msg.contains("Empty password") || msg.contains("empty password"),
+        "unexpected error: {}",
+        msg
     );
 }
 
@@ -1491,6 +1509,7 @@ async fn regen_coldkey_respects_wallet_name() {
     use agcli::cli::{OutputFormat, WalletCommands};
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let _guard = AgcliMnemonicGuard::set(mnemonic);
     let dir = tempfile::tempdir().unwrap();
     let base = dir.path().to_str().unwrap();
 
@@ -1526,6 +1545,7 @@ async fn regen_hotkey_respects_wallet_name() {
     use agcli::cli::{OutputFormat, WalletCommands};
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let _guard = AgcliMnemonicGuard::set(mnemonic);
     let dir = tempfile::tempdir().unwrap();
     let base = dir.path().to_str().unwrap();
 
@@ -1598,6 +1618,7 @@ async fn regen_coldkey_does_not_touch_other_wallets() {
     use agcli::cli::{OutputFormat, WalletCommands};
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let _guard = AgcliMnemonicGuard::set(mnemonic);
     let dir = tempfile::tempdir().unwrap();
     let base = dir.path().to_str().unwrap();
 

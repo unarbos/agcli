@@ -39,6 +39,9 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -54,6 +57,7 @@ jobs:
         with:
           files: codecov.json
           fail_ci_if_error: false
+          use_oidc: true
 
   e2e-docker:
     name: E2E (Docker localnet)
