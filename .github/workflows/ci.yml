@@ -36,6 +36,25 @@ jobs:
         run: cargo test --lib --test wallet_test --test cli_weights
         timeout-minutes: 10
 
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate coverage
+        run: cargo llvm-cov --lib --test wallet_test --test cli_weights --codecov --output-path codecov.json
+        timeout-minutes: 15
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: codecov.json
+          fail_ci_if_error: false
+
   e2e-docker:
     name: E2E (Docker localnet)
     runs-on: ubuntu-latest

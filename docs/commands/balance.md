@@ -37,7 +37,7 @@ Watch mode runs until **Ctrl+C**. A failed poll prints a warning, waits, and ret
 
 ## Read path (RPC / storage)
 
-Order matches [`Commands::Balance`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs) in `src/cli/commands.rs` (~201–324):
+Order matches [`Commands::Balance`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs) in `src/cli/commands.rs` (201–325):
 
 1. **`validate_threshold`** when `--threshold` is set (`src/cli/helpers.rs`).
 2. **`connect`** (global network / endpoint).

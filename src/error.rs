@@ -85,6 +85,12 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("invalid destination")
         // `validate_ss58(..., "stake list --address")` on `stake list --address`
         || msg.contains("stake list --address")
+        // `validate_amount(..., "stake amount")` on `stake add` / related stake writes
+        || msg.contains("stake amount")
+        // `validate_netuid` — root / invalid user netuid before stake commands
+        || msg.contains("invalid netuid")
+        // `check_spending_limit` in helpers.rs (local config guard)
+        || msg.contains("spending limit exceeded")
     {
         return exit_code::VALIDATION;
     }
@@ -103,6 +109,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("hotkeynotregistered")
         || msg.contains("slippagetoo")
         || msg.contains("slippage too")
+        // Client-side `check_slippage` in stake_cmds.rs ("Slippage X% exceeds maximum allowed …")
+        || (msg.contains("slippage") && msg.contains("maximum allowed"))
         || msg.contains("subnet not exist")
         || msg.contains("subnetnotexist")
         || msg.contains("not subnet owner")
@@ -214,6 +222,12 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Use `--dest` with a valid SS58 coldkey address (see `docs/commands/transfer.md` and `agcli wallet show`)")
             } else if lower.contains("stake list --address") {
                 Some("Tip: Use `--address` with a valid SS58 coldkey (see `docs/commands/stake.md` and `agcli stake list --help`)")
+            } else if lower.contains("stake amount") {
+                Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake add --help`)")
+            } else if lower.contains("invalid netuid") {
+                Some("Tip: Use `--netuid` ≥ 1 (root SN0 is not a stake target). List subnets with `agcli subnet list`")
+            } else if lower.contains("spending limit exceeded") {
+                Some("Tip: Adjust limits with `agcli config set spending_limit.<N>` or `spending_limit.*` (see `docs/commands/config.md`)")
             } else {
                 None
             }
@@ -287,6 +301,44 @@ mod tests {
         assert_eq!(classify(&err), exit_code::VALIDATION);
         let msg = format!("{err:#}");
         assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake.md")));
+    }
+
+    #[test]
+    fn classify_stake_amount_validation_hint() {
+        let err = anyhow::anyhow!("Invalid stake amount: -1. Amount cannot be negative.");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake.md")));
+    }
+
+    #[test]
+    fn classify_stake_invalid_netuid_validation_hint() {
+        let err = anyhow::anyhow!(
+            "Invalid netuid: 0. Root network (netuid 0) is not a user subnet.\n  Tip: user subnets start at netuid 1."
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("subnet list")));
+    }
+
+    #[test]
+    fn classify_spending_limit_validation_hint() {
+        let err = anyhow::anyhow!(
+            "Spending limit exceeded for SN1: trying 10.0000τ but limit is 1.0000τ.\n  Adjust with: agcli config set spending_limit.1 10"
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("config.md")));
+    }
+
+    #[test]
+    fn classify_stake_slippage_guard_chain() {
+        let err = anyhow::anyhow!(
+            "Slippage 9.00% exceeds maximum allowed 2.00% on SN1.\n  Reduce trade size or use a limit order: agcli stake add-limit / remove-limit"
+        );
+        assert_eq!(classify(&err), exit_code::CHAIN);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::CHAIN, &msg).is_some_and(|s| s.contains("slippage")));
     }
 
     #[test]

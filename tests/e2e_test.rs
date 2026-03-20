@@ -21,7 +21,9 @@
 //!   Bob:   5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 
 use agcli::chain::Client;
-use agcli::cli::helpers::{validate_amount, validate_ss58};
+use agcli::cli::helpers::{
+    check_spending_limit, safe_rao, validate_amount, validate_netuid, validate_ss58,
+};
 use agcli::extrinsics::compute_weight_commit_hash;
 use agcli::queries::subnet::list_subnets;
 use agcli::types::balance::Balance;
@@ -654,6 +656,7 @@ async fn e2e_local_chain() {
     test_balance_preflight(&mut client).await;
     test_transfer_preflight(&mut client).await;
     test_stake_list_preflight(&mut client).await;
+    test_stake_add_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -5780,6 +5783,52 @@ async fn test_stake_list_preflight(client: &mut Client) {
 
     println!(
         "[PASS] stake_list_preflight — one-shot + pinned head (mirrors `handle_stake` List in `stake_cmds.rs`)"
+    );
+}
+
+/// Preflight for `agcli stake add` — same validation + balance + optional slippage RPC bundle as
+/// `StakeCommands::Add` in `stake_cmds.rs` (before `unlock_and_resolve` / extrinsic).
+async fn test_stake_add_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    let netuid = 1u16;
+    let n = NetUid(netuid);
+    validate_netuid(netuid).expect("stake_add_preflight validate_netuid");
+
+    let probe_tao = 1.0_f64;
+    validate_amount(probe_tao, "stake amount").expect("stake_add_preflight validate_amount");
+    check_spending_limit(netuid, probe_tao).expect("stake_add_preflight check_spending_limit");
+
+    let bal = client
+        .get_balance_ss58(ALICE_SS58)
+        .await
+        .expect("stake_add_preflight get_balance_ss58");
+    let need = Balance::from_tao(probe_tao);
+    assert!(
+        bal.rao() >= need.rao(),
+        "Alice should have at least {:.6}τ free for stake add preflight mirror",
+        probe_tao
+    );
+    println!(
+        "  stake_add_preflight (`StakeCommands::Add`): validate_netuid → validate_amount → check_spending_limit → get_balance(coldkey) ≥ amount — have {:.6}τ, need {:.6}τ",
+        bal.tao(),
+        probe_tao
+    );
+
+    let rao = safe_rao(probe_tao);
+    let (price_raw, swap) = tokio::try_join!(
+        client.current_alpha_price(n),
+        client.sim_swap_tao_for_alpha(n, rao),
+    )
+    .expect("stake_add_preflight slippage RPC bundle");
+    let (alpha_out, _tao_fee, _alpha_fee) = swap;
+    println!(
+        "  stake_add_preflight (`--max-slippage` try_join): current_alpha_price={} sim_swap_tao_for_alpha → alpha_amount={} (same inputs as `check_slippage` buy path)",
+        price_raw, alpha_out
+    );
+
+    println!(
+        "[PASS] stake_add_preflight — mirrors pre-wallet checks in `handle_stake` Add (`stake_cmds.rs`)"
     );
 }
 

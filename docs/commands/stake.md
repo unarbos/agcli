@@ -64,21 +64,60 @@ Log lines **`stake_list_preflight`** in Phase 20 [`test_stake_list_preflight`](h
 
 ---
 
+## stake add — Stake TAO on a subnet (wallet)
+
+Lock **free TAO** from the wallet **coldkey** into **alpha** on a subnet for a chosen **hotkey** (default wallet hotkey or `--hotkey-address`). Uses the subnet AMM (`swap_tao_for_alpha`).
+
+**Discoverability:** `agcli stake add --help`; Tier 1 in [`docs/llm.txt`](../llm.txt); `agcli explain` Phase 6 lists the e2e log name; this page is linked from the Stake row in `llm.txt`.
+
+### After `cargo install`
+
+```bash
+agcli stake add --amount 10.0 --netuid 1 --password p --yes
+agcli stake add --amount 1.0 --netuid 1 --hotkey-address 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty --password p --yes
+agcli stake add --amount 5.0 --netuid 1 --max-slippage 2.0 --password p --yes
+```
+
+Global flags (`--network`, `--endpoint`, `--wallet-dir`, `--wallet`, `--mev`, …) apply like other write commands.
+
+## Read path (validation → RPC preflight → submit)
+
+Order matches [`StakeCommands::Add`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (`handle_stake`, `Add` branch, lines 101–145):
+
+1. **`connect`** (from `commands.rs` dispatch, same as other stake subcommands).
+2. **`validate_netuid(netuid)`** — **SN0** rejected before wallet (`src/cli/helpers.rs`).
+3. **`validate_amount(amount, "stake amount")`** — positive, finite TAO.
+4. **`check_spending_limit(netuid, amount)`** — optional per-subnet / global caps from `agcli config` (`src/cli/helpers.rs`).
+5. **`unlock_and_resolve`** — coldkey + hotkey SS58 (`src/cli/helpers.rs`).
+6. **Balance (+ optional slippage) preflight:** if **`--max-slippage`** is set, **`try_join!(get_balance(&coldkey_pub), check_slippage(...))`**; otherwise **`get_balance(&coldkey_pub)`** alone. If free TAO &lt; amount, bail with **Insufficient balance** and a pointer to `agcli balance`. **`check_slippage`** (buy path) uses **`current_alpha_price`** + **`sim_swap_tao_for_alpha`** (runtime APIs in `src/chain/queries.rs`); aborts if estimated slippage exceeds the cap (or warns above ~2% when within cap).
+7. **`add_stake_mev`** — extrinsic via `stake_op` (human **Tx:** line on success). **Note:** success output is **not** shaped by global `--output json` today (table/JSON apply to read-only stake commands such as **`stake list`**).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Stake extrinsic submitted and finalized path OK. |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on **`connect`** or hard RPC errors during preflight. |
+| **11** | Auth: wallet / password / hotkey resolution (`unlock_and_resolve`). |
+| **12** | Validation: invalid **`--netuid`** (e.g. **0**), invalid **`--amount`** (**`stake amount`** label in errors), **spending limit exceeded** (local config), and other messages classified in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **13** | Chain / client guardrails: **insufficient** free TAO before submit; **slippage** over **`--max-slippage`** (message contains **maximum allowed**); dispatch errors (**`NotEnoughBalanceToStake`**, **`HotKeyAccountNotExists`**, **`StakingRateLimitExceeded`**, **`InsufficientLiquidity`**, …). |
+| **15** | Timeout when applicable. |
+| **1** | Uncategorized errors. |
+
+Invalid **`--amount`** messages use the **`stake amount`** label — **`classify`** → **12** with a **`hint`** pointing at **`docs/commands/stake.md`**.
+
+## E2E
+
+Log lines **`stake_add_preflight`** in Phase 20 [`test_stake_add_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_amount`** with label **`stake amount`**, **`check_spending_limit`**, **`get_balance_ss58`**(Alice) ≥ amount, then **`try_join!(current_alpha_price, sim_swap_tao_for_alpha)`** — same RPC inputs as the **`--max-slippage`** branch’s **`check_slippage`** buy path. Full **`add_stake`** / **`remove_stake`** extrinsics remain in Phase 8 **`test_add_remove_stake`**.
+
 ## Subcommands
 
 ### stake add
-Stake TAO on a subnet. Converts TAO → alpha via the subnet's AMM pool.
 
-```bash
-agcli stake add --amount 10.0 --netuid 1 [--hotkey-address SS58] [--max-slippage 2.0] [--password PW] [--yes]
-```
+See **[stake add](#stake-add--stake-tao-on-a-subnet-wallet)** (read path, slippage, exit codes, e2e).
 
-**On-chain**: `SubtensorModule::add_stake(origin, hotkey, netuid, amount_staked)`
-- Flow: withdraw TAO from coldkey → `stake_into_subnet()` → `swap_tao_for_alpha()` via AMM → increase alpha shares
-- Storage: `Alpha(hotkey, coldkey, netuid)` shares, `TotalHotkeyAlpha`, `SubnetTAO`, `SubnetAlphaIn/Out`, `TotalStake`
-- Events: `StakeAdded(coldkey, hotkey, tao_amount, alpha_amount, netuid, block)`
-- Pre-checks: balance >= amount, spending limit check, slippage simulation
-- Errors: `NotEnoughBalanceToStake`, `HotKeyAccountNotExists`, `StakingRateLimitExceeded`, `InsufficientLiquidity`
+**On-chain**: `SubtensorModule::add_stake(origin, hotkey, netuid, amount_staked)` — withdraw TAO from coldkey → `stake_into_subnet()` → AMM `swap_tao_for_alpha()` → alpha shares on **`Alpha(hotkey, coldkey, netuid)`**; events **`StakeAdded`**.
 
 ### stake remove
 Unstake alpha from a subnet. Converts alpha → TAO via the AMM pool.

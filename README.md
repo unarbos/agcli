@@ -1,6 +1,7 @@
 # agcli — Rust CLI + SDK for Bittensor
 
-[![CI](https://github.com/unconst/agcli/actions/workflows/ci.yml/badge.svg)](https://github.com/unconst/agcli/actions/workflows/ci.yml)
+[![CI](https://github.com/unarbos/agcli/actions/workflows/ci.yml/badge.svg)](https://github.com/unarbos/agcli/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/unarbos/agcli/graph/badge.svg)](https://codecov.io/gh/unarbos/agcli)
 
 Fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
 
