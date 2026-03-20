@@ -77,6 +77,18 @@ impl QueryCache {
         }
     }
 
+    /// Like [`Self::with_ttl_and_disk`] with disk on, but disk files use `network_prefix_*` keys
+    /// so tests do not race on `~/.agcli/cache/all_subnets.json` under parallel `cargo test`.
+    #[cfg(test)]
+    pub(crate) fn with_ttl_disk_network_prefix(
+        ttl: Duration,
+        network_prefix: impl Into<String>,
+    ) -> Self {
+        let mut c = Self::with_ttl_and_disk(ttl, true);
+        c.network_prefix = network_prefix.into();
+        c
+    }
+
     /// Return a disk cache key namespaced by network.
     fn disk_key(&self, base: &str) -> String {
         if self.network_prefix.is_empty() {
@@ -545,15 +557,16 @@ mod tests {
     async fn stale_while_error_subnets() {
         use crate::queries::disk_cache;
 
-        // This test uses the real disk cache, so use a unique key prefix
-        let key = "all_subnets";
+        // Must not use bare `all_subnets` — parallel tests share ~/.agcli/cache on CI.
+        let prefix = "test_stale_while_error_subnets";
+        let key = format!("{prefix}_all_subnets");
 
         // Pre-populate disk cache with known data
         let stale_data: Vec<SubnetInfo> = vec![];
-        disk_cache::put(key, &stale_data).unwrap();
+        disk_cache::put(&key, &stale_data).unwrap();
 
         // Force in-memory TTL to be expired by using short TTL
-        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(1), true);
+        let cache = QueryCache::with_ttl_disk_network_prefix(Duration::from_millis(1), prefix);
         tokio::time::sleep(Duration::from_millis(5)).await;
 
         // Fetch fails — should fall back to stale disk data
@@ -566,7 +579,7 @@ mod tests {
         );
 
         // Clean up
-        disk_cache::remove(key);
+        disk_cache::remove(&key);
     }
 
     /// Stale-while-error: when no stale data exists, error propagates normally.
@@ -595,15 +608,16 @@ mod tests {
     async fn stale_while_error_dynamic_info() {
         use crate::queries::disk_cache;
 
-        let key = "all_dynamic_info";
+        let prefix = "test_stale_while_error_dynamic_info";
+        let key = format!("{prefix}_all_dynamic_info");
 
         // Pre-populate disk cache
         let stale_data: Vec<DynamicInfo> = vec![make_dynamic_info(1, "TestNet")];
-        disk_cache::put(key, &stale_data).unwrap();
+        disk_cache::put(&key, &stale_data).unwrap();
 
         // TTL must exceed the gap between `get_all_dynamic_info` (which populates
         // `dynamic_by_netuid`) and the following `get_dynamic_info`; 1ms races under load.
-        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(100), true);
+        let cache = QueryCache::with_ttl_disk_network_prefix(Duration::from_millis(100), prefix);
         tokio::time::sleep(Duration::from_millis(120)).await;
 
         // Fetch fails — should fall back to stale disk data
@@ -627,7 +641,7 @@ mod tests {
         assert_eq!(single.unwrap().name, "TestNet");
 
         // Clean up
-        disk_cache::remove(key);
+        disk_cache::remove(&key);
     }
 
     /// Invalidate forces fresh fetch even within TTL — critical for wizard staleness (Issue 647).
