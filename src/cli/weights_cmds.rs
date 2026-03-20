@@ -4,7 +4,7 @@ use crate::chain::Client;
 use crate::cli::helpers::*;
 use crate::cli::*;
 use crate::types::{Balance, NetUid};
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 /// Parse weights from string, stdin ("-"), or file ("@path").
 /// Supports:
@@ -56,7 +56,11 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
                     .and_then(|v| v.as_u64())
                     .ok_or_else(|| anyhow::anyhow!("Missing 'uid' field in weight entry"))?;
                 if uid_val > u16::MAX as u64 {
-                    anyhow::bail!("UID {} exceeds maximum value {} — UIDs must fit in u16", uid_val, u16::MAX);
+                    anyhow::bail!(
+                        "UID {} exceeds maximum value {} — UIDs must fit in u16",
+                        uid_val,
+                        u16::MAX
+                    );
                 }
                 let uid = uid_val as u16;
                 let weight_val = item
@@ -64,7 +68,12 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
                     .and_then(|v| v.as_u64())
                     .ok_or_else(|| anyhow::anyhow!("Missing 'weight' field in weight entry"))?;
                 if weight_val > u16::MAX as u64 {
-                    anyhow::bail!("Weight {} for UID {} exceeds maximum value {} — weights must fit in u16", weight_val, uid, u16::MAX);
+                    anyhow::bail!(
+                        "Weight {} for UID {} exceeds maximum value {} — weights must fit in u16",
+                        weight_val,
+                        uid,
+                        u16::MAX
+                    );
                 }
                 let weight = weight_val as u16;
                 uids.push(uid);
@@ -80,7 +89,12 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
                     .as_u64()
                     .ok_or_else(|| anyhow::anyhow!("Invalid weight value for UID {}", uid))?;
                 if weight_val > u16::MAX as u64 {
-                    anyhow::bail!("Weight {} for UID {} exceeds maximum value {} — weights must fit in u16", weight_val, uid, u16::MAX);
+                    anyhow::bail!(
+                        "Weight {} for UID {} exceeds maximum value {} — weights must fit in u16",
+                        weight_val,
+                        uid,
+                        u16::MAX
+                    );
                 }
                 let weight = weight_val as u16;
                 uids.push(uid);
@@ -118,15 +132,15 @@ pub fn weights_cmd_requires_wallet(cmd: &WeightCommands) -> bool {
 pub fn validate_weights_args(cmd: &WeightCommands) -> Result<()> {
     match cmd {
         WeightCommands::Set {
-            netuid,
-            weights,
-            ..
+            netuid, weights, ..
         } => {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
             resolve_weights(weights)?;
         }
-        WeightCommands::Commit { netuid, weights, .. } => {
+        WeightCommands::Commit {
+            netuid, weights, ..
+        } => {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
             resolve_weights(weights)?;
@@ -140,28 +154,28 @@ pub fn validate_weights_args(cmd: &WeightCommands) -> Result<()> {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
             if salt.is_empty() {
-                anyhow::bail!("Reveal requires a non-empty --salt (the salt used when committing).");
+                anyhow::bail!(
+                    "Reveal requires a non-empty --salt (the salt used when committing)."
+                );
             }
             resolve_weights(weights)?;
         }
         WeightCommands::CommitTimelocked {
-            netuid,
-            weights,
-            ..
+            netuid, weights, ..
         } => {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
             resolve_weights(weights)?;
         }
-        WeightCommands::CommitReveal { netuid, weights, .. } => {
+        WeightCommands::CommitReveal {
+            netuid, weights, ..
+        } => {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
             resolve_weights(weights)?;
         }
         WeightCommands::SetMechanism {
-            netuid,
-            weights,
-            ..
+            netuid, weights, ..
         } => {
             validate_netuid(*netuid)?;
             validate_weight_input(weights)?;
@@ -201,6 +215,29 @@ pub fn validate_weights_args(cmd: &WeightCommands) -> Result<()> {
     Ok(())
 }
 
+/// Latest-head subnet existence check (parity with `weights set` / `commit-reveal`).
+/// Used for signing weight paths, `weights status`, and read-only **`weights show`** before querying weights.
+/// `Ok(None)` from hyperparams means no subnet; RPC errors only warn so a flaky endpoint can still proceed.
+async fn require_subnet_exists_for_weights_cmd(client: &Client, netuid: u16) -> Result<()> {
+    match client.get_subnet_hyperparams(NetUid(netuid)).await {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => {
+            anyhow::bail!(
+                "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                netuid
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                netuid = netuid,
+                error = %e,
+                "Failed to fetch subnet hyperparams for weights pre-flight"
+            );
+            Ok(())
+        }
+    }
+}
+
 pub(super) async fn handle_weights(
     cmd: WeightCommands,
     client: &Client,
@@ -225,6 +262,7 @@ pub(super) async fn handle_weights(
             if let Some(lim) = limit {
                 validate_view_limit(lim, "weights show --limit")?;
             }
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             handle_weights_show(client, NetUid(netuid), hotkey.as_deref(), limit, ctx.output).await
         }
         WeightCommands::Set {
@@ -239,7 +277,13 @@ pub(super) async fn handle_weights(
 
             // Pre-flight checks (always run these)
             let hyperparams = match client.get_subnet_hyperparams(NetUid(netuid)).await {
-                Ok(h) => h,
+                Ok(Some(h)) => Some(h),
+                Ok(None) => {
+                    anyhow::bail!(
+                        "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                        netuid
+                    );
+                }
                 Err(e) => {
                     tracing::warn!(netuid = netuid, error = %e, "Failed to fetch subnet hyperparams for pre-flight checks");
                     None
@@ -326,6 +370,7 @@ pub(super) async fn handle_weights(
         } => {
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -363,6 +408,7 @@ pub(super) async fn handle_weights(
         } => {
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -408,6 +454,7 @@ pub(super) async fn handle_weights(
         } => {
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -448,21 +495,33 @@ pub(super) async fn handle_weights(
         } => {
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
+            let (uids, wts) = resolve_weights(&weights)?;
+
+            // Hyperparams before wallet (same unknown-SN bail as `weights set` / `subnet show`).
+            let hyperparams = match client.get_subnet_hyperparams(NetUid(netuid)).await {
+                Ok(Some(h)) => h,
+                Ok(None) => {
+                    anyhow::bail!(
+                        "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                        netuid
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(netuid = netuid, error = %e, "Failed to fetch subnet hyperparams for commit-reveal pre-flight");
+                    return Err(e).context(format!(
+                        "Failed to fetch subnet hyperparameters for SN{} (needed for commit-reveal timing).\n  Hint: Check your RPC endpoint and connectivity, then retry.",
+                        netuid
+                    ));
+                }
+            };
+
+            let cr_enabled = hyperparams.commit_reveal_weights_enabled;
+            let cr_interval = hyperparams.commit_reveal_weights_interval;
+            let tempo = hyperparams.tempo as u64;
+
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
-            let (uids, wts) = resolve_weights(&weights)?;
-
-            // Pre-flight: check commit-reveal is enabled
-            let hyperparams = client.get_subnet_hyperparams(NetUid(netuid)).await?;
-            let (cr_enabled, cr_interval, tempo) = match &hyperparams {
-                Some(h) => (
-                    h.commit_reveal_weights_enabled,
-                    h.commit_reveal_weights_interval,
-                    h.tempo as u64,
-                ),
-                None => anyhow::bail!("Subnet SN{} not found or hyperparams unavailable", netuid),
-            };
 
             if !cr_enabled {
                 eprintln!("Warning: SN{} does NOT have commit-reveal enabled. Using direct set_weights instead.", netuid);
@@ -575,6 +634,7 @@ pub(super) async fn handle_weights(
         }
         WeightCommands::Status { netuid } => {
             validate_netuid(netuid)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -645,6 +705,7 @@ pub(super) async fn handle_weights(
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let (uids, wts) = resolve_weights(&weights)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -686,7 +747,10 @@ pub(super) async fn handle_weights(
                 .await?;
             println!(
                 "Mechanism weights set on SN{} ({}, {} UIDs).\n  Tx: {}",
-                netuid, mech_name, uids.len(), hash
+                netuid,
+                mech_name,
+                uids.len(),
+                hash
             );
             Ok(())
         }
@@ -700,11 +764,9 @@ pub(super) async fn handle_weights(
                 .map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?
                 .try_into()
                 .map_err(|v: Vec<u8>| {
-                    anyhow::anyhow!(
-                        "Hash must be exactly 32 bytes, got {} bytes",
-                        v.len()
-                    )
+                    anyhow::anyhow!("Hash must be exactly 32 bytes, got {} bytes", v.len())
                 })?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             wallet.load_hotkey(hotkey_name)?;
@@ -744,6 +806,7 @@ pub(super) async fn handle_weights(
             validate_netuid(netuid)?;
             validate_weight_input(&weights)?;
             let (uids, wts) = resolve_weights(&weights)?;
+            require_subnet_exists_for_weights_cmd(client, netuid).await?;
             let salt_u16: Vec<u16> = salt
                 .as_bytes()
                 .chunks(2)
@@ -783,7 +846,10 @@ pub(super) async fn handle_weights(
                 .await?;
             println!(
                 "Mechanism weights revealed on SN{} ({}, {} UIDs).\n  Tx: {}",
-                netuid, mech_name, uids.len(), tx
+                netuid,
+                mech_name,
+                uids.len(),
+                tx
             );
             Ok(())
         }

@@ -77,7 +77,13 @@ pub struct Cli {
     pub wallet: String,
 
     /// Hotkey name (file under wallet's hotkeys/ directory)
-    #[arg(long, alias = "hotkey", global = true, default_value = "default", env = "AGCLI_HOTKEY")]
+    #[arg(
+        long,
+        alias = "hotkey",
+        global = true,
+        default_value = "default",
+        env = "AGCLI_HOTKEY"
+    )]
     pub hotkey_name: String,
 
     /// Output format
@@ -219,7 +225,16 @@ pub enum Commands {
     Subnet(SubnetCommands),
 
     // ──── Weights ────
-    /// Weight setting operations
+    /// Set or commit-reveal validator weights on subnets
+    ///
+    /// Subnets either accept direct `weights set` or require commit-reveal (`weights commit` then
+    /// `weights reveal`, or `weights commit-reveal`). Use `agcli subnet hyperparams --netuid <N>` for
+    /// weight-related hyperparameters; `agcli subnet show --netuid <N>` for a subnet summary. For direct sets, match the chain’s version key (`--version-key`). Use global
+    /// `--dry-run` to simulate without submitting.
+    ///
+    /// **Finalization:** submitting waits for inclusion (default 30s). For slow or busy chains use
+    /// global `--finalization-timeout`, env `AGCLI_FINALIZATION_TIMEOUT`, or `finalization_timeout` in
+    /// `~/.agcli/config.toml`. Global `--timeout` caps total wall time for the whole command.
     #[command(subcommand)]
     Weights(WeightCommands),
 
@@ -305,9 +320,9 @@ pub enum Commands {
     Doctor,
 
     // ──── Explain ────
-    /// Built-in Bittensor concept reference (tempo, commit-reveal, AMM, etc.)
+    /// Built-in Bittensor concept reference (tempo, commit-reveal, weights, AMM, etc.)
     Explain {
-        /// Topic to explain (e.g., tempo, commit-reveal, amm, bootstrap)
+        /// Topic to explain (e.g., tempo, commit-reveal, weights, amm, bootstrap)
         /// Omit to list all available topics.
         #[arg(long)]
         topic: Option<String>,
@@ -412,7 +427,7 @@ pub enum CommitmentCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58 address
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: String,
     },
     /// List all commitments on a subnet
@@ -427,7 +442,7 @@ pub enum CommitmentCommands {
 pub enum SubscribeCommands {
     /// Watch finalized blocks
     Blocks,
-    /// Watch chain events (all, staking, registration, transfer, weights, subnet)
+    /// Watch chain events (all, staking, registration, transfer, weights, subnet, delegation, keys, swap, governance, crowdloan, …)
     Events {
         /// Event filter category
         #[arg(long, default_value = "all")]
@@ -539,7 +554,7 @@ pub enum WalletCommands {
     /// Associate a hotkey with your coldkey on-chain
     AssociateHotkey {
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Check coldkey swap status (scheduled swap and arbitration)
@@ -567,7 +582,7 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
         /// Maximum allowed slippage percentage (e.g., 2.0 for 2%). Aborts if exceeded.
         #[arg(long)]
@@ -582,7 +597,7 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
         /// Maximum allowed slippage percentage (e.g., 2.0 for 2%). Aborts if exceeded.
         #[arg(long)]
@@ -609,7 +624,7 @@ pub enum StakeCommands {
         #[arg(long)]
         to: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Swap stake between subnets for the same hotkey
@@ -624,13 +639,13 @@ pub enum StakeCommands {
         #[arg(long)]
         to: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Unstake all from a hotkey
     UnstakeAll {
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Claim root dividends
@@ -654,7 +669,7 @@ pub enum StakeCommands {
         #[arg(long)]
         partial: bool,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Remove stake with limit price
@@ -672,7 +687,7 @@ pub enum StakeCommands {
         #[arg(long)]
         partial: bool,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Set childkey take
@@ -684,7 +699,7 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Set children for hotkey
@@ -696,7 +711,7 @@ pub enum StakeCommands {
         #[arg(long)]
         children: String,
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Recycle alpha tokens back to TAO
@@ -708,13 +723,13 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Unstake all alpha across all subnets for a hotkey
     UnstakeAllAlpha {
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Burn alpha tokens permanently (reduce supply)
@@ -726,7 +741,7 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Swap stake between subnets with a limit price
@@ -747,7 +762,7 @@ pub enum StakeCommands {
         #[arg(long)]
         partial: bool,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Set auto-stake hotkey for a subnet (rewards auto-compound to this hotkey)
@@ -756,7 +771,7 @@ pub enum StakeCommands {
         #[arg(long)]
         netuid: u16,
         /// Hotkey SS58 to auto-stake to
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Show auto-stake destination for each subnet
@@ -768,7 +783,7 @@ pub enum StakeCommands {
     /// Process pending root emission claims across subnets
     ProcessClaim {
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
         /// Only claim for specific subnet UIDs (comma-separated)
         #[arg(long)]
@@ -798,7 +813,7 @@ pub enum StakeCommands {
         #[arg(long)]
         to: u16,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Remove all stake from a hotkey on a subnet with a limit price (no partial fills)
@@ -810,7 +825,7 @@ pub enum StakeCommands {
         #[arg(long)]
         price: f64,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Full staking wizard (interactive or non-interactive with flags)
@@ -822,7 +837,7 @@ pub enum StakeCommands {
         #[arg(long)]
         amount: Option<f64>,
         /// Hotkey SS58 (skip interactive hotkey selection)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
 }
@@ -836,6 +851,7 @@ pub enum SubnetCommands {
         at_block: Option<u32>,
     },
     /// Show detailed info for a subnet
+    #[command(alias = "info")]
     Show {
         /// Subnet UID
         #[arg(long)]
@@ -844,11 +860,14 @@ pub enum SubnetCommands {
         #[arg(long)]
         at_block: Option<u32>,
     },
-    /// Show subnet hyperparameters
+    /// Show subnet hyperparameters (commit–reveal, min weights, rate limits, registration, burns, …)
     Hyperparams {
         /// Subnet UID
         #[arg(long)]
         netuid: u16,
+        /// Query at a specific block number (historical wayback)
+        #[arg(long)]
+        at_block: Option<u32>,
     },
     /// Show metagraph for a subnet (full or single UID)
     Metagraph {
@@ -1037,10 +1056,11 @@ pub enum SubnetCommands {
         #[arg(long)]
         netuid: u16,
         /// Filter by hotkey SS58 address (default: show all)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
-    /// Set a subnet hyperparameter (subnet owner only)
+    /// Set a subnet hyperparameter via AdminUtils (subnet owner for owner-allowed params; root-only
+    /// params such as `tempo` or `weights_rate_limit` require `agcli admin` with `--sudo-key` on localnet)
     SetParam {
         /// Subnet UID
         #[arg(long)]
@@ -1137,7 +1157,11 @@ pub enum SubnetCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum WeightCommands {
-    /// Set weights on a subnet
+    /// Set weights directly (only when commit–reveal is off on the subnet).
+    ///
+    /// Loads hyperparams first: missing subnets exit like `subnet show` before the wallet opens.
+    /// Match on-chain `weights_version` via `--version-key` from `subnet hyperparams --netuid N`.
+    /// Global `--dry-run` prints JSON pre-flight (rate limit, CR flag, stake hint) without submitting.
     Set {
         /// Subnet UID
         #[arg(long)]
@@ -1211,7 +1235,12 @@ pub enum WeightCommands {
         #[arg(long)]
         salt: Option<String>,
     },
-    /// Atomic commit-reveal: commit weights, wait for reveal window, then auto-reveal
+    /// Atomic commit-reveal: commit weights, wait for reveal window, then auto-reveal.
+    ///
+    /// Loads hyperparams first: missing subnets exit like `subnet show` before the wallet opens.
+    /// RPC failures bail with context (needed for reveal timing). If commit-reveal is off on the
+    /// subnet, falls back to direct `set_weights`. Match `--version-key` to hyperparams
+    /// `weights_version`. Use `--wait` for a final JSON summary after reveal.
     CommitReveal {
         /// Subnet UID
         #[arg(long)]
@@ -1292,7 +1321,7 @@ pub enum DelegateCommands {
     /// Show delegate info
     Show {
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// List all delegates
@@ -1303,7 +1332,7 @@ pub enum DelegateCommands {
         #[arg(long)]
         take: f64,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Increase take
@@ -1312,7 +1341,7 @@ pub enum DelegateCommands {
         #[arg(long)]
         take: f64,
         /// Hotkey SS58
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
 }
@@ -1409,7 +1438,7 @@ pub enum ViewCommands {
     /// Show who has nominated/delegated to a hotkey
     Nominations {
         /// Hotkey SS58 address
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: String,
     },
     /// Show metagraph with optional diff against a previous block
@@ -1433,7 +1462,7 @@ pub enum ViewCommands {
         #[arg(long)]
         uid: Option<u16>,
         /// Hotkey SS58 address
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Subnet health: neuron count, active %, axon reachability
@@ -2153,7 +2182,7 @@ pub enum LiquidityCommands {
         #[arg(long)]
         amount: u64,
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Remove a liquidity position entirely
@@ -2165,7 +2194,7 @@ pub enum LiquidityCommands {
         #[arg(long)]
         position_id: u128,
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Modify liquidity in an existing position
@@ -2180,7 +2209,7 @@ pub enum LiquidityCommands {
         #[arg(long, allow_hyphen_values = true)]
         delta: i64,
         /// Hotkey SS58 (defaults to wallet hotkey)
-        #[arg(long)]
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
     },
     /// Toggle user liquidity for a subnet (subnet owner only)
@@ -2845,7 +2874,8 @@ impl Cli {
 /// Check whether a flag (e.g. "--network") was explicitly passed on the command line.
 /// Handles both `--flag value` and `--flag=value` forms.
 pub(crate) fn cli_has_flag(args: &[String], flag: &str) -> bool {
-    args.iter().any(|a| a == flag || a.starts_with(&format!("{}=", flag)))
+    args.iter()
+        .any(|a| a == flag || a.starts_with(&format!("{}=", flag)))
 }
 
 #[cfg(test)]
@@ -2858,7 +2888,10 @@ mod tests {
     fn cli_has_flag_detects_short_n() {
         let args: Vec<String> = vec!["agcli".into(), "-n".into(), "local".into()];
         assert!(cli_has_flag(&args, "-n"), "-n should be detected");
-        assert!(!cli_has_flag(&args, "--network"), "--network should not match -n");
+        assert!(
+            !cli_has_flag(&args, "--network"),
+            "--network should not match -n"
+        );
     }
 
     #[test]
@@ -2870,7 +2903,10 @@ mod tests {
     #[test]
     fn cli_has_flag_detects_long_network() {
         let args: Vec<String> = vec!["agcli".into(), "--network".into(), "test".into()];
-        assert!(cli_has_flag(&args, "--network"), "--network should be detected");
+        assert!(
+            cli_has_flag(&args, "--network"),
+            "--network should be detected"
+        );
         assert!(!cli_has_flag(&args, "-n"), "-n should not match --network");
     }
 
@@ -2883,9 +2919,18 @@ mod tests {
         let mut cfg = crate::config::Config::default();
         cfg.network = Some("test".into());
 
-        let args: Vec<String> = vec!["agcli".into(), "-n".into(), "local".into(), "config".into(), "show".into()];
+        let args: Vec<String> = vec![
+            "agcli".into(),
+            "-n".into(),
+            "local".into(),
+            "config".into(),
+            "show".into(),
+        ];
         cli.apply_config_with_args(&cfg, &args);
-        assert_eq!(cli.network, "local", "-n flag should prevent config from overriding network");
+        assert_eq!(
+            cli.network, "local",
+            "-n flag should prevent config from overriding network"
+        );
     }
 
     #[test]
@@ -2898,7 +2943,10 @@ mod tests {
 
         let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
         cli.apply_config_with_args(&cfg, &args);
-        assert_eq!(cli.network, "test", "config network should apply when no CLI flag");
+        assert_eq!(
+            cli.network, "test",
+            "config network should apply when no CLI flag"
+        );
     }
 
     // ── Issue 87: --proxy flag is parsed and stored in Ctx ──
@@ -2931,7 +2979,10 @@ mod tests {
     #[test]
     fn live_interval_from_config_applied_when_no_cli_flag() {
         let mut cli = Cli::parse_from(["agcli", "config", "show"]);
-        assert!(cli.live.is_none(), "live should default to None without --live");
+        assert!(
+            cli.live.is_none(),
+            "live should default to None without --live"
+        );
 
         let mut cfg = crate::config::Config::default();
         cfg.live_interval = Some(30);
@@ -2939,21 +2990,39 @@ mod tests {
         let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
         cli.apply_config_with_args(&cfg, &args);
 
-        assert_eq!(cli.live_interval(), Some(30), "config live_interval=30 should be applied");
+        assert_eq!(
+            cli.live_interval(),
+            Some(30),
+            "config live_interval=30 should be applied"
+        );
     }
 
     #[test]
     fn live_interval_config_ignored_when_cli_flag_present() {
         let mut cli = Cli::parse_from(["agcli", "--live", "5", "config", "show"]);
-        assert_eq!(cli.live_interval(), Some(5), "--live 5 should give interval 5");
+        assert_eq!(
+            cli.live_interval(),
+            Some(5),
+            "--live 5 should give interval 5"
+        );
 
         let mut cfg = crate::config::Config::default();
         cfg.live_interval = Some(30);
 
-        let args: Vec<String> = vec!["agcli".into(), "--live".into(), "5".into(), "config".into(), "show".into()];
+        let args: Vec<String> = vec![
+            "agcli".into(),
+            "--live".into(),
+            "5".into(),
+            "config".into(),
+            "show".into(),
+        ];
         cli.apply_config_with_args(&cfg, &args);
 
-        assert_eq!(cli.live_interval(), Some(5), "--live CLI flag should take precedence over config");
+        assert_eq!(
+            cli.live_interval(),
+            Some(5),
+            "--live CLI flag should take precedence over config"
+        );
     }
 
     #[test]
@@ -2964,7 +3033,10 @@ mod tests {
         let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
         cli.apply_config_with_args(&cfg, &args);
 
-        assert!(cli.live_interval().is_none(), "should remain None when no config and no flag");
+        assert!(
+            cli.live_interval().is_none(),
+            "should remain None when no config and no flag"
+        );
     }
 
     // ── Issue 89: WeightCommands::Set no longer has its own dry_run field ──
@@ -2974,8 +3046,14 @@ mod tests {
         // Verify that WeightCommands::Set does not have a dry_run field by
         // parsing a command line with the global --dry-run flag.
         let cli = Cli::parse_from([
-            "agcli", "--dry-run", "weights", "set",
-            "--netuid", "1", "--weights", "0:100",
+            "agcli",
+            "--dry-run",
+            "weights",
+            "set",
+            "--netuid",
+            "1",
+            "--weights",
+            "0:100",
         ]);
         assert!(cli.dry_run, "global --dry-run should be true");
         // Ensure the parsed Set variant doesn't have its own dry_run
@@ -2990,8 +3068,13 @@ mod tests {
     #[test]
     fn weights_set_without_global_dry_run() {
         let cli = Cli::parse_from([
-            "agcli", "weights", "set",
-            "--netuid", "1", "--weights", "0:100",
+            "agcli",
+            "weights",
+            "set",
+            "--netuid",
+            "1",
+            "--weights",
+            "0:100",
         ]);
         assert!(!cli.dry_run, "global --dry-run should be false by default");
     }

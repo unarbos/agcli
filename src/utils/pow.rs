@@ -143,7 +143,10 @@ mod tests {
         let block = [0u8; 32];
         let hotkey = [1u8; 32];
         let result = solve_pow(&block, &hotkey, 0, 100);
-        assert!(result.is_none(), "difficulty=0 should return None, not panic");
+        assert!(
+            result.is_none(),
+            "difficulty=0 should return None, not panic"
+        );
     }
 
     /// H-13 fix: solve_pow_range with difficulty=0 should also return None.
@@ -152,6 +155,9 @@ mod tests {
         let block = [0u8; 32];
         let hotkey = [1u8; 32];
         let result = solve_pow_range(&block, &hotkey, 0, 0, 1000);
-        assert!(result.is_none(), "difficulty=0 should return None, not panic");
+        assert!(
+            result.is_none(),
+            "difficulty=0 should return None, not panic"
+        );
     }
 }

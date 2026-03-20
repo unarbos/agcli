@@ -124,7 +124,11 @@ fn config_batch_cli_overrides() {
         batch: Some(false),
         ..Default::default()
     };
-    let args: Vec<String> = vec!["agcli".to_string(), "--batch".to_string(), "balance".to_string()];
+    let args: Vec<String> = vec![
+        "agcli".to_string(),
+        "--batch".to_string(),
+        "balance".to_string(),
+    ];
     cli.apply_config_with_args(&cfg, &args);
     assert!(cli.batch);
 }
@@ -190,13 +194,8 @@ fn config_explicit_default_hotkey_not_overridden() {
 #[test]
 /// Issue 639: Explicit --wallet-dir with default value should NOT be overridden.
 fn config_explicit_default_wallet_dir_not_overridden() {
-    let mut cli = Cli::try_parse_from([
-        "agcli",
-        "--wallet-dir",
-        "~/.bittensor/wallets",
-        "balance",
-    ])
-    .unwrap();
+    let mut cli =
+        Cli::try_parse_from(["agcli", "--wallet-dir", "~/.bittensor/wallets", "balance"]).unwrap();
     let cfg = agcli::Config {
         wallet_dir: Some("/custom/path".to_string()),
         ..Default::default()

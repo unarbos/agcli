@@ -202,149 +202,295 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
         AdminCommands::SetTxRateLimit { limit, sudo_key } => {
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_tx_rate_limit(client, &pair, limit).await?;
-            print_tx_result(ctx.output, &hash, &format!("TX rate limit set to {}", limit));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("TX rate limit set to {}", limit),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMinDifficulty { netuid, difficulty, sudo_key } => {
+        AdminCommands::SetMinDifficulty {
+            netuid,
+            difficulty,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_min_difficulty(client, &pair, netuid, difficulty).await?;
-            print_tx_result(ctx.output, &hash, &format!("Min difficulty set to {} on SN{}", difficulty, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Min difficulty set to {} on SN{}", difficulty, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMaxDifficulty { netuid, difficulty, sudo_key } => {
+        AdminCommands::SetMaxDifficulty {
+            netuid,
+            difficulty,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_max_difficulty(client, &pair, netuid, difficulty).await?;
-            print_tx_result(ctx.output, &hash, &format!("Max difficulty set to {} on SN{}", difficulty, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Max difficulty set to {} on SN{}", difficulty, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetAdjustmentInterval { netuid, interval, sudo_key } => {
+        AdminCommands::SetAdjustmentInterval {
+            netuid,
+            interval,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_adjustment_interval(client, &pair, netuid, interval).await?;
-            print_tx_result(ctx.output, &hash, &format!("Adjustment interval set to {} on SN{}", interval, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Adjustment interval set to {} on SN{}", interval, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetKappa { netuid, kappa, sudo_key } => {
+        AdminCommands::SetKappa {
+            netuid,
+            kappa,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_kappa(client, &pair, netuid, kappa).await?;
-            print_tx_result(ctx.output, &hash, &format!("Kappa set to {} on SN{}", kappa, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Kappa set to {} on SN{}", kappa, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetRho { netuid, rho, sudo_key } => {
+        AdminCommands::SetRho {
+            netuid,
+            rho,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_rho(client, &pair, netuid, rho).await?;
-            print_tx_result(ctx.output, &hash, &format!("Rho set to {} on SN{}", rho, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Rho set to {} on SN{}", rho, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMinBurn { netuid, burn, sudo_key } => {
+        AdminCommands::SetMinBurn {
+            netuid,
+            burn,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_min_burn(client, &pair, netuid, burn).await?;
-            print_tx_result(ctx.output, &hash, &format!("Min burn set to {} on SN{}", burn, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Min burn set to {} on SN{}", burn, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMaxBurn { netuid, burn, sudo_key } => {
+        AdminCommands::SetMaxBurn {
+            netuid,
+            burn,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_max_burn(client, &pair, netuid, burn).await?;
-            print_tx_result(ctx.output, &hash, &format!("Max burn set to {} on SN{}", burn, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Max burn set to {} on SN{}", burn, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetLiquidAlpha { netuid, enabled, sudo_key } => {
+        AdminCommands::SetLiquidAlpha {
+            netuid,
+            enabled,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_liquid_alpha_enabled(client, &pair, netuid, enabled).await?;
             let state = if enabled { "enabled" } else { "disabled" };
-            print_tx_result(ctx.output, &hash, &format!("Liquid alpha {} on SN{}", state, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Liquid alpha {} on SN{}", state, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetAlphaValues { netuid, alpha_low, alpha_high, sudo_key } => {
+        AdminCommands::SetAlphaValues {
+            netuid,
+            alpha_low,
+            alpha_high,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
-            let hash = admin::set_alpha_values(client, &pair, netuid, alpha_low, alpha_high).await?;
-            print_tx_result(ctx.output, &hash, &format!("Alpha values set to low={}, high={} on SN{}", alpha_low, alpha_high, netuid));
+            let hash =
+                admin::set_alpha_values(client, &pair, netuid, alpha_low, alpha_high).await?;
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!(
+                    "Alpha values set to low={}, high={} on SN{}",
+                    alpha_low, alpha_high, netuid
+                ),
+            );
             Ok(())
         }
 
-        AdminCommands::SetYuma3 { netuid, enabled, sudo_key } => {
+        AdminCommands::SetYuma3 {
+            netuid,
+            enabled,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_yuma3_enabled(client, &pair, netuid, enabled).await?;
             let state = if enabled { "enabled" } else { "disabled" };
-            print_tx_result(ctx.output, &hash, &format!("Yuma3 {} on SN{}", state, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Yuma3 {} on SN{}", state, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetBondsPenalty { netuid, penalty, sudo_key } => {
+        AdminCommands::SetBondsPenalty {
+            netuid,
+            penalty,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_bonds_penalty(client, &pair, netuid, penalty).await?;
-            print_tx_result(ctx.output, &hash, &format!("Bonds penalty set to {} on SN{}", penalty, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Bonds penalty set to {} on SN{}", penalty, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetStakeThreshold { threshold, sudo_key } => {
+        AdminCommands::SetStakeThreshold {
+            threshold,
+            sudo_key,
+        } => {
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_stake_threshold(client, &pair, threshold).await?;
-            print_tx_result(ctx.output, &hash, &format!("Stake threshold set to {}", threshold));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Stake threshold set to {}", threshold),
+            );
             Ok(())
         }
 
-        AdminCommands::SetNetworkRegistration { netuid, allowed, sudo_key } => {
+        AdminCommands::SetNetworkRegistration {
+            netuid,
+            allowed,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
-            let hash = admin::set_network_registration_allowed(client, &pair, netuid, allowed).await?;
+            let hash =
+                admin::set_network_registration_allowed(client, &pair, netuid, allowed).await?;
             let state = if allowed { "enabled" } else { "disabled" };
-            print_tx_result(ctx.output, &hash, &format!("Network registration {} on SN{}", state, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Network registration {} on SN{}", state, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetPowRegistration { netuid, allowed, sudo_key } => {
+        AdminCommands::SetPowRegistration {
+            netuid,
+            allowed,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
-            let hash = admin::set_network_pow_registration_allowed(client, &pair, netuid, allowed).await?;
+            let hash =
+                admin::set_network_pow_registration_allowed(client, &pair, netuid, allowed).await?;
             let state = if allowed { "enabled" } else { "disabled" };
-            print_tx_result(ctx.output, &hash, &format!("POW registration {} on SN{}", state, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("POW registration {} on SN{}", state, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetAdjustmentAlpha { netuid, alpha, sudo_key } => {
+        AdminCommands::SetAdjustmentAlpha {
+            netuid,
+            alpha,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_adjustment_alpha(client, &pair, netuid, alpha).await?;
-            print_tx_result(ctx.output, &hash, &format!("Adjustment alpha set to {} on SN{}", alpha, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Adjustment alpha set to {} on SN{}", alpha, netuid),
+            );
             Ok(())
         }
 
         AdminCommands::SetSubnetMovingAlpha { alpha, sudo_key } => {
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_subnet_moving_alpha(client, &pair, alpha).await?;
-            print_tx_result(ctx.output, &hash, &format!("Subnet moving alpha set to {}", alpha));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Subnet moving alpha set to {}", alpha),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMechanismCount { netuid, count, sudo_key } => {
+        AdminCommands::SetMechanismCount {
+            netuid,
+            count,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_mechanism_count(client, &pair, netuid, count).await?;
-            print_tx_result(ctx.output, &hash, &format!("Mechanism count set to {} on SN{}", count, netuid));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Mechanism count set to {} on SN{}", count, netuid),
+            );
             Ok(())
         }
 
-        AdminCommands::SetMechanismEmissionSplit { netuid, weights, sudo_key } => {
+        AdminCommands::SetMechanismEmissionSplit {
+            netuid,
+            weights,
+            sudo_key,
+        } => {
             validate_netuid(netuid)?;
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let emission_weights: Vec<u64> = weights
@@ -355,15 +501,24 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
                         .map_err(|e| anyhow::anyhow!("Invalid emission weight '{}': {}", s, e))
                 })
                 .collect::<Result<Vec<_>>>()?;
-            let hash = admin::set_mechanism_emission_split(client, &pair, netuid, emission_weights).await?;
-            print_tx_result(ctx.output, &hash, &format!("Mechanism emission split set on SN{}", netuid));
+            let hash = admin::set_mechanism_emission_split(client, &pair, netuid, emission_weights)
+                .await?;
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Mechanism emission split set on SN{}", netuid),
+            );
             Ok(())
         }
 
         AdminCommands::SetNominatorMinStake { stake, sudo_key } => {
             let pair = resolve_sudo_key(&sudo_key, ctx)?;
             let hash = admin::set_nominator_min_required_stake(client, &pair, stake).await?;
-            print_tx_result(ctx.output, &hash, &format!("Nominator min required stake set to {}", stake));
+            print_tx_result(
+                ctx.output,
+                &hash,
+                &format!("Nominator min required stake set to {}", stake),
+            );
             Ok(())
         }
 
@@ -522,7 +677,11 @@ mod tests {
         let result = parse_raw_args("[-1]");
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Negative"), "Error should mention negative: {}", err);
+        assert!(
+            err.contains("Negative"),
+            "Error should mention negative: {}",
+            err
+        );
     }
 
     #[test]

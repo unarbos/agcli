@@ -321,11 +321,7 @@ where
                             || msg.contains("Bad origin")
                         {
                             let truncated = crate::utils::truncate(&msg, 80);
-                            $cb(&format!(
-                                "Warning: {} skipped — {}",
-                                $label,
-                                truncated
-                            ));
+                            $cb(&format!("Warning: {} skipped — {}", $label, truncated));
                         } else {
                             return Err(e);
                         }
@@ -450,7 +446,9 @@ where
             if let Some(fund) = neuron_cfg.fund_tao {
                 if fund > 0.0 {
                     // Transfer is non-idempotent — do NOT retry (could double-spend).
-                    client.transfer(&alice, &ss58, Balance::from_tao(fund)).await?;
+                    client
+                        .transfer(&alice, &ss58, Balance::from_tao(fund))
+                        .await?;
                     balance_tao = Some(fund);
                 }
             }
@@ -458,7 +456,10 @@ where
             // Register on subnet
             let mut uid = None;
             if neuron_cfg.register {
-                retry_idempotent_extrinsic(|| client.burned_register(&alice, NetUid(netuid), &ss58)).await?;
+                retry_idempotent_extrinsic(|| {
+                    client.burned_register(&alice, NetUid(netuid), &ss58)
+                })
+                .await?;
                 wait_blocks(&client, 1).await;
 
                 // Look up UID
@@ -656,7 +657,9 @@ mod tests {
     #[test]
     fn is_local_endpoint_rejects_remote() {
         assert!(!is_local_endpoint("ws://subtensor.example.com:9944"));
-        assert!(!is_local_endpoint("wss://entrypoint-finney.opentensor.ai:443"));
+        assert!(!is_local_endpoint(
+            "wss://entrypoint-finney.opentensor.ai:443"
+        ));
         assert!(!is_local_endpoint("ws://8.8.8.8:9944"));
         assert!(!is_local_endpoint("wss://mainnet.bittensor.com:443"));
     }
@@ -711,8 +714,13 @@ mod tests {
                     Ok("0xdef".to_string())
                 }
             }
-        }).await;
-        assert!(result.is_ok(), "Should succeed after transient retries: {:?}", result.err());
+        })
+        .await;
+        assert!(
+            result.is_ok(),
+            "Should succeed after transient retries: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap(), "0xdef");
     }
 
@@ -720,8 +728,12 @@ mod tests {
     async fn retry_idempotent_fails_on_non_transient() {
         let result = retry_idempotent_extrinsic(|| async {
             Err::<String, _>(anyhow::anyhow!("insufficient balance"))
-        }).await;
-        assert!(result.is_err(), "Non-transient error should fail immediately");
+        })
+        .await;
+        assert!(
+            result.is_err(),
+            "Non-transient error should fail immediately"
+        );
     }
 
     // ──── Issue 100: is_rfc1918_172 correctly checks 172.16-31 range ────
@@ -739,7 +751,10 @@ mod tests {
         // 172.32+ and 172.0-15 are NOT private
         assert!(!is_rfc1918_172("172.32.0.1"), "172.32.x.x is not RFC1918");
         assert!(!is_rfc1918_172("172.0.0.1"), "172.0.x.x is not RFC1918");
-        assert!(!is_rfc1918_172("172.15.255.255"), "172.15.x.x is not RFC1918");
+        assert!(
+            !is_rfc1918_172("172.15.255.255"),
+            "172.15.x.x is not RFC1918"
+        );
         assert!(!is_rfc1918_172("172.255.0.1"), "172.255.x.x is not RFC1918");
     }
 
@@ -753,9 +768,18 @@ mod tests {
     #[test]
     fn is_local_endpoint_rejects_public_172() {
         // Before the fix, 172.32+ was incorrectly accepted as local
-        assert!(!is_local_endpoint("ws://172.32.0.1:9944"), "172.32.x should not be local");
-        assert!(!is_local_endpoint("ws://172.100.0.1:9944"), "172.100.x should not be local");
-        assert!(!is_local_endpoint("ws://172.255.0.1:9944"), "172.255.x should not be local");
+        assert!(
+            !is_local_endpoint("ws://172.32.0.1:9944"),
+            "172.32.x should not be local"
+        );
+        assert!(
+            !is_local_endpoint("ws://172.100.0.1:9944"),
+            "172.100.x should not be local"
+        );
+        assert!(
+            !is_local_endpoint("ws://172.255.0.1:9944"),
+            "172.255.x should not be local"
+        );
         // But 172.16-31 should still be accepted
         assert!(is_local_endpoint("ws://172.16.0.1:9944"));
         assert!(is_local_endpoint("ws://172.31.255.255:9944"));

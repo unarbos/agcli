@@ -1499,9 +1499,15 @@ async fn regen_coldkey_respects_wallet_name() {
         password: Some("testpass".to_string()),
     };
 
-    handle_wallet(cmd, base, "TWENTY_EIGHT", Some("testpass"), OutputFormat::Json)
-        .await
-        .unwrap();
+    handle_wallet(
+        cmd,
+        base,
+        "TWENTY_EIGHT",
+        Some("testpass"),
+        OutputFormat::Json,
+    )
+    .await
+    .unwrap();
 
     // Coldkey must exist in TWENTY_EIGHT, not default
     assert!(
@@ -1542,7 +1548,11 @@ async fn regen_hotkey_respects_wallet_name() {
         "hotkey should be in CUSTOM_WALLET/hotkeys/"
     );
     assert!(
-        !dir.path().join("default").join("hotkeys").join("myhot").exists(),
+        !dir.path()
+            .join("default")
+            .join("hotkeys")
+            .join("myhot")
+            .exists(),
         "hotkey must NOT be in default/hotkeys/ — wallet_name was ignored"
     );
 }
@@ -1573,7 +1583,11 @@ async fn new_hotkey_respects_wallet_name() {
         "hotkey should be in MY_WALLET/hotkeys/"
     );
     assert!(
-        !dir.path().join("default").join("hotkeys").join("newhot").exists(),
+        !dir.path()
+            .join("default")
+            .join("hotkeys")
+            .join("newhot")
+            .exists(),
         "hotkey must NOT be in default/hotkeys/ — wallet_name was ignored"
     );
 }
@@ -1589,8 +1603,7 @@ async fn regen_coldkey_does_not_touch_other_wallets() {
 
     // Create a "default" wallet first
     let (_, _, _) = Wallet::create(base, "default", "pw1", "default").unwrap();
-    let default_before =
-        std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
+    let default_before = std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
     let default_mtime = default_before.modified().unwrap();
 
     // Small delay to ensure mtime would change if file is rewritten
@@ -1601,13 +1614,18 @@ async fn regen_coldkey_does_not_touch_other_wallets() {
         mnemonic: Some(mnemonic.to_string()),
         password: Some("other_pw".to_string()),
     };
-    handle_wallet(cmd, base, "other_wallet", Some("other_pw"), OutputFormat::Json)
-        .await
-        .unwrap();
+    handle_wallet(
+        cmd,
+        base,
+        "other_wallet",
+        Some("other_pw"),
+        OutputFormat::Json,
+    )
+    .await
+    .unwrap();
 
     // default wallet's coldkey should be untouched
-    let default_after =
-        std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
+    let default_after = std::fs::metadata(dir.path().join("default").join("coldkey")).unwrap();
     assert_eq!(
         default_mtime,
         default_after.modified().unwrap(),
@@ -1717,7 +1735,8 @@ fn plaintext_keyfile_permissions_after_atomic_write() {
 fn import_wallet_no_temp_files_remain() {
     let dir = tempfile::tempdir().unwrap();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let _wallet = Wallet::import_from_mnemonic(dir.path(), "import_atomic", mnemonic, "pass123").unwrap();
+    let _wallet =
+        Wallet::import_from_mnemonic(dir.path(), "import_atomic", mnemonic, "pass123").unwrap();
 
     let wallet_dir = dir.path().join("import_atomic");
     assert!(!wallet_dir.join("coldkey.tmp").exists());

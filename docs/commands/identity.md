@@ -24,7 +24,7 @@ agcli identity set --name "MyValidator" [--url "https://..."] [--github "user/re
 - Events: identity storage updated
 
 ### identity set-subnet
-Set identity for a subnet (owner only).
+Set identity for a subnet (owner only). For a **brand-new** subnet, you can instead set identity in the same extrinsic as registration: **`agcli subnet register-with-identity`** (see **`docs/commands/subnet.md`**).
 
 ```bash
 agcli identity set-subnet --netuid 1 --name "MySubnet" [--github "..."] [--url "..."]

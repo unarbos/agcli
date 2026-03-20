@@ -19,8 +19,8 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
                 crate::cli::helpers::validate_port(p, "localnet")?;
             }
             let image_val = image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string());
-            let container_val = container
-                .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            let container_val =
+                container.unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
             validate_docker_image(&image_val)?;
             validate_docker_name(&container_val, "Container name")?;
             let cfg = LocalnetConfig {
@@ -137,8 +137,8 @@ pub(super) async fn handle_localnet(cmd: LocalnetCommands, ctx: &Ctx<'_>) -> Res
                 crate::cli::helpers::validate_port(p, "localnet reset")?;
             }
             let image_val = image.unwrap_or_else(|| localnet::DEFAULT_IMAGE.to_string());
-            let container_val = container
-                .unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
+            let container_val =
+                container.unwrap_or_else(|| localnet::DEFAULT_CONTAINER.to_string());
             validate_docker_image(&image_val)?;
             validate_docker_name(&container_val, "Container name")?;
             let cfg = LocalnetConfig {

@@ -71,6 +71,14 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("not a valid")
         || msg.contains("must be ")
         || msg.contains("expected format")
+        // `agcli subscribe events --filter …` typo / unknown category (`validate_event_filter`)
+        || msg.contains("invalid event filter")
+        // `agcli explain --topic …` typo / unknown built-in topic
+        || msg.contains("unknown topic")
+        // Query path: unknown / inactive netuid (e.g. `subnet show`)
+        || (msg.contains("subnet") && msg.contains("not found"))
+        // `agcli balance --threshold` (`validate_threshold` in helpers.rs)
+        || msg.contains("balance --threshold")
     {
         return exit_code::VALIDATION;
     }
@@ -149,7 +157,7 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
             if lower.contains("password") {
                 Some("Tip: Verify your password. Use AGCLI_PASSWORD env var for non-interactive mode")
             } else if lower.contains("hotkey") {
-                Some("Tip: Create a hotkey with `agcli wallet create-hotkey` or pass --hotkey <ss58>")
+                Some("Tip: Create a hotkey with `agcli wallet create-hotkey` or pass --hotkey-address <ss58>")
             } else {
                 Some("Tip: Check wallet path with --wallet-dir and --wallet flags. List wallets: `agcli wallet list`")
             }
@@ -173,9 +181,9 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
             } else if lower.contains("subnet not exist") || lower.contains("subnetnotexist") {
                 Some("Tip: Check available subnets with `agcli subnet list`")
             } else if lower.contains("not subnet owner") || lower.contains("notsubnetowner") {
-                Some("Tip: Only the subnet owner can perform this operation. Check ownership with `agcli subnet show`")
+                Some("Tip: Only the subnet owner can perform this operation. Check ownership with `agcli subnet show --netuid <N>`")
             } else if lower.contains("registration disabled") || lower.contains("registrationdisabled") {
-                Some("Tip: Registration is currently disabled on this subnet. Check `agcli subnet hyperparams`")
+                Some("Tip: Registration is currently disabled on this subnet. Check `agcli subnet hyperparams --netuid <N>`")
             } else if lower.contains("call disabled") || lower.contains("calldisabled") {
                 Some("Tip: This call is currently disabled on this subnet")
             } else {
@@ -185,7 +193,19 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
         exit_code::IO => {
             Some("Tip: Check file permissions and paths. Use --wallet-dir to specify wallet location")
         }
-        exit_code::VALIDATION => None, // Validation errors already contain specific hints
+        exit_code::VALIDATION => {
+            if lower.contains("unknown topic") {
+                Some("Tip: Run `agcli explain` to list topics. For weight flows: `agcli explain --topic weights` or `agcli weights --help`")
+            } else if lower.contains("invalid event filter") {
+                Some("Tip: Run `agcli subscribe events --help` and `docs/commands/subscribe.md` for `--filter` values; start with `--filter all`")
+            } else if lower.contains("subnet") && lower.contains("not found") {
+                Some("Tip: List subnets with `agcli subnet list`, then `agcli subnet show --netuid <N>` (alias: `subnet info`), `agcli subnet hyperparams --netuid <N>`, `agcli subnet metagraph --netuid <N>`, `agcli diff subnet --netuid <N>`, `agcli diff metagraph --netuid <N>`, `agcli subnet cost --netuid <N>`, `agcli subnet emissions --netuid <N>`, `agcli subnet health --netuid <N>`, `agcli subnet probe --netuid <N>`, `agcli subnet commits --netuid <N>`, `agcli subnet watch --netuid <N>`, `agcli subnet monitor --netuid <N>`, `agcli subnet liquidity --netuid <N>`, `agcli subnet cache-load --netuid <N>`, `agcli subnet cache-list --netuid <N>`, `agcli subnet cache-diff --netuid <N>`, `agcli subnet cache-prune --netuid <N>`, `agcli subnet emission-split --netuid <N>`, `agcli subnet mechanism-count --netuid <N>`, `agcli subnet set-mechanism-count --netuid <N>`, `agcli subnet set-emission-split --netuid <N>`, `agcli subnet check-start --netuid <N>`, `agcli subnet start --netuid <N>`, `agcli subnet snipe --netuid <N>`, `agcli subnet set-param --netuid <N>`, `agcli subnet set-symbol --netuid <N>`, `agcli subnet trim --netuid <N>`, `agcli subnet register-neuron --netuid <N>`, `agcli subnet pow --netuid <N>`, `agcli subnet dissolve --netuid <N>`, `agcli subnet root-dissolve --netuid <N>`, `agcli subnet terminate-lease --netuid <N>`, `agcli weights set --netuid <N>`, `agcli weights commit --netuid <N>`, `agcli weights reveal --netuid <N>`, `agcli weights commit-reveal --netuid <N>`, `agcli weights status --netuid <N>`, `agcli weights commit-timelocked --netuid <N>`, `agcli weights set-mechanism --netuid <N>`, `agcli weights commit-mechanism --netuid <N>`, `agcli weights reveal-mechanism --netuid <N>`, or `agcli weights show --netuid <N>`")
+            } else if lower.contains("balance --threshold") {
+                Some("Tip: Use a non-negative finite TAO amount, e.g. `agcli balance --watch --threshold 1.0` (see `docs/commands/balance.md`)")
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
@@ -204,6 +224,17 @@ mod tests {
     fn classify_invalid_address() {
         let err = anyhow::anyhow!("Invalid SS58 address: bad checksum");
         assert_eq!(classify(&err), exit_code::VALIDATION);
+    }
+
+    #[test]
+    fn classify_subscribe_invalid_event_filter() {
+        let err = anyhow::anyhow!(
+            "Invalid event filter: 'nope'. Valid filters are: all, staking, registration, transfer, weights, subnet, delegation, keys, swap, governance, crowdloan (plus short aliases like stake, reg, dex).\n  Tip: use --filter all to see every decoded event."
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        let h = hint(exit_code::VALIDATION, &msg);
+        assert!(h.is_some_and(|s| s.contains("subscribe events")));
     }
 
     #[test]
@@ -234,6 +265,93 @@ mod tests {
     fn classify_generic() {
         let err = anyhow::anyhow!("Something unexpected happened");
         assert_eq!(classify(&err), exit_code::GENERIC);
+    }
+
+    #[test]
+    fn classify_subnet_show_not_found() {
+        let err =
+            anyhow::anyhow!("Subnet 99999 not found.\n  List available subnets: agcli subnet list");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        let h = hint(exit_code::VALIDATION, &msg);
+        assert!(h.is_some_and(|s| {
+            s.contains("subnet list")
+                && s.contains("hyperparams")
+                && s.contains("metagraph")
+                && s.contains("cost")
+                && s.contains("emissions")
+                && s.contains("health")
+                && s.contains("probe")
+                && s.contains("commits")
+                && s.contains("watch")
+                && s.contains("monitor")
+                && s.contains("liquidity")
+                && s.contains("cache-load")
+                && s.contains("cache-list")
+                && s.contains("cache-diff")
+                && s.contains("cache-prune")
+                && s.contains("emission-split")
+                && s.contains("mechanism-count")
+                && s.contains("check-start")
+                && s.contains("subnet start")
+                && s.contains("snipe")
+                && s.contains("set-param")
+                && s.contains("set-symbol")
+                && s.contains("trim")
+                && s.contains("register-neuron")
+                && s.contains("subnet pow")
+                && s.contains("subnet dissolve")
+                && s.contains("root-dissolve")
+                && s.contains("terminate-lease")
+                && s.contains("set-mechanism-count")
+                && s.contains("set-emission-split")
+                && s.contains("weights set")
+                && s.contains("weights commit")
+                && s.contains("weights reveal")
+                && s.contains("weights commit-reveal")
+                && s.contains("weights status")
+                && s.contains("weights commit-timelocked")
+                && s.contains("weights set-mechanism")
+                && s.contains("weights commit-mechanism")
+                && s.contains("weights reveal-mechanism")
+                && s.contains("weights show")
+                && s.contains("diff subnet")
+                && s.contains("diff metagraph")
+        }));
+    }
+
+    #[test]
+    fn classify_diff_subnet_not_found_at_block_validation_12() {
+        let err = anyhow::anyhow!("Subnet 8 not found at block 100");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        let h = hint(exit_code::VALIDATION, &msg);
+        assert!(h.is_some_and(|s| s.contains("diff subnet") && s.contains("diff metagraph")));
+    }
+
+    #[test]
+    fn classify_subnet_hyperparams_not_found_same_as_show() {
+        // `subnet hyperparams` uses the same bail text as `subnet show` when SN is missing.
+        let err =
+            anyhow::anyhow!("Subnet 42 not found.\n  List available subnets: agcli subnet list");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+    }
+
+    #[test]
+    fn classify_weights_set_subnet_not_found_same_as_show() {
+        // Weight commands bail with this text when hyperparams are absent (set, CR paths, timelocked, mechanism, status, `weights show`).
+        let err =
+            anyhow::anyhow!("Subnet 7 not found.\n  List available subnets: agcli subnet list");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+    }
+
+    #[test]
+    fn classify_explain_unknown_topic() {
+        let err = anyhow::anyhow!("Unknown topic 'not-a-real-topic'");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        let h = hint(exit_code::VALIDATION, &msg);
+        assert!(h.is_some_and(|s| s.contains("explain") && s.contains("weights")));
     }
 
     #[test]
@@ -444,14 +562,22 @@ mod tests {
     fn classify_chain_before_network_insufficient() {
         // "insufficient" should classify as CHAIN even when "connect" also appears
         let err = anyhow::anyhow!("Failed to connect extrinsic to mempool: insufficient fee");
-        assert_eq!(classify(&err), exit_code::CHAIN, "Chain errors must take priority over network heuristics");
+        assert_eq!(
+            classify(&err),
+            exit_code::CHAIN,
+            "Chain errors must take priority over network heuristics"
+        );
     }
 
     #[test]
     fn classify_chain_before_network_extrinsic() {
         // "extrinsic" alone should be CHAIN, not matched by "connect"
         let err = anyhow::anyhow!("Extrinsic dispatch error from endpoint");
-        assert_eq!(classify(&err), exit_code::CHAIN, "'extrinsic' should match CHAIN before 'endpoint' matches NETWORK");
+        assert_eq!(
+            classify(&err),
+            exit_code::CHAIN,
+            "'extrinsic' should match CHAIN before 'endpoint' matches NETWORK"
+        );
     }
 
     #[test]

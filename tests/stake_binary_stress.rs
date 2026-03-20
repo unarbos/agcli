@@ -91,7 +91,15 @@ fn stake_add_missing_wallet_fails_fast() {
             ("AGCLI_WALLET", "NO_SUCH_WALLET"),
             ("AGCLI_HOTKEY", "HOT"),
         ],
-        &["stake", "add", "--amount", "1.0", "--netuid", "1", "--dry-run"],
+        &[
+            "stake",
+            "add",
+            "--amount",
+            "1.0",
+            "--netuid",
+            "1",
+            "--dry-run",
+        ],
     );
     assert!(!ok);
     assert!(

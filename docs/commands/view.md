@@ -88,7 +88,7 @@ Use this before `stake add` to estimate slippage.
 Show who delegates to a specific validator.
 
 ```bash
-agcli view nominations --hotkey SS58
+agcli view nominations --hotkey-address SS58
 ```
 
 ## Live Mode

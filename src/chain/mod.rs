@@ -152,7 +152,8 @@ fn acquire_tx_lock(pair: &sr25519::Pair) -> Result<std::fs::File> {
                 anyhow::bail!(
                     "Another agcli process is submitting a transaction with this key. \
                      Timed out waiting 60s for tx lock. If no other process is running, \
-                     remove {}", lock_path.display()
+                     remove {}",
+                    lock_path.display()
                 );
             }
         }
@@ -507,8 +508,9 @@ impl Client {
             spinner.finish_and_clear();
             anyhow::anyhow!(
                 "Transaction timed out after {}s waiting for finalization. \
-                 The extrinsic may still be pending. Consider increasing \
-                 --finalization-timeout or --mortality-blocks for congested networks.",
+                 The extrinsic may still be pending. Increase wait with \
+                 --finalization-timeout or AGCLI_FINALIZATION_TIMEOUT / ~/.agcli/config.toml \
+                 `finalization_timeout`, or tune --mortality-blocks on congested networks.",
                 self.finalization_timeout
             )
         })?
@@ -976,7 +978,11 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
     let lower = msg.to_lowercase();
     let idx = lower.find("custom error:")?;
     let after = &lower[idx + "custom error:".len()..];
-    let num_str: String = after.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+    let num_str: String = after
+        .trim()
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
     let n: u32 = num_str.parse().ok()?;
     // SubtensorModule (pallet index 7) error enum — from chain metadata
     let (name, desc) = match n {
@@ -1091,12 +1097,12 @@ fn decode_custom_error(msg: &str) -> Option<DecodedError> {
         108 => ("AdminActionProhibitedDuringWeightsWindow", "Admin changes are blocked during the weights setting window. Try after the current tempo"),
         109 => ("SymbolDoesNotExist", "The specified token symbol does not exist"),
         110 => ("SymbolAlreadyInUse", "This token symbol is already taken. Choose a different symbol"),
-        111 => ("IncorrectCommitRevealVersion", "The commit-reveal version does not match. The subnet may have changed its protocol"),
+        111 => ("IncorrectCommitRevealVersion", "The commit_reveal_version argument does not match on-chain CommitRevealWeightsVersion (timelocked weight commits)"),
         112 => ("RevealPeriodTooLarge", "The reveal period is too long"),
         113 => ("RevealPeriodTooSmall", "The reveal period is too short"),
         114 => ("InvalidValue", "The provided value is invalid for this parameter"),
         115 => ("SubnetLimitReached", "The maximum number of subnets has been reached — no new subnets can be created"),
-        116 => ("CannotAffordLockCost", "Insufficient balance to pay the subnet creation lock cost. Check `agcli subnet cost`"),
+        116 => ("CannotAffordLockCost", "Insufficient balance to pay the subnet creation lock cost. Check `agcli subnet create-cost`"),
         117 => ("EvmKeyAssociateRateLimitExceeded", "EVM key association is rate-limited. Wait before retrying"),
         118 => ("SameAutoStakeHotkeyAlreadySet", "Auto-stake is already set to this hotkey — no change needed"),
         119 => ("UidMapCouldNotBeCleared", "Internal error: UID map cleanup failed"),
@@ -1132,7 +1138,14 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         (raw_msg, None)
     };
     // Map common SubtensorModule errors to helpful messages
-    let hint = if msg.contains("NotEnoughBalanceToStake") || msg.contains("NotEnoughStake") {
+    // `NotEnoughStake` is a substring of `NotEnoughStakeToSetWeights` / ToWithdraw / ToSetChildkeys — check specific variants first.
+    let hint = if msg.contains("NotEnoughStakeToSetWeights") {
+        "Stake is below the chain minimum required to set weights on this subnet. Stake more on this validator hotkey or check `agcli stake list`."
+    } else if msg.contains("NotEnoughStakeToWithdraw") {
+        "Cannot unstake this amount — it exceeds your current stake. Check `agcli stake list`."
+    } else if msg.contains("NotEnoughStakeToSetChildkeys") {
+        "Stake is below the minimum required to set childkeys on this subnet."
+    } else if msg.contains("NotEnoughBalanceToStake") || msg.contains("NotEnoughStake") {
         "Insufficient balance or stake for this operation. Check `agcli balance` and `agcli stake list`."
     } else if msg.contains("NotRegistered")
         || msg.contains("HotKeyNotRegisteredInSubNet")
@@ -1149,8 +1162,10 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Invalid subnet ID. List available subnets with `agcli subnet list`."
     } else if msg.contains("BadOrigin") || msg.contains("NotOwner") {
         "Permission denied — you are not the owner of this subnet or account."
-    } else if msg.contains("WeightsNotSettable") || msg.contains("SettingWeightsTooFast") {
-        "Cannot set weights: either rate-limited or commit-reveal is required. Check subnet hyperparams."
+    } else if msg.contains("SettingWeightsTooFast") {
+        "Subnet weights rate limit: wait more blocks before set_weights again. Check subnet hyperparams or run `agcli weights set --dry-run` for rate-limit context."
+    } else if msg.contains("WeightsNotSettable") {
+        "Cannot set weights right now (weights window or chain rules). Retry after the window or check subnet status."
     } else if msg.contains("TxRateLimitExceeded") {
         "Rate limit exceeded. Wait before retrying this operation."
     } else if msg.contains("StakeRateLimitExceeded") {
@@ -1161,6 +1176,40 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "This coldkey is not associated with the specified hotkey."
     } else if msg.contains("CommitRevealEnabled") {
         "This subnet requires commit-reveal for weights. Use `agcli weights commit` then `agcli weights reveal`."
+    } else if msg.contains("CommitRevealDisabled") {
+        "This subnet does not use commit-reveal. Set weights with `agcli weights set` instead of commit/reveal."
+    } else if msg.contains("NoWeightsCommitFound") {
+        "No on-chain weight commit for this hotkey/subnet. Run `agcli weights commit` before reveal, or check `agcli weights status`."
+    } else if msg.contains("InvalidRevealCommitHashNotMatch") {
+        "Reveal does not match the commit (weights or salt differ). Use the exact same weights and salt as in `agcli weights commit`."
+    } else if msg.contains("TooManyUnrevealedCommits") {
+        "Too many unrevealed commits for this hotkey. Reveal pending commits or wait before submitting another."
+    } else if msg.contains("ExpiredWeightCommit") {
+        "The commit expired before reveal. Submit a new `agcli weights commit` within the chain commit window."
+    } else if msg.contains("RevealTooEarly") {
+        "Reveal phase is not open yet. Wait for the reveal window (see subnet tempo / `agcli subnet show --netuid <N>`)."
+    } else if msg.contains("CommittingWeightsTooFast") {
+        "Weight commits are rate-limited. Wait more blocks before running `agcli weights commit` again."
+    } else if msg.contains("IncorrectCommitRevealVersion") {
+        "Global commit-reveal protocol version mismatch (timelocked commits). Update agcli — `agcli weights commit-timelocked` reads `CommitRevealWeightsVersion` from chain before submitting."
+    } else if msg.contains("IncorrectWeightVersionKey") {
+        "The subnet expects a different weights version key. Use `agcli weights set --version-key <KEY>` matching the chain (see `agcli subnet hyperparams --netuid <N>`)."
+    } else if msg.contains("NeuronNoValidatorPermit") {
+        "This hotkey does not hold a validator permit on this subnet (top-N by stake). Gain stake or wait for permit slots — see `agcli view validators --netuid <N>` and subnet `max_allowed_validators`."
+    } else if msg.contains("WeightVecLengthIsLow") {
+        "Too few UIDs in the weight vector for this subnet's minimum. Add more targets or check `min_allowed_weights` (`agcli subnet hyperparams --netuid <N>`)."
+    } else if msg.contains("DuplicateUids") {
+        "Duplicate UIDs in the weight vector — each UID must appear only once. Deduplicate your `--weights` / JSON input."
+    } else if msg.contains("WeightVecNotEqualSize") || msg.contains("InputLengthsUnequal") {
+        "UID list and weight list must have the same length. Check your `--weights` or JSON pairs."
+    } else if msg.contains("UidVecContainInvalidOne") {
+        "One or more UIDs are out of range for this subnet. List neurons with `agcli view neurons --netuid <N>`."
+    } else if msg.contains("MaxWeightExceeded") {
+        "Sum of weights exceeds 65535. Reduce values so the total fits in u16 range."
+    } else if msg.contains("UidsLengthExceedUidsInSubNet") {
+        "Too many UIDs in the submission — cannot exceed the number of neurons on this subnet."
+    } else if msg.contains("CanNotSetRootNetworkWeights") {
+        "Weights on the root subnet (netuid 0) are not set with this extrinsic. Use the chain’s root-weighting flow if applicable."
     } else if msg.contains("SubnetLocked") || msg.contains("NetworkIsImmuned") {
         "This subnet is in its immunity period and cannot be modified yet."
     } else if msg.contains("MaxAllowedUIDs") || msg.contains("SubNetworkDoesNotExist") {
@@ -1205,7 +1254,7 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
     } else if msg.contains("AmountTooLow") {
         "Amount is below the minimum threshold for this operation."
     } else if msg.contains("SubnetLimitReached") || msg.contains("CannotAffordLockCost") {
-        "Cannot create subnet: either the subnet limit is reached or you cannot afford the lock cost."
+        "Cannot create subnet: either the subnet limit is reached or you cannot afford the lock cost. Check the current lock with `agcli subnet create-cost`."
     } else if msg.contains("AddStakeBurnRateLimitExceeded") {
         "Add-stake-burn rate limit exceeded. Wait a few blocks before retrying."
     } else if msg.contains("LeaseNetuidNotFound") || msg.contains("LeaseDoesNotExist") {
@@ -1345,6 +1394,258 @@ mod tests {
     }
 
     #[test]
+    fn format_dispatch_error_duplicate_uids_hint() {
+        let err = subxt::Error::Other("Custom error: 17".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("DuplicateUids") && msg.contains("Hint:"),
+            "should decode 17 and add duplicate-UID hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_invalid_uid_hint() {
+        let err = subxt::Error::Other("Custom error: 18".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("UidVecContainInvalidOne") && msg.contains("Hint:"),
+            "should decode 18 and add invalid-UID hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_max_weight_exceeded_hint() {
+        let err = subxt::Error::Other("Custom error: 26".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("MaxWeightExceeded") && msg.contains("65535"),
+            "should decode 26 and add max-weight hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_weight_vec_not_equal_size_hint() {
+        let err = subxt::Error::Other("Custom error: 16".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("WeightVecNotEqualSize") && msg.contains("Hint:"),
+            "should decode 16 and add length-mismatch hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_input_lengths_unequal_hint() {
+        let err = subxt::Error::Other("Custom error: 79".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("InputLengthsUnequal") && msg.contains("Hint:"),
+            "should decode 79 and add length-mismatch hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_uids_length_exceed_subnet_hint() {
+        let err = subxt::Error::Other("Custom error: 31".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("UidsLengthExceedUidsInSubNet") && msg.contains("Hint:"),
+            "should decode 31 and add too-many-UIDs hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_cannot_set_root_network_weights_hint() {
+        let err = subxt::Error::Other("Custom error: 46".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("CanNotSetRootNetworkWeights") && msg.contains("Hint:"),
+            "should decode 46 and add root-network hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_not_enough_stake_to_set_weights_hint() {
+        let err = subxt::Error::Other("Custom error: 10".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("NotEnoughStakeToSetWeights") && msg.contains("Hint:"),
+            "should decode 10 and add stake hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_neuron_no_validator_permit_hint() {
+        let err = subxt::Error::Other("Custom error: 15".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("NeuronNoValidatorPermit") && msg.contains("Hint:"),
+            "should decode 15 and add validator-permit hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_weight_vec_length_is_low_hint() {
+        let err = subxt::Error::Other("Custom error: 19".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("WeightVecLengthIsLow") && msg.contains("Hint:"),
+            "should decode 19 and add min-weights hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_setting_weights_too_fast_hint() {
+        let err = subxt::Error::Other("Custom error: 28".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("SettingWeightsTooFast") && msg.contains("Hint:"),
+            "should decode 28 and add rate-limit hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_incorrect_weight_version_key_hint() {
+        let err = subxt::Error::Other("Custom error: 29".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("IncorrectWeightVersionKey") && msg.contains("version-key"),
+            "should decode 29 and add version-key hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_commit_reveal_enabled_hint() {
+        let err = subxt::Error::Other("Custom error: 52".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("CommitRevealEnabled") && msg.contains("weights reveal"),
+            "should decode 52 and add commit-reveal hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_commit_reveal_disabled_hint() {
+        let err = subxt::Error::Other("Custom error: 53".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("CommitRevealDisabled") && msg.contains("weights set"),
+            "should decode 53 and add direct-set hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_no_weights_commit_found_hint() {
+        let err = subxt::Error::Other("Custom error: 50".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("NoWeightsCommitFound") && msg.contains("weights commit"),
+            "should decode 50 and add commit-first hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_invalid_reveal_commit_hash_hint() {
+        let err = subxt::Error::Other("Custom error: 51".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("InvalidRevealCommitHashNotMatch") && msg.contains("salt"),
+            "should decode 51 and add salt/weights hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_too_many_unrevealed_commits_hint() {
+        let err = subxt::Error::Other("Custom error: 76".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("TooManyUnrevealedCommits") && msg.contains("Reveal"),
+            "should decode 76 and add reveal-first hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_expired_weight_commit_hint() {
+        let err = subxt::Error::Other("Custom error: 77".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("ExpiredWeightCommit") && msg.contains("commit"),
+            "should decode 77 and add recommit hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_reveal_too_early_hint() {
+        let err = subxt::Error::Other("Custom error: 78".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("RevealTooEarly") && msg.contains("reveal"),
+            "should decode 78 and add timing hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_committing_weights_too_fast_hint() {
+        let err = subxt::Error::Other("Custom error: 80".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("CommittingWeightsTooFast") && msg.contains("weights commit"),
+            "should decode 80 and add commit rate-limit hint: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn format_dispatch_error_incorrect_commit_reveal_version_hint() {
+        let err = subxt::Error::Other("Custom error: 111".to_string());
+        let result = format_dispatch_error(err);
+        let msg = format!("{:#}", result);
+        assert!(
+            msg.contains("IncorrectCommitRevealVersion") && msg.contains("agcli"),
+            "should decode 111 and add version hint: {}",
+            msg
+        );
+    }
+
+    #[test]
     fn decode_custom_error_6() {
         let d = decode_custom_error("Custom error: 6").expect("should decode 6");
         assert_eq!(d.name, "HotKeyNotRegisteredInNetwork");
@@ -1464,12 +1765,18 @@ mod tests {
 
     #[test]
     fn url_to_cache_prefix_finney() {
-        assert_eq!(url_to_cache_prefix("wss://entrypoint-finney.opentensor.ai:443"), "finney");
+        assert_eq!(
+            url_to_cache_prefix("wss://entrypoint-finney.opentensor.ai:443"),
+            "finney"
+        );
     }
 
     #[test]
     fn url_to_cache_prefix_test() {
-        assert_eq!(url_to_cache_prefix("wss://test.finney.opentensor.ai:443"), "test");
+        assert_eq!(
+            url_to_cache_prefix("wss://test.finney.opentensor.ai:443"),
+            "test"
+        );
     }
 
     #[test]
@@ -1480,7 +1787,10 @@ mod tests {
 
     #[test]
     fn url_to_cache_prefix_archive() {
-        assert_eq!(url_to_cache_prefix("wss://bittensor-finney.api.onfinality.io/public-ws"), "archive");
+        assert_eq!(
+            url_to_cache_prefix("wss://bittensor-finney.api.onfinality.io/public-ws"),
+            "archive"
+        );
     }
 
     #[test]
@@ -1528,7 +1838,11 @@ mod tests {
         // Both return Result<u64> so they are interchangeable in usage.
         fn _takes_async_u64_fn<F>(_f: F)
         where
-            F: for<'a> FnOnce(&'a Client) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<u64>> + 'a>>,
+            F: for<'a> FnOnce(
+                &'a Client,
+            ) -> std::pin::Pin<
+                Box<dyn std::future::Future<Output = Result<u64>> + 'a>,
+            >,
         {
         }
         // The test compiles iff both methods exist. We cannot call them without a Client.
@@ -1550,7 +1864,7 @@ mod tests {
         let lock = acquire_tx_lock(&pair);
         assert!(lock.is_ok(), "Should acquire tx lock: {:?}", lock.err());
         drop(lock); // Release
-        // Should be able to reacquire immediately
+                    // Should be able to reacquire immediately
         let lock2 = acquire_tx_lock(&pair);
         assert!(lock2.is_ok(), "Should reacquire tx lock: {:?}", lock2.err());
     }
@@ -1570,7 +1884,10 @@ mod tests {
     #[test]
     fn tx_lock_same_key_blocks_concurrent() {
         use sp_core::Pair;
-        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+        use std::sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        };
 
         let pair = sr25519::Pair::from_string("//Charlie", None).unwrap();
         // Acquire lock in main thread
@@ -1593,12 +1910,18 @@ mod tests {
 
         // Wait a bit — the other thread should still be blocked
         std::thread::sleep(std::time::Duration::from_millis(300));
-        assert!(!acquired.load(Ordering::SeqCst), "Other thread should be blocked");
+        assert!(
+            !acquired.load(Ordering::SeqCst),
+            "Other thread should be blocked"
+        );
 
         // Release the lock
         drop(_lock);
         handle.join().unwrap();
-        assert!(acquired.load(Ordering::SeqCst), "Other thread should have acquired lock after release");
+        assert!(
+            acquired.load(Ordering::SeqCst),
+            "Other thread should have acquired lock after release"
+        );
     }
 
     #[test]
@@ -1635,7 +1958,11 @@ mod tests {
             ("ws://127.0.0.1:9944", "local"),
         ] {
             let prefix = url_to_cache_prefix(url);
-            assert_eq!(prefix, expected, "URL '{}' should produce prefix '{}'", url, expected);
+            assert_eq!(
+                prefix, expected,
+                "URL '{}' should produce prefix '{}'",
+                url, expected
+            );
         }
     }
 

@@ -48,7 +48,11 @@ fn ip_to_string(ip: u128, ip_type: u8) -> String {
 
 impl From<GenNeuronInfoLite> for NeuronInfoLite {
     fn from(n: GenNeuronInfoLite) -> Self {
-        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
+        let total_stake: u64 = n
+            .stake
+            .iter()
+            .map(|(_, s)| s.0)
+            .fold(0u64, u64::saturating_add);
         NeuronInfoLite {
             hotkey: account_to_ss58(&n.hotkey),
             coldkey: account_to_ss58(&n.coldkey),
@@ -74,7 +78,11 @@ impl From<GenNeuronInfoLite> for NeuronInfoLite {
 
 impl From<GenNeuronInfo> for NeuronInfo {
     fn from(n: GenNeuronInfo) -> Self {
-        let total_stake: u64 = n.stake.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
+        let total_stake: u64 = n
+            .stake
+            .iter()
+            .map(|(_, s)| s.0)
+            .fold(0u64, u64::saturating_add);
         NeuronInfo {
             hotkey: account_to_ss58(&n.hotkey),
             coldkey: account_to_ss58(&n.coldkey),
@@ -187,7 +195,10 @@ impl From<GenDelegateInfo> for DelegateInfo {
                 .nominators
                 .into_iter()
                 .map(|(a, stakes)| {
-                    let total: u64 = stakes.iter().map(|(_, s)| s.0).fold(0u64, u64::saturating_add);
+                    let total: u64 = stakes
+                        .iter()
+                        .map(|(_, s)| s.0)
+                        .fold(0u64, u64::saturating_add);
                     (account_to_ss58(&a), Balance::from_rao(total))
                 })
                 .collect(),
@@ -313,6 +324,10 @@ mod tests {
         // All groups non-zero
         let ip: u128 = 0x20010db800010002000300040005000f;
         let result = ip_to_string(ip, 6);
-        assert!(result.contains(':'), "IPv6 must use colon notation: {}", result);
+        assert!(
+            result.contains(':'),
+            "IPv6 must use colon notation: {}",
+            result
+        );
     }
 }

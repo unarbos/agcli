@@ -152,7 +152,9 @@ pub async fn live_dynamic(client: &Client, interval_secs: u64) -> Result<()> {
                 let backoff = Duration::from_secs(1 << consecutive_failures.min(5));
                 eprintln!(
                     "Warning: poll #{} failed: {} (retrying in {}s)",
-                    poll_count, e, backoff.as_secs()
+                    poll_count,
+                    e,
+                    backoff.as_secs()
                 );
                 tokio::time::sleep(backoff).await;
                 continue;
@@ -217,6 +219,7 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
     } else {
         interval_secs
     });
+    client.require_subnet_exists(netuid, None).await?;
     let mut prev_neurons = client.get_neurons_lite(netuid).await?;
     let mut poll_count = 0u64;
     let mut consecutive_failures: u32 = 0;
@@ -247,7 +250,9 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
                 let backoff = Duration::from_secs(1 << consecutive_failures.min(5));
                 eprintln!(
                     "Warning: poll #{} failed: {} (retrying in {}s)",
-                    poll_count, e, backoff.as_secs()
+                    poll_count,
+                    e,
+                    backoff.as_secs()
                 );
                 tokio::time::sleep(backoff).await;
                 continue;
@@ -338,7 +343,9 @@ pub async fn live_portfolio(client: &Client, coldkey_ss58: &str, interval_secs: 
                 let backoff = Duration::from_secs(1 << consecutive_failures.min(5));
                 eprintln!(
                     "Warning: poll #{} failed: {} (retrying in {}s)",
-                    poll_count, e, backoff.as_secs()
+                    poll_count,
+                    e,
+                    backoff.as_secs()
                 );
                 tokio::time::sleep(backoff).await;
                 continue;
@@ -431,7 +438,10 @@ mod tests {
             make_di(2, 2.5, 2_000_000_000, 1000),
         ];
         let deltas = compute_dynamic_deltas(&snap, &snap);
-        assert!(deltas.is_empty(), "identical snapshots should yield zero deltas");
+        assert!(
+            deltas.is_empty(),
+            "identical snapshots should yield zero deltas"
+        );
     }
 
     #[test]
@@ -445,7 +455,11 @@ mod tests {
         assert!((d.price_prev - 2.0).abs() < 1e-10);
         assert!((d.price_now - 3.0).abs() < 1e-10);
         // (3.0 - 2.0) / 2.0 * 100 = 50%
-        assert!((d.price_pct - 50.0).abs() < 1e-10, "expected 50%, got {}", d.price_pct);
+        assert!(
+            (d.price_pct - 50.0).abs() < 1e-10,
+            "expected 50%, got {}",
+            d.price_pct
+        );
     }
 
     #[test]
@@ -474,7 +488,7 @@ mod tests {
     fn new_subnet_produces_new_delta() {
         let prev = vec![make_di(1, 1.0, 1_000_000_000, 100)];
         let curr = vec![
-            make_di(1, 1.0, 1_000_000_000, 100), // unchanged
+            make_di(1, 1.0, 1_000_000_000, 100),  // unchanged
             make_di(99, 5.0, 3_000_000_000, 200), // new, not in prev
         ];
         let deltas = compute_dynamic_deltas(&prev, &curr);
@@ -534,7 +548,7 @@ mod tests {
         ];
         let curr = vec![
             make_di(1, 1.0, 1_000_000_000, 100), // unchanged
-            // SN5 removed
+                                                 // SN5 removed
         ];
         let deltas = compute_dynamic_deltas(&prev, &curr);
         assert_eq!(deltas.len(), 1);
@@ -571,13 +585,19 @@ mod tests {
         ];
         let curr = vec![
             make_di(1, 1.5, 1_000_000_000, 100), // changed
-            make_di(3, 3.0, 3_000_000_000, 300),  // new
+            make_di(3, 3.0, 3_000_000_000, 300), // new
         ];
         let deltas = compute_dynamic_deltas(&prev, &curr);
         assert_eq!(deltas.len(), 3, "expected changed + new + removed");
-        let changed: Vec<_> = deltas.iter().filter(|d| d.kind == DeltaKind::Changed).collect();
+        let changed: Vec<_> = deltas
+            .iter()
+            .filter(|d| d.kind == DeltaKind::Changed)
+            .collect();
         let new: Vec<_> = deltas.iter().filter(|d| d.kind == DeltaKind::New).collect();
-        let removed: Vec<_> = deltas.iter().filter(|d| d.kind == DeltaKind::Removed).collect();
+        let removed: Vec<_> = deltas
+            .iter()
+            .filter(|d| d.kind == DeltaKind::Removed)
+            .collect();
         assert_eq!(changed.len(), 1);
         assert_eq!(changed[0].netuid, 1);
         assert_eq!(new.len(), 1);

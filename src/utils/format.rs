@@ -9,7 +9,14 @@ pub fn short_ss58(addr: &str) -> String {
     }
     // Use char-safe indexing to handle non-ASCII input from error paths
     let prefix: String = addr.chars().take(4).collect();
-    let suffix: String = addr.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
+    let suffix: String = addr
+        .chars()
+        .rev()
+        .take(4)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
     format!("{}...{}", prefix, suffix)
 }
 
@@ -44,7 +51,8 @@ pub fn truncate(s: &str, max: usize) -> String {
         return s.to_string();
     }
     // Take max-1 chars and append ellipsis, avoiding intermediate Vec<char>
-    let end = s.char_indices()
+    let end = s
+        .char_indices()
         .nth(max - 1)
         .map(|(i, _)| i)
         .unwrap_or(s.len());
@@ -231,14 +239,20 @@ mod tests {
         // Issue 149: short_ss58 should not panic on multi-byte UTF-8 input
         let addr = "αβγδεζηθικλμ"; // 12 Greek chars, each 2 bytes = 24 bytes
         let result = short_ss58(addr);
-        assert!(result.contains("..."), "should truncate long multi-byte input");
+        assert!(
+            result.contains("..."),
+            "should truncate long multi-byte input"
+        );
     }
 
     #[test]
     fn short_ss58_short_multibyte_unchanged() {
         let addr = "αβγ"; // 3 chars, 6 bytes — but only 3 chars ≤ 10 chars
         let result = short_ss58(addr);
-        assert_eq!(result, "αβγ", "short multi-byte input should be returned as-is");
+        assert_eq!(
+            result, "αβγ",
+            "short multi-byte input should be returned as-is"
+        );
     }
 
     #[test]

@@ -38,18 +38,16 @@ Self-update agcli from GitHub.
 agcli update
 ```
 
-### doctor
-Diagnostic check: connectivity, wallet access, chain state.
+## Diagnostics (top-level)
 
-```bash
-agcli doctor
-```
+**`agcli doctor`** is not a `utils` subcommand — it is a **top-level** command. See **[doctor.md](doctor.md)** for connectivity, chain pings, disk cache, wallet row semantics, JSON shape, and exit behaviour (always **0** with per-row OK/FAIL).
 
 ## Source Code
-**agcli handler**: [`src/cli/system_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/system_cmds.rs) — `handle_utils()` at L184 (Convert L191, Latency L215), `generate_completions()` at L112, `handle_update()` at L331, `handle_doctor()` at L439
+**agcli handler**: [`src/cli/system_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/system_cmds.rs) — `handle_utils()` (convert, latency), `generate_completions()`, `handle_update()`; **`handle_doctor()`** is separate (~`handle_doctor` in the same file).
 
-**No on-chain interaction** for convert/completions/update. Latency and doctor make RPC test calls.
+**No on-chain interaction** for convert/completions/update. **`utils latency`** makes RPC test calls.
 
 ## Related Commands
+- [`agcli doctor`](doctor.md) — Full connectivity / wallet smoke panel
 - `agcli explain` — Built-in concept reference
 - `agcli config show` — Current configuration

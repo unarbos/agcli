@@ -83,7 +83,9 @@ impl Config {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            if let Err(e) = std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600)) {
+            if let Err(e) =
+                std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))
+            {
                 let _ = std::fs::remove_file(&tmp_path);
                 return Err(e.into());
             }
@@ -172,12 +174,16 @@ mod tests {
             live_interval: Some(30),
             batch: Some(true),
             spending_limits: Some(limits),
+            finalization_timeout: Some(42),
+            mortality_blocks: Some(64),
         };
         let s = toml::to_string_pretty(&cfg).unwrap();
         let parsed: Config = toml::from_str(&s).unwrap();
         assert_eq!(parsed.endpoint.as_deref(), Some("wss://custom:443"));
         assert_eq!(parsed.live_interval, Some(30));
         assert_eq!(parsed.batch, Some(true));
+        assert_eq!(parsed.finalization_timeout, Some(42));
+        assert_eq!(parsed.mortality_blocks, Some(64));
         assert!(parsed.spending_limits.as_ref().unwrap().contains_key("18"));
     }
 
@@ -274,6 +280,9 @@ mod tests {
             .filter_map(|e| e.ok())
             .filter(|e| e.file_name().to_str().map_or(false, |n| n.contains(".tmp")))
             .collect();
-        assert!(entries.is_empty(), "temp file should not remain after successful save");
+        assert!(
+            entries.is_empty(),
+            "temp file should not remain after successful save"
+        );
     }
 }

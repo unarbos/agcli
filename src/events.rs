@@ -196,9 +196,9 @@ impl EventFilter {
             }
             Self::Keys => pallet == "SubtensorModule" && KEY_VARIANTS.contains(&variant),
             Self::Swap => pallet == "Swap" && SWAP_VARIANTS.contains(&variant),
-            Self::Governance => {
-                GOVERNANCE_VARIANTS.iter().any(|(p, v)| *p == pallet && *v == variant)
-            }
+            Self::Governance => GOVERNANCE_VARIANTS
+                .iter()
+                .any(|(p, v)| *p == pallet && *v == variant),
             Self::Crowdloan => pallet == "Crowdloan" && CROWDLOAN_VARIANTS.contains(&variant),
         }
     }
@@ -532,7 +532,9 @@ async fn subscribe_events_inner(
                         current_block = block_number,
                         missed_blocks = gap,
                         "Gap detected: {} blocks missed between #{} and #{}",
-                        gap, last, block_number
+                        gap,
+                        last,
+                        block_number
                     );
                     if !json_output {
                         eprintln!(
@@ -595,8 +597,8 @@ async fn subscribe_events_inner(
                 if let Some(target_netuid) = netuid_filter {
                     match extract_netuid(&field_values) {
                         Some(found) if found == target_netuid => { /* match */ }
-                        Some(_) => continue,  // different netuid
-                        None => continue,     // no netuid field — skip (not a netuid-bearing event)
+                        Some(_) => continue, // different netuid
+                        None => continue,    // no netuid field — skip (not a netuid-bearing event)
                     }
                 }
 
@@ -743,7 +745,9 @@ async fn subscribe_blocks_inner(
                     if !json_output {
                         eprintln!(
                             "Warning: {} block(s) missed (#{} to #{})",
-                            gap, last.saturating_add(1), number.saturating_sub(1)
+                            gap,
+                            last.saturating_add(1),
+                            number.saturating_sub(1)
                         );
                     } else {
                         println!(
@@ -809,62 +813,98 @@ mod tests {
 
     #[test]
     fn from_str_staking() {
-        assert_eq!(EventFilter::from_str("staking").unwrap(), EventFilter::Staking);
+        assert_eq!(
+            EventFilter::from_str("staking").unwrap(),
+            EventFilter::Staking
+        );
     }
 
     #[test]
     fn from_str_stake() {
-        assert_eq!(EventFilter::from_str("stake").unwrap(), EventFilter::Staking);
+        assert_eq!(
+            EventFilter::from_str("stake").unwrap(),
+            EventFilter::Staking
+        );
     }
 
     #[test]
     fn from_str_registration() {
-        assert_eq!(EventFilter::from_str("registration").unwrap(), EventFilter::Registration);
+        assert_eq!(
+            EventFilter::from_str("registration").unwrap(),
+            EventFilter::Registration
+        );
     }
 
     #[test]
     fn from_str_register() {
-        assert_eq!(EventFilter::from_str("register").unwrap(), EventFilter::Registration);
+        assert_eq!(
+            EventFilter::from_str("register").unwrap(),
+            EventFilter::Registration
+        );
     }
 
     #[test]
     fn from_str_reg() {
-        assert_eq!(EventFilter::from_str("reg").unwrap(), EventFilter::Registration);
+        assert_eq!(
+            EventFilter::from_str("reg").unwrap(),
+            EventFilter::Registration
+        );
     }
 
     #[test]
     fn from_str_transfer() {
-        assert_eq!(EventFilter::from_str("transfer").unwrap(), EventFilter::Transfer);
+        assert_eq!(
+            EventFilter::from_str("transfer").unwrap(),
+            EventFilter::Transfer
+        );
     }
 
     #[test]
     fn from_str_transfers() {
-        assert_eq!(EventFilter::from_str("transfers").unwrap(), EventFilter::Transfer);
+        assert_eq!(
+            EventFilter::from_str("transfers").unwrap(),
+            EventFilter::Transfer
+        );
     }
 
     #[test]
     fn from_str_weights() {
-        assert_eq!(EventFilter::from_str("weights").unwrap(), EventFilter::Weights);
+        assert_eq!(
+            EventFilter::from_str("weights").unwrap(),
+            EventFilter::Weights
+        );
     }
 
     #[test]
     fn from_str_weight() {
-        assert_eq!(EventFilter::from_str("weight").unwrap(), EventFilter::Weights);
+        assert_eq!(
+            EventFilter::from_str("weight").unwrap(),
+            EventFilter::Weights
+        );
     }
 
     #[test]
     fn from_str_subnet() {
-        assert_eq!(EventFilter::from_str("subnet").unwrap(), EventFilter::Subnet);
+        assert_eq!(
+            EventFilter::from_str("subnet").unwrap(),
+            EventFilter::Subnet
+        );
     }
 
     #[test]
     fn from_str_subnets() {
-        assert_eq!(EventFilter::from_str("subnets").unwrap(), EventFilter::Subnet);
+        assert_eq!(
+            EventFilter::from_str("subnets").unwrap(),
+            EventFilter::Subnet
+        );
     }
 
     #[test]
     fn from_str_unknown_falls_back_to_all() {
-        assert_eq!(EventFilter::from_str("anything_else").unwrap(), EventFilter::All);
+        assert_eq!(
+            EventFilter::from_str("anything_else").unwrap(),
+            EventFilter::All
+        );
     }
 
     #[test]
@@ -874,27 +914,42 @@ mod tests {
 
     #[test]
     fn from_str_case_insensitive_staking() {
-        assert_eq!(EventFilter::from_str("STAKING").unwrap(), EventFilter::Staking);
+        assert_eq!(
+            EventFilter::from_str("STAKING").unwrap(),
+            EventFilter::Staking
+        );
     }
 
     #[test]
     fn from_str_case_insensitive_transfer() {
-        assert_eq!(EventFilter::from_str("Transfer").unwrap(), EventFilter::Transfer);
+        assert_eq!(
+            EventFilter::from_str("Transfer").unwrap(),
+            EventFilter::Transfer
+        );
     }
 
     #[test]
     fn from_str_case_insensitive_weights() {
-        assert_eq!(EventFilter::from_str("WEIGHTS").unwrap(), EventFilter::Weights);
+        assert_eq!(
+            EventFilter::from_str("WEIGHTS").unwrap(),
+            EventFilter::Weights
+        );
     }
 
     #[test]
     fn from_str_case_insensitive_subnet() {
-        assert_eq!(EventFilter::from_str("SUBNET").unwrap(), EventFilter::Subnet);
+        assert_eq!(
+            EventFilter::from_str("SUBNET").unwrap(),
+            EventFilter::Subnet
+        );
     }
 
     #[test]
     fn from_str_case_insensitive_registration() {
-        assert_eq!(EventFilter::from_str("Registration").unwrap(), EventFilter::Registration);
+        assert_eq!(
+            EventFilter::from_str("Registration").unwrap(),
+            EventFilter::Registration
+        );
     }
 
     // ========== EventFilter::matches() tests ==========
@@ -1201,7 +1256,7 @@ mod tests {
     #[test]
     fn event_filter_clone_and_eq() {
         let f = EventFilter::Staking;
-        let f2 = f;  // Copy
+        let f2 = f; // Copy
         let f3 = f.clone();
         assert_eq!(f, f2);
         assert_eq!(f, f3);
@@ -1218,16 +1273,18 @@ mod tests {
 
     /// Helper: build a Named composite with a netuid field.
     fn make_named_with_netuid(netuid: u128) -> Composite<()> {
-        Composite::Named(vec![
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(netuid)),
-        ])
+        Composite::Named(vec![(
+            "netuid".to_string(),
+            subxt::ext::scale_value::Value::u128(netuid),
+        )])
     }
 
     /// Helper: build a Named composite without a netuid field.
     fn make_named_no_netuid() -> Composite<()> {
-        Composite::Named(vec![
-            ("amount".to_string(), subxt::ext::scale_value::Value::u128(1000)),
-        ])
+        Composite::Named(vec![(
+            "amount".to_string(),
+            subxt::ext::scale_value::Value::u128(1000),
+        )])
     }
 
     #[test]
@@ -1245,10 +1302,12 @@ mod tests {
     #[test]
     fn extract_netuid_unnamed_returns_none() {
         // Issue 719: Unnamed composites should NOT match by accident
-        let composite = Composite::Unnamed(vec![
-            subxt::ext::scale_value::Value::u128(42),
-        ]);
-        assert_eq!(extract_netuid(&composite), None, "Unnamed(42) must not match as netuid");
+        let composite = Composite::Unnamed(vec![subxt::ext::scale_value::Value::u128(42)]);
+        assert_eq!(
+            extract_netuid(&composite),
+            None,
+            "Unnamed(42) must not match as netuid"
+        );
     }
 
     #[test]
@@ -1258,23 +1317,34 @@ mod tests {
             .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
             .collect();
         let account_composite = Composite::Unnamed(bytes);
-        let outer = Composite::Named(vec![
-            ("who".to_string(), subxt::ext::scale_value::Value {
+        let outer = Composite::Named(vec![(
+            "who".to_string(),
+            subxt::ext::scale_value::Value {
                 value: ValueDef::Composite(account_composite),
                 context: (),
-            }),
-        ]);
+            },
+        )]);
         let accounts = extract_accounts(&outer);
         assert_eq!(accounts.len(), 1, "Should extract exactly one account");
-        assert!(accounts[0].starts_with("5"), "Should be a valid SS58 address: {}", accounts[0]);
+        assert!(
+            accounts[0].starts_with("5"),
+            "Should be a valid SS58 address: {}",
+            accounts[0]
+        );
     }
 
     #[test]
     fn extract_accounts_no_account_fields() {
         // Issue 718: A composite with no 32-byte fields should return empty
         let composite = Composite::Named(vec![
-            ("amount".to_string(), subxt::ext::scale_value::Value::u128(1000)),
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(1)),
+            (
+                "amount".to_string(),
+                subxt::ext::scale_value::Value::u128(1000),
+            ),
+            (
+                "netuid".to_string(),
+                subxt::ext::scale_value::Value::u128(1),
+            ),
         ]);
         let accounts = extract_accounts(&composite);
         assert!(accounts.is_empty(), "Should not find any accounts");
@@ -1292,18 +1362,27 @@ mod tests {
             .map(|b| subxt::ext::scale_value::Value::u128(b as u128))
             .collect();
         let outer = Composite::Named(vec![
-            ("from".to_string(), subxt::ext::scale_value::Value {
-                value: ValueDef::Composite(Composite::Unnamed(bytes_a)),
-                context: (),
-            }),
-            ("to".to_string(), subxt::ext::scale_value::Value {
-                value: ValueDef::Composite(Composite::Unnamed(bytes_b)),
-                context: (),
-            }),
+            (
+                "from".to_string(),
+                subxt::ext::scale_value::Value {
+                    value: ValueDef::Composite(Composite::Unnamed(bytes_a)),
+                    context: (),
+                },
+            ),
+            (
+                "to".to_string(),
+                subxt::ext::scale_value::Value {
+                    value: ValueDef::Composite(Composite::Unnamed(bytes_b)),
+                    context: (),
+                },
+            ),
         ]);
         let accounts = extract_accounts(&outer);
         assert_eq!(accounts.len(), 2, "Should find two accounts");
-        assert_ne!(accounts[0], accounts[1], "Different bytes should produce different SS58");
+        assert_ne!(
+            accounts[0], accounts[1],
+            "Different bytes should produce different SS58"
+        );
     }
 
     #[test]
@@ -1359,18 +1438,20 @@ mod tests {
     #[test]
     fn extract_netuid_valid_value() {
         use subxt::ext::scale_value::Composite;
-        let composite = Composite::Named(vec![
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(42)),
-        ]);
+        let composite = Composite::Named(vec![(
+            "netuid".to_string(),
+            subxt::ext::scale_value::Value::u128(42),
+        )]);
         assert_eq!(extract_netuid(&composite), Some(42));
     }
 
     #[test]
     fn extract_netuid_max_u16() {
         use subxt::ext::scale_value::Composite;
-        let composite = Composite::Named(vec![
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(65535)),
-        ]);
+        let composite = Composite::Named(vec![(
+            "netuid".to_string(),
+            subxt::ext::scale_value::Value::u128(65535),
+        )]);
         assert_eq!(extract_netuid(&composite), Some(65535));
     }
 
@@ -1378,9 +1459,10 @@ mod tests {
     fn extract_netuid_rejects_above_u16() {
         use subxt::ext::scale_value::Composite;
         // Value 65536 is above u16::MAX — should return None, not silently truncate to 0
-        let composite = Composite::Named(vec![
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(65536)),
-        ]);
+        let composite = Composite::Named(vec![(
+            "netuid".to_string(),
+            subxt::ext::scale_value::Value::u128(65536),
+        )]);
         assert_eq!(extract_netuid(&composite), None);
     }
 
@@ -1388,9 +1470,10 @@ mod tests {
     fn extract_netuid_rejects_large_value() {
         use subxt::ext::scale_value::Composite;
         // 0x0001_0001 would truncate to 1 without the guard
-        let composite = Composite::Named(vec![
-            ("netuid".to_string(), subxt::ext::scale_value::Value::u128(0x0001_0001)),
-        ]);
+        let composite = Composite::Named(vec![(
+            "netuid".to_string(),
+            subxt::ext::scale_value::Value::u128(0x0001_0001),
+        )]);
         assert_eq!(extract_netuid(&composite), None);
     }
 
@@ -1440,7 +1523,10 @@ mod tests {
 
     #[test]
     fn from_str_liquidity() {
-        assert_eq!(EventFilter::from_str("liquidity").unwrap(), EventFilter::Swap);
+        assert_eq!(
+            EventFilter::from_str("liquidity").unwrap(),
+            EventFilter::Swap
+        );
     }
 
     #[test]
@@ -1477,22 +1563,34 @@ mod tests {
 
     #[test]
     fn from_str_governance() {
-        assert_eq!(EventFilter::from_str("governance").unwrap(), EventFilter::Governance);
+        assert_eq!(
+            EventFilter::from_str("governance").unwrap(),
+            EventFilter::Governance
+        );
     }
 
     #[test]
     fn from_str_gov() {
-        assert_eq!(EventFilter::from_str("gov").unwrap(), EventFilter::Governance);
+        assert_eq!(
+            EventFilter::from_str("gov").unwrap(),
+            EventFilter::Governance
+        );
     }
 
     #[test]
     fn from_str_sudo() {
-        assert_eq!(EventFilter::from_str("sudo").unwrap(), EventFilter::Governance);
+        assert_eq!(
+            EventFilter::from_str("sudo").unwrap(),
+            EventFilter::Governance
+        );
     }
 
     #[test]
     fn from_str_safemode() {
-        assert_eq!(EventFilter::from_str("safemode").unwrap(), EventFilter::Governance);
+        assert_eq!(
+            EventFilter::from_str("safemode").unwrap(),
+            EventFilter::Governance
+        );
     }
 
     #[test]
@@ -1539,17 +1637,26 @@ mod tests {
 
     #[test]
     fn from_str_crowdloan() {
-        assert_eq!(EventFilter::from_str("crowdloan").unwrap(), EventFilter::Crowdloan);
+        assert_eq!(
+            EventFilter::from_str("crowdloan").unwrap(),
+            EventFilter::Crowdloan
+        );
     }
 
     #[test]
     fn from_str_crowdloans() {
-        assert_eq!(EventFilter::from_str("crowdloans").unwrap(), EventFilter::Crowdloan);
+        assert_eq!(
+            EventFilter::from_str("crowdloans").unwrap(),
+            EventFilter::Crowdloan
+        );
     }
 
     #[test]
     fn from_str_fund() {
-        assert_eq!(EventFilter::from_str("fund").unwrap(), EventFilter::Crowdloan);
+        assert_eq!(
+            EventFilter::from_str("fund").unwrap(),
+            EventFilter::Crowdloan
+        );
     }
 
     #[test]

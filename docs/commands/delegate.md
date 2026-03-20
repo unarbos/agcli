@@ -16,14 +16,14 @@ agcli delegate list
 Show detailed info for a specific delegate.
 
 ```bash
-agcli delegate show [--hotkey SS58]
+agcli delegate show [--hotkey-address SS58]
 ```
 
 ### delegate decrease-take
 Decrease validator take percentage. Takes effect immediately.
 
 ```bash
-agcli delegate decrease-take --take 10.0 [--hotkey SS58]
+agcli delegate decrease-take --take 10.0 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::decrease_take(origin, hotkey, take)` where take is u16 (pct * 65535 / 100)
@@ -33,7 +33,7 @@ agcli delegate decrease-take --take 10.0 [--hotkey SS58]
 Increase validator take percentage. Subject to rate limiting.
 
 ```bash
-agcli delegate increase-take --take 15.0 [--hotkey SS58]
+agcli delegate increase-take --take 15.0 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::increase_take(origin, hotkey, take)`
@@ -49,6 +49,6 @@ agcli delegate increase-take --take 15.0 [--hotkey SS58]
 
 ## Related Commands
 - `agcli stake add` — Stake behind a delegate
-- `agcli view nominations --hotkey SS58` — See who nominates a delegate
+- `agcli view nominations --hotkey-address SS58` — See who nominates a delegate
 - `agcli explain --topic take` — How take percentage works
 - `agcli explain --topic delegation` — Delegation mechanics

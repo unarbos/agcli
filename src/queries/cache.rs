@@ -436,7 +436,10 @@ mod tests {
             kind: DeltaKind::Deregistered,
         };
         let s = format!("{}", delta);
-        assert!(s.contains("5ABCDEFG"), "Long hotkey should be truncated to 8 chars");
+        assert!(
+            s.contains("5ABCDEFG"),
+            "Long hotkey should be truncated to 8 chars"
+        );
         assert!(!s.contains("HIJKLM"), "Truncated portion should not appear");
     }
 
@@ -445,7 +448,8 @@ mod tests {
         // Defensive: even if hotkey somehow contains multi-byte UTF-8, no panic
         let delta = MetagraphDelta {
             uid: 2,
-            hotkey: "\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}".to_string(),
+            hotkey: "\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}\u{00e9}"
+                .to_string(),
             kind: DeltaKind::Registered,
         };
         // This should not panic

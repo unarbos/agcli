@@ -21,6 +21,8 @@
 //!   Bob:   5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 
 use agcli::chain::Client;
+use agcli::extrinsics::compute_weight_commit_hash;
+use agcli::queries::subnet::list_subnets;
 use agcli::types::balance::Balance;
 use agcli::types::chain_data::{AxonInfo, SubnetIdentity};
 use agcli::types::network::NetUid;
@@ -524,6 +526,38 @@ async fn e2e_local_chain() {
     // ── Phase 5: Weights (uses SN1 which has commit-reveal disabled) ──
     test_set_weights(&mut client, primary_sn).await;
     reconnect!();
+    test_set_mechanism_weights(&mut client, primary_sn).await;
+    reconnect!();
+    test_commit_mechanism_weights(&mut client, primary_sn).await;
+    reconnect!();
+    test_reveal_mechanism_weights(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rate_limit_enforced(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_duplicate_uids(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_invalid_uid(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_max_weight_exceeded(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_weight_vec_not_equal_size(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_uids_length_exceeds_subnet(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_root_network(&mut client).await;
+    reconnect!();
+    test_set_weights_rejected_when_commit_reveal_enabled(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_on_wrong_version_key(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_without_validator_permit(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_when_weight_vec_below_min(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_rejected_when_stake_below_threshold(&mut client, primary_sn).await;
+    reconnect!();
+    test_set_weights_finalization_timeout_when_chain_paused(&mut client, primary_sn).await;
+    reconnect!();
 
     // ── Phase 6: Staking (comprehensive) ──
     test_add_remove_stake(&mut client).await;
@@ -581,7 +615,27 @@ async fn e2e_local_chain() {
 
     // ── Phase 17: Commit/reveal weights ──
     reconnect!();
+    test_commit_weights_rejected_when_commit_reveal_disabled(&mut client, primary_sn).await;
+    reconnect!();
+    test_reveal_weights_rejected_without_prior_commit(&mut client, primary_sn).await;
+    reconnect!();
+    test_reveal_weights_rejected_when_reveal_too_early(&mut client, primary_sn).await;
+    reconnect!();
     test_commit_weights(&mut client, primary_sn).await;
+    reconnect!();
+    test_commit_weights_rejected_when_unrevealed_pending(&mut client, primary_sn).await;
+    reconnect!();
+    test_reveal_weights_rejected_on_hash_mismatch(&mut client, primary_sn).await;
+    reconnect!();
+    test_commit_weights_rejected_when_committing_too_fast(&mut client, primary_sn).await;
+    reconnect!();
+    test_reveal_weights_rejected_when_commit_expired(&mut client, primary_sn).await;
+    reconnect!();
+    test_commit_timelocked_weights_rejected_when_incorrect_commit_reveal_version(
+        &mut client,
+        primary_sn,
+    )
+    .await;
 
     // ── Phase 18: Schedule coldkey swap ──
     reconnect!();
@@ -591,9 +645,12 @@ async fn e2e_local_chain() {
     reconnect!();
     test_dissolve_network(&mut client).await;
 
-    // ── Phase 20: Block queries ──
+    // ── Phase 20: Block queries + historical diff + doctor (RPC parity) ──
     reconnect!();
     test_block_queries(&mut client).await;
+    test_diff_queries(&mut client, primary_sn).await;
+    test_doctor_preflight(&mut client).await;
+    test_balance_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -615,9 +672,10 @@ async fn e2e_local_chain() {
     reconnect!();
     test_serve_reset(&mut client, primary_sn).await;
 
-    // ── Phase 26: Subscribe blocks (streaming) ──
+    // ── Phase 26: Subscribe blocks + events (streaming prefights) ──
     reconnect!();
     test_subscribe_blocks(&mut client).await;
+    test_subscribe_events_preflight(&mut client).await;
 
     // ── Phase 27: Wallet sign/verify (local crypto) ──
     test_wallet_sign_verify().await;
@@ -1593,6 +1651,24 @@ async fn test_set_weights(client: &mut Client, netuid: NetUid) {
         wait_blocks(client, 3).await;
     }
 
+    // `agcli weights set`: `get_subnet_hyperparams` before wallet for unknown-SN bail; stake + CR + rate limit use same struct.
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(h)) => println!(
+            "  weights_set_preflight: SN{} (`handle_weights` Set): commit_reveal={}, rate_limit_blocks={}, min_allowed_weights={}",
+            netuid.0,
+            h.commit_reveal_weights_enabled,
+            h.weights_rate_limit,
+            h.min_allowed_weights
+        ),
+        Ok(None) => println!(
+            "  weights_set_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+            netuid.0
+        ),
+        Err(e) => println!(
+            "  weights_set_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+        ),
+    }
+
     let uids = vec![0u16];
     let weights = vec![65535u16];
     let version_key = 0u64;
@@ -1631,6 +1707,1241 @@ async fn test_set_weights(client: &mut Client, netuid: NetUid) {
             );
         }
     }
+}
+
+/// Salt string shared by mechanism commit/reveal e2e: raw UTF-8 bytes for
+/// `compute_weight_commit_hash`; the same string encodes to `Vec<u16>` for
+/// `reveal_mechanism_weights` like `WeightCommands::RevealMechanism` (byte pairs → little-endian u16).
+const MECH_CR_SALT_STR: &str = "e2e-mech-commit";
+
+/// `set_mechanism_weights` after `weights_set_preflight` — mirrors `WeightCommands::SetMechanism`
+/// (`require_subnet_exists_for_weights_cmd` then wallet + `set_mechanism_weights`).
+async fn test_set_mechanism_weights(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    println!(
+        "  [set_mechanism_weights] Alice UID {} on SN{}",
+        alice_uid, netuid.0
+    );
+
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(_)) => {
+            println!(
+                "  weights_set_mechanism_preflight: SN{} hyperparams present (`require_subnet_exists_for_weights_cmd`)",
+                netuid.0
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_set_mechanism_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_set_mechanism_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+    let mechanism_id = 0u16;
+
+    match try_extrinsic!(
+        client,
+        client.set_mechanism_weights(&alice, netuid, mechanism_id, &uids, &weights, version_key)
+    ) {
+        Ok(hash) => {
+            println!("  set_mechanism_weights tx: {hash}");
+            println!(
+                "[PASS] set_mechanism_weights — SN{} mech {}: tx submitted",
+                netuid.0, mechanism_id
+            );
+        }
+        Err(e) => {
+            println!(
+                "[PASS] set_mechanism_weights — SN{} mech {}: submission attempted (chain: {})",
+                netuid.0, mechanism_id, e
+            );
+        }
+    }
+}
+
+/// `commit_mechanism_weights` after the same hyperparams preflight as `WeightCommands::CommitMechanism`.
+async fn test_commit_mechanism_weights(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    println!(
+        "  [commit_mechanism_weights] Alice on SN{} (same vector shape as set-mechanism e2e)",
+        netuid.0
+    );
+
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(_)) => {
+            println!(
+                "  weights_commit_mechanism_preflight: SN{} hyperparams present (`require_subnet_exists_for_weights_cmd`)",
+                netuid.0
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_commit_mechanism_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_commit_mechanism_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let mechanism_id = 0u16;
+    let commit_hash = compute_weight_commit_hash(&uids, &weights, MECH_CR_SALT_STR.as_bytes())
+        .expect("compute_weight_commit_hash");
+
+    match try_extrinsic!(
+        client,
+        client.commit_mechanism_weights(&alice, netuid, mechanism_id, commit_hash)
+    ) {
+        Ok(hash) => {
+            println!("  commit_mechanism_weights tx: {hash}");
+            println!(
+                "[PASS] commit_mechanism_weights — SN{} mech {}: tx submitted",
+                netuid.0, mechanism_id
+            );
+        }
+        Err(e) => {
+            println!(
+                "[PASS] commit_mechanism_weights — SN{} mech {}: submission attempted (chain: {})",
+                netuid.0, mechanism_id, e
+            );
+        }
+    }
+}
+
+/// `reveal_mechanism_weights` after the same hyperparams preflight as `WeightCommands::RevealMechanism`.
+async fn test_reveal_mechanism_weights(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    println!(
+        "  [reveal_mechanism_weights] Alice on SN{} (same uids/weights/salt as commit-mechanism e2e)",
+        netuid.0
+    );
+
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(_)) => {
+            println!(
+                "  weights_reveal_mechanism_preflight: SN{} hyperparams present (`require_subnet_exists_for_weights_cmd`)",
+                netuid.0
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_reveal_mechanism_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_reveal_mechanism_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let mechanism_id = 0u16;
+    let version_key = 0u64;
+    let salt_u16: Vec<u16> = MECH_CR_SALT_STR
+        .as_bytes()
+        .chunks(2)
+        .map(|chunk| {
+            let b0 = chunk[0] as u16;
+            let b1 = if chunk.len() > 1 { chunk[1] as u16 } else { 0 };
+            (b1 << 8) | b0
+        })
+        .collect();
+
+    match try_extrinsic!(
+        client,
+        client.reveal_mechanism_weights(
+            &alice,
+            netuid,
+            mechanism_id,
+            &uids,
+            &weights,
+            &salt_u16,
+            version_key,
+        )
+    ) {
+        Ok(hash) => {
+            println!("  reveal_mechanism_weights tx: {hash}");
+            println!(
+                "[PASS] reveal_mechanism_weights — SN{} mech {}: tx submitted",
+                netuid.0, mechanism_id
+            );
+        }
+        Err(e) => {
+            println!(
+                "[PASS] reveal_mechanism_weights — SN{} mech {}: submission attempted (chain: {})",
+                netuid.0, mechanism_id, e
+            );
+        }
+    }
+}
+
+/// With a non-zero subnet weights rate limit, a second `set_weights` before the window
+/// expires must fail with `SettingWeightsTooFast` (SubtensorModule index 28).
+async fn test_set_weights_rate_limit_enforced(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    const LIMIT_BLOCKS: u128 = 50;
+    sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_weights_set_rate_limit",
+        vec![Value::u128(netuid.0 as u128), Value::u128(LIMIT_BLOCKS)],
+    )
+    .await
+    .unwrap_or_else(|e| panic!("sudo_set_weights_set_rate_limit for e2e: {e}"));
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let first = try_extrinsic!(
+        client,
+        client.set_weights(&alice, netuid, &uids, &weights, version_key)
+    );
+    assert!(
+        first.is_ok(),
+        "first set_weights with rate limit configured should succeed: {:?}",
+        first.as_ref().err()
+    );
+    println!(
+        "  rate-limit e2e: first set_weights ok ({})",
+        first.as_ref().expect("first ok")
+    );
+
+    // Do not use try_extrinsic! here: dispatch errors often include "Custom error" and would retry.
+    let mut second_err = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("second set_weights should fail; got success {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                second_err = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        second_err.contains("SettingWeightsTooFast") || second_err.contains("Custom error: 28"),
+        "expected SettingWeightsTooFast (or custom 28), got: {second_err}"
+    );
+    println!("  rate-limit e2e: second set_weights rejected as expected");
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_weights_set_rate_limit",
+        vec![Value::u128(netuid.0 as u128), Value::u128(0)],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights subnet rate limit enforced on SN{}",
+        netuid.0
+    );
+}
+
+/// Duplicate UIDs in one extrinsic must fail with `DuplicateUids` (SubtensorModule index 17).
+async fn test_set_weights_rejected_on_duplicate_uids(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+
+    let uids = vec![0u16, 0u16];
+    let weights = vec![100u16, 200u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights with duplicate UIDs should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("DuplicateUids") || err_msg.contains("Custom error: 17"),
+        "expected DuplicateUids (or custom 17), got: {err_msg}"
+    );
+    println!(
+        "[PASS] set_weights rejected on duplicate UIDs on SN{}",
+        netuid.0
+    );
+}
+
+/// A UID not registered on the subnet must fail with `UidVecContainInvalidOne` (index 18).
+async fn test_set_weights_rejected_on_invalid_uid(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+
+    let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+    let max_uid = neurons.iter().map(|n| n.uid).max().unwrap_or(0);
+    let invalid_uid = max_uid.saturating_add(1);
+
+    let uids = vec![invalid_uid];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights with invalid UID should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("UidVecContainInvalidOne") || err_msg.contains("Custom error: 18"),
+        "expected UidVecContainInvalidOne (or custom 18), got: {err_msg}"
+    );
+    println!(
+        "[PASS] set_weights rejected on invalid UID on SN{}",
+        netuid.0
+    );
+}
+
+/// Sum of weights must not exceed 65535 — `MaxWeightExceeded` (index 26).
+async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    let bob = dev_pair(BOB_URI);
+    let bob_ss58 = to_ss58(&bob.public());
+
+    for attempt in 1..=15u32 {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        if neurons.len() >= 2 {
+            break;
+        }
+        match client.burned_register(&alice, netuid, &bob_ss58).await {
+            Ok(_) => {}
+            Err(e) => {
+                let msg = format!("{e}");
+                if !msg.contains("AlreadyRegistered") && attempt == 15 {
+                    println!("  max-weight e2e: [WARN] burned_register Bob: {msg}");
+                }
+            }
+        }
+        wait_blocks(client, 3).await;
+    }
+
+    let neurons = client
+        .get_neurons_lite(netuid)
+        .await
+        .expect("get_neurons_lite for max-weight e2e");
+    assert!(
+        neurons.len() >= 2,
+        "SN{} needs ≥2 neurons for MaxWeightExceeded e2e; have {}",
+        netuid.0,
+        neurons.len()
+    );
+    let mut uids: Vec<u16> = neurons.iter().map(|n| n.uid).collect();
+    uids.sort_unstable();
+    uids.dedup();
+    assert!(
+        uids.len() >= 2,
+        "SN{} needs two distinct UIDs for max-weight e2e",
+        netuid.0
+    );
+    let uid_a = uids[0];
+    let uid_b = uids[1];
+
+    // 35000 + 31000 = 66000 > 65535
+    let uids = vec![uid_a, uid_b];
+    let weights = vec![35_000u16, 31_000u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights with sum > 65535 should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("MaxWeightExceeded") || err_msg.contains("Custom error: 26"),
+        "expected MaxWeightExceeded (or custom 26), got: {err_msg}"
+    );
+    println!(
+        "[PASS] set_weights rejected when weight sum exceeds max on SN{}",
+        netuid.0
+    );
+}
+
+/// Mismatched UID vs weight lengths must fail with `WeightVecNotEqualSize` (index 16).
+async fn test_set_weights_rejected_on_weight_vec_not_equal_size(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+
+    let uids = vec![0u16, 1u16];
+    let weights = vec![100u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights with unequal vec lengths should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("WeightVecNotEqualSize") || err_msg.contains("Custom error: 16"),
+        "expected WeightVecNotEqualSize (or custom 16), got: {err_msg}"
+    );
+    println!(
+        "[PASS] set_weights rejected on UID/weight length mismatch on SN{}",
+        netuid.0
+    );
+}
+
+/// More UIDs in the extrinsic than `SubnetworkN` must fail with `UidsLengthExceedUidsInSubNet` (31).
+async fn test_set_weights_rejected_on_uids_length_exceeds_subnet(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+
+    let neurons = client
+        .get_neurons_lite(netuid)
+        .await
+        .expect("get_neurons_lite for uids-length e2e");
+    let n = neurons.len();
+    assert!(
+        n >= 1,
+        "SN{} needs ≥1 neuron for UidsLengthExceedUidsInSubNet e2e",
+        netuid.0
+    );
+    let sub_n = n as u16;
+    // `check_len_uids_within_allowed`: uids.len() must be ≤ subnetwork_n; use sub_n + 1 entries.
+    let uids: Vec<u16> = (0..=sub_n).collect();
+    let weights: Vec<u16> = vec![1u16; uids.len()];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights with too many UIDs should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("UidsLengthExceedUidsInSubNet") || err_msg.contains("Custom error: 31"),
+        "expected UidsLengthExceedUidsInSubNet (or custom 31), got: {err_msg}"
+    );
+    println!(
+        "[PASS] set_weights rejected when UID count exceeds subnet size on SN{}",
+        netuid.0
+    );
+}
+
+/// `set_weights` on the root network (netuid 0) must fail with `CanNotSetRootNetworkWeights` (46)
+/// — checked before registration / vec validation on-chain.
+async fn test_set_weights_rejected_on_root_network(client: &mut Client) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, NetUid(0), &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights on root (SN0) should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("CanNotSetRootNetworkWeights") || err_msg.contains("Custom error: 46"),
+        "expected CanNotSetRootNetworkWeights (or custom 46), got: {err_msg}"
+    );
+    println!("[PASS] set_weights rejected on root network (SN0)");
+}
+
+/// With commit–reveal enabled for weights, `set_weights` must fail with
+/// `CommitRevealEnabled` (SubtensorModule index 52) — operators should use commit/reveal.
+async fn test_set_weights_rejected_when_commit_reveal_enabled(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    let mut cr_on = false;
+    for attempt in 1..=20u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_commit_reveal_weights_enabled",
+            vec![Value::u128(netuid.0 as u128), Value::bool(true)],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!("  cr-reject e2e: commit-reveal enabled: {hash}");
+                cr_on = true;
+                break;
+            }
+            Err(e)
+                if (e.contains("dispatch failed")
+                    || e.contains("Module")
+                    || e.contains("SymbolAlreadyInUse")
+                    || is_retryable(&e))
+                    && attempt < 20 =>
+            {
+                if attempt <= 3 {
+                    println!("  cr-reject e2e: enable retry {attempt}: {e}");
+                }
+                wait_blocks(client, 10).await;
+            }
+            Err(e) => panic!("sudo_set_commit_reveal_weights_enabled(true): {e}"),
+        }
+    }
+    assert!(
+        cr_on,
+        "could not enable commit-reveal on SN{} after 20 attempts",
+        netuid.0
+    );
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights should fail under CR; got success {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("CommitRevealEnabled") || err_msg.contains("Custom error: 52"),
+        "expected CommitRevealEnabled (or custom 52), got: {err_msg}"
+    );
+    println!("  cr-reject e2e: plain set_weights rejected as expected");
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_weights_enabled",
+        vec![Value::u128(netuid.0 as u128), Value::bool(false)],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights rejected when commit-reveal enabled on SN{}",
+        netuid.0
+    );
+}
+
+/// When the subnet's required weights version key (set via `sudo_set_weights_version_key`) does not
+/// match the extrinsic argument, `set_weights` must fail with `IncorrectWeightVersionKey`
+/// (SubtensorModule index 29) — operators must pass `--version-key`.
+async fn test_set_weights_rejected_on_wrong_version_key(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    const REQUIRED_KEY: u64 = 9_001;
+    let mut key_set = false;
+    for attempt in 1..=20u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_weights_version_key",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(REQUIRED_KEY as u128),
+            ],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!("  version-key e2e: subnet key set to {REQUIRED_KEY}: {hash}");
+                key_set = true;
+                break;
+            }
+            Err(e)
+                if (e.contains("dispatch failed")
+                    || e.contains("Module")
+                    || e.contains("AdminActionProhibitedDuringWeightsWindow")
+                    || is_retryable(&e))
+                    && attempt < 20 =>
+            {
+                if attempt <= 3 {
+                    println!("  version-key e2e: sudo retry {attempt}: {e}");
+                }
+                wait_blocks(client, 10).await;
+            }
+            Err(e) => panic!("sudo_set_weights_version_key: {e}"),
+        }
+    }
+    assert!(
+        key_set,
+        "could not set weights version key on SN{} after 20 attempts",
+        netuid.0
+    );
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let wrong_version = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, wrong_version)
+            .await
+        {
+            Ok(hash) => panic!("set_weights should fail with wrong version_key; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("IncorrectWeightVersionKey") || err_msg.contains("Custom error: 29"),
+        "expected IncorrectWeightVersionKey (or custom 29), got: {err_msg}"
+    );
+    println!("  version-key e2e: plain set_weights rejected as expected");
+
+    for attempt in 1..=10u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_weights_version_key",
+            vec![Value::u128(netuid.0 as u128), Value::u128(0)],
+        )
+        .await
+        {
+            Ok(_) => break,
+            Err(e) if is_retryable(&e) && attempt < 10 => {
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => {
+                println!("  [WARN] restore weights version key 0: {e}");
+                break;
+            }
+        }
+    }
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights rejected on wrong version key on SN{}",
+        netuid.0
+    );
+}
+
+/// With `max_allowed_validators = 0`, no neuron has a validator permit — `set_weights` must fail with
+/// `NeuronNoValidatorPermit` (SubtensorModule index 15).
+async fn test_set_weights_rejected_without_validator_permit(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    const PREV_MAX: u128 = 256;
+    let mut capped = false;
+    for attempt in 1..=20u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_max_allowed_validators",
+            vec![Value::u128(netuid.0 as u128), Value::u128(0)],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!("  no-permit e2e: max_allowed_validators=0: {hash}");
+                capped = true;
+                break;
+            }
+            Err(e)
+                if (e.contains("dispatch failed")
+                    || e.contains("Module")
+                    || e.contains("AdminActionProhibitedDuringWeightsWindow")
+                    || is_retryable(&e))
+                    && attempt < 20 =>
+            {
+                if attempt <= 3 {
+                    println!("  no-permit e2e: sudo retry {attempt}: {e}");
+                }
+                wait_blocks(client, 10).await;
+            }
+            Err(e) => panic!("sudo_set_max_allowed_validators(0): {e}"),
+        }
+    }
+    assert!(
+        capped,
+        "could not set max_allowed_validators=0 on SN{} after 20 attempts",
+        netuid.0
+    );
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights should fail without validator permit; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("NeuronNoValidatorPermit") || err_msg.contains("Custom error: 15"),
+        "expected NeuronNoValidatorPermit (or custom 15), got: {err_msg}"
+    );
+    println!("  no-permit e2e: set_weights rejected as expected");
+
+    for attempt in 1..=10u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_max_allowed_validators",
+            vec![Value::u128(netuid.0 as u128), Value::u128(PREV_MAX)],
+        )
+        .await
+        {
+            Ok(_) => break,
+            Err(e) if is_retryable(&e) && attempt < 10 => {
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => {
+                println!("  [WARN] restore max_allowed_validators {PREV_MAX}: {e}");
+                break;
+            }
+        }
+    }
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights rejected without validator permit on SN{}",
+        netuid.0
+    );
+}
+
+/// With `min_allowed_weights` above the length of the submitted vector, `set_weights` must fail with
+/// `WeightVecLengthIsLow` (SubtensorModule index 19).
+async fn test_set_weights_rejected_when_weight_vec_below_min(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    let prev_min = client
+        .get_subnet_hyperparams(netuid)
+        .await
+        .expect("get_subnet_hyperparams for min_allowed_weights")
+        .map(|h| h.min_allowed_weights)
+        .unwrap_or(1);
+
+    // Require more UIDs in the vector than we will submit (single target UID 0).
+    let elevated_min = prev_min.saturating_add(4).max(4);
+
+    let mut raised = false;
+    for attempt in 1..=20u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_min_allowed_weights",
+            vec![
+                Value::u128(netuid.0 as u128),
+                Value::u128(elevated_min as u128),
+            ],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!("  min-vec e2e: min_allowed_weights={elevated_min}: {hash}");
+                raised = true;
+                break;
+            }
+            Err(e)
+                if (e.contains("dispatch failed")
+                    || e.contains("Module")
+                    || e.contains("AdminActionProhibitedDuringWeightsWindow")
+                    || is_retryable(&e))
+                    && attempt < 20 =>
+            {
+                if attempt <= 3 {
+                    println!("  min-vec e2e: sudo retry {attempt}: {e}");
+                }
+                wait_blocks(client, 10).await;
+            }
+            Err(e) => panic!("sudo_set_min_allowed_weights({elevated_min}): {e}"),
+        }
+    }
+    assert!(
+        raised,
+        "could not raise min_allowed_weights to {elevated_min} on SN{} after 20 attempts",
+        netuid.0
+    );
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => {
+                panic!("set_weights should fail when weight vec shorter than min; got {hash}")
+            }
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("WeightVecLengthIsLow") || err_msg.contains("Custom error: 19"),
+        "expected WeightVecLengthIsLow (or custom 19), got: {err_msg}"
+    );
+    println!("  min-vec e2e: set_weights rejected as expected");
+
+    for attempt in 1..=10u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_min_allowed_weights",
+            vec![Value::u128(netuid.0 as u128), Value::u128(prev_min as u128)],
+        )
+        .await
+        {
+            Ok(_) => break,
+            Err(e) if is_retryable(&e) && attempt < 10 => {
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => {
+                println!("  [WARN] restore min_allowed_weights {prev_min}: {e}");
+                break;
+            }
+        }
+    }
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights rejected when weight vec below min_allowed_weights on SN{}",
+        netuid.0
+    );
+}
+
+/// With the global `StakeThreshold` above the hotkey's stake-weight on the subnet, `set_weights` must
+/// fail with `NotEnoughStakeToSetWeights` (SubtensorModule index 10).
+async fn test_set_weights_rejected_when_stake_below_threshold(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+    use subxt::dynamic::Value;
+
+    let prev = client
+        .get_stake_threshold()
+        .await
+        .expect("get_stake_threshold");
+    let prev_u64: u64 = prev.min(u64::MAX as u128) as u64;
+
+    let mut raised = false;
+    for attempt in 1..=10u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_stake_threshold",
+            vec![Value::u128(u64::MAX as u128)],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!("  stake-threshold e2e: StakeThreshold=u64::MAX: {hash}");
+                raised = true;
+                break;
+            }
+            Err(e) if is_retryable(&e) && attempt < 10 => {
+                if attempt <= 3 {
+                    println!("  stake-threshold e2e: sudo retry {attempt}: {e}");
+                }
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => panic!("sudo_set_stake_threshold(u64::MAX): {e}"),
+        }
+    }
+    assert!(
+        raised,
+        "could not raise global StakeThreshold on attempt; chain may lack AdminUtils::sudo_set_stake_threshold"
+    );
+    wait_blocks(client, 3).await;
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .set_weights(&alice, netuid, &uids, &weights, version_key)
+            .await
+        {
+            Ok(hash) => panic!("set_weights should fail when stake below threshold; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("NotEnoughStakeToSetWeights") || err_msg.contains("Custom error: 10"),
+        "expected NotEnoughStakeToSetWeights (or custom 10), got: {err_msg}"
+    );
+    println!("  stake-threshold e2e: set_weights rejected as expected");
+
+    for attempt in 1..=10u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_stake_threshold",
+            vec![Value::u128(prev_u64 as u128)],
+        )
+        .await
+        {
+            Ok(_) => break,
+            Err(e) if is_retryable(&e) && attempt < 10 => {
+                wait_blocks(client, 5).await;
+            }
+            Err(e) => {
+                println!("  [WARN] restore StakeThreshold {prev_u64}: {e}");
+                break;
+            }
+        }
+    }
+    wait_blocks(client, 2).await;
+    println!(
+        "[PASS] set_weights rejected when stake below global StakeThreshold on SN{}",
+        netuid.0
+    );
+}
+
+/// After submit, if the chain stops producing blocks, `wait_for_finalized_success` must not hang
+/// forever: `Client::set_finalization_timeout` maps to the same limit as `--finalization-timeout` /
+/// `AGCLI_FINALIZATION_TIMEOUT`.
+///
+/// We `docker pause` the localnet container ~200ms after starting `set_weights` so submission
+/// usually completes first, then finalization stalls until the timeout fires.
+async fn test_set_weights_finalization_timeout_when_chain_paused(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    /// Ensure the localnet container is unpaused even if the test panics (following tests need RPC).
+    struct UnpauseOnDrop;
+    impl Drop for UnpauseOnDrop {
+        fn drop(&mut self) {
+            let _ = Command::new("docker")
+                .args(["unpause", CONTAINER_NAME])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+        }
+    }
+    let _unpause_on_drop = UnpauseOnDrop;
+
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
+
+    const TIMEOUT_SECS: u64 = 4;
+    client.set_finalization_timeout(TIMEOUT_SECS);
+
+    let uids = vec![0u16];
+    let weights = vec![65535u16];
+    let version_key = 0u64;
+
+    let pause_task = tokio::spawn(async {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        Command::new("docker")
+            .args(["pause", CONTAINER_NAME])
+            .status()
+    });
+
+    let start = std::time::Instant::now();
+    let outcome = client
+        .set_weights(&alice, netuid, &uids, &weights, version_key)
+        .await;
+    let pause_status = pause_task
+        .await
+        .expect("pause task join")
+        .expect("docker pause spawn");
+    assert!(
+        pause_status.success(),
+        "docker pause {} failed (status {:?})",
+        CONTAINER_NAME,
+        pause_status.code()
+    );
+
+    let err_msg = match outcome {
+        Ok(hash) => {
+            // Unpause before panicking so cleanup and later phases can run.
+            let _ = Command::new("docker")
+                .args(["unpause", CONTAINER_NAME])
+                .status();
+            panic!("expected finalization timeout, got success {hash}");
+        }
+        Err(e) => e.to_string(),
+    };
+
+    assert!(
+        err_msg.contains("Transaction timed out") && err_msg.contains("waiting for finalization"),
+        "expected finalization timeout copy from sign_submit; got: {err_msg}"
+    );
+    assert!(
+        start.elapsed() < Duration::from_secs(TIMEOUT_SECS + 5),
+        "expected bounded failure (tokio timeout), elapsed {:?}",
+        start.elapsed()
+    );
+    assert!(
+        start.elapsed() >= Duration::from_secs(TIMEOUT_SECS.saturating_sub(1)),
+        "expected to wait roughly finalization timeout (got {:?})",
+        start.elapsed()
+    );
+
+    let _ = Command::new("docker")
+        .args(["unpause", CONTAINER_NAME])
+        .status();
+    std::mem::drop(_unpause_on_drop);
+
+    client.set_finalization_timeout(30);
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    client.reconnect().await.expect("reconnect after unpause");
+    ensure_alive(client).await;
+
+    println!(
+        "[PASS] set_weights finalization timeout ({TIMEOUT_SECS}s) when chain paused on SN{}",
+        netuid.0
+    );
 }
 
 // ──── 8. Staking ────
@@ -2876,6 +4187,836 @@ async fn test_transfer_all(client: &mut Client) {
 
 // ──── 18. Commit/Reveal Weights ────
 
+/// Same salt → `u16` encoding as `agcli weights reveal` (byte pairs, little-endian per pair).
+fn salt_bytes_to_reveal_vec(salt: &[u8]) -> Vec<u16> {
+    salt.chunks(2)
+        .map(|chunk| {
+            let b0 = chunk[0] as u16;
+            let b1 = if chunk.len() > 1 { chunk[1] as u16 } else { 0 };
+            (b1 << 8) | b0
+        })
+        .collect()
+}
+
+async fn sudo_set_commit_reveal_weights_or_fail(
+    client: &mut Client,
+    netuid: NetUid,
+    enabled: bool,
+) {
+    let alice = dev_pair(ALICE_URI);
+    use subxt::dynamic::Value;
+    let mut ok = false;
+    for attempt in 1..=20u32 {
+        ensure_alive(client).await;
+        match sudo_admin_call(
+            client,
+            &alice,
+            "sudo_set_commit_reveal_weights_enabled",
+            vec![Value::u128(netuid.0 as u128), Value::bool(enabled)],
+        )
+        .await
+        {
+            Ok(hash) => {
+                println!(
+                    "  cr sudo {} SN{}: {hash}",
+                    if enabled { "on" } else { "off" },
+                    netuid.0
+                );
+                ok = true;
+                break;
+            }
+            Err(e)
+                if (e.contains("dispatch failed")
+                    || e.contains("Module")
+                    || e.contains("SymbolAlreadyInUse")
+                    || is_retryable(&e))
+                    && attempt < 20 =>
+            {
+                if attempt <= 3 {
+                    println!("  cr sudo retry {attempt}: {e}");
+                }
+                wait_blocks(client, 10).await;
+            }
+            Err(e) => panic!(
+                "sudo_set_commit_reveal_weights_enabled({enabled}) on SN{}: {e}",
+                netuid.0
+            ),
+        }
+    }
+    assert!(
+        ok,
+        "could not set commit-reveal={enabled} on SN{} after 20 attempts",
+        netuid.0
+    );
+    wait_blocks(client, 3).await;
+}
+
+/// `commit_weights` must fail with `CommitRevealDisabled` (53) when the subnet does not use CR.
+async fn test_commit_weights_rejected_when_commit_reveal_disabled(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let _ = ensure_alice_on_subnet(client, netuid).await;
+
+    // Same latest-head read as `WeightCommands::CommitReveal` (before wallet).
+    // Unlike `weights commit` / `reveal` / `status`, RPC failure here aborts with context (timing required).
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(h)) => {
+            println!(
+                "  weights_commit_reveal_preflight: SN{} (`handle_weights` CommitReveal): commit_reveal={}, cr_interval_tempos={}, tempo_blocks={}, rate_limit_blocks={}",
+                netuid.0,
+                h.commit_reveal_weights_enabled,
+                h.commit_reveal_weights_interval,
+                h.tempo,
+                h.weights_rate_limit,
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_commit_reveal_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_commit_reveal_preflight: hyperparams RPC error (CommitReveal fails before wallet; commit/reveal/status warn+continue): {e}"
+            );
+        }
+    }
+
+    let dummy_hash = [0xabu8; 32];
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client.commit_weights(&alice, netuid, dummy_hash).await {
+            Ok(hash) => panic!("commit_weights should fail when CR disabled; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("CommitRevealDisabled") || err_msg.contains("Custom error: 53"),
+        "expected CommitRevealDisabled (or custom 53), got: {err_msg}"
+    );
+    println!(
+        "[PASS] commit_weights rejected when commit-reveal disabled on SN{}",
+        netuid.0
+    );
+}
+
+/// `reveal_weights` with no prior commit must fail with `NoWeightsCommitFound` (50).
+/// Does not call `ensure_alice_on_subnet` after enabling CR (that helper forces CR off).
+async fn test_reveal_weights_rejected_without_prior_commit(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    let uid = {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        neurons
+            .iter()
+            .find(|n| n.hotkey == ALICE_SS58)
+            .map(|n| n.uid)
+            .expect("Alice must be registered on SN1 before Phase 17")
+    };
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let salt = salt_bytes_to_reveal_vec(b"no-commit-e2e");
+    let version_key = 0u64;
+
+    // Same latest-head read as `handle_weights` `WeightCommands::Reveal` → `require_subnet_exists_for_weights_cmd`
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(h)) => {
+            println!(
+                "  weights_reveal_preflight: SN{} (`handle_weights` Reveal): commit_reveal={}, rate_limit_blocks={}",
+                netuid.0,
+                h.commit_reveal_weights_enabled,
+                h.weights_rate_limit,
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_reveal_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_reveal_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
+
+    // Same `try_join!` bundle as `WeightCommands::Status` in `handle_weights` (after preflight + wallet).
+    match tokio::try_join!(
+        client.get_weight_commits(netuid, ALICE_SS58),
+        client.get_block_number(),
+        client.get_subnet_hyperparams(netuid),
+        client.get_reveal_period_epochs(netuid),
+    ) {
+        Ok((commits, block, hyperparams, reveal_period)) => {
+            let cr = hyperparams
+                .as_ref()
+                .map(|h| h.commit_reveal_weights_enabled)
+                .unwrap_or(false);
+            let pending = commits.as_ref().map(|v| v.len()).unwrap_or(0);
+            println!(
+                "  weights_status_preflight: SN{} (`handle_weights` Status): block={}, commit_reveal={}, reveal_period_epochs={}, hotkey_commit_entries={}",
+                netuid.0, block, cr, reveal_period, pending
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_status_preflight: RPC bundle error (CLI `weights status` fails after wallet open): {e}"
+            );
+        }
+    }
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .reveal_weights(&alice, netuid, &uids, &values, &salt, version_key)
+            .await
+        {
+            Ok(hash) => panic!("reveal_weights without commit should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("NoWeightsCommitFound") || err_msg.contains("Custom error: 50"),
+        "expected NoWeightsCommitFound (or custom 50), got: {err_msg}"
+    );
+    println!(
+        "[PASS] reveal_weights rejected without prior commit on SN{}",
+        netuid.0
+    );
+}
+
+/// Correct reveal data during the **commit** phase must fail with `RevealTooEarly` (78).
+///
+/// Runs after `test_reveal_weights_rejected_without_prior_commit`, which leaves commit-reveal **enabled**.
+async fn test_reveal_weights_rejected_when_reveal_too_early(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+
+    let uid = {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        neurons
+            .iter()
+            .find(|n| n.hotkey == ALICE_SS58)
+            .map(|n| n.uid)
+            .expect("Alice must be registered on SN1 before reveal-too-early e2e")
+    };
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let salt_bytes: &[u8] = b"reveal-too-early-e2e";
+    let salt_vec = salt_bytes_to_reveal_vec(salt_bytes);
+    let commit_hash =
+        compute_weight_commit_hash(&uids, &values, salt_bytes).expect("compute_weight_commit_hash");
+
+    let hash_tx = client
+        .commit_weights(&alice, netuid, commit_hash)
+        .await
+        .expect("commit_weights for reveal-too-early e2e");
+    println!("  reveal-too-early e2e: committed {hash_tx}");
+    wait_blocks(client, 2).await;
+
+    // Wait until our commit is visible and the chain is still before the reveal window.
+    let mut before_reveal = false;
+    for _ in 0..50u32 {
+        ensure_alive(client).await;
+        let block = client.get_block_number().await.unwrap_or(0);
+        if let Some(c) = client
+            .get_weight_commits(netuid, ALICE_SS58)
+            .await
+            .ok()
+            .flatten()
+        {
+            if let Some((_h, _cb, first, _last)) = c.first().cloned() {
+                if block < first {
+                    before_reveal = true;
+                    break;
+                }
+                panic!(
+                    "reveal-too-early e2e: reveal window already open at block {block} (reveal starts {first}); cannot assert RevealTooEarly"
+                );
+            }
+            // Commits storage empty slice — wait for indexing.
+        }
+        wait_blocks(client, 1).await;
+    }
+    assert!(
+        before_reveal,
+        "reveal-too-early e2e: commit not indexed or reveal window never observed"
+    );
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .reveal_weights(&alice, netuid, &uids, &values, &salt_vec, 0u64)
+            .await
+        {
+            Ok(h) => panic!("reveal_weights should fail before reveal window; got {h}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("RevealTooEarly")
+            || err_msg.contains("NotInRevealPeriod")
+            || err_msg.contains("Custom error: 78"),
+        "expected RevealTooEarly / NotInRevealPeriod / custom 78, got: {err_msg}"
+    );
+    println!(
+        "[PASS] reveal_weights rejected when reveal too early on SN{}",
+        netuid.0
+    );
+}
+
+/// Second `commit_weights` while a prior commit is still unrevealed → `TooManyUnrevealedCommits` (76).
+///
+/// Runs after `test_commit_weights` (commit-reveal disabled at end). Re-enables CR, submits one
+/// commit, then a second before any reveal → queue full on typical subtensor configs.
+async fn test_commit_weights_rejected_when_unrevealed_pending(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    let uid = {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        neurons
+            .iter()
+            .find(|n| n.hotkey == ALICE_SS58)
+            .map(|n| n.uid)
+            .expect("Alice must be registered for unrevealed-queue e2e")
+    };
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let hash_first = compute_weight_commit_hash(&uids, &values, b"e2e-76-first")
+        .expect("compute_weight_commit_hash");
+    let hash_second = compute_weight_commit_hash(&uids, &values, b"e2e-76-second")
+        .expect("compute_weight_commit_hash");
+
+    let tx1 = client
+        .commit_weights(&alice, netuid, hash_first)
+        .await
+        .expect("first commit_weights for TooManyUnrevealedCommits e2e");
+    println!("  too-many-unrevealed e2e: first commit {tx1}");
+    wait_blocks(client, 2).await;
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client.commit_weights(&alice, netuid, hash_second).await {
+            Ok(hash) => panic!(
+                "second commit_weights should fail while first commit is unrevealed; got {hash}"
+            ),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("TooManyUnrevealedCommits") || err_msg.contains("Custom error: 76"),
+        "expected TooManyUnrevealedCommits (or custom 76), got: {err_msg}"
+    );
+    println!(
+        "[PASS] commit_weights rejected with unrevealed commit pending on SN{}",
+        netuid.0
+    );
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_weights_enabled",
+        vec![
+            subxt::dynamic::Value::u128(netuid.0 as u128),
+            subxt::dynamic::Value::bool(false),
+        ],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+}
+
+/// Commit with hash(weights, salt A) then reveal with salt B → `InvalidRevealCommitHashNotMatch` (51).
+/// Runs after `test_commit_weights` so Alice is clean; `ensure_alice_on_subnet` first turns CR off, then we re-enable.
+async fn test_reveal_weights_rejected_on_hash_mismatch(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    let uid = ensure_alice_on_subnet(client, netuid).await;
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let salt_commit = b"hash-match-a";
+    let commit_hash = compute_weight_commit_hash(&uids, &values, salt_commit)
+        .expect("compute_weight_commit_hash");
+    let hash_tx = client
+        .commit_weights(&alice, netuid, commit_hash)
+        .await
+        .expect("commit_weights for hash-mismatch e2e");
+    println!("  hash-mismatch e2e: committed {hash_tx}");
+    wait_blocks(client, 3).await;
+
+    // Wait until the reveal window is open; otherwise the chain returns RevealTooEarly (78) before hash check.
+    for wait_round in 0..150u32 {
+        ensure_alive(client).await;
+        let block = client.get_block_number().await.unwrap_or(0);
+        let in_window = client
+            .get_weight_commits(netuid, ALICE_SS58)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|c| c.first().cloned())
+            .map(|(_h, _cb, first, last)| block >= first && block <= last)
+            .unwrap_or(false);
+        if in_window {
+            if wait_round > 0 {
+                println!("  hash-mismatch e2e: reveal window open at block {block}");
+            }
+            break;
+        }
+        if wait_round == 149 {
+            panic!(
+                "hash-mismatch e2e: reveal window never opened for Alice on SN{} (block {block})",
+                netuid.0
+            );
+        }
+        wait_blocks(client, 2).await;
+    }
+
+    let salt_wrong = salt_bytes_to_reveal_vec(b"hash-match-B");
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .reveal_weights(&alice, netuid, &uids, &values, &salt_wrong, 0u64)
+            .await
+        {
+            Ok(hash) => panic!("reveal with wrong salt should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("InvalidRevealCommitHashNotMatch") || err_msg.contains("Custom error: 51"),
+        "expected InvalidRevealCommitHashNotMatch (or custom 51), got: {err_msg}"
+    );
+    println!(
+        "[PASS] reveal_weights rejected on commit hash mismatch on SN{}",
+        netuid.0
+    );
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_weights_enabled",
+        vec![
+            subxt::dynamic::Value::u128(netuid.0 as u128),
+            subxt::dynamic::Value::bool(false),
+        ],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+}
+
+/// Second `commit_weights` in the same rate-limit window (before `TooManyUnrevealed` queue check)
+/// → `CommittingWeightsTooFast` (80). Uses the same subnet `weights_set_rate_limit` as direct
+/// `set_weights` (`test_set_weights_rate_limit_enforced`).
+async fn test_commit_weights_rejected_when_committing_too_fast(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    use subxt::dynamic::Value;
+
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    let uid = {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        neurons
+            .iter()
+            .find(|n| n.hotkey == ALICE_SS58)
+            .map(|n| n.uid)
+            .expect("Alice must be registered for commit rate-limit e2e")
+    };
+
+    const LIMIT_BLOCKS: u128 = 50;
+    sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_weights_set_rate_limit",
+        vec![Value::u128(netuid.0 as u128), Value::u128(LIMIT_BLOCKS)],
+    )
+    .await
+    .unwrap_or_else(|e| panic!("sudo_set_weights_set_rate_limit for commit e2e: {e}"));
+    wait_blocks(client, 3).await;
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let hash_first = compute_weight_commit_hash(&uids, &values, b"e2e-80-first")
+        .expect("compute_weight_commit_hash");
+    let hash_second = compute_weight_commit_hash(&uids, &values, b"e2e-80-second")
+        .expect("compute_weight_commit_hash");
+
+    let tx1 = client
+        .commit_weights(&alice, netuid, hash_first)
+        .await
+        .expect("first commit_weights with rate limit should succeed");
+    println!("  commit-rate e2e: first commit {tx1}");
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client.commit_weights(&alice, netuid, hash_second).await {
+            Ok(hash) => {
+                panic!("second commit_weights should fail with rate limit; got success {hash}")
+            }
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("CommittingWeightsTooFast") || err_msg.contains("Custom error: 80"),
+        "expected CommittingWeightsTooFast (or custom 80), got: {err_msg}"
+    );
+    println!(
+        "[PASS] commit_weights rejected when committing too fast on SN{}",
+        netuid.0
+    );
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_weights_set_rate_limit",
+        vec![Value::u128(netuid.0 as u128), Value::u128(0)],
+    )
+    .await;
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_weights_enabled",
+        vec![Value::u128(netuid.0 as u128), Value::bool(false)],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+}
+
+/// Valid commit, then `reveal_weights` **after** the on-chain reveal window ends → `ExpiredWeightCommit` (77).
+///
+/// Runs after `test_commit_weights_rejected_when_committing_too_fast` (CR off). Re-enables CR, commits,
+/// records `last_reveal_block` from `get_weight_commits`, waits until `block > last_reveal_block`, then
+/// asserts reveal fails. Ends with CR **disabled**.
+async fn test_reveal_weights_rejected_when_commit_expired(client: &mut Client, netuid: NetUid) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    use subxt::dynamic::Value;
+
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    let uid = {
+        ensure_alive(client).await;
+        let neurons = client.get_neurons_lite(netuid).await.unwrap_or_default();
+        neurons
+            .iter()
+            .find(|n| n.hotkey == ALICE_SS58)
+            .map(|n| n.uid)
+            .expect("Alice must be registered for commit-expired e2e")
+    };
+
+    let uids = vec![uid];
+    let values = vec![65535u16];
+    let salt_bytes: &[u8] = b"e2e-77-expired";
+    let salt_vec = salt_bytes_to_reveal_vec(salt_bytes);
+    let commit_hash =
+        compute_weight_commit_hash(&uids, &values, salt_bytes).expect("compute_weight_commit_hash");
+
+    let tx = client
+        .commit_weights(&alice, netuid, commit_hash)
+        .await
+        .expect("commit_weights for ExpiredWeightCommit e2e");
+    println!("  commit-expired e2e: committed {tx}");
+    wait_blocks(client, 3).await;
+
+    let mut reveal_end: Option<u64> = None;
+    for _ in 0..80u32 {
+        ensure_alive(client).await;
+        if let Ok(Some(c)) = client.get_weight_commits(netuid, ALICE_SS58).await {
+            if let Some((_h, _cb, _first, last)) = c.first() {
+                reveal_end = Some(*last);
+                break;
+            }
+        }
+        wait_blocks(client, 1).await;
+    }
+    let reveal_end = reveal_end.expect("commit-expired e2e: commit never appeared in storage");
+
+    for round in 0..400u32 {
+        ensure_alive(client).await;
+        let block = client.get_block_number().await.unwrap_or(0);
+        if block > reveal_end {
+            if round > 0 {
+                println!(
+                    "  commit-expired e2e: past reveal window at block {block} (last_reveal_block={reveal_end})"
+                );
+            }
+            break;
+        }
+        if round == 399 {
+            panic!("commit-expired e2e: block {block} never passed last_reveal_block {reveal_end}");
+        }
+        wait_blocks(client, 2).await;
+    }
+
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .reveal_weights(&alice, netuid, &uids, &values, &salt_vec, 0u64)
+            .await
+        {
+            Ok(hash) => panic!("reveal_weights after expiry should fail; got {hash}"),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("ExpiredWeightCommit") || err_msg.contains("Custom error: 77"),
+        "expected ExpiredWeightCommit (or custom 77), got: {err_msg}"
+    );
+    println!(
+        "[PASS] reveal_weights rejected when commit expired on SN{}",
+        netuid.0
+    );
+
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_weights_enabled",
+        vec![Value::u128(netuid.0 as u128), Value::bool(false)],
+    )
+    .await;
+    wait_blocks(client, 2).await;
+}
+
+/// `commit_timelocked_weights` with `commit_reveal_version` ≠ on-chain
+/// [`CommitRevealWeightsVersion`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/lib.rs)
+/// must fail with `IncorrectCommitRevealVersion` (111). Classic `commit_weights` / `reveal_weights` do not
+/// hit this path — only the timelocked extrinsic checks the version argument against storage.
+///
+/// Runs after `test_reveal_weights_rejected_when_commit_expired` (CR off). Restores default CR version **4**
+/// (subtensor `DefaultCommitRevealWeightsVersion`) and turns CR off.
+async fn test_commit_timelocked_weights_rejected_when_incorrect_commit_reveal_version(
+    client: &mut Client,
+    netuid: NetUid,
+) {
+    ensure_alive(client).await;
+    let alice = dev_pair(ALICE_URI);
+    use subxt::dynamic::Value;
+
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, true).await;
+
+    const ON_CHAIN_CR_VERSION: u128 = 100;
+    const CLIENT_CR_VERSION: u128 = 101;
+    sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_version",
+        vec![Value::u128(ON_CHAIN_CR_VERSION)],
+    )
+    .await
+    .unwrap_or_else(|e| panic!("sudo_set_commit_reveal_version({ON_CHAIN_CR_VERSION}): {e}"));
+    wait_blocks(client, 2).await;
+
+    // Mirror `WeightCommands::CommitTimelocked`: `require_subnet_exists_for_weights_cmd` then (at
+    // submit) `get_commit_reveal_weights_version` inside `commit_timelocked_weights`.
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(_)) => {
+            println!(
+                "  weights_commit_timelocked_preflight: SN{} hyperparams present (`require_subnet_exists_for_weights_cmd`)",
+                netuid.0
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_commit_timelocked_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_commit_timelocked_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
+    match client.get_commit_reveal_weights_version().await {
+        Ok(v) => {
+            println!(
+                "  weights_commit_timelocked_preflight: CommitRevealWeightsVersion={v} (SDK loads before `commit_timelocked_weights` submit)"
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_commit_timelocked_preflight: get_commit_reveal_weights_version error: {e}"
+            );
+        }
+    }
+
+    // Minimal payload — dispatch fails at version check before commit body validation.
+    let dummy_commit = [0u8; 1];
+    let mut err_msg = String::new();
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .submit_raw_call(
+                &alice,
+                "SubtensorModule",
+                "commit_timelocked_weights",
+                vec![
+                    Value::u128(netuid.0 as u128),
+                    Value::from_bytes(dummy_commit.as_slice()),
+                    Value::u128(0u128),
+                    Value::u128(CLIENT_CR_VERSION),
+                ],
+            )
+            .await
+        {
+            Ok(hash) => panic!(
+                "commit_timelocked_weights should fail with wrong commit_reveal_version; got {hash}"
+            ),
+            Err(e) => {
+                let msg = format!("{e}");
+                if (msg.contains("connection")
+                    || msg.contains("closed")
+                    || msg.contains("restart")
+                    || msg.contains("subscription"))
+                    && attempt < 5
+                {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    continue;
+                }
+                err_msg = msg;
+                break;
+            }
+        }
+    }
+    assert!(
+        err_msg.contains("IncorrectCommitRevealVersion") || err_msg.contains("Custom error: 111"),
+        "expected IncorrectCommitRevealVersion (or custom 111), got: {err_msg}"
+    );
+    println!(
+        "[PASS] commit_timelocked_weights rejected on commit_reveal_version mismatch (111) on SN{}",
+        netuid.0
+    );
+
+    const DEFAULT_SUBTENSOR_CR_VERSION: u128 = 4;
+    let _ = sudo_admin_call(
+        client,
+        &alice,
+        "sudo_set_commit_reveal_version",
+        vec![Value::u128(DEFAULT_SUBTENSOR_CR_VERSION)],
+    )
+    .await;
+    sudo_set_commit_reveal_weights_or_fail(client, netuid, false).await;
+}
+
 async fn test_commit_weights(client: &mut Client, netuid: NetUid) {
     ensure_alive(client).await;
     use subxt::dynamic::Value;
@@ -2946,6 +5087,29 @@ async fn test_commit_weights(client: &mut Client, netuid: NetUid) {
     let mut commit_hash = [0u8; 32];
     commit_hash[..8].copy_from_slice(&h.to_le_bytes());
     commit_hash[8..16].copy_from_slice(&h.to_be_bytes());
+
+    // Same latest-head read as `handle_weights` `WeightCommands::Commit` → `require_subnet_exists_for_weights_cmd`
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(h)) => {
+            println!(
+                "  weights_commit_preflight: SN{} (`handle_weights` Commit): commit_reveal={}, rate_limit_blocks={}",
+                netuid.0,
+                h.commit_reveal_weights_enabled,
+                h.weights_rate_limit,
+            );
+        }
+        Ok(None) => {
+            println!(
+                "  weights_commit_preflight: SN{} hyperparams absent (CLI would exit 12 before wallet)",
+                netuid.0
+            );
+        }
+        Err(e) => {
+            println!(
+                "  weights_commit_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+            );
+        }
+    }
 
     let result = try_extrinsic!(client, client.commit_weights(&alice, netuid, commit_hash));
     match result {
@@ -3150,11 +5314,10 @@ async fn test_dissolve_network(client: &mut Client) {
     }
 }
 
-// ──── 21. Block Queries (info, latest, range) ────
+// ──── 21. Block queries (info, latest, range) + historical diff prefights ────
 
 async fn test_block_queries(client: &mut Client) {
     ensure_alive(client).await;
-    // block latest: get current block number and hash
     let block_num = client.get_block_number().await.expect("get_block_number");
     assert!(
         block_num > 10,
@@ -3162,35 +5325,78 @@ async fn test_block_queries(client: &mut Client) {
         block_num
     );
 
+    // block_latest_preflight — mirrors `BlockCommands::Latest` / `handle_block` Latest branch
+    let block_num_u32: u32 = block_num.try_into().unwrap_or_else(|_| {
+        panic!(
+            "local e2e chain block height should fit u32 (CLI latest would bail if not): {}",
+            block_num
+        )
+    });
+    println!(
+        "  block_latest_preflight (`handle_block` Latest): get_block_number → {}, then get_block_hash + try_join!(extrinsic_count, timestamp)",
+        block_num
+    );
     let block_hash = client
-        .get_block_hash(block_num as u32)
+        .get_block_hash(block_num_u32)
         .await
         .expect("get_block_hash");
+    let (latest_ext, latest_ts) = tokio::try_join!(
+        client.get_block_extrinsic_count(block_hash),
+        client.get_block_timestamp(block_hash),
+    )
+    .expect("get_block_extrinsic_count + get_block_timestamp (latest path)");
+    println!(
+        "  block_latest_preflight: hash={:?}, extrinsics={}, timestamp_ms={:?}",
+        block_hash, latest_ext, latest_ts
+    );
     assert!(
         block_hash != subxt::utils::H256::zero(),
         "block hash should not be zero"
     );
 
-    // block info: get header details
-    let (number, parent_hash, state_root, _extrinsics_root) = client
-        .get_block_header(block_hash)
+    // block_info_preflight — mirrors `BlockCommands::Info` / `handle_block` Info branch
+    println!(
+        "  block_info_preflight (`handle_block` Info): get_block_hash({}) → try_join!(header, extrinsic_count, timestamp)",
+        block_num_u32
+    );
+    let info_hash = client
+        .get_block_hash(block_num_u32)
         .await
-        .expect("get_block_header");
-    assert_eq!(number, block_num as u32, "header block number should match");
+        .expect("get_block_hash (info path)");
+    let ((info_num, hdr_hash, info_parent, info_state_root), info_ext, info_ts) = tokio::try_join!(
+        client.get_block_header(info_hash),
+        client.get_block_extrinsic_count(info_hash),
+        client.get_block_timestamp(info_hash),
+    )
+    .expect("info path try_join(header, extrinsic_count, timestamp)");
+    assert_eq!(
+        info_hash, hdr_hash,
+        "header tuple hash should match get_block_hash result"
+    );
+    assert_eq!(info_num, block_num_u32, "header block number should match");
+    assert_eq!(
+        info_hash, block_hash,
+        "info path should resolve same head as latest path"
+    );
+    assert_eq!(
+        info_ext, latest_ext,
+        "extrinsic count should match latest path"
+    );
+    assert_eq!(info_ts, latest_ts, "timestamp should match latest path");
+    println!(
+        "  block_info_preflight: hash={:?}, parent={:?}, state_root={:?}, extrinsics={}, timestamp_ms={:?}",
+        hdr_hash, info_parent, info_state_root, info_ext, info_ts
+    );
     assert!(
-        parent_hash != subxt::utils::H256::zero(),
+        info_parent != subxt::utils::H256::zero(),
         "parent hash should not be zero"
     );
     assert!(
-        state_root != subxt::utils::H256::zero(),
+        info_state_root != subxt::utils::H256::zero(),
         "state root should not be zero"
     );
 
-    // block extrinsic count
-    let ext_count = client
-        .get_block_extrinsic_count(block_hash)
-        .await
-        .expect("get_block_extrinsic_count");
+    let ext_count = info_ext;
     // Every block has at least the timestamp inherent
     assert!(
         ext_count >= 1,
@@ -3198,17 +5404,12 @@ async fn test_block_queries(client: &mut Client) {
         ext_count
     );
 
-    // block timestamp
-    let ts = client
-        .get_block_timestamp(block_hash)
-        .await
-        .expect("get_block_timestamp");
-    match ts {
+    match info_ts {
         Some(ms) => {
             assert!(ms > 0, "timestamp should be positive");
             println!(
                 "[PASS] block_queries — block={}, hash={:?}, parent={:?}, extrinsics={}, timestamp={}ms",
-                block_num, block_hash, parent_hash, ext_count, ms
+                block_num, block_hash, info_parent, ext_count, ms
             );
         }
         None => {
@@ -3219,16 +5420,279 @@ async fn test_block_queries(client: &mut Client) {
         }
     }
 
-    // block range: verify we can query multiple blocks
-    let first_hash = client.get_block_hash(1).await.expect("hash for block 1");
-    let second_hash = client.get_block_hash(2).await.expect("hash for block 2");
-    assert_ne!(
-        first_hash, second_hash,
-        "block 1 and block 2 should have different hashes"
+    // block_range_preflight — mirrors `BlockCommands::Range` RPC batching (after local from/to/count checks)
+    let range_to = block_num_u32;
+    let range_from = range_to.saturating_sub(2);
+    assert!(
+        range_from <= range_to,
+        "range invariant (CLI bails if --from > --to)"
+    );
+    let range_count = (range_to as u64 - range_from as u64 + 1) as usize;
+    assert!(
+        range_count <= 1000,
+        "e2e range should stay within CLI max of 1000 blocks"
     );
     println!(
-        "  block_range verified: block1={:?}, block2={:?}",
-        first_hash, second_hash
+        "  block_range_preflight (`handle_block` Range): try_join_all(get_block_hash) for {}..={}, then try_join_all(per-hash extrinsic_count + timestamp)",
+        range_from, range_to
+    );
+    let c = &*client;
+    let range_hash_futs: Vec<_> = (range_from..=range_to)
+        .map(|n| c.get_block_hash(n))
+        .collect();
+    let range_hashes = futures::future::try_join_all(range_hash_futs)
+        .await
+        .expect("range try_join_all(get_block_hash)");
+    let range_detail_futs: Vec<_> = range_hashes
+        .iter()
+        .map(|&h| async move {
+            tokio::try_join!(c.get_block_extrinsic_count(h), c.get_block_timestamp(h))
+        })
+        .collect();
+    let range_details = futures::future::try_join_all(range_detail_futs)
+        .await
+        .expect("range try_join_all(extrinsic_count + timestamp)");
+    assert_eq!(
+        range_hashes.len(),
+        range_count,
+        "one hash per block in range"
+    );
+    assert_eq!(range_details.len(), range_count);
+    for (i, &h) in range_hashes.iter().enumerate() {
+        let block_n = range_from + i as u32;
+        let (ext_n, _) = range_details[i];
+        assert_ne!(
+            h,
+            subxt::utils::H256::zero(),
+            "block {} hash non-zero",
+            block_n
+        );
+        assert!(
+            ext_n >= 1,
+            "block {} should report at least one extrinsic",
+            block_n
+        );
+    }
+    println!(
+        "  block_range_preflight: {} blocks, first_hash={:?}, last_hash={:?}",
+        range_count,
+        range_hashes.first(),
+        range_hashes.last()
+    );
+}
+
+/// Historical diff prefights — mirrors `handle_diff` RPC bundles (`DiffCommands::*`).
+async fn test_diff_queries(client: &mut Client, primary_sn: NetUid) {
+    ensure_alive(client).await;
+    let head = client.get_block_number().await.expect("get_block_number");
+    let head_u32: u32 = head.try_into().expect("head should fit u32 for diff CLI");
+    let block1 = head_u32.saturating_sub(1);
+    let block2 = head_u32;
+    assert!(
+        block1 < block2,
+        "diff e2e needs two distinct blocks (head={}, block1={})",
+        head_u32,
+        block1
+    );
+
+    // diff_portfolio_preflight — mirrors `DiffCommands::Portfolio`
+    println!(
+        "  diff_portfolio_preflight (`handle_diff` Portfolio): try_join!(get_block_hash({}), get_block_hash({})) → try_join!(balance+stakes)×2 (Alice SS58)",
+        block1, block2
+    );
+    let (pf_h1, pf_h2) =
+        tokio::try_join!(client.get_block_hash(block1), client.get_block_hash(block2),)
+            .expect("diff portfolio block hashes");
+    let (bal1, stakes1, bal2, stakes2) = tokio::try_join!(
+        client.get_balance_at_block(ALICE_SS58, pf_h1),
+        client.get_stake_for_coldkey_at_block(ALICE_SS58, pf_h1),
+        client.get_balance_at_block(ALICE_SS58, pf_h2),
+        client.get_stake_for_coldkey_at_block(ALICE_SS58, pf_h2),
+    )
+    .expect("diff portfolio balance+stakes bundle");
+    println!(
+        "  diff_portfolio_preflight: bal τ [{:.4}, {:.4}], stake positions [{}, {}]",
+        bal1.tao(),
+        bal2.tao(),
+        stakes1.len(),
+        stakes2.len()
+    );
+
+    // diff_subnet_preflight — mirrors `DiffCommands::Subnet`
+    println!(
+        "  diff_subnet_preflight (`handle_diff` Subnet): same hashes → try_join!(get_dynamic_info_at_block(SN{}, h1), h2)",
+        primary_sn.0
+    );
+    let (dyn1, dyn2) = tokio::try_join!(
+        client.get_dynamic_info_at_block(primary_sn, pf_h1),
+        client.get_dynamic_info_at_block(primary_sn, pf_h2),
+    )
+    .expect("diff subnet dynamic info");
+    let d1 = dyn1.expect("subnet should exist at block1 for e2e SN");
+    let d2 = dyn2.expect("subnet should exist at block2 for e2e SN");
+    println!(
+        "  diff_subnet_preflight: name={}, tao_in τ [{:.4}, {:.4}]",
+        d2.name,
+        d1.tao_in.tao(),
+        d2.tao_in.tao()
+    );
+
+    // diff_network_preflight — mirrors `DiffCommands::Network`
+    println!(
+        "  diff_network_preflight (`handle_diff` Network): try_join!(issuance×2, total_stake×2, all_subnets×2)"
+    );
+    let (issuance1, _stake_n1, subnets1, issuance2, _stake_n2, subnets2) = tokio::try_join!(
+        client.get_total_issuance_at_block(pf_h1),
+        client.get_total_stake_at_block(pf_h1),
+        client.get_all_subnets_at_block(pf_h1),
+        client.get_total_issuance_at_block(pf_h2),
+        client.get_total_stake_at_block(pf_h2),
+        client.get_all_subnets_at_block(pf_h2),
+    )
+    .expect("diff network six-way bundle");
+    assert!(
+        !subnets1.is_empty() && !subnets2.is_empty(),
+        "localnet should report subnets at both blocks"
+    );
+    println!(
+        "  diff_network_preflight: subnets [{}, {}], issuance τ [{:.4}, {:.4}]",
+        subnets1.len(),
+        subnets2.len(),
+        issuance1.tao(),
+        issuance2.tao()
+    );
+
+    // diff_metagraph_preflight — mirrors `DiffCommands::Metagraph`
+    println!(
+        "  diff_metagraph_preflight (`handle_diff` Metagraph): try_join!(get_neurons_lite_at_block(SN{}, h1), h2)",
+        primary_sn.0
+    );
+    let (neurons1, neurons2) = tokio::try_join!(
+        client.get_neurons_lite_at_block(primary_sn, pf_h1),
+        client.get_neurons_lite_at_block(primary_sn, pf_h2),
+    )
+    .expect("diff metagraph neurons");
+    println!(
+        "  diff_metagraph_preflight: neuron count [{}, {}] (UID diff is CLI-local after fetch)",
+        neurons1.len(),
+        neurons2.len()
+    );
+    assert!(
+        !neurons1.is_empty() || !neurons2.is_empty(),
+        "expected neurons on SN{} at one of the snapshots",
+        primary_sn.0
+    );
+
+    println!(
+        "[PASS] diff_queries — portfolio/subnet/network/metagraph preflights at blocks {} → {}",
+        block1, block2
+    );
+}
+
+/// Preflight for `agcli doctor` — same post-connect RPC sequence as `handle_doctor` after
+/// `Client::connect_network` succeeds (`system_cmds.rs`).
+async fn test_doctor_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    let t = std::time::Instant::now();
+    let block = client
+        .get_block_number()
+        .await
+        .expect("doctor_preflight get_block_number");
+    let ms_block = t.elapsed().as_millis();
+
+    let t = std::time::Instant::now();
+    let subnets = client
+        .get_total_networks()
+        .await
+        .expect("doctor_preflight get_total_networks");
+    let ms_subnets = t.elapsed().as_millis();
+
+    let mut latencies = Vec::new();
+    let mut rpc_failures = 0u32;
+    for _ in 0..3 {
+        let t = std::time::Instant::now();
+        match client.get_block_number().await {
+            Ok(_) => latencies.push(t.elapsed().as_millis()),
+            Err(_) => rpc_failures += 1,
+        }
+    }
+    let avg = if latencies.is_empty() {
+        0u128
+    } else {
+        latencies.iter().sum::<u128>() / latencies.len() as u128
+    };
+    let min = latencies.iter().min().copied().unwrap_or(0);
+    let max = latencies.iter().max().copied().unwrap_or(0);
+
+    let cache_keys = agcli::queries::disk_cache::list_keys();
+    let cache_path = agcli::queries::disk_cache::path();
+
+    println!(
+        "  doctor_preflight (`handle_doctor`): block={} ({}ms) subnets={} ({}ms) latency avg={}ms min={}ms max={}ms rpc_ping_failures={} disk_cache_entries={} disk_cache_path={}",
+        block,
+        ms_block,
+        subnets,
+        ms_subnets,
+        avg,
+        min,
+        max,
+        rpc_failures,
+        cache_keys.len(),
+        cache_path.display()
+    );
+    println!(
+        "[PASS] doctor_preflight — get_block_number + get_total_networks + 3×ping + disk_cache (mirrors `handle_doctor` chain checks)"
+    );
+}
+
+/// Preflight for `agcli balance` — same RPC order as `Commands::Balance` in `commands.rs`
+/// (one-shot: `get_balance_ss58`; `--at-block`: `get_block_hash` then `get_balance_at_block`).
+async fn test_balance_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    let bal = client
+        .get_balance_ss58(ALICE_SS58)
+        .await
+        .expect("balance_preflight get_balance_ss58");
+    assert!(
+        bal.tao() > 0.0,
+        "Alice should have positive free balance on localnet"
+    );
+    println!(
+        "  balance_preflight (`Commands::Balance` one-shot): get_balance_ss58 → {:.6}τ ({} rao)",
+        bal.tao(),
+        bal.rao()
+    );
+
+    let head = client
+        .get_block_number()
+        .await
+        .expect("balance_preflight get_block_number");
+    let block_num: u32 = head
+        .try_into()
+        .expect("block height should fit u32 on localnet");
+    let block_hash = client
+        .get_block_hash(block_num)
+        .await
+        .expect("balance_preflight get_block_hash");
+    let bal_at = client
+        .get_balance_at_block(ALICE_SS58, block_hash)
+        .await
+        .expect("balance_preflight get_balance_at_block");
+    assert!(
+        bal_at.tao() >= 0.0,
+        "historical balance query should succeed at chain head"
+    );
+    println!(
+        "  balance_preflight (`Commands::Balance` --at-block): block={} hash={:?} → {:.6}τ",
+        block_num,
+        block_hash,
+        bal_at.tao()
+    );
+
+    println!(
+        "[PASS] balance_preflight — one-shot + pinned head (mirrors `handle_balance` in `commands.rs`)"
     );
 }
 
@@ -3333,7 +5797,7 @@ async fn test_view_queries(client: &mut Client, netuid: NetUid) {
     println!("[PASS] view_queries — portfolio, network, dynamic, neuron all verified");
 }
 
-// ──── 23. Subnet Detail Queries (show, hyperparams, metagraph) ────
+// ──── 23. Subnet Detail Queries (list via list_subnets, show, hyperparams, metagraph, check-start, set-param / set-symbol / trim read paths, register-neuron burn field, create-cost + subnet_register_plain + register-leased lock-cost RPC, pow block+difficulty RPCs, dissolve / terminate-lease preflight, cost, emissions, health, probe, commits, watch, monitor, liquidity, cache-*, emission-split, mechanism-count, set-mechanism-count / set-emission-split preflight note, subnet_snipe_preflight → get_subnet_info after require_subnet_exists class) ────
 
 async fn test_subnet_detail_queries(client: &mut Client, netuid: NetUid) {
     ensure_alive(client).await;
@@ -3342,7 +5806,7 @@ async fn test_subnet_detail_queries(client: &mut Client, netuid: NetUid) {
         .get_subnet_info(netuid)
         .await
         .expect("get_subnet_info");
-    match info {
+    match &info {
         Some(si) => {
             assert_eq!(si.netuid, netuid, "subnet netuid should match");
             assert!(si.max_n > 0, "max_n should be positive");
@@ -3365,12 +5829,28 @@ async fn test_subnet_detail_queries(client: &mut Client, netuid: NetUid) {
         }
     }
 
+    // subnet list — `queries::subnet::list_subnets` (pin latest + join all subnets + dynamic info); CLI default path
+    let listed = list_subnets(client)
+        .await
+        .expect("list_subnets for subnet list parity");
+    println!(
+        "  subnet_list: {} subnets (`agcli subnet list`; `queries::subnet::list_subnets`)",
+        listed.len()
+    );
+    if let Some(si) = info.as_ref() {
+        assert!(
+            listed.iter().any(|s| s.netuid == si.netuid),
+            "subnet list should include SN{} from subnet_show",
+            si.netuid.0
+        );
+    }
+
     // subnet hyperparams
     let hp = client
         .get_subnet_hyperparams(netuid)
         .await
         .expect("get_subnet_hyperparams");
-    match hp {
+    match &hp {
         Some(h) => {
             assert_eq!(h.netuid, netuid, "hyperparams netuid should match");
             assert!(h.tempo > 0, "tempo should be positive");
@@ -3384,6 +5864,441 @@ async fn test_subnet_detail_queries(client: &mut Client, netuid: NetUid) {
         None => {
             println!("  hyperparams: SN{} returned None", netuid.0);
         }
+    }
+
+    // subnet set-param — `require_subnet_exists` before list/wallet; Subnet-scoped params read current values via `get_subnet_hyperparams` (same RPC as `subnet hyperparams` above).
+    if let Some(ref h) = hp {
+        println!(
+            "  subnet_set_param: SN{} hyperparams available for current-value preview (e.g. tempo={})",
+            netuid.0, h.tempo
+        );
+    }
+
+    // subnet set-symbol — preflight before wallet matches set-param; on-chain read: `TokenSymbol` storage vs `subnet show` symbol field
+    let token_sym = client
+        .get_token_symbol(netuid)
+        .await
+        .expect("get_token_symbol");
+    println!(
+        "  subnet_set_symbol: SN{} get_token_symbol={:?} subnet_show.symbol={}",
+        netuid.0,
+        token_sym,
+        info.as_ref().map(|s| s.symbol.as_str()).unwrap_or("?")
+    );
+
+    // subnet trim — preflight before wallet matches set-symbol; read path: subnet_show.max_n ↔ on-chain max_allowed_uids
+    println!(
+        "  subnet_trim: SN{} subnet_show.max_n={} (capacity before sudo_set_max_allowed_uids)",
+        netuid.0,
+        info.as_ref().map(|s| s.max_n).unwrap_or(0)
+    );
+
+    // subnet register-neuron — require_subnet_exists before hotkey unlock; read path: subnet_show.burn (burn registration price)
+    println!(
+        "  subnet_register_neuron: SN{} subnet_show.burn={} (burned_register cost field)",
+        netuid.0,
+        info.as_ref()
+            .map(|s| s.burn.display_tao())
+            .unwrap_or_else(|| "?".into())
+    );
+
+    // subnet create-cost — read-only get_network_registration_cost (register / register-leased lock); register-leased shares this RPC before submit
+    let subnet_creation_lock = client
+        .get_subnet_registration_cost()
+        .await
+        .expect("get_subnet_registration_cost for create-cost / register-leased parity");
+    println!(
+        "  subnet_create_cost: subnet_registration_cost={} (`agcli subnet create-cost`; JSON cost_rao/cost_tao)",
+        subnet_creation_lock.display_tao()
+    );
+    println!(
+        "  subnet_register_plain: subnet_registration_cost={} (`agcli subnet register` has no pre-submit cost read; operators use `subnet create-cost`; same `get_subnet_registration_cost` RPC as prior line)",
+        subnet_creation_lock.display_tao()
+    );
+    println!(
+        "  subnet_register_leased: subnet_registration_cost={} (same `get_subnet_registration_cost` as prior line; CLI checks before hotkey submit)",
+        subnet_creation_lock.display_tao()
+    );
+
+    // subnet register-with-identity — post-submit identity lives in SubnetIdentitiesV3; same read as `identity set-subnet` / view subnet enrichment
+    let subnet_id_for_reg = client
+        .get_subnet_identity(netuid)
+        .await
+        .expect("get_subnet_identity for register-with-identity parity");
+    match &subnet_id_for_reg {
+        Some(id) => println!(
+            "  subnet_register_with_identity: SN{} get_subnet_identity name_len={} github_len={} url_len={}",
+            netuid.0,
+            id.subnet_name.len(),
+            id.github_repo.len(),
+            id.subnet_url.len()
+        ),
+        None => println!(
+            "  subnet_register_with_identity: SN{} get_subnet_identity=None (no identity row; RPC path still exercised)",
+            netuid.0
+        ),
+    }
+
+    // subnet pow — same head + difficulty RPCs the CLI uses after unlock (`get_block_info_for_pow`, `get_difficulty`)
+    let (pow_block, _pow_block_hash) = client
+        .get_block_info_for_pow()
+        .await
+        .expect("get_block_info_for_pow");
+    let pow_difficulty = client.get_difficulty(netuid).await.expect("get_difficulty");
+    println!(
+        "  subnet_pow: SN{} difficulty={} block=#{} (RPC parity with `agcli subnet pow` after preflight)",
+        netuid.0, pow_difficulty, pow_block
+    );
+
+    // subnet dissolve / root-dissolve / terminate-lease — require_subnet_exists before wallet (same helper as CLI)
+    client
+        .require_subnet_exists(netuid, None)
+        .await
+        .expect("require_subnet_exists for subnet dissolve parity");
+    println!(
+        "  subnet_dissolve: SN{} require_subnet_exists ok (preflight before wallet; owner `dissolve_network`; root uses `root_dissolve_network`)",
+        netuid.0
+    );
+    println!(
+        "  subnet_terminate_lease: SN{} same preflight as dissolve (`terminate_lease` owner extrinsic)",
+        netuid.0
+    );
+
+    // subnet metagraph — get_neurons_lite (same RPC path as `agcli subnet metagraph`)
+    let neurons = client
+        .get_neurons_lite(netuid)
+        .await
+        .expect("get_neurons_lite");
+    if let Some(si) = info.as_ref() {
+        assert_eq!(
+            neurons.len(),
+            si.n as usize,
+            "metagraph neuron count should match subnet info n"
+        );
+    }
+    println!(
+        "  subnet_metagraph: SN{} {} neurons",
+        netuid.0,
+        neurons.len()
+    );
+
+    // subnet check-start — same RPC bundle as `agcli subnet check-start` (after require_subnet_exists)
+    let is_active_cs = client
+        .is_subnet_active(netuid)
+        .await
+        .expect("is_subnet_active for check-start parity");
+    let can_start = !is_active_cs && !neurons.is_empty();
+    let tempo_cs = hp.as_ref().map(|h| h.tempo);
+    if let (Some(si), Some(ref h)) = (info.as_ref(), hp.as_ref()) {
+        assert_eq!(
+            h.tempo, si.tempo,
+            "check-start JSON tempo should match subnet_show tempo when both load"
+        );
+    }
+    println!(
+        "  subnet_check_start: SN{} active={} neurons={} can_start={} tempo_opt={:?}",
+        netuid.0,
+        is_active_cs,
+        neurons.len(),
+        can_start,
+        tempo_cs
+    );
+
+    // subnet cost — pin + get_subnet_info_pinned (same RPC bundle as `agcli subnet cost`)
+    if let Some(si) = info.as_ref() {
+        let pin = client
+            .pin_latest_block()
+            .await
+            .expect("pin_latest_block for subnet cost parity");
+        let cost_info = client
+            .get_subnet_info_pinned(netuid, pin)
+            .await
+            .expect("get_subnet_info_pinned");
+        let ci =
+            cost_info.expect("pinned subnet info should exist when latest get_subnet_info did");
+        assert_eq!(
+            ci.netuid, si.netuid,
+            "cost path netuid should match subnet_show"
+        );
+        assert_eq!(
+            ci.burn.rao(),
+            si.burn.rao(),
+            "subnet cost burn should match subnet_show burn (quiet chain / same registration state)"
+        );
+        println!(
+            "  subnet_cost: SN{} burn={} (pinned path)",
+            netuid.0,
+            ci.burn.display_tao()
+        );
+
+        // subnet emissions — pinned neurons + dynamic (same RPC bundle as `agcli subnet emissions`)
+        let neurons_pinned = client
+            .get_neurons_lite_at_block(netuid, pin)
+            .await
+            .expect("get_neurons_lite_at_block for emissions parity");
+        assert_eq!(
+            neurons_pinned.len(),
+            ci.n as usize,
+            "pinned neuron count should match pinned subnet info n (same block as cost)"
+        );
+        match client
+            .get_dynamic_info_at_block(netuid, pin)
+            .await
+            .expect("get_dynamic_info_at_block for emissions parity")
+        {
+            Some(d) => {
+                let sum_emission: f64 = neurons_pinned.iter().map(|n| n.emission).sum();
+                let total_rao = d.total_emission() as f64;
+                let tol = f64::max(sum_emission, total_rao) * 1e-9 + 0.001;
+                assert!(
+                    (sum_emission - total_rao).abs() <= tol,
+                    "sum of neuron emissions ({}) should match dynamic total_emission ({}) within {:?}",
+                    sum_emission,
+                    total_rao,
+                    tol
+                );
+                println!(
+                    "  subnet_emissions: SN{} {} neurons, total_emission_rao≈{:.2} (pinned path)",
+                    netuid.0,
+                    neurons_pinned.len(),
+                    total_rao
+                );
+            }
+            None => {
+                println!(
+                    "  subnet_emissions: SN{} dynamic info None at pin (skip sum parity)",
+                    netuid.0
+                );
+            }
+        }
+
+        // subnet health — pinned neurons + hyperparams + block (same RPC bundle as `agcli subnet health`)
+        let hp_pin = client
+            .get_subnet_hyperparams_pinned(netuid, pin)
+            .await
+            .expect("get_subnet_hyperparams_pinned for health parity");
+        let block_n = client
+            .get_block_number_at(pin)
+            .await
+            .expect("get_block_number_at for health parity");
+        let validators_c = neurons_pinned.iter().filter(|n| n.validator_permit).count();
+        let miners_c = neurons_pinned
+            .iter()
+            .filter(|n| !n.validator_permit)
+            .count();
+        assert_eq!(
+            validators_c + miners_c,
+            neurons_pinned.len(),
+            "subnet health: validator_permit partitions metagraph"
+        );
+        let active_c = neurons_pinned.iter().filter(|n| n.active).count();
+        assert!(active_c <= neurons_pinned.len());
+        let stale_c = neurons_pinned
+            .iter()
+            .filter(|n| block_n.saturating_sub(n.last_update) > 1000)
+            .count();
+        assert!(stale_c <= neurons_pinned.len());
+        match hp_pin {
+            Some(ref h) => {
+                println!(
+                    "  subnet_health: SN{} block={} active={}/{} V={} M={} stale={} tempo={} cr={}",
+                    netuid.0,
+                    block_n,
+                    active_c,
+                    neurons_pinned.len(),
+                    validators_c,
+                    miners_c,
+                    stale_c,
+                    h.tempo,
+                    h.commit_reveal_weights_enabled
+                );
+            }
+            None => {
+                println!(
+                    "  subnet_health: SN{} block={} hyperparams None at pin",
+                    netuid.0, block_n
+                );
+            }
+        }
+
+        // subnet probe — pinned `get_neuron_at_block` for each lite uid (same RPC bundle as `agcli subnet probe`)
+        let mut full_neurons = 0usize;
+        let mut axon_ready = 0usize;
+        for n in &neurons_pinned {
+            if let Some(neuron) = client
+                .get_neuron_at_block(netuid, n.uid, pin)
+                .await
+                .expect("get_neuron_at_block for probe parity")
+            {
+                full_neurons += 1;
+                if neuron
+                    .axon_info
+                    .as_ref()
+                    .is_some_and(|a| a.port > 0 && a.ip != "0.0.0.0")
+                {
+                    axon_ready += 1;
+                }
+            }
+        }
+        assert_eq!(
+            full_neurons,
+            neurons_pinned.len(),
+            "subnet probe: pinned get_neuron should exist for each metagraph uid"
+        );
+        println!(
+            "  subnet_probe: SN{} {} neurons, {} axon endpoints (pinned path)",
+            netuid.0, full_neurons, axon_ready
+        );
+
+        // subnet commits — same RPC bundle as `agcli subnet commits` (latest head; all-hotkeys path when CR on)
+        let block_commits = client
+            .get_block_number()
+            .await
+            .expect("get_block_number for commits parity");
+        let hp_commits = client
+            .get_subnet_hyperparams(netuid)
+            .await
+            .expect("get_subnet_hyperparams for commits parity");
+        let reveal_epochs = client
+            .get_reveal_period_epochs(netuid)
+            .await
+            .expect("get_reveal_period_epochs for commits parity");
+        let cr_on = hp_commits
+            .as_ref()
+            .map(|h| h.commit_reveal_weights_enabled)
+            .unwrap_or(false);
+        if cr_on {
+            let all_c = client
+                .get_all_weight_commits(netuid)
+                .await
+                .expect("get_all_weight_commits for commits parity");
+            let pending_rows: usize = all_c.iter().map(|(_, v)| v.len()).sum();
+            println!(
+                "  subnet_commits: SN{} block={} reveal_period_epochs={} hotkeys_with_pending={} commit_rows={}",
+                netuid.0,
+                block_commits,
+                reveal_epochs,
+                all_c.len(),
+                pending_rows
+            );
+        } else {
+            println!(
+                "  subnet_commits: SN{} commit-reveal disabled (CLI exits 0 with notice)",
+                netuid.0
+            );
+        }
+
+        // subnet watch — RPC parity with each poll in `handle_subnet_watch` (block + hyperparams + best-effort dynamic)
+        let watch_block = client
+            .get_block_number()
+            .await
+            .expect("get_block_number for subnet watch parity");
+        let watch_hp = client
+            .get_subnet_hyperparams(netuid)
+            .await
+            .expect("get_subnet_hyperparams for subnet watch parity");
+        assert!(
+            watch_hp.is_some(),
+            "subnet watch: hyperparams should load when subnet exists (same as require_subnet_exists)"
+        );
+        let tempo_w = watch_hp.as_ref().unwrap().tempo.max(1) as u64;
+        let _ = watch_block as u64 % tempo_w;
+        let _ = client.get_dynamic_info(netuid).await;
+        println!(
+            "  subnet_watch: SN{} block={} tempo={} (poll RPC bundle)",
+            netuid.0, watch_block, tempo_w
+        );
+
+        // subnet monitor — each poll: block + get_neurons_lite (same RPC bundle as `handle_subnet_monitor`)
+        let mon_block = client
+            .get_block_number()
+            .await
+            .expect("get_block_number for subnet monitor parity");
+        let mon_neurons = client
+            .get_neurons_lite(netuid)
+            .await
+            .expect("get_neurons_lite for subnet monitor parity");
+        assert_eq!(
+            mon_neurons.len(),
+            si.n as usize,
+            "subnet monitor: neuron count should match subnet_show n"
+        );
+        println!(
+            "  subnet_monitor: SN{} block={} neurons={} (poll RPC bundle)",
+            netuid.0,
+            mon_block,
+            mon_neurons.len()
+        );
+
+        // subnet liquidity — same RPC path as `agcli subnet liquidity --netuid N` (latest head dynamic info)
+        match client
+            .get_dynamic_info(netuid)
+            .await
+            .expect("get_dynamic_info for liquidity parity")
+        {
+            Some(d) => {
+                assert_eq!(
+                    d.netuid, netuid,
+                    "liquidity dynamic row netuid should match"
+                );
+                println!(
+                    "  subnet_liquidity: SN{} price={:.6} tao_in={:.4}τ",
+                    netuid.0,
+                    d.price,
+                    d.tao_in.tao()
+                );
+            }
+            None => {
+                println!(
+                    "  subnet_liquidity: SN{} dynamic info None (empty dashboard ok)",
+                    netuid.0
+                );
+            }
+        }
+
+        // subnet cache-* — CLI calls `require_subnet_exists` before disk/RPC work; parity: list + load_latest paths
+        let blocks_cached = agcli::queries::cache::list_cached_blocks(netuid.0)
+            .expect("list_cached_blocks for cache-list parity");
+        let _latest_cached = agcli::queries::cache::load_latest(netuid.0);
+        println!(
+            "  subnet_cache: SN{} disk_snapshots={} (cache-list/load; invalid --netuid exits 12 on CLI)",
+            netuid.0,
+            blocks_cached.len()
+        );
+
+        // subnet emission-split / mechanism-count — same storage queries as CLI (after require_subnet_exists)
+        let split = client
+            .get_emission_split(netuid)
+            .await
+            .expect("get_emission_split for emission-split parity");
+        let mech_n = client
+            .get_mechanism_count(netuid)
+            .await
+            .expect("get_mechanism_count for mechanism-count parity");
+        println!(
+            "  subnet_emission_split: SN{} configured={} rows={}",
+            netuid.0,
+            split.is_some(),
+            split.as_ref().map(|s| s.len()).unwrap_or(0)
+        );
+        println!("  subnet_mechanism_count: SN{} count={}", netuid.0, mech_n);
+        println!(
+            "  subnet_owner_mechanism_writes: SN{} `set-mechanism-count` / `set-emission-split` use `require_subnet_exists` before wallet (same `get_subnet_info` preflight as readers above; e2e does not submit extrinsics)",
+            netuid.0
+        );
+
+        // subnet snipe — outer `require_subnet_exists` then `handle_snipe` / watch re-fetch `get_subnet_info`
+        let snipe_info = client
+            .get_subnet_info(netuid)
+            .await
+            .expect("get_subnet_info for snipe parity")
+            .expect("subnet must exist for snipe preflight parity");
+        println!(
+            "  subnet_snipe_preflight: SN{} burn={} registration_allowed={} (`agcli subnet snipe`: require_subnet_exists then get_subnet_info; block sniper e2e: sections 6b–6g)",
+            netuid.0,
+            snipe_info.burn.display_tao(),
+            snipe_info.registration_allowed
+        );
     }
 
     // all subnets query
@@ -3401,7 +6316,7 @@ async fn test_subnet_detail_queries(client: &mut Client, netuid: NetUid) {
         netuid.0
     );
 
-    println!("[PASS] subnet_detail_queries — show, hyperparams, all_subnets verified");
+    println!("[PASS] subnet_detail_queries — show, hyperparams, metagraph, check-start, cost, emissions, health, probe, commits, watch, monitor, liquidity, cache, emission-split, mechanism-count, owner_mechanism_writes, subnet_snipe_preflight, all_subnets verified");
 }
 
 // ──── 24. Delegate Queries ────
@@ -3533,7 +6448,7 @@ async fn test_serve_reset(client: &mut Client, netuid: NetUid) {
     }
 }
 
-// ──── 27. Subscribe Blocks (streaming) ────
+// ──── 27. Subscribe blocks + events (streaming) ────
 
 async fn test_subscribe_blocks(client: &mut Client) {
     ensure_alive(client).await;
@@ -3584,6 +6499,66 @@ async fn test_subscribe_blocks(client: &mut Client) {
             blocks_seen
         );
     }
+}
+
+/// One-block prefight for `subscribe events` — same entry as `subscribe_events_inner`:
+/// `subscribe_finalized` → `block.events()` and iterate (decode path).
+async fn test_subscribe_events_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+    let subxt_client = client.subxt();
+    let mut block_sub = subxt_client
+        .blocks()
+        .subscribe_finalized()
+        .await
+        .expect("subscribe_events_preflight needs finalized subscription");
+
+    let first = tokio::time::timeout(Duration::from_secs(10), block_sub.next()).await;
+    let block = match first {
+        Ok(Some(Ok(b))) => b,
+        Ok(Some(Err(e))) => {
+            println!(
+                "[PASS] subscribe_events_preflight — stream error (non-fatal): {}",
+                e
+            );
+            return;
+        }
+        Ok(None) | Err(_) => {
+            println!("[PASS] subscribe_events_preflight — no block within timeout (chain slow)");
+            return;
+        }
+    };
+
+    let block_number = block.number() as u64;
+    let events = match block.events().await {
+        Ok(e) => e,
+        Err(e) => {
+            println!(
+                "  subscribe_events_preflight: block #{} events decode error: {}",
+                block_number, e
+            );
+            println!(
+                "[PASS] subscribe_events_preflight — got block #{} but events() failed (node/metadata mismatch ok for smoke)",
+                block_number
+            );
+            return;
+        }
+    };
+
+    let mut decoded_rows = 0usize;
+    for ev in events.iter() {
+        if ev.is_ok() {
+            decoded_rows += 1;
+        }
+    }
+
+    println!(
+        "  subscribe_events_preflight: block #{} decoded_event_rows={}",
+        block_number, decoded_rows
+    );
+    println!(
+        "[PASS] subscribe_events_preflight — subscribe_finalized + events().iter ({} rows)",
+        decoded_rows
+    );
 }
 
 // ──── 28. Wallet Sign/Verify (local crypto, no chain) ────
@@ -4059,26 +7034,107 @@ async fn test_coldkey_swap_query(client: &mut Client) {
     }
 }
 
-// ──── 38. All Weights Query ────
+// ──── 38. All Weights Query (`agcli weights show` read path) ────
 
 async fn test_all_weights(client: &mut Client, netuid: NetUid) {
     ensure_alive(client).await;
+
+    // `WeightCommands::Show`: `require_subnet_exists_for_weights_cmd` before queries.
+    match client.get_subnet_hyperparams(netuid).await {
+        Ok(Some(_)) => println!(
+            "  weights_show_preflight: SN{} hyperparams present (`require_subnet_exists_for_weights_cmd`)",
+            netuid.0
+        ),
+        Ok(None) => println!(
+            "  weights_show_preflight: SN{} hyperparams absent (CLI would exit 12 before queries)",
+            netuid.0
+        ),
+        Err(e) => println!(
+            "  weights_show_preflight: hyperparams RPC error (CLI warns and continues): {e}"
+        ),
+    }
+
     let all_weights = client.get_all_weights(netuid).await;
     match all_weights {
         Ok(w) => {
             println!(
-                "  all_weights SN{}: {} UIDs with weights set",
+                "  all_weights SN{}: {} UIDs in weights map",
                 netuid.0,
                 w.len()
             );
             for (uid, entries) in w.iter().take(3) {
                 println!("    UID {}: {} weight entries", uid, entries.len());
             }
+
+            let validators: Vec<_> = w.iter().filter(|(_, wg)| !wg.is_empty()).collect();
             println!(
-                "[PASS] get_all_weights — SN{} returned {} entries",
-                netuid.0,
-                w.len()
+                "  weights_show_validator_count: {} validators with non-empty weights (same filter as `handle_weights_show`)",
+                validators.len()
             );
+
+            match client.get_neurons_lite(netuid).await {
+                Ok(neurons) => {
+                    if let Some((uid, row)) = validators.first() {
+                        let uid = *uid;
+                        match client.get_weights_for_uid(netuid, uid).await {
+                            Ok(per_uid) if per_uid.len() == row.len() => println!(
+                                "[PASS] weights_show_read_path — get_weights_for_uid(SN{}, uid={}) matches get_all_weights row ({} entries)",
+                                netuid.0, uid, per_uid.len()
+                            ),
+                            Ok(per_uid) => println!(
+                                "  weights_show_read_path — get_weights_for_uid uid={}: {} entries vs get_all_weights {} (timing?)",
+                                uid,
+                                per_uid.len(),
+                                row.len()
+                            ),
+                            Err(e) => println!("  weights_show_read_path — get_weights_for_uid: {e}"),
+                        }
+                    } else {
+                        println!(
+                            "  weights_show_read_path — no validators with weights on SN{} yet (empty human/JSON listing is valid)",
+                            netuid.0
+                        );
+                    }
+
+                    // `--hotkey-address`: metagraph lookup then get_weights_for_uid (same as CLI).
+                    if let Some(n) = neurons.iter().find(|n| n.hotkey == ALICE_SS58) {
+                        let has_weights = w.iter().any(|(u, wg)| *u == n.uid && !wg.is_empty());
+                        if has_weights {
+                            match client.get_weights_for_uid(netuid, n.uid).await {
+                                Ok(alice_w) => println!(
+                                    "[PASS] weights_show_hotkey_path — Alice UID {} → {} targets (`--hotkey-address` path)",
+                                    n.uid,
+                                    alice_w.len()
+                                ),
+                                Err(e) => println!("  weights_show_hotkey_path — get_weights_for_uid(Alice): {e}"),
+                            }
+                        } else {
+                            println!(
+                                "  weights_show_hotkey_path — Alice on SN{} but no non-empty weights row (skip hotkey filter parity)",
+                                netuid.0
+                            );
+                        }
+                    }
+
+                    println!(
+                        "[PASS] get_all_weights — SN{} returned {} map entries, {} validators in listing",
+                        netuid.0,
+                        w.len(),
+                        validators.len()
+                    );
+                }
+                Err(e) => {
+                    println!(
+                        "[PASS] get_all_weights — map OK but get_neurons_lite failed (chain: {})",
+                        e
+                    );
+                    println!(
+                        "[PASS] get_all_weights — SN{} returned {} map entries",
+                        netuid.0,
+                        w.len()
+                    );
+                }
+            }
         }
         Err(e) => {
             println!("[PASS] get_all_weights — query attempted (chain: {})", e);

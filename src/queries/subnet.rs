@@ -10,10 +10,10 @@ use anyhow::Result;
 pub async fn list_subnets(client: &Client) -> Result<Vec<SubnetInfo>> {
     // Pin a single block so both queries read from the same chain state.
     let block_hash = client.pin_latest_block().await?;
-    let (subnets_result, dynamic_result) = tokio::try_join!(
-        client.get_all_subnets_at_block(block_hash),
-        async { Ok::<_, anyhow::Error>(client.get_all_dynamic_info_at_block(block_hash).await) },
-    )?;
+    let (subnets_result, dynamic_result) =
+        tokio::try_join!(client.get_all_subnets_at_block(block_hash), async {
+            Ok::<_, anyhow::Error>(client.get_all_dynamic_info_at_block(block_hash).await)
+        },)?;
     let mut subnets = subnets_result;
     // Enrich subnet list with real names from DynamicInfo (one call vs N identity queries)
     if let Ok(dynamic) = dynamic_result {

@@ -15,7 +15,7 @@ Validators evaluate miners by setting weights, which determines emission distrib
 agcli wallet create --name validator
 
 # Create a hotkey (operational key — used for on-chain validator operations)
-agcli wallet create-hotkey --name validator --hotkey default
+agcli wallet new-hotkey --name validator
 ```
 
 ### 2. Fund Your Coldkey
@@ -31,7 +31,7 @@ agcli wallet show -w validator
 
 ```bash
 # Burn register on subnet 1
-agcli subnet register-neuron 1 -w validator
+agcli subnet register-neuron --netuid 1 -w validator
 
 # Register on root network (for emission governance)
 agcli root register -w validator
@@ -78,7 +78,7 @@ agcli delegate show -w validator
 agcli delegate decrease-take 9.0 -w validator
 
 # View who delegates to you
-agcli view nominations --hotkey YOUR_HOTKEY_SS58
+agcli view nominations --hotkey-address YOUR_HOTKEY_SS58
 ```
 
 ## Monitoring
@@ -91,10 +91,10 @@ agcli view portfolio -w validator
 agcli view staking-analytics -w validator
 
 # Subnet metagraph (see your rank, trust, dividends)
-agcli subnet metagraph 1
+agcli subnet metagraph --netuid 1
 
 # Live metagraph with auto-refresh
-agcli subnet metagraph 1 --live 60
+agcli --live 60 subnet metagraph --netuid 1
 
 # Account explorer (full overview of any address)
 agcli view account --address YOUR_COLDKEY_SS58
@@ -109,8 +109,8 @@ Top validators run on multiple subnets:
 
 ```bash
 # Register on additional subnets
-agcli subnet register-neuron 3 -w validator
-agcli subnet register-neuron 8 -w validator
+agcli subnet register-neuron --netuid 3 -w validator
+agcli subnet register-neuron --netuid 8 -w validator
 
 # Stake across subnets
 agcli stake add 500.0 --netuid 3 -w validator

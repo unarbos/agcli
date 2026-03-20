@@ -43,7 +43,7 @@ agcli localnet status
 agcli subnet list --network local
 
 # View the metagraph
-agcli subnet metagraph 1 --network local
+agcli subnet metagraph --netuid 1 --network local
 
 # Check account balances
 agcli balance --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY --network local
@@ -53,7 +53,7 @@ agcli balance --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY --netwo
 
 ```bash
 # Register another neuron
-agcli subnet register-neuron 1 --network local
+agcli subnet register-neuron --netuid 1 --network local
 
 # Set weights as a validator
 agcli weights set --netuid 1 "0:100,1:200" --network local
@@ -62,7 +62,7 @@ agcli weights set --netuid 1 "0:100,1:200" --network local
 agcli serve axon --netuid 1 --ip 127.0.0.1 --port 8091 --network local
 
 # View hyperparameters
-agcli subnet hyperparams 1 --network local
+agcli subnet hyperparams --netuid 1 --network local
 ```
 
 ### 4. Use the scaffold JSON output

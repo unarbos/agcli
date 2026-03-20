@@ -116,30 +116,29 @@ pub(super) async fn handle_subnet(
             let nuid = NetUid(netuid);
             let (info, dynamic) = if let Some(bn) = at_block {
                 let bh = client.get_block_hash(bn).await?;
-                let (subnets, di) = tokio::try_join!(
-                    client.get_all_subnets_at_block(bh),
-                    async {
-                        Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, bh).await {
-                            Ok(v) => v,
-                            Err(e) => {
-                                tracing::debug!(netuid = nuid.0, block = bn, error = %e, "get_dynamic_info_at_block failed (non-fatal)");
-                                None
-                            }
-                        })
-                    }
-                )?;
+                let (subnets, di) = tokio::try_join!(client.get_all_subnets_at_block(bh), async {
+                    Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, bh).await {
+                        Ok(v) => v,
+                        Err(e) => {
+                            tracing::debug!(netuid = nuid.0, block = bn, error = %e, "get_dynamic_info_at_block failed (non-fatal)");
+                            None
+                        }
+                    })
+                })?;
                 let si = subnets.into_iter().find(|s| s.netuid == nuid);
                 (si, di)
             } else {
                 let pin = client.pin_latest_block().await?;
                 tokio::try_join!(client.get_subnet_info_pinned(nuid, pin), async {
-                    Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
-                        Ok(v) => v,
-                        Err(e) => {
-                            tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
-                            None
-                        }
-                    })
+                    Ok::<_, anyhow::Error>(
+                        match client.get_dynamic_info_at_block(nuid, pin).await {
+                            Ok(v) => v,
+                            Err(e) => {
+                                tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
+                                None
+                            }
+                        },
+                    )
                 })?
             };
             match info {
@@ -190,8 +189,14 @@ pub(super) async fn handle_subnet(
             }
             Ok(())
         }
-        SubnetCommands::Hyperparams { netuid } => {
-            let params = client.get_subnet_hyperparams(NetUid(netuid)).await?;
+        SubnetCommands::Hyperparams { netuid, at_block } => {
+            let nuid = NetUid(netuid);
+            let params = if let Some(bn) = at_block {
+                let bh = client.get_block_hash(bn).await?;
+                client.get_subnet_hyperparams_pinned(nuid, bh).await?
+            } else {
+                client.get_subnet_hyperparams(nuid).await?
+            };
             match params {
                 Some(h) => {
                     if output.is_json() {
@@ -202,29 +207,63 @@ pub(super) async fn handle_subnet(
                         ("rho".into(), h.rho.to_string()),
                         ("kappa".into(), h.kappa.to_string()),
                         ("immunity_period".into(), h.immunity_period.to_string()),
-                        ("min_allowed_weights".into(), h.min_allowed_weights.to_string()),
+                        (
+                            "min_allowed_weights".into(),
+                            h.min_allowed_weights.to_string(),
+                        ),
                         ("max_weights_limit".into(), h.max_weights_limit.to_string()),
                         ("tempo".into(), h.tempo.to_string()),
                         ("min_difficulty".into(), h.min_difficulty.to_string()),
                         ("max_difficulty".into(), h.max_difficulty.to_string()),
                         ("weights_version".into(), h.weights_version.to_string()),
-                        ("weights_rate_limit".into(), h.weights_rate_limit.to_string()),
-                        ("adjustment_interval".into(), h.adjustment_interval.to_string()),
+                        (
+                            "weights_rate_limit".into(),
+                            h.weights_rate_limit.to_string(),
+                        ),
+                        (
+                            "adjustment_interval".into(),
+                            h.adjustment_interval.to_string(),
+                        ),
                         ("activity_cutoff".into(), h.activity_cutoff.to_string()),
-                        ("registration_allowed".into(), h.registration_allowed.to_string()),
-                        ("target_regs_per_interval".into(), h.target_regs_per_interval.to_string()),
+                        (
+                            "registration_allowed".into(),
+                            h.registration_allowed.to_string(),
+                        ),
+                        (
+                            "target_regs_per_interval".into(),
+                            h.target_regs_per_interval.to_string(),
+                        ),
                         ("min_burn".into(), h.min_burn.display_tao()),
                         ("max_burn".into(), h.max_burn.display_tao()),
                         ("bonds_moving_avg".into(), h.bonds_moving_avg.to_string()),
-                        ("max_regs_per_block".into(), h.max_regs_per_block.to_string()),
-                        ("serving_rate_limit".into(), h.serving_rate_limit.to_string()),
+                        (
+                            "max_regs_per_block".into(),
+                            h.max_regs_per_block.to_string(),
+                        ),
+                        (
+                            "serving_rate_limit".into(),
+                            h.serving_rate_limit.to_string(),
+                        ),
                         ("max_validators".into(), h.max_validators.to_string()),
                         ("adjustment_alpha".into(), h.adjustment_alpha.to_string()),
                         ("difficulty".into(), h.difficulty.to_string()),
-                        ("commit_reveal_weights".into(), h.commit_reveal_weights_enabled.to_string()),
-                        ("commit_reveal_interval".into(), h.commit_reveal_weights_interval.to_string()),
-                        ("liquid_alpha_enabled".into(), h.liquid_alpha_enabled.to_string()),
+                        (
+                            "commit_reveal_weights".into(),
+                            h.commit_reveal_weights_enabled.to_string(),
+                        ),
+                        (
+                            "commit_reveal_interval".into(),
+                            h.commit_reveal_weights_interval.to_string(),
+                        ),
+                        (
+                            "liquid_alpha_enabled".into(),
+                            h.liquid_alpha_enabled.to_string(),
+                        ),
                     ];
+                    let title = match at_block {
+                        Some(b) => format!("Hyperparameters for SN{} (at block {})", netuid, b),
+                        None => format!("Hyperparameters for SN{}", netuid),
+                    };
                     render_rows(
                         output,
                         &rows,
@@ -232,10 +271,13 @@ pub(super) async fn handle_subnet(
                         |r| format!("{},{}", csv_escape(&r.0), csv_escape(&r.1)),
                         &["Parameter", "Value"],
                         |r| vec![r.0.clone(), r.1.clone()],
-                        Some(&format!("Hyperparameters for SN{}", netuid)),
+                        Some(&title),
                     );
                 }
-                None => println!("Hyperparameters not found for SN{}.", netuid),
+                None => anyhow::bail!(
+                    "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                    netuid
+                ),
             }
             Ok(())
         }
@@ -246,6 +288,8 @@ pub(super) async fn handle_subnet(
             full,
             save,
         } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, at_block).await?;
             // Single-UID lookup (always fetches full info)
             if let Some(target_uid) = uid {
                 let neuron = if let Some(bn) = at_block {
@@ -488,6 +532,13 @@ pub(super) async fn handle_subnet(
             description,
             additional,
         } => {
+            crate::cli::helpers::validate_subnet_name(&name, "subnet name")?;
+            if !github.trim().is_empty() {
+                crate::cli::helpers::validate_github_repo(&github)?;
+            }
+            if !url.trim().is_empty() {
+                crate::cli::helpers::validate_url(&url, "subnet URL")?;
+            }
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             let identity = crate::types::chain_data::SubnetIdentity {
@@ -526,25 +577,21 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::TerminateLease { netuid } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
-            println!(
-                "Terminating lease on SN{} (owner only)",
-                netuid
-            );
-            let hash = client
-                .terminate_lease(wallet.coldkey()?, NetUid(netuid))
-                .await?;
+            println!("Terminating lease on SN{} (owner only)", netuid);
+            let hash = client.terminate_lease(wallet.coldkey()?, nuid).await?;
             print_tx_result(output, &hash, &format!("Lease terminated on SN{}", netuid));
             Ok(())
         }
         SubnetCommands::RootDissolve { netuid } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
-            println!(
-                "Root dissolving subnet SN{} (root origin only)",
-                netuid
-            );
+            println!("Root dissolving subnet SN{} (root origin only)", netuid);
             println!("WARNING: This action cannot be undone. The subnet and all its state will be permanently removed.");
             if !is_yes_mode() {
                 let proceed = dialoguer::Confirm::new()
@@ -557,12 +604,18 @@ pub(super) async fn handle_subnet(
                 }
             }
             let hash = client
-                .root_dissolve_network(wallet.coldkey()?, NetUid(netuid))
+                .root_dissolve_network(wallet.coldkey()?, nuid)
                 .await?;
-            print_tx_result(output, &hash, &format!("Subnet SN{} root-dissolved", netuid));
+            print_tx_result(
+                output,
+                &hash,
+                &format!("Subnet SN{} root-dissolved", netuid),
+            );
             Ok(())
         }
         SubnetCommands::RegisterNeuron { netuid } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             println!(
@@ -570,7 +623,7 @@ pub(super) async fn handle_subnet(
                 netuid,
                 crate::utils::short_ss58(&hk)
             );
-            let hash = client.burned_register(&pair, NetUid(netuid), &hk).await?;
+            let hash = client.burned_register(&pair, nuid, &hk).await?;
             println!(
                 "Neuron registered on SN{} with hotkey {}. Check `agcli subnet metagraph --netuid {}` for your UID.\n  Tx: {}",
                 netuid, crate::utils::short_ss58(&hk), netuid, hash
@@ -579,12 +632,14 @@ pub(super) async fn handle_subnet(
         }
         SubnetCommands::Pow { netuid, threads } => {
             crate::cli::helpers::validate_threads(threads, "POW")?;
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             let hotkey_pk = crate::wallet::keypair::from_ss58(&hk)?;
             println!("POW registration on SN{} with {} threads", netuid, threads);
             let (block_number, block_hash) = client.get_block_info_for_pow().await?;
-            let difficulty = client.get_difficulty(NetUid(netuid)).await?;
+            let difficulty = client.get_difficulty(nuid).await?;
             println!("Difficulty: {}, Block: #{}", difficulty, block_number);
 
             let attempts_per_thread = 10_000_000u64;
@@ -613,7 +668,7 @@ pub(super) async fn handle_subnet(
                 Some((nonce, work)) => {
                     println!("POW solved! Nonce: {}", nonce);
                     let hash = client
-                        .pow_register(&pair, NetUid(netuid), &hk, block_number, nonce, work)
+                        .pow_register(&pair, nuid, &hk, block_number, nonce, work)
                         .await?;
                     println!(
                         "POW registered on SN{} with nonce {}.\n  Tx: {}",
@@ -628,6 +683,8 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::Dissolve { netuid } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             println!("Dissolving subnet SN{} (owner only)", netuid);
@@ -642,9 +699,7 @@ pub(super) async fn handle_subnet(
                     return Ok(());
                 }
             }
-            let hash = client
-                .dissolve_network(wallet.coldkey()?, NetUid(netuid))
-                .await?;
+            let hash = client.dissolve_network(wallet.coldkey()?, nuid).await?;
             print_tx_result(output, &hash, "Subnet dissolved.");
             Ok(())
         }
@@ -665,6 +720,8 @@ pub(super) async fn handle_subnet(
         }
         SubnetCommands::Cost { netuid } => handle_subnet_cost(client, netuid, output).await,
         SubnetCommands::CacheLoad { netuid, block } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mg = if let Some(b) = block {
                 crate::queries::cache::load_block(netuid, b)?
             } else {
@@ -726,6 +783,8 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::CacheList { netuid } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let blocks = crate::queries::cache::list_cached_blocks(netuid)?;
             if blocks.is_empty() {
                 if output.is_json() {
@@ -762,6 +821,8 @@ pub(super) async fn handle_subnet(
             from_block,
             to_block,
         } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             // Load "from" snapshot
             let from_mg = if let Some(fb) = from_block {
                 crate::queries::cache::load_block(netuid, fb)?.ok_or_else(|| {
@@ -804,6 +865,8 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::CachePrune { netuid, keep } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let removed = crate::queries::cache::prune(netuid, keep)?;
             if output.is_json() {
                 print_json(
@@ -833,39 +896,77 @@ pub(super) async fn handle_subnet(
         } => handle_subnet_set_param(client, netuid, &param, value.as_deref(), ctx).await,
         SubnetCommands::SetSymbol { netuid, symbol } => {
             crate::cli::helpers::validate_symbol(&symbol)?;
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             println!("Setting symbol for SN{} to \"{}\"", netuid, symbol);
             let hash = client
-                .set_subnet_symbol(wallet.coldkey()?, NetUid(netuid), &symbol)
+                .set_subnet_symbol(wallet.coldkey()?, nuid, &symbol)
                 .await?;
             println!("Symbol set. Tx: {}", hash);
             Ok(())
         }
         SubnetCommands::EmissionSplit { netuid } => {
-            match client.get_emission_split(NetUid(netuid)).await? {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
+            match client.get_emission_split(nuid).await? {
                 Some(splits) => {
                     let total: u64 = splits.iter().map(|(_, v)| v).sum();
-                    println!("Emission split for SN{}:", netuid);
-                    for (name, weight) in &splits {
-                        let pct = if total > 0 {
-                            *weight as f64 / total as f64 * 100.0
-                        } else {
-                            0.0
-                        };
-                        println!("  {:<12} {} ({:.1}%)", name, weight, pct);
+                    if output.is_json() {
+                        let items: Vec<serde_json::Value> = splits
+                            .iter()
+                            .map(|(name, weight)| {
+                                let pct = if total > 0 {
+                                    *weight as f64 / total as f64 * 100.0
+                                } else {
+                                    0.0
+                                };
+                                serde_json::json!({
+                                    "mechanism": name,
+                                    "weight": weight,
+                                    "pct": pct,
+                                })
+                            })
+                            .collect();
+                        print_json(&serde_json::json!({
+                            "netuid": netuid,
+                            "configured": true,
+                            "total_weight": total,
+                            "split": items,
+                        }));
+                    } else {
+                        println!("Emission split for SN{}:", netuid);
+                        for (name, weight) in &splits {
+                            let pct = if total > 0 {
+                                *weight as f64 / total as f64 * 100.0
+                            } else {
+                                0.0
+                            };
+                            println!("  {:<12} {} ({:.1}%)", name, weight, pct);
+                        }
                     }
                 }
                 None => {
-                    println!(
-                        "No emission split configured for SN{} (using default)",
-                        netuid
-                    );
+                    if output.is_json() {
+                        print_json(&serde_json::json!({
+                            "netuid": netuid,
+                            "configured": false,
+                            "message": "No emission split configured (using default)",
+                        }));
+                    } else {
+                        println!(
+                            "No emission split configured for SN{} (using default)",
+                            netuid
+                        );
+                    }
                 }
             }
             Ok(())
         }
         SubnetCommands::Trim { netuid, max_uids } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             println!(
@@ -902,6 +1003,7 @@ pub(super) async fn handle_subnet(
         }
         SubnetCommands::CheckStart { netuid } => {
             let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let (is_active, hyperparams, neurons) = tokio::try_join!(
                 client.is_subnet_active(nuid),
                 client.get_subnet_hyperparams(nuid),
@@ -934,6 +1036,7 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::Start { netuid } => {
+            client.require_subnet_exists(NetUid(netuid), None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             println!(
@@ -957,6 +1060,7 @@ pub(super) async fn handle_subnet(
         }
         SubnetCommands::MechanismCount { netuid } => {
             let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let count = client.get_mechanism_count(nuid).await?;
             if output.is_json() {
                 print_json(&serde_json::json!({"netuid": netuid, "mechanism_count": count}));
@@ -966,6 +1070,8 @@ pub(super) async fn handle_subnet(
             Ok(())
         }
         SubnetCommands::SetMechanismCount { netuid, count } => {
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             println!(
@@ -1003,7 +1109,8 @@ pub(super) async fn handle_subnet(
                     )
                 })?;
             crate::cli::helpers::validate_emission_weights(&split)?;
-            // Now open wallet after validation passes
+            let nuid = NetUid(netuid);
+            client.require_subnet_exists(nuid, None).await?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
             let total: u64 = split.iter().map(|v| *v as u64).sum();
@@ -1054,6 +1161,7 @@ pub(super) async fn handle_subnet(
             if let Some(cost) = max_cost {
                 crate::cli::helpers::validate_max_cost(cost)?;
             }
+            client.require_subnet_exists(NetUid(netuid), None).await?;
             let max_burn = max_cost.map(Balance::from_tao);
             if watch {
                 // Watch-only mode: no wallet needed
@@ -1168,10 +1276,12 @@ async fn handle_snipe(
     let coldkey_ss58 = crate::wallet::keypair::to_ss58(&coldkey_pub, 42);
 
     // ── Pre-flight: verify subnet and registration status ──
-    let info = client
-        .get_subnet_info(nuid)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Subnet SN{} does not exist", netuid))?;
+    let info = client.get_subnet_info(nuid).await?.ok_or_else(|| {
+        anyhow::anyhow!(
+            "Subnet {} not found.\n  List available subnets: agcli subnet list",
+            netuid
+        )
+    })?;
     if !info.registration_allowed {
         anyhow::bail!(
             "Registration is disabled on SN{}. The subnet owner must enable it first.",
@@ -1395,7 +1505,10 @@ async fn handle_snipe(
                     || msg.contains("SubnetNotExists")
                 {
                     println!();
-                    anyhow::bail!("SN{} does not exist. Aborting.", netuid);
+                    anyhow::bail!(
+                        "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                        netuid
+                    );
                 } else if msg.contains("NotRegistered")
                     || msg.contains("HotKeyNotRegisteredInNetwork")
                 {
@@ -1444,10 +1557,12 @@ async fn handle_snipe_watch(client: &Client, netuid: u16, max_burn: Option<Balan
     use std::io::Write;
     let nuid = NetUid(netuid);
 
-    let info = client
-        .get_subnet_info(nuid)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Subnet SN{} does not exist", netuid))?;
+    let info = client.get_subnet_info(nuid).await?.ok_or_else(|| {
+        anyhow::anyhow!(
+            "Subnet {} not found.\n  List available subnets: agcli subnet list",
+            netuid
+        )
+    })?;
 
     println!("╔══════════════════════════════════════════════════════╗");
     println!(
@@ -1552,6 +1667,7 @@ async fn handle_snipe_watch(client: &Client, netuid: u16, max_burn: Option<Balan
 async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Result<()> {
     use std::io::Write;
     let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
     println!(
         "Watching SN{} (Ctrl+C to stop, poll every {}s)\n",
         netuid, interval
@@ -1641,8 +1757,14 @@ async fn handle_subnet_watch(client: &Client, netuid: u16, interval: u64) -> Res
                 );
             }
             None => {
-                println!("Subnet SN{} not found or hyperparams unavailable.", netuid);
-                return Ok(());
+                tracing::warn!(
+                    netuid = nuid.0,
+                    "subnet watch: hyperparams None while subnet exists (transient RPC?)"
+                );
+                println!(
+                    "  Warning: hyperparams unavailable for SN{} — retrying in {}s…",
+                    netuid, interval
+                );
             }
         }
 
@@ -1662,13 +1784,20 @@ async fn handle_subnet_liquidity(
     let single;
     let all;
     let dynamic: &[crate::types::chain_data::DynamicInfo] = match netuid {
-        Some(n) => match client.get_dynamic_info(NetUid(n)).await? {
-            Some(d) => {
-                single = vec![d];
-                &single
+        Some(n) => {
+            let nuid = NetUid(n);
+            client.require_subnet_exists(nuid, None).await?;
+            match client.get_dynamic_info(nuid).await? {
+                Some(d) => {
+                    single = vec![d];
+                    &single
+                }
+                None => {
+                    single = vec![];
+                    &single
+                }
             }
-            None => anyhow::bail!("Subnet SN{} not found", n),
-        },
+        }
         None => {
             all = client.get_all_dynamic_info().await?;
             &all
@@ -1813,6 +1942,7 @@ async fn handle_subnet_monitor(
 ) -> Result<()> {
     use std::collections::HashMap;
     let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
 
     if !json_mode {
         eprintln!(
@@ -1847,7 +1977,8 @@ async fn handle_subnet_monitor(
         let block = client.get_block_number().await?;
         let neurons = client.get_neurons_lite(nuid).await?;
         let mut cur_map: HashMap<u16, NeuronSnapshot> = HashMap::with_capacity(neurons.len());
-        let mut cur_uids: std::collections::HashSet<u16> = std::collections::HashSet::with_capacity(neurons.len());
+        let mut cur_uids: std::collections::HashSet<u16> =
+            std::collections::HashSet::with_capacity(neurons.len());
 
         for n in neurons.iter() {
             cur_uids.insert(n.uid);
@@ -2027,10 +2158,11 @@ async fn handle_subnet_monitor(
 
 async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
-    // Pin a single block to save 3 redundant at_latest() RPC round-trips.
+    client.require_subnet_exists(nuid, None).await?;
+    // Pin a single block: neurons + dynamic + hyperparams share one hash (consistent snapshot).
     let pin = client.pin_latest_block().await?;
     let (neurons, dynamic, hyperparams, block) = tokio::try_join!(
-        client.get_neurons_lite(nuid),
+        client.get_neurons_lite_at_block(nuid, pin),
         client.get_dynamic_info_at_block(nuid, pin),
         client.get_subnet_hyperparams_pinned(nuid, pin),
         client.get_block_number_at(pin),
@@ -2146,17 +2278,21 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
 
 async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
-    // Pin a single block to save 1 redundant at_latest() RPC round-trip.
+    client.require_subnet_exists(nuid, None).await?;
+    // Pin a single block: neurons + dynamic info share one hash (consistent snapshot).
     let pin = client.pin_latest_block().await?;
-    let (neurons, dynamic) = tokio::try_join!(client.get_neurons_lite(nuid), async {
-        Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
-                None
-            }
-        })
-    },)?;
+    let (neurons, dynamic) = tokio::try_join!(
+        client.get_neurons_lite_at_block(nuid, pin),
+        async {
+            Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::debug!(netuid = nuid.0, error = %e, "get_dynamic_info failed (non-fatal)");
+                    None
+                }
+            })
+        },
+    )?;
 
     let total_emission: f64 = neurons.iter().map(|n| n.emission).sum();
     let emission_per_block = dynamic
@@ -2249,18 +2385,21 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFor
 
 async fn handle_subnet_cost(client: &Client, netuid: u16, output: OutputFormat) -> Result<()> {
     let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
     // Pin a single block to save 2 redundant at_latest() RPC round-trips.
     let pin = client.pin_latest_block().await?;
     let (info, hyperparams, dynamic) = tokio::try_join!(
         client.get_subnet_info_pinned(nuid, pin),
         async {
-            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams_pinned(nuid, pin).await {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
-                    None
-                }
-            })
+            Ok::<_, anyhow::Error>(
+                match client.get_subnet_hyperparams_pinned(nuid, pin).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
+                        None
+                    }
+                },
+            )
         },
         async {
             Ok::<_, anyhow::Error>(match client.get_dynamic_info_at_block(nuid, pin).await {
@@ -2345,6 +2484,9 @@ async fn handle_subnet_probe(
     use futures::stream::{self, StreamExt};
     use std::time::Instant;
 
+    let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
+
     // Parse UID filter if provided
     let uid_set: Option<std::collections::HashSet<u16>> = uids_filter.map(|s| {
         s.split(',')
@@ -2352,8 +2494,11 @@ async fn handle_subnet_probe(
             .collect()
     });
 
+    // Pin a block so lite + full neuron reads match one snapshot (same as emissions/health).
+    let pin = client.pin_latest_block().await?;
+
     // Fetch neurons lite first to get UIDs, then fetch full info for axon endpoints
-    let neurons_lite = client.get_neurons_lite(NetUid(netuid)).await?;
+    let neurons_lite = client.get_neurons_lite_at_block(nuid, pin).await?;
     let target_uids: Vec<u16> = neurons_lite
         .iter()
         .filter(|n| uid_set.as_ref().is_none_or(|s| s.contains(&n.uid)))
@@ -2374,7 +2519,7 @@ async fn handle_subnet_probe(
     for chunk in target_uids.chunks(32) {
         let futs: Vec<_> = chunk
             .iter()
-            .map(|&uid| client.get_neuron(NetUid(netuid), uid))
+            .map(|&uid| client.get_neuron_at_block(nuid, uid, pin))
             .collect();
         let results = futures::future::join_all(futs).await;
         for r in results {
@@ -2514,6 +2659,7 @@ async fn handle_subnet_commits(
     output: OutputFormat,
 ) -> Result<()> {
     let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
 
     let (block, hyperparams, reveal_period) = tokio::try_join!(
         client.get_block_number(),
@@ -2686,213 +2832,229 @@ enum ParamType {
     Bool,
 }
 
-/// A hyperparameter that can be set by the subnet owner.
+/// Whether the AdminUtils extrinsic takes `(netuid, value)` or only `(value)` (chain-wide).
+#[derive(Clone, Copy)]
+enum ParamArgs {
+    Subnet,
+    Chain,
+}
+
+/// A hyperparameter that can be set by the subnet owner (or root via `agcli admin` on localnet).
 struct ParamDef {
     /// Friendly name (what the user types)
     name: &'static str,
-    /// The on-chain extrinsic call name (e.g., "sudo_set_tempo")
+    /// AdminUtils extrinsic name (e.g. "sudo_set_tempo")
     call: &'static str,
     /// Value type
     ty: ParamType,
     /// Short description
     desc: &'static str,
+    args: ParamArgs,
 }
 
-/// All supported subnet hyperparameters.
-/// These are the `SubtensorModule::sudo_set_*` extrinsics that take `(netuid, value)`.
+macro_rules! subnet_hp {
+    ($name:literal, $call:literal, $ty:ident, $desc:literal) => {
+        ParamDef {
+            name: $name,
+            call: $call,
+            ty: ParamType::$ty,
+            desc: $desc,
+            args: ParamArgs::Subnet,
+        }
+    };
+}
+
+macro_rules! chain_hp {
+    ($name:literal, $call:literal, $ty:ident, $desc:literal) => {
+        ParamDef {
+            name: $name,
+            call: $call,
+            ty: ParamType::$ty,
+            desc: $desc,
+            args: ParamArgs::Chain,
+        }
+    };
+}
+
+/// All supported subnet hyperparameters (AdminUtils `sudo_set_*`).
 const SUBNET_PARAMS: &[ParamDef] = &[
-    ParamDef {
-        name: "tempo",
-        call: "sudo_set_tempo",
-        ty: ParamType::U16,
-        desc: "Blocks per epoch",
-    },
-    ParamDef {
-        name: "rho",
-        call: "sudo_set_rho",
-        ty: ParamType::U16,
-        desc: "Consensus rho parameter",
-    },
-    ParamDef {
-        name: "kappa",
-        call: "sudo_set_kappa",
-        ty: ParamType::U16,
-        desc: "Consensus kappa parameter",
-    },
-    ParamDef {
-        name: "immunity_period",
-        call: "sudo_set_immunity_period",
-        ty: ParamType::U16,
-        desc: "Blocks a new neuron is immune from deregistration",
-    },
-    ParamDef {
-        name: "min_allowed_weights",
-        call: "sudo_set_min_allowed_weights",
-        ty: ParamType::U16,
-        desc: "Minimum weight entries required per set_weights",
-    },
-    ParamDef {
-        name: "max_allowed_uids",
-        call: "sudo_set_max_allowed_uids",
-        ty: ParamType::U16,
-        desc: "Maximum neurons allowed on subnet",
-    },
-    ParamDef {
-        name: "max_allowed_validators",
-        call: "sudo_set_max_allowed_validators",
-        ty: ParamType::U16,
-        desc: "Maximum validator count",
-    },
-    ParamDef {
-        name: "min_difficulty",
-        call: "sudo_set_min_difficulty",
-        ty: ParamType::U64,
-        desc: "Minimum POW difficulty",
-    },
-    ParamDef {
-        name: "max_difficulty",
-        call: "sudo_set_max_difficulty",
-        ty: ParamType::U64,
-        desc: "Maximum POW difficulty",
-    },
-    ParamDef {
-        name: "weights_version",
-        call: "sudo_set_weights_version_key",
-        ty: ParamType::U64,
-        desc: "Expected weights version key",
-    },
-    ParamDef {
-        name: "weights_rate_limit",
-        call: "sudo_set_weights_set_rate_limit",
-        ty: ParamType::U64,
-        desc: "Min blocks between weight sets",
-    },
-    ParamDef {
-        name: "adjustment_interval",
-        call: "sudo_set_adjustment_interval",
-        ty: ParamType::U16,
-        desc: "Blocks between difficulty adjustments",
-    },
-    ParamDef {
-        name: "adjustment_alpha",
-        call: "sudo_set_adjustment_alpha",
-        ty: ParamType::U64,
-        desc: "EMA smoothing for difficulty adjustment",
-    },
-    ParamDef {
-        name: "activity_cutoff",
-        call: "sudo_set_activity_cutoff",
-        ty: ParamType::U16,
-        desc: "Blocks of inactivity before deregistration",
-    },
-    ParamDef {
-        name: "registration_allowed",
-        call: "sudo_set_network_registration_allowed",
-        ty: ParamType::Bool,
-        desc: "Allow new registrations",
-    },
-    ParamDef {
-        name: "pow_registration_allowed",
-        call: "sudo_set_network_pow_registration_allowed",
-        ty: ParamType::Bool,
-        desc: "Allow POW registrations",
-    },
-    ParamDef {
-        name: "target_regs_per_interval",
-        call: "sudo_set_target_registrations_per_interval",
-        ty: ParamType::U16,
-        desc: "Target registrations per adjustment interval",
-    },
-    ParamDef {
-        name: "min_burn",
-        call: "sudo_set_min_burn",
-        ty: ParamType::U64,
-        desc: "Minimum burn cost (RAO)",
-    },
-    ParamDef {
-        name: "max_burn",
-        call: "sudo_set_max_burn",
-        ty: ParamType::U64,
-        desc: "Maximum burn cost (RAO)",
-    },
-    ParamDef {
-        name: "bonds_moving_average",
-        call: "sudo_set_bonds_moving_average",
-        ty: ParamType::U64,
-        desc: "Bonds moving average period",
-    },
-    ParamDef {
-        name: "max_regs_per_block",
-        call: "sudo_set_max_registrations_per_block",
-        ty: ParamType::U16,
-        desc: "Max registrations per block",
-    },
-    ParamDef {
-        name: "serving_rate_limit",
-        call: "sudo_set_serving_rate_limit",
-        ty: ParamType::U64,
-        desc: "Min blocks between serve_axon calls",
-    },
-    ParamDef {
-        name: "difficulty",
-        call: "sudo_set_difficulty",
-        ty: ParamType::U64,
-        desc: "Current POW difficulty",
-    },
-    ParamDef {
-        name: "commit_reveal_weights_enabled",
-        call: "sudo_set_commit_reveal_weights_enabled",
-        ty: ParamType::Bool,
-        desc: "Enable commit-reveal for weights",
-    },
-    ParamDef {
-        name: "commit_reveal_weights_interval",
-        call: "sudo_set_commit_reveal_weights_interval",
-        ty: ParamType::U64,
-        desc: "Blocks between commit-reveal phases",
-    },
-    ParamDef {
-        name: "liquid_alpha_enabled",
-        call: "sudo_set_liquid_alpha_enabled",
-        ty: ParamType::Bool,
-        desc: "Enable liquid alpha (dynamic dividends)",
-    },
-    ParamDef {
-        name: "bonds_penalty",
-        call: "sudo_set_bonds_penalty",
-        ty: ParamType::U16,
-        desc: "Bonds penalty factor",
-    },
-    ParamDef {
-        name: "bonds_reset_enabled",
-        call: "sudo_set_bonds_reset_enabled",
-        ty: ParamType::Bool,
-        desc: "Allow bonds reset",
-    },
-    ParamDef {
-        name: "commit_reveal_version",
-        call: "sudo_set_commit_reveal_version",
-        ty: ParamType::U64,
-        desc: "Commit-reveal protocol version",
-    },
-    ParamDef {
-        name: "yuma",
-        call: "sudo_set_yuma",
-        ty: ParamType::Bool,
-        desc: "Enable Yuma consensus",
-    },
-    ParamDef {
-        name: "min_allowed_uids",
-        call: "sudo_set_min_allowed_uids",
-        ty: ParamType::U16,
-        desc: "Minimum neurons on subnet",
-    },
-    ParamDef {
-        name: "min_non_immune_uids",
-        call: "sudo_set_min_non_immune_uids",
-        ty: ParamType::U16,
-        desc: "Minimum non-immune neurons",
-    },
+    subnet_hp!("tempo", "sudo_set_tempo", U16, "Blocks per epoch"),
+    subnet_hp!("rho", "sudo_set_rho", U16, "Consensus rho parameter"),
+    subnet_hp!("kappa", "sudo_set_kappa", U16, "Consensus kappa parameter"),
+    subnet_hp!(
+        "immunity_period",
+        "sudo_set_immunity_period",
+        U16,
+        "Blocks a new neuron is immune from deregistration"
+    ),
+    subnet_hp!(
+        "min_allowed_weights",
+        "sudo_set_min_allowed_weights",
+        U16,
+        "Minimum weight entries required per set_weights"
+    ),
+    subnet_hp!(
+        "max_allowed_uids",
+        "sudo_set_max_allowed_uids",
+        U16,
+        "Maximum neurons allowed on subnet"
+    ),
+    subnet_hp!(
+        "max_allowed_validators",
+        "sudo_set_max_allowed_validators",
+        U16,
+        "Maximum validator count"
+    ),
+    subnet_hp!(
+        "min_difficulty",
+        "sudo_set_min_difficulty",
+        U64,
+        "Minimum POW difficulty"
+    ),
+    subnet_hp!(
+        "max_difficulty",
+        "sudo_set_max_difficulty",
+        U64,
+        "Maximum POW difficulty"
+    ),
+    subnet_hp!(
+        "weights_version",
+        "sudo_set_weights_version_key",
+        U64,
+        "Expected weights version key"
+    ),
+    subnet_hp!(
+        "weights_rate_limit",
+        "sudo_set_weights_set_rate_limit",
+        U64,
+        "Min blocks between weight sets"
+    ),
+    subnet_hp!(
+        "adjustment_interval",
+        "sudo_set_adjustment_interval",
+        U16,
+        "Blocks between difficulty adjustments"
+    ),
+    subnet_hp!(
+        "adjustment_alpha",
+        "sudo_set_adjustment_alpha",
+        U64,
+        "EMA smoothing for difficulty adjustment"
+    ),
+    subnet_hp!(
+        "activity_cutoff",
+        "sudo_set_activity_cutoff",
+        U16,
+        "Blocks of inactivity before deregistration"
+    ),
+    subnet_hp!(
+        "registration_allowed",
+        "sudo_set_network_registration_allowed",
+        Bool,
+        "Allow new registrations"
+    ),
+    subnet_hp!(
+        "pow_registration_allowed",
+        "sudo_set_network_pow_registration_allowed",
+        Bool,
+        "Allow POW registrations"
+    ),
+    subnet_hp!(
+        "target_regs_per_interval",
+        "sudo_set_target_registrations_per_interval",
+        U16,
+        "Target registrations per adjustment interval"
+    ),
+    subnet_hp!(
+        "min_burn",
+        "sudo_set_min_burn",
+        U64,
+        "Minimum burn cost (RAO)"
+    ),
+    subnet_hp!(
+        "max_burn",
+        "sudo_set_max_burn",
+        U64,
+        "Maximum burn cost (RAO)"
+    ),
+    subnet_hp!(
+        "bonds_moving_average",
+        "sudo_set_bonds_moving_average",
+        U64,
+        "Bonds moving average period"
+    ),
+    subnet_hp!(
+        "max_regs_per_block",
+        "sudo_set_max_registrations_per_block",
+        U16,
+        "Max registrations per block"
+    ),
+    subnet_hp!(
+        "serving_rate_limit",
+        "sudo_set_serving_rate_limit",
+        U64,
+        "Min blocks between serve_axon calls"
+    ),
+    subnet_hp!(
+        "difficulty",
+        "sudo_set_difficulty",
+        U64,
+        "Current POW difficulty"
+    ),
+    subnet_hp!(
+        "commit_reveal_weights_enabled",
+        "sudo_set_commit_reveal_weights_enabled",
+        Bool,
+        "Enable commit-reveal for weights"
+    ),
+    subnet_hp!(
+        "commit_reveal_weights_interval",
+        "sudo_set_commit_reveal_weights_interval",
+        U64,
+        "Blocks between commit-reveal phases"
+    ),
+    subnet_hp!(
+        "liquid_alpha_enabled",
+        "sudo_set_liquid_alpha_enabled",
+        Bool,
+        "Enable liquid alpha (dynamic dividends)"
+    ),
+    subnet_hp!(
+        "bonds_penalty",
+        "sudo_set_bonds_penalty",
+        U16,
+        "Bonds penalty factor"
+    ),
+    subnet_hp!(
+        "bonds_reset_enabled",
+        "sudo_set_bonds_reset_enabled",
+        Bool,
+        "Allow bonds reset"
+    ),
+    chain_hp!(
+        "commit_reveal_version",
+        "sudo_set_commit_reveal_version",
+        U16,
+        "Commit-reveal protocol version (chain-wide, not per netuid)"
+    ),
+    subnet_hp!(
+        "yuma",
+        "sudo_set_yuma3_enabled",
+        Bool,
+        "Enable Yuma 3 consensus"
+    ),
+    subnet_hp!(
+        "min_allowed_uids",
+        "sudo_set_min_allowed_uids",
+        U16,
+        "Minimum neurons on subnet"
+    ),
+    subnet_hp!(
+        "min_non_immune_uids",
+        "sudo_set_min_non_immune_uids",
+        U16,
+        "Minimum non-immune neurons"
+    ),
 ];
 
 /// Extract the current value of a named parameter from hyperparameters.
@@ -2949,6 +3111,8 @@ async fn handle_subnet_set_param(
     let wallet_dir = ctx.wallet_dir;
     let wallet_name = ctx.wallet_name;
     let password = ctx.password;
+    let nuid = NetUid(netuid);
+    client.require_subnet_exists(nuid, None).await?;
     // List mode
     if param == "list" || param == "help" {
         if output.is_json() {
@@ -2958,6 +3122,7 @@ async fn handle_subnet_set_param(
                     serde_json::json!({
                         "name": p.name,
                         "type": match p.ty { ParamType::U16 => "u16", ParamType::U64 => "u64", ParamType::Bool => "bool" },
+                        "scope": match p.args { ParamArgs::Subnet => "subnet", ParamArgs::Chain => "chain" },
                         "description": p.desc,
                     })
                 })
@@ -2966,7 +3131,7 @@ async fn handle_subnet_set_param(
         } else {
             println!("Available subnet hyperparameters:\n");
             let mut table = comfy_table::Table::new();
-            table.set_header(vec!["Parameter", "Type", "Description"]);
+            table.set_header(vec!["Parameter", "Type", "Scope", "Description"]);
             for p in SUBNET_PARAMS {
                 table.add_row(vec![
                     p.name,
@@ -2974,6 +3139,10 @@ async fn handle_subnet_set_param(
                         ParamType::U16 => "u16",
                         ParamType::U64 => "u64",
                         ParamType::Bool => "bool",
+                    },
+                    match p.args {
+                        ParamArgs::Subnet => "subnet",
+                        ParamArgs::Chain => "chain",
                     },
                     p.desc,
                 ]);
@@ -3069,19 +3238,28 @@ async fn handle_subnet_set_param(
         }
     };
 
-    // Fetch current value for display
-    let current_display = match client.get_subnet_hyperparams(NetUid(netuid)).await {
-        Ok(Some(h)) => current_param_value(&h, param)
-            .map(|v| format!(" (current: {})", v))
-            .unwrap_or_default(),
-        _ => String::new(),
+    // Fetch current value for display (chain-wide params skip per-subnet query)
+    let current_display = match def.args {
+        ParamArgs::Chain => String::new(),
+        ParamArgs::Subnet => match client.get_subnet_hyperparams(nuid).await {
+            Ok(Some(h)) => current_param_value(&h, param)
+                .map(|v| format!(" (current: {})", v))
+                .unwrap_or_default(),
+            _ => String::new(),
+        },
     };
 
     // Confirm
-    println!(
-        "Setting SN{} {} = {}{} (via {})",
-        netuid, def.name, value_str, current_display, def.call
-    );
+    match def.args {
+        ParamArgs::Subnet => println!(
+            "Setting SN{} {} = {}{} (via AdminUtils::{})",
+            netuid, def.name, value_str, current_display, def.call
+        ),
+        ParamArgs::Chain => println!(
+            "Setting {} = {} chain-wide (via AdminUtils::{})",
+            def.name, value_str, def.call
+        ),
+    }
 
     if !crate::cli::helpers::is_yes_mode() {
         let proceed = dialoguer::Confirm::new()
@@ -3099,21 +3277,21 @@ async fn handle_subnet_set_param(
     unlock_coldkey(&mut wallet, password)?;
     let pair = wallet.coldkey()?.clone();
 
-    // Submit
+    let fields = match def.args {
+        ParamArgs::Subnet => vec![Value::u128(netuid as u128), val],
+        ParamArgs::Chain => vec![val],
+    };
+
+    // Submit (AdminUtils — matches subtensor localnet / finney metadata)
     let hash = client
-        .submit_raw_call(
-            &pair,
-            "SubtensorModule",
-            def.call,
-            vec![Value::u128(netuid as u128), val],
-        )
+        .submit_raw_call(&pair, "AdminUtils", def.call, fields)
         .await?;
 
-    print_tx_result(
-        output,
-        &hash,
-        &format!("SN{} {} set to {}", netuid, def.name, value_str),
-    );
+    let summary = match def.args {
+        ParamArgs::Subnet => format!("SN{} {} set to {}", netuid, def.name, value_str),
+        ParamArgs::Chain => format!("{} set to {} (chain-wide)", def.name, value_str),
+    };
+    print_tx_result(output, &hash, &summary);
     Ok(())
 }
 
@@ -3237,8 +3415,8 @@ mod tests {
     #[test]
     fn current_param_value_max_allowed_uids_returns_none() {
         use super::current_param_value;
-        use crate::types::chain_data::SubnetHyperparameters;
         use crate::types::balance::Balance;
+        use crate::types::chain_data::SubnetHyperparameters;
         use crate::types::network::NetUid;
         let h = SubnetHyperparameters {
             netuid: NetUid(1),
@@ -3336,7 +3514,10 @@ mod tests {
     fn fast_mode_warning_mentions_reorg() {
         let msg = "Warning: Fast mode uses non-finalized blocks. Burn cost readings may change \
              if the chain reorgs. The registration tx executes at the actual finalized cost.";
-        assert!(msg.contains("non-finalized"), "Warning should mention non-finalized blocks");
+        assert!(
+            msg.contains("non-finalized"),
+            "Warning should mention non-finalized blocks"
+        );
         assert!(msg.contains("reorg"), "Warning should mention reorg risk");
     }
 
@@ -3352,6 +3533,9 @@ mod tests {
         // The non-at_block path renders with None directly.
         // If this compiles, the dead variable has been removed.
         let title: Option<&str> = None;
-        assert!(title.is_none(), "Non-at_block path should use None title directly");
+        assert!(
+            title.is_none(),
+            "Non-at_block path should use None title directly"
+        );
     }
 }

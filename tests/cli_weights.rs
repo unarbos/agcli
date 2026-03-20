@@ -2,6 +2,13 @@
 //! Run with: cargo test --test cli_weights
 
 use clap::Parser;
+use std::sync::{Mutex, OnceLock};
+
+/// Serialize tests that mutate `AGCLI_FINALIZATION_TIMEOUT` (parallel runs would race).
+fn agcli_finalization_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 #[test]
 fn parse_weights_commit_reveal() {
@@ -325,7 +332,11 @@ fn parse_weights_show_with_hotkey() {
         "--hotkey-address",
         "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ]);
-    assert!(cli.is_ok(), "weights show --hotkey-address: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "weights show --hotkey-address: {:?}",
+        cli.err()
+    );
 }
 
 #[test]
@@ -769,7 +780,11 @@ fn parse_weights_set_empty_string_parses() {
         "--weights",
         "",
     ]);
-    assert!(cli.is_ok(), "empty --weights parses; validation at run: {:?}", cli.err());
+    assert!(
+        cli.is_ok(),
+        "empty --weights parses; validation at run: {:?}",
+        cli.err()
+    );
 }
 
 /// JSON array with missing "weight" key parses; resolve_weights would fail at run time.
@@ -804,4 +819,75 @@ fn parse_weights_set_max_u16_pair() {
         "0:65535,65535:65535",
     ]);
     assert!(cli.is_ok(), "max u16 pairs: {:?}", cli.err());
+}
+
+/// Global `--finalization-timeout` applies to `weights set` (same knob as e2e `Client::set_finalization_timeout`).
+#[test]
+fn parse_weights_set_with_finalization_timeout_flag() {
+    let cli = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--finalization-timeout",
+        "42",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:100",
+    ])
+    .expect("weights set with --finalization-timeout");
+    assert_eq!(cli.finalization_timeout, Some(42));
+}
+
+/// `AGCLI_FINALIZATION_TIMEOUT` is wired on the root `Cli` (clap `env = ...`).
+#[test]
+fn parse_weights_set_finalization_timeout_from_env() {
+    let _env_guard = agcli_finalization_env_lock().lock().expect("env lock");
+    const KEY: &str = "AGCLI_FINALIZATION_TIMEOUT";
+    let saved = std::env::var(KEY).ok();
+    std::env::remove_var(KEY);
+    std::env::set_var(KEY, "88");
+    let parsed = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:100",
+    ]);
+    if let Some(v) = saved {
+        std::env::set_var(KEY, v);
+    } else {
+        std::env::remove_var(KEY);
+    }
+    let cli = parsed.expect("parse with AGCLI_FINALIZATION_TIMEOUT");
+    assert_eq!(cli.finalization_timeout, Some(88));
+}
+
+/// Explicit `--finalization-timeout` must win over the env var.
+#[test]
+fn parse_weights_set_finalization_timeout_flag_overrides_env() {
+    let _env_guard = agcli_finalization_env_lock().lock().expect("env lock");
+    const KEY: &str = "AGCLI_FINALIZATION_TIMEOUT";
+    let saved = std::env::var(KEY).ok();
+    std::env::set_var(KEY, "99");
+    let parsed = agcli::cli::Cli::try_parse_from([
+        "agcli",
+        "--finalization-timeout",
+        "5",
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:100",
+    ]);
+    if let Some(v) = saved {
+        std::env::set_var(KEY, v);
+    } else {
+        std::env::remove_var(KEY);
+    }
+    let cli = parsed.expect("parse flag override");
+    assert_eq!(cli.finalization_timeout, Some(5));
 }

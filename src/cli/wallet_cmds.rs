@@ -107,8 +107,7 @@ pub async fn handle_wallet(
             // Use wallet_explicitly_set() to distinguish "user typed --wallet default"
             // from "clap filled in the 'default' default value" (Issue 71).
             let explicit = crate::cli::helpers::wallet_explicitly_set();
-            let wallets: Vec<String> = if explicit
-                && all_wallets.contains(&wallet_name.to_string())
+            let wallets: Vec<String> = if explicit && all_wallets.contains(&wallet_name.to_string())
             {
                 vec![wallet_name.to_string()]
             } else if explicit && !all_wallets.contains(&wallet_name.to_string()) {
@@ -235,7 +234,8 @@ pub async fn handle_wallet(
             let password =
                 crate::cli::helpers::require_password(cmd_password, global_password, true)?;
             crate::cli::helpers::validate_password_strength(&password)?;
-            let wallet = Wallet::import_from_mnemonic(wallet_dir, wallet_name, &mnemonic, &password)?;
+            let wallet =
+                Wallet::import_from_mnemonic(wallet_dir, wallet_name, &mnemonic, &password)?;
             mnemonic.zeroize();
             if output.is_json() {
                 crate::cli::helpers::print_json(&serde_json::json!({

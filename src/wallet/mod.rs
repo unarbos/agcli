@@ -269,8 +269,8 @@ impl Wallet {
             if data.trim().starts_with('{') {
                 // Python bittensor-wallet stores JSON: {"secretSeed": "0x...", ...} or
                 // {"ss58Address": "...", "secretPhrase": "...", ...}
-                let v: serde_json::Value =
-                    serde_json::from_str(data.trim()).context("Failed to parse Python keyfile JSON")?;
+                let v: serde_json::Value = serde_json::from_str(data.trim())
+                    .context("Failed to parse Python keyfile JSON")?;
                 if let Some(seed) = v.get("secretSeed").and_then(|s| s.as_str()) {
                     keypair::pair_from_seed_hex(seed)
                 } else if let Some(phrase) = v.get("secretPhrase").and_then(|s| s.as_str()) {
@@ -496,7 +496,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         // First creation should succeed
         let w = Wallet::create_from_uri(dir.path(), "//Alice", "pass123");
-        assert!(w.is_ok(), "First create_from_uri should succeed: {:?}", w.err());
+        assert!(
+            w.is_ok(),
+            "First create_from_uri should succeed: {:?}",
+            w.err()
+        );
 
         // Second creation of the same wallet should fail
         let w2 = Wallet::create_from_uri(dir.path(), "//Alice", "pass456");
@@ -520,7 +524,10 @@ mod tests {
 
         // Second import of the same wallet name should fail
         let w2 = Wallet::import_from_mnemonic(dir.path(), "test_wallet", mnemonic, "pass456");
-        assert!(w2.is_err(), "import_from_mnemonic should reject existing wallet");
+        assert!(
+            w2.is_err(),
+            "import_from_mnemonic should reject existing wallet"
+        );
         let msg = w2.unwrap_err().to_string();
         assert!(
             msg.contains("already exists"),
@@ -609,14 +616,22 @@ mod tests {
     fn expand_tilde_preserves_absolute_path() {
         let path = std::path::Path::new("/tmp/wallets");
         let expanded = expand_tilde(path);
-        assert_eq!(expanded, path.to_path_buf(), "absolute paths should be unchanged");
+        assert_eq!(
+            expanded,
+            path.to_path_buf(),
+            "absolute paths should be unchanged"
+        );
     }
 
     #[test]
     fn expand_tilde_preserves_relative_path() {
         let path = std::path::Path::new("wallets/default");
         let expanded = expand_tilde(path);
-        assert_eq!(expanded, path.to_path_buf(), "relative paths without ~ should be unchanged");
+        assert_eq!(
+            expanded,
+            path.to_path_buf(),
+            "relative paths without ~ should be unchanged"
+        );
     }
 
     // ── Audit fix: hotkey name path traversal prevention ──
@@ -668,7 +683,10 @@ mod tests {
     fn create_wallet_rejects_traversal_hotkey_name() {
         let dir = tempfile::tempdir().unwrap();
         let result = Wallet::create(dir.path(), "test", "pass", "../escape");
-        assert!(result.is_err(), "create must reject path traversal in hotkey name");
+        assert!(
+            result.is_err(),
+            "create must reject path traversal in hotkey name"
+        );
     }
 
     // ── Issue 94: Wallet name path traversal at library level ──
@@ -695,9 +713,16 @@ mod tests {
     fn create_rejects_traversal_wallet_name() {
         let dir = tempfile::tempdir().unwrap();
         let result = Wallet::create(dir.path(), "../escape", "pass", "default");
-        assert!(result.is_err(), "create must reject path traversal in wallet name");
+        assert!(
+            result.is_err(),
+            "create must reject path traversal in wallet name"
+        );
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("Invalid wallet name"), "error should mention invalid wallet name, got: {}", msg);
+        assert!(
+            msg.contains("Invalid wallet name"),
+            "error should mention invalid wallet name, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -705,7 +730,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let result = Wallet::import_from_mnemonic(dir.path(), "../../etc/shadow", mnemonic, "pass");
-        assert!(result.is_err(), "import must reject path traversal in wallet name");
+        assert!(
+            result.is_err(),
+            "import must reject path traversal in wallet name"
+        );
     }
 
     // ── Issue 95/96: Decrypted key data zeroized after use ──
@@ -716,8 +744,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (_, _, _) = Wallet::create(dir.path(), "ztest", "mypass", "default").unwrap();
         let mut w = Wallet::open(dir.path().join("ztest")).unwrap();
-        assert!(w.unlock_coldkey("mypass").is_ok(), "unlock_coldkey should still work after zeroize refactor");
-        assert!(w.coldkey().is_ok(), "coldkey pair should be available after unlock");
+        assert!(
+            w.unlock_coldkey("mypass").is_ok(),
+            "unlock_coldkey should still work after zeroize refactor"
+        );
+        assert!(
+            w.coldkey().is_ok(),
+            "coldkey pair should be available after unlock"
+        );
     }
 
     #[test]
@@ -726,8 +760,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (_, _, _) = Wallet::create(dir.path(), "ztest2", "mypass", "default").unwrap();
         let mut w = Wallet::open(dir.path().join("ztest2")).unwrap();
-        assert!(w.load_hotkey("default").is_ok(), "load_hotkey should still work after zeroize refactor");
-        assert!(w.hotkey().is_ok(), "hotkey pair should be available after load");
+        assert!(
+            w.load_hotkey("default").is_ok(),
+            "load_hotkey should still work after zeroize refactor"
+        );
+        assert!(
+            w.hotkey().is_ok(),
+            "hotkey pair should be available after load"
+        );
     }
 
     #[test]
@@ -736,7 +776,10 @@ mod tests {
         // Verify strip_suffix correctly handles names ending in chars from the set {p,u,b,.,t,x}.
         let fname = "testpub.txt";
         let base = fname.strip_suffix("pub.txt").unwrap_or(fname).to_string();
-        assert_eq!(base, "test", "base should be 'test', not incorrectly trimmed");
+        assert_eq!(
+            base, "test",
+            "base should be 'test', not incorrectly trimmed"
+        );
     }
 
     #[test]

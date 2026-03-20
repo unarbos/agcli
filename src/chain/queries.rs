@@ -109,6 +109,28 @@ impl Client {
         Ok(result.map(SubnetInfo::from))
     }
 
+    /// Ensure the subnet exists on-chain (latest or at `at_block`); otherwise bail with the same message as `subnet show` / `hyperparams`.
+    pub async fn require_subnet_exists(
+        &self,
+        netuid: NetUid,
+        at_block: Option<u32>,
+    ) -> anyhow::Result<()> {
+        let exists = if let Some(bn) = at_block {
+            let bh = self.get_block_hash(bn).await?;
+            let subnets = self.get_all_subnets_at_block(bh).await?;
+            subnets.iter().any(|s| s.netuid == netuid)
+        } else {
+            self.get_subnet_info(netuid).await?.is_some()
+        };
+        if !exists {
+            anyhow::bail!(
+                "Subnet {} not found.\n  List available subnets: agcli subnet list",
+                netuid.0
+            );
+        }
+        Ok(())
+    }
+
     /// Get subnet hyperparameters.
     pub async fn get_subnet_hyperparams(
         &self,
@@ -477,6 +499,7 @@ impl Client {
     }
 
     /// Check if a coldkey has a scheduled swap at a pinned block hash.
+    /// Returns execution block and blake2 hash of the announced new coldkey (`0x…` hex).
     pub async fn get_coldkey_swap_scheduled_pinned(
         &self,
         ss58: &str,
@@ -485,7 +508,7 @@ impl Client {
         let account_id = Self::ss58_to_account_id(ss58)?;
         let addr = api::storage()
             .subtensor_module()
-            .coldkey_swap_scheduled(&account_id);
+            .coldkey_swap_announcements(&account_id);
         let result = self
             .inner
             .storage()
@@ -493,9 +516,11 @@ impl Client {
             .fetch(&addr)
             .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
-        Ok(result.map(|(block, new_coldkey)| {
-            let new_ss58 = sp_core::crypto::AccountId32::from(new_coldkey.0).to_string();
-            (block, new_ss58)
+        Ok(result.map(|(block, new_coldkey_hash)| {
+            (
+                block,
+                format!("0x{}", hex::encode(new_coldkey_hash.as_ref())),
+            )
         }))
     }
 
@@ -731,14 +756,14 @@ impl Client {
 
     // ──────── Coldkey Swap Detection ────────
 
-    /// Check if a coldkey has a scheduled swap. Returns (execution_block, new_coldkey_ss58) if scheduled.
+    /// Check if a coldkey has a scheduled swap. Returns (execution_block, new_coldkey_hash_hex) if scheduled.
     pub async fn get_coldkey_swap_scheduled(&self, ss58: &str) -> Result<Option<(u32, String)>> {
         let account_id = Self::ss58_to_account_id(ss58)?;
         let inner = &self.inner;
         let result = retry_on_transient("get_coldkey_swap_scheduled", RPC_RETRIES, || async {
             let addr = api::storage()
                 .subtensor_module()
-                .coldkey_swap_scheduled(&account_id);
+                .coldkey_swap_announcements(&account_id);
             let r = inner
                 .storage()
                 .at_latest()
@@ -749,9 +774,11 @@ impl Client {
             Ok(r)
         })
         .await?;
-        Ok(result.map(|(block, new_coldkey)| {
-            let new_ss58 = sp_core::crypto::AccountId32::from(new_coldkey.0).to_string();
-            (block, new_ss58)
+        Ok(result.map(|(block, new_coldkey_hash)| {
+            (
+                block,
+                format!("0x{}", hex::encode(new_coldkey_hash.as_ref())),
+            )
         }))
     }
 
@@ -1490,6 +1517,29 @@ impl Client {
         Ok(results)
     }
 
+    /// Global commit-reveal protocol version for timelocked weight commits (`commit_timelocked_weights`).
+    ///
+    /// Must match the `commit_reveal_version` argument in that extrinsic or the chain returns
+    /// `IncorrectCommitRevealVersion` (111).
+    pub async fn get_commit_reveal_weights_version(&self) -> Result<u16> {
+        let inner = &self.inner;
+        retry_on_transient("get_commit_reveal_weights_version", RPC_RETRIES, || async {
+            let addr = api::storage()
+                .subtensor_module()
+                .commit_reveal_weights_version();
+            let val = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch CommitRevealWeightsVersion")?;
+            // Subtensor default is 4 when unset (ValueQuery).
+            Ok(val.unwrap_or(4))
+        })
+        .await
+    }
+
     // ──────── Weight Reads ────────
 
     /// Read the on-chain weights set by a specific UID on a subnet.
@@ -1677,10 +1727,7 @@ impl Client {
     }
 
     /// Get subnet emission rates: (alpha_in_emission, alpha_out_emission, tao_in_emission).
-    pub async fn get_subnet_emissions(
-        &self,
-        netuid: NetUid,
-    ) -> Result<(u128, u128, u128)> {
+    pub async fn get_subnet_emissions(&self, netuid: NetUid) -> Result<(u128, u128, u128)> {
         let inner = &self.inner;
         let nid = netuid.0;
 
@@ -1698,10 +1745,7 @@ impl Client {
     }
 
     /// Get TAO flow metrics for a subnet: (tao_flow, ema_tao_flow).
-    pub async fn get_subnet_tao_flow(
-        &self,
-        netuid: NetUid,
-    ) -> Result<(i128, i128)> {
+    pub async fn get_subnet_tao_flow(&self, netuid: NetUid) -> Result<(i128, i128)> {
         let inner = &self.inner;
         let nid = netuid.0;
 
@@ -1714,11 +1758,7 @@ impl Client {
     }
 
     /// Get root claim info for a hotkey on a subnet: (claimable, claimed).
-    pub async fn get_root_claims(
-        &self,
-        hotkey_ss58: &str,
-        netuid: NetUid,
-    ) -> Result<(u128, u128)> {
+    pub async fn get_root_claims(&self, hotkey_ss58: &str, netuid: NetUid) -> Result<(u128, u128)> {
         let inner = &self.inner;
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
         let nid = netuid.0;
@@ -1794,11 +1834,26 @@ impl Client {
         Ok(result.and_then(|v| v.as_type::<u64>().ok()))
     }
 
-    /// Get stake threshold for a subnet (min stake to set weights).
-    pub async fn get_stake_threshold(&self, netuid: NetUid) -> Result<u128> {
+    /// Global minimum stake-weight required for `set_weights` (`SubtensorModule::StakeThreshold`).
+    ///
+    /// On current subtensor this is a single `StorageValue<u64>`, not keyed by netuid.
+    pub async fn get_stake_threshold(&self) -> Result<u128> {
         let inner = &self.inner;
-        let result = Self::fetch_u128_storage(inner, "SubtensorModule", "StakeThreshold", netuid.0).await?;
-        Ok(result.unwrap_or(0))
+        let result = retry_on_transient("get_stake_threshold", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage("SubtensorModule", "StakeThreshold", ());
+            inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch StakeThreshold")
+        })
+        .await?;
+        Ok(result
+            .and_then(|v| v.as_type::<u64>().ok())
+            .map(|x| x as u128)
+            .unwrap_or(0))
     }
 
     /// Get nominator minimum required stake (global).
@@ -1845,10 +1900,7 @@ impl Client {
     }
 
     /// Get subnet lease info: returns netuid's lease if present.
-    pub async fn get_subnet_lease(
-        &self,
-        netuid: NetUid,
-    ) -> Result<Option<(u64, u64, u128)>> {
+    pub async fn get_subnet_lease(&self, netuid: NetUid) -> Result<Option<(u64, u64, u128)>> {
         let inner = &self.inner;
         let nid = netuid.0;
         let result = retry_on_transient("get_subnet_lease", RPC_RETRIES, || async {

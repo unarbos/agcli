@@ -10,7 +10,10 @@ async fn probe_runtime_metadata() {
     let client = match Client::connect(LOCAL_WS).await {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("[probe_metadata] No local chain at {} — skipping. ({})", LOCAL_WS, e);
+            eprintln!(
+                "[probe_metadata] No local chain at {} — skipping. ({})",
+                LOCAL_WS, e
+            );
             return;
         }
     };

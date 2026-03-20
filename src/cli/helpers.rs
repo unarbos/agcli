@@ -314,7 +314,14 @@ pub fn validate_ipv4(ip: &str) -> Result<u128> {
                 "Invalid IPv4 address: \"{}\" — octet {} has leading zeros. Use {} instead.",
                 ip,
                 i + 1,
-                { let trimmed = part.trim_start_matches('0'); if trimmed.is_empty() { "0" } else { trimmed } }
+                {
+                    let trimmed = part.trim_start_matches('0');
+                    if trimmed.is_empty() {
+                        "0"
+                    } else {
+                        trimmed
+                    }
+                }
             );
         }
         octets[i] = part.parse::<u8>().map_err(|_| {
@@ -387,7 +394,7 @@ pub fn validate_delegate_take(take: f64) -> Result<()> {
 }
 
 /// Validate an SS58 address string. Returns Ok(()) if valid, or a helpful error message.
-/// Use this to validate user-supplied addresses (--dest, --delegate, --hotkey, --spawner, etc.)
+/// Use this to validate user-supplied addresses (--dest, --delegate, --hotkey-address, --spawner, etc.)
 /// before submitting them to the chain.
 pub fn validate_ss58(address: &str, label: &str) -> Result<()> {
     let trimmed = address.trim();
@@ -715,7 +722,7 @@ pub fn check_spending_limit_for_raw_call(
         "transfer_stake" => (2, 4), // check origin_netuid (funds leave this subnet)
         // swap_stake_limit(hotkey, origin_netuid, dest_netuid, amount_rao, ...)
         "swap_stake_limit" => (1, 3), // check origin_netuid (funds leave this subnet)
-        _ => return Ok(()), // unknown call, no spending limit to check
+        _ => return Ok(()),           // unknown call, no spending limit to check
     };
 
     if args.len() <= amount_idx {
@@ -723,25 +730,28 @@ pub fn check_spending_limit_for_raw_call(
         return Ok(());
     }
 
-    let netuid_u64 = args[netuid_idx]
-        .as_u64()
-        .ok_or_else(|| anyhow::anyhow!(
+    let netuid_u64 = args[netuid_idx].as_u64().ok_or_else(|| {
+        anyhow::anyhow!(
             "Spending limit check: expected numeric netuid at arg index {}, got: {}",
-            netuid_idx, args[netuid_idx]
-        ))?;
+            netuid_idx,
+            args[netuid_idx]
+        )
+    })?;
     if netuid_u64 > u16::MAX as u64 {
         anyhow::bail!(
             "Spending limit check: netuid {} exceeds maximum ({})",
-            netuid_u64, u16::MAX
+            netuid_u64,
+            u16::MAX
         );
     }
     let netuid = netuid_u64 as u16;
-    let amount_rao = args[amount_idx]
-        .as_u64()
-        .ok_or_else(|| anyhow::anyhow!(
+    let amount_rao = args[amount_idx].as_u64().ok_or_else(|| {
+        anyhow::anyhow!(
             "Spending limit check: expected numeric amount at arg index {}, got: {}",
-            amount_idx, args[amount_idx]
-        ))?;
+            amount_idx,
+            args[amount_idx]
+        )
+    })?;
     let tao_amount = amount_rao as f64 / 1_000_000_000.0;
 
     if tao_amount > 0.0 {
@@ -900,14 +910,14 @@ pub fn resolve_hotkey_ss58(
     hotkey_name: &str,
 ) -> Result<String> {
     if let Some(hk) = hotkey_arg {
-        validate_ss58(&hk, "hotkey")?;
+        validate_ss58(&hk, "hotkey-address")?;
         return Ok(hk);
     }
     wallet.load_hotkey(hotkey_name)?;
     wallet
         .hotkey_ss58()
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow::anyhow!("Could not resolve hotkey address.\n  Tip: pass --hotkey <ss58_address> or create a hotkey with `agcli wallet create-hotkey`."))
+        .ok_or_else(|| anyhow::anyhow!("Could not resolve hotkey address.\n  Tip: pass --hotkey-address <ss58_address> or create a hotkey with `agcli wallet create-hotkey`."))
 }
 
 /// Shortcut: open wallet, unlock, resolve hotkey, return (pair, hotkey_ss58).
@@ -1056,12 +1066,14 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
     for (i, word) in words.iter().enumerate() {
         if wordlist.binary_search(word).is_err() {
             // Try to suggest a close match
-            let suggestion = wordlist
-                .iter()
-                .find(|w| {
-                    let end = word.char_indices().nth(3).map(|(i, _)| i).unwrap_or(word.len());
-                    w.starts_with(&word[..end])
-                });
+            let suggestion = wordlist.iter().find(|w| {
+                let end = word
+                    .char_indices()
+                    .nth(3)
+                    .map(|(i, _)| i)
+                    .unwrap_or(word.len());
+                w.starts_with(&word[..end])
+            });
             let tip = if let Some(s) = suggestion {
                 format!("  Did you mean \"{}\"?", s)
             } else {
@@ -1470,28 +1482,43 @@ pub fn validate_commitment_data(data: &str) -> Result<()> {
     Ok(())
 }
 
-/// Validate a subscribe event filter category.
-/// Valid values: all, staking, registration, transfer, weights, subnet.
+/// Validate a subscribe event filter category (must match [`crate::events::EventFilter`] `FromStr` aliases).
 pub fn validate_event_filter(filter: &str) -> Result<()> {
-    const VALID_FILTERS: &[&str] = &[
-        "all",
-        "staking",
-        "stake",
-        "registration",
-        "register",
-        "reg",
-        "transfer",
-        "transfers",
-        "weights",
-        "weight",
-        "subnet",
-        "subnets",
-    ];
     let lower = filter.trim().to_lowercase();
-    if !VALID_FILTERS.contains(&lower.as_str()) {
+    let ok = matches!(
+        lower.as_str(),
+        "all"
+            | "staking"
+            | "stake"
+            | "registration"
+            | "register"
+            | "reg"
+            | "transfer"
+            | "transfers"
+            | "weights"
+            | "weight"
+            | "subnet"
+            | "subnets"
+            | "delegation"
+            | "delegate"
+            | "delegates"
+            | "keys"
+            | "key"
+            | "swap"
+            | "dex"
+            | "liquidity"
+            | "governance"
+            | "gov"
+            | "sudo"
+            | "safemode"
+            | "crowdloan"
+            | "crowdloans"
+            | "fund"
+    );
+    if !ok {
         anyhow::bail!(
-            "Invalid event filter: '{}'. Valid filters are: {}.\n  Tip: use --filter all to see all events.",
-            filter, VALID_FILTERS.join(", ")
+            "Invalid event filter: '{}'. Valid filters are: all, staking, registration, transfer, weights, subnet, delegation, keys, swap, governance, crowdloan (plus short aliases like stake, reg, dex).\n  Tip: use --filter all to see every decoded event.",
+            filter
         );
     }
     Ok(())
@@ -2190,7 +2217,10 @@ pub fn validate_docker_name(name: &str, label: &str) -> Result<()> {
             first as char
         );
     }
-    if let Some(bad) = name.chars().find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '.' | '-')) {
+    if let Some(bad) = name
+        .chars()
+        .find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '.' | '-'))
+    {
         anyhow::bail!(
             "{} '{}' contains invalid character '{}'. Only [a-zA-Z0-9_.-] are allowed.",
             label,
@@ -2217,7 +2247,9 @@ pub fn validate_docker_image(image: &str) -> Result<()> {
             image.len()
         );
     }
-    if let Some(bad) = image.chars().find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '/' | '.' | '-' | '_' | ':' | '@')) {
+    if let Some(bad) = image.chars().find(
+        |c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '/' | '.' | '-' | '_' | ':' | '@'),
+    ) {
         anyhow::bail!(
             "Docker image '{}' contains invalid character '{}'. Only [a-zA-Z0-9/._:-@] are allowed.",
             image,
@@ -2265,7 +2297,11 @@ mod tests {
     fn safe_rao_handles_special_floats() {
         assert_eq!(safe_rao(f64::NAN), 0, "NaN should produce 0");
         assert_eq!(safe_rao(f64::INFINITY), 0, "Infinity should produce 0");
-        assert_eq!(safe_rao(f64::NEG_INFINITY), 0, "Neg infinity should produce 0");
+        assert_eq!(
+            safe_rao(f64::NEG_INFINITY),
+            0,
+            "Neg infinity should produce 0"
+        );
         assert_eq!(safe_rao(-1.0), 0, "Negative should produce 0");
     }
 
@@ -2368,15 +2404,20 @@ mod tests {
         // Ensure AGCLI_MNEMONIC is NOT set for this test
         std::env::remove_var("AGCLI_MNEMONIC");
         let result = require_mnemonic(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()));
-        assert!(result.is_err(), "Should reject mnemonic passed via CLI flag");
+        assert!(
+            result.is_err(),
+            "Should reject mnemonic passed via CLI flag"
+        );
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("Refusing --mnemonic flag"),
-            "Error should mention refusing CLI flag: {}", msg
+            "Error should mention refusing CLI flag: {}",
+            msg
         );
         assert!(
             msg.contains("AGCLI_MNEMONIC"),
-            "Error should mention env var alternative: {}", msg
+            "Error should mention env var alternative: {}",
+            msg
         );
     }
 
@@ -2386,7 +2427,11 @@ mod tests {
         std::env::set_var("AGCLI_MNEMONIC", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         let result = require_mnemonic(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()));
         std::env::remove_var("AGCLI_MNEMONIC");
-        assert!(result.is_ok(), "Should accept mnemonic from env var: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should accept mnemonic from env var: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -2397,7 +2442,8 @@ mod tests {
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("ps"),
-            "Error should warn about ps visibility: {}", msg
+            "Error should warn about ps visibility: {}",
+            msg
         );
     }
 
@@ -2425,7 +2471,11 @@ mod tests {
         let result = validate_password_strength("abc");
         assert!(result.is_err(), "3-char password should be rejected");
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("too short") || msg.contains("Minimum 8"), "Error: {}", msg);
+        assert!(
+            msg.contains("too short") || msg.contains("Minimum 8"),
+            "Error: {}",
+            msg
+        );
     }
 
     #[test]
@@ -2438,19 +2488,29 @@ mod tests {
     fn password_strength_rejects_common_8_char() {
         let result = validate_password_strength("12345678");
         // "12345678" is in the common password list, should be rejected even though >= 8 chars
-        assert!(result.is_err(), "Common password '12345678' should be rejected");
+        assert!(
+            result.is_err(),
+            "Common password '12345678' should be rejected"
+        );
     }
 
     #[test]
     fn password_strength_accepts_strong_password() {
         let result = validate_password_strength("MyStr0ng!Pass");
-        assert!(result.is_ok(), "Strong password should be accepted: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Strong password should be accepted: {:?}",
+            result.err()
+        );
     }
 
     #[test]
     fn password_strength_rejects_common_password() {
         let result = validate_password_strength("password");
-        assert!(result.is_err(), "Common password 'password' should be rejected");
+        assert!(
+            result.is_err(),
+            "Common password 'password' should be rejected"
+        );
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("commonly used"), "Error: {}", msg);
     }
@@ -2458,7 +2518,10 @@ mod tests {
     #[test]
     fn password_strength_rejects_common_case_insensitive() {
         let result = validate_password_strength("PASSWORD");
-        assert!(result.is_err(), "Case-insensitive common password should be rejected");
+        assert!(
+            result.is_err(),
+            "Case-insensitive common password should be rejected"
+        );
     }
 
     #[test]
@@ -2470,7 +2533,11 @@ mod tests {
     fn password_strength_accepts_8_char_unique() {
         // Not in common list, >= 8 chars
         let result = validate_password_strength("xK9!mZ2q");
-        assert!(result.is_ok(), "Unique 8-char password should pass: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Unique 8-char password should pass: {:?}",
+            result.err()
+        );
     }
 
     // ========== Issue 658: is_yes_mode checks both --yes and --batch ==========
@@ -2502,8 +2569,10 @@ mod tests {
     fn confirm_action_auto_confirms_in_batch_mode() {
         set_yes_mode(false);
         set_batch_mode(true);
-        assert!(confirm_action("Delete everything?").is_ok(),
-            "confirm_action should auto-confirm in batch mode");
+        assert!(
+            confirm_action("Delete everything?").is_ok(),
+            "confirm_action should auto-confirm in batch mode"
+        );
         set_batch_mode(false);
     }
 
@@ -2526,11 +2595,23 @@ mod tests {
     #[test]
     fn validate_docker_name_rejects_leading_special() {
         let err = validate_docker_name("_foo", "Container name").unwrap_err();
-        assert!(err.to_string().contains("must start with an alphanumeric"), "{}", err);
+        assert!(
+            err.to_string().contains("must start with an alphanumeric"),
+            "{}",
+            err
+        );
         let err2 = validate_docker_name("-bar", "Container name").unwrap_err();
-        assert!(err2.to_string().contains("must start with an alphanumeric"), "{}", err2);
+        assert!(
+            err2.to_string().contains("must start with an alphanumeric"),
+            "{}",
+            err2
+        );
         let err3 = validate_docker_name(".baz", "Container name").unwrap_err();
-        assert!(err3.to_string().contains("must start with an alphanumeric"), "{}", err3);
+        assert!(
+            err3.to_string().contains("must start with an alphanumeric"),
+            "{}",
+            err3
+        );
     }
 
     #[test]
@@ -2556,7 +2637,9 @@ mod tests {
 
     #[test]
     fn validate_docker_image_accepts_valid_images() {
-        assert!(validate_docker_image("ghcr.io/opentensor/subtensor-localnet:devnet-ready").is_ok());
+        assert!(
+            validate_docker_image("ghcr.io/opentensor/subtensor-localnet:devnet-ready").is_ok()
+        );
         assert!(validate_docker_image("ubuntu:22.04").is_ok());
         assert!(validate_docker_image("my-registry.com/org/image:v1.2.3").is_ok());
         assert!(validate_docker_image("image@sha256:abc123").is_ok());
@@ -2590,9 +2673,17 @@ mod tests {
         // rather than silently defaulting to 0
         let args = vec![json!("5abc123"), json!("1"), json!(50_000_000_000u64)];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
-        assert!(result.is_err(), "String netuid should be rejected, got: {:?}", result);
+        assert!(
+            result.is_err(),
+            "String netuid should be rejected, got: {:?}",
+            result
+        );
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("numeric netuid"), "Error should mention numeric netuid: {}", msg);
+        assert!(
+            msg.contains("numeric netuid"),
+            "Error should mention numeric netuid: {}",
+            msg
+        );
     }
 
     #[test]
@@ -2600,9 +2691,17 @@ mod tests {
         use serde_json::json;
         let args = vec![json!("5abc123"), json!(1), json!("50000000000")];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
-        assert!(result.is_err(), "String amount should be rejected, got: {:?}", result);
+        assert!(
+            result.is_err(),
+            "String amount should be rejected, got: {:?}",
+            result
+        );
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("numeric amount"), "Error should mention numeric amount: {}", msg);
+        assert!(
+            msg.contains("numeric amount"),
+            "Error should mention numeric amount: {}",
+            msg
+        );
     }
 
     #[test]
@@ -2623,7 +2722,11 @@ mod tests {
         let result = validate_docker_name(&name, "container");
         assert!(result.is_err(), "Should reject name > 128 chars");
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("too long"), "Error message should mention too long: {}", msg);
+        assert!(
+            msg.contains("too long"),
+            "Error message should mention too long: {}",
+            msg
+        );
     }
 
     #[test]
@@ -2643,7 +2746,11 @@ mod tests {
         let result = validate_docker_image(&image);
         assert!(result.is_err(), "Should reject image > 256 chars");
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("too long"), "Error message should mention too long: {}", msg);
+        assert!(
+            msg.contains("too long"),
+            "Error message should mention too long: {}",
+            msg
+        );
     }
 
     // ── Issue 129: validate_spending_limit wildcard ──
@@ -2651,7 +2758,11 @@ mod tests {
     #[test]
     fn validate_spending_limit_accepts_wildcard() {
         let result = validate_spending_limit(100.0, "*");
-        assert!(result.is_ok(), "Wildcard '*' should be accepted: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Wildcard '*' should be accepted: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -2663,22 +2774,34 @@ mod tests {
     #[test]
     fn validate_spending_limit_accepts_numeric_netuid() {
         let result = validate_spending_limit(100.0, "1");
-        assert!(result.is_ok(), "Numeric netuid should be accepted: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Numeric netuid should be accepted: {:?}",
+            result
+        );
     }
 
     #[test]
     fn validate_mnemonic_multibyte_word_no_panic() {
         // Issue 145: word[..word.len().min(3)] panics on multi-byte UTF-8 input
         // The function should return an error, not panic.
-        let result = validate_mnemonic("café latte espresso drink make sure love open right left paper again");
-        assert!(result.is_err(), "non-BIP39 words should produce an error, not a panic");
+        let result = validate_mnemonic(
+            "café latte espresso drink make sure love open right left paper again",
+        );
+        assert!(
+            result.is_err(),
+            "non-BIP39 words should produce an error, not a panic"
+        );
     }
 
     #[test]
     fn validate_mnemonic_emoji_word_no_panic() {
         // Issue 145: emoji (4 bytes) at byte position 0-3 would cause panic on [..3]
         let result = validate_mnemonic("🎉 abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
-        assert!(result.is_err(), "emoji word should produce an error, not a panic");
+        assert!(
+            result.is_err(),
+            "emoji word should produce an error, not a panic"
+        );
     }
 
     // --- Issue 154: spending limit checks origin_netuid not dest_netuid for move/swap/transfer ---
@@ -2691,8 +2814,8 @@ mod tests {
         let args = vec![
             json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
             json!("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"),
-            json!(1),  // origin_netuid
-            json!(2),  // dest_netuid
+            json!(1),                // origin_netuid
+            json!(2),                // dest_netuid
             json!(1_000_000_000u64), // 1 TAO in rao
         ];
         // This test verifies the function extracts netuid from index 2 (origin), not 3 (dest).
@@ -2707,8 +2830,8 @@ mod tests {
         use serde_json::json;
         let args = vec![
             json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-            json!(1),  // origin_netuid
-            json!(2),  // dest_netuid
+            json!(1), // origin_netuid
+            json!(2), // dest_netuid
             json!(1_000_000_000u64),
         ];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "swap_stake", &args);
@@ -2722,8 +2845,8 @@ mod tests {
         let args = vec![
             json!("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"),
             json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-            json!(1),  // origin_netuid
-            json!(2),  // dest_netuid
+            json!(1), // origin_netuid
+            json!(2), // dest_netuid
             json!(1_000_000_000u64),
         ];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "transfer_stake", &args);
@@ -2753,7 +2876,14 @@ mod tests {
 
     #[test]
     fn validate_event_filter_accepts_canonical_names() {
-        for name in &["all", "staking", "registration", "transfer", "weights", "subnet"] {
+        for name in &[
+            "all",
+            "staking",
+            "registration",
+            "transfer",
+            "weights",
+            "subnet",
+        ] {
             assert!(
                 validate_event_filter(name).is_ok(),
                 "validate_event_filter should accept canonical name '{}'",
@@ -2768,13 +2898,17 @@ mod tests {
         use serde_json::json;
         let args = vec![
             json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-            json!(65537u64),  // netuid > u16::MAX
+            json!(65537u64), // netuid > u16::MAX
             json!(1_000_000_000u64),
         ];
         let result = check_spending_limit_for_raw_call("SubtensorModule", "add_stake", &args);
         assert!(result.is_err(), "should reject netuid > u16::MAX");
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("exceeds maximum"), "error should mention exceeds maximum: {}", msg);
+        assert!(
+            msg.contains("exceeds maximum"),
+            "error should mention exceeds maximum: {}",
+            msg
+        );
     }
 
     #[test]
@@ -2796,7 +2930,11 @@ mod tests {
         let result = validate_ipv4("1.00.0.1");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("Use 0 instead") || msg.contains("Use 0"), "error should suggest '0', got: {}", msg);
+        assert!(
+            msg.contains("Use 0 instead") || msg.contains("Use 0"),
+            "error should suggest '0', got: {}",
+            msg
+        );
     }
 
     #[test]

@@ -127,11 +127,7 @@ pub(super) async fn handle_block(
         BlockCommands::Latest => {
             let block_num = client.get_block_number().await?;
             let block_num_u32: u32 = block_num.try_into().map_err(|_| {
-                anyhow::anyhow!(
-                    "Block number {} exceeds u32::MAX ({})",
-                    block_num,
-                    u32::MAX
-                )
+                anyhow::anyhow!("Block number {} exceeds u32::MAX ({})", block_num, u32::MAX)
             })?;
             let block_hash = client.get_block_hash(block_num_u32).await?;
             let (ext_count, timestamp) = tokio::try_join!(
@@ -202,8 +198,12 @@ pub(super) async fn handle_diff(
                 client.get_stake_for_coldkey_at_block(&addr, hash2),
             )?;
 
-            let total_stake1: u64 = stakes1.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-            let total_stake2: u64 = stakes2.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+            let total_stake1: u64 = stakes1
+                .iter()
+                .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+            let total_stake2: u64 = stakes2
+                .iter()
+                .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
             let total1 = bal1.rao().saturating_add(total_stake1);
             let total2 = bal2.rao().saturating_add(total_stake2);
 
@@ -552,7 +552,10 @@ mod tests {
     fn block_num_exceeding_u32_fails() {
         let block_num: u64 = u32::MAX as u64 + 1;
         let result: Result<u32, _> = block_num.try_into();
-        assert!(result.is_err(), "block number exceeding u32::MAX should fail");
+        assert!(
+            result.is_err(),
+            "block number exceeding u32::MAX should fail"
+        );
     }
 
     // ── Issue 131: stake sum should use saturating_add not wrapping ──
@@ -585,7 +588,10 @@ mod tests {
         let diff_i64 = e2 as i64 - e1 as i64;
         assert_eq!(diff_i64, 1, "i64 would give wrong value due to truncation");
         // The i128 and i64 diffs are fundamentally different
-        assert_ne!(diff_i128, diff_i64 as i128, "i128 and i64 diffs must differ for large values");
+        assert_ne!(
+            diff_i128, diff_i64 as i128,
+            "i128 and i64 diffs must differ for large values"
+        );
     }
 
     // ── Issue 140: block range count uses u64 arithmetic to avoid u32 wrap ──
@@ -598,7 +604,10 @@ mod tests {
         let to: u32 = u32::MAX;
         let count = (to as u64 - from as u64 + 1) as usize;
         assert_eq!(count, 4_294_967_296);
-        assert!(count > 1000, "full u32 range must exceed the 1000-block guard");
+        assert!(
+            count > 1000,
+            "full u32 range must exceed the 1000-block guard"
+        );
     }
 
     #[test]

@@ -148,9 +148,10 @@ impl Client {
         mev: bool,
     ) -> Result<String> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        let tx = api::tx()
-            .subtensor_module()
-            .move_stake(hk.clone(), hk, from.0, to.0, amount.rao());
+        let tx =
+            api::tx()
+                .subtensor_module()
+                .move_stake(hk.clone(), hk, from.0, to.0, amount.rao());
         self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
@@ -271,8 +272,16 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
-        self.add_stake_limit_mev(pair, hotkey_ss58, netuid, amount, limit_price, allow_partial, false)
-            .await
+        self.add_stake_limit_mev(
+            pair,
+            hotkey_ss58,
+            netuid,
+            amount,
+            limit_price,
+            allow_partial,
+            false,
+        )
+        .await
     }
 
     /// Add stake limit, optionally wrapping through MEV shield.
@@ -307,8 +316,16 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
-        self.remove_stake_limit_mev(pair, hotkey_ss58, netuid, amount, limit_price, allow_partial, false)
-            .await
+        self.remove_stake_limit_mev(
+            pair,
+            hotkey_ss58,
+            netuid,
+            amount,
+            limit_price,
+            allow_partial,
+            false,
+        )
+        .await
     }
 
     /// Remove stake limit, optionally wrapping through MEV shield.
@@ -384,8 +401,17 @@ impl Client {
         limit_price: u64,
         allow_partial: bool,
     ) -> Result<String> {
-        self.swap_stake_limit_mev(pair, hotkey_ss58, from, to, amount, limit_price, allow_partial, false)
-            .await
+        self.swap_stake_limit_mev(
+            pair,
+            hotkey_ss58,
+            from,
+            to,
+            amount,
+            limit_price,
+            allow_partial,
+            false,
+        )
+        .await
     }
 
     /// Swap stake limit, optionally wrapping through MEV shield.
@@ -1319,7 +1345,8 @@ impl Client {
         anyhow::ensure!(
             netuids.len() == commit_hashes.len(),
             "batch_commit_weights: netuids ({}) and commit_hashes ({}) must have equal length",
-            netuids.len(), commit_hashes.len()
+            netuids.len(),
+            commit_hashes.len()
         );
         use parity_scale_codec::Compact;
         let n: Vec<Compact<u16>> = netuids.iter().map(|n| Compact(*n)).collect();
@@ -2202,13 +2229,31 @@ impl Client {
         use subxt::dynamic::Value;
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
         let ident = Value::named_composite([
-            ("subnet_name", Value::from_bytes(identity.subnet_name.as_bytes())),
-            ("github_repo", Value::from_bytes(identity.github_repo.as_bytes())),
-            ("subnet_contact", Value::from_bytes(identity.subnet_contact.as_bytes())),
-            ("subnet_url", Value::from_bytes(identity.subnet_url.as_bytes())),
+            (
+                "subnet_name",
+                Value::from_bytes(identity.subnet_name.as_bytes()),
+            ),
+            (
+                "github_repo",
+                Value::from_bytes(identity.github_repo.as_bytes()),
+            ),
+            (
+                "subnet_contact",
+                Value::from_bytes(identity.subnet_contact.as_bytes()),
+            ),
+            (
+                "subnet_url",
+                Value::from_bytes(identity.subnet_url.as_bytes()),
+            ),
             ("discord", Value::from_bytes(identity.discord.as_bytes())),
-            ("description", Value::from_bytes(identity.description.as_bytes())),
-            ("additional", Value::from_bytes(identity.additional.as_bytes())),
+            (
+                "description",
+                Value::from_bytes(identity.description.as_bytes()),
+            ),
+            (
+                "additional",
+                Value::from_bytes(identity.additional.as_bytes()),
+            ),
         ]);
         self.submit_raw_call(
             pair,
@@ -2245,11 +2290,7 @@ impl Client {
     }
 
     /// Start call for subnet initialization.
-    pub async fn start_call(
-        &self,
-        pair: &sr25519::Pair,
-        netuid: NetUid,
-    ) -> Result<String> {
+    pub async fn start_call(&self, pair: &sr25519::Pair, netuid: NetUid) -> Result<String> {
         use subxt::dynamic::Value;
         self.submit_raw_call(
             pair,
@@ -2286,6 +2327,9 @@ impl Client {
     }
 
     /// Commit timelocked weights (reveal at a specific round).
+    ///
+    /// Reads on-chain `CommitRevealWeightsVersion` and passes it as `commit_reveal_version` (current
+    /// subtensor extrinsic has four parameters).
     pub async fn commit_timelocked_weights(
         &self,
         pair: &sr25519::Pair,
@@ -2293,6 +2337,7 @@ impl Client {
         commit_hash: [u8; 32],
         reveal_round: u64,
     ) -> Result<String> {
+        let commit_reveal_version = self.get_commit_reveal_weights_version().await?;
         use subxt::dynamic::Value;
         self.submit_raw_call(
             pair,
@@ -2302,6 +2347,7 @@ impl Client {
                 Value::u128(netuid.0 as u128),
                 Value::from_bytes(commit_hash),
                 Value::u128(reveal_round as u128),
+                Value::u128(u128::from(commit_reveal_version)),
             ],
         )
         .await
@@ -2431,11 +2477,7 @@ impl Client {
     }
 
     /// Terminate a subnet lease.
-    pub async fn terminate_lease(
-        &self,
-        pair: &sr25519::Pair,
-        netuid: NetUid,
-    ) -> Result<String> {
+    pub async fn terminate_lease(&self, pair: &sr25519::Pair, netuid: NetUid) -> Result<String> {
         use subxt::dynamic::Value;
         self.submit_raw_call(
             pair,
@@ -2457,9 +2499,7 @@ impl Client {
     ) -> Result<String> {
         let dest = subxt::utils::MultiAddress::Id(Self::ss58_to_account_id(dest_ss58)?);
         self.sign_submit(
-            &api::tx()
-                .balances()
-                .transfer_keep_alive(dest, amount.rao()),
+            &api::tx().balances().transfer_keep_alive(dest, amount.rao()),
             pair,
         )
         .await
@@ -2502,7 +2542,11 @@ impl Client {
 
     /// Remove all proxy delegations for the sender.
     pub async fn remove_proxies(&self, pair: &sr25519::Pair) -> Result<String> {
-        let tx = subxt::dynamic::tx("Proxy", "remove_proxies", Vec::<subxt::dynamic::Value>::new());
+        let tx = subxt::dynamic::tx(
+            "Proxy",
+            "remove_proxies",
+            Vec::<subxt::dynamic::Value>::new(),
+        );
         self.sign_submit(&tx, pair).await
     }
 
@@ -2580,11 +2624,7 @@ impl Client {
         calls: Vec<subxt::dynamic::Value>,
     ) -> Result<String> {
         use subxt::dynamic::Value;
-        let tx = subxt::dynamic::tx(
-            "Utility",
-            "batch",
-            vec![Value::unnamed_composite(calls)],
-        );
+        let tx = subxt::dynamic::tx("Utility", "batch", vec![Value::unnamed_composite(calls)]);
         self.sign_submit(&tx, pair).await
     }
 
@@ -2654,7 +2694,7 @@ impl Client {
         let access: Vec<Value> = access_list
             .into_iter()
             .map(|(addr, slots)| {
-                let slot_vals: Vec<Value> = slots.into_iter().map(|s| Value::from_bytes(s)).collect();
+                let slot_vals: Vec<Value> = slots.into_iter().map(Value::from_bytes).collect();
                 Value::unnamed_composite([
                     Value::from_bytes(addr),
                     Value::unnamed_composite(slot_vals),
@@ -2705,7 +2745,7 @@ impl Client {
         let access: Vec<Value> = access_list
             .into_iter()
             .map(|(addr, slots)| {
-                let slot_vals: Vec<Value> = slots.into_iter().map(|s| Value::from_bytes(s)).collect();
+                let slot_vals: Vec<Value> = slots.into_iter().map(Value::from_bytes).collect();
                 Value::unnamed_composite([
                     Value::from_bytes(addr),
                     Value::unnamed_composite(slot_vals),
@@ -2841,17 +2881,33 @@ mod tests {
     assert_async_method_exists!(mev_variant_recycle_alpha_exists, recycle_alpha_mev);
     assert_async_method_exists!(mev_variant_burn_alpha_exists, burn_alpha_mev);
     assert_async_method_exists!(mev_variant_add_stake_limit_exists, add_stake_limit_mev);
-    assert_async_method_exists!(mev_variant_remove_stake_limit_exists, remove_stake_limit_mev);
+    assert_async_method_exists!(
+        mev_variant_remove_stake_limit_exists,
+        remove_stake_limit_mev
+    );
     assert_async_method_exists!(mev_variant_swap_stake_limit_exists, swap_stake_limit_mev);
 
     #[test]
     fn parse_proxy_type_all_variants_accepted() {
         let valid = [
-            "any", "owner", "nontransfer", "staking", "noncritical",
-            "triumvirate", "governance", "senate", "nonfungible",
-            "registration", "transfer", "smalltransfer", "rootweights",
-            "childkeys", "sudouncheckedsetcode", "swaphotkey",
-            "subnetleasebeneficiary", "rootclaim",
+            "any",
+            "owner",
+            "nontransfer",
+            "staking",
+            "noncritical",
+            "triumvirate",
+            "governance",
+            "senate",
+            "nonfungible",
+            "registration",
+            "transfer",
+            "smalltransfer",
+            "rootweights",
+            "childkeys",
+            "sudouncheckedsetcode",
+            "swaphotkey",
+            "subnetleasebeneficiary",
+            "rootclaim",
         ];
         for v in valid {
             assert!(
@@ -2866,12 +2922,18 @@ mod tests {
 
     #[test]
     fn multisig_default_ref_time_is_nonzero() {
-        assert!(DEFAULT_MULTISIG_MAX_REF_TIME > 0, "Default ref_time must be non-zero");
+        assert!(
+            DEFAULT_MULTISIG_MAX_REF_TIME > 0,
+            "Default ref_time must be non-zero"
+        );
     }
 
     #[test]
     fn multisig_default_proof_size_is_nonzero() {
-        assert!(DEFAULT_MULTISIG_MAX_PROOF_SIZE > 0, "Default proof_size must be non-zero");
+        assert!(
+            DEFAULT_MULTISIG_MAX_PROOF_SIZE > 0,
+            "Default proof_size must be non-zero"
+        );
     }
 
     #[test]

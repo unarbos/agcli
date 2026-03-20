@@ -335,10 +335,7 @@ pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_
                 .map_err(|e| anyhow::anyhow!("Invalid EVM address hex: {}", e))?
                 .try_into()
                 .map_err(|v: Vec<u8>| {
-                    anyhow::anyhow!(
-                        "EVM address must be 20 bytes, got {}",
-                        v.len()
-                    )
+                    anyhow::anyhow!("EVM address must be 20 bytes, got {}", v.len())
                 })?;
             // Parse signature (65 bytes hex, optionally 0x-prefixed)
             let sig_hex = signature.strip_prefix("0x").unwrap_or(&signature);
@@ -346,17 +343,11 @@ pub(super) async fn handle_swap(cmd: SwapCommands, client: &Client, ctx: &Ctx<'_
                 .map_err(|e| anyhow::anyhow!("Invalid signature hex: {}", e))?
                 .try_into()
                 .map_err(|v: Vec<u8>| {
-                    anyhow::anyhow!(
-                        "Signature must be 65 bytes (r+s+v), got {}",
-                        v.len()
-                    )
+                    anyhow::anyhow!("Signature must be 65 bytes (r+s+v), got {}", v.len())
                 })?;
             let mut wallet = open_wallet(wallet_dir, wallet_name)?;
             unlock_coldkey(&mut wallet, password)?;
-            println!(
-                "Associating EVM address 0x{} with your account",
-                addr_hex
-            );
+            println!("Associating EVM address 0x{} with your account", addr_hex);
             let hash = client
                 .associate_evm_key(wallet.coldkey()?, addr_bytes, block_number, sig_bytes)
                 .await?;
@@ -1233,26 +1224,25 @@ pub(super) async fn handle_serve(cmd: ServeCommands, client: &Client, ctx: &Ctx<
                         u16::MAX
                     )
                 })?;
-                let protocol: u8 = entry["protocol"]
-                    .as_u64()
-                    .unwrap_or(4)
-                    .try_into()
-                    .map_err(|_| {
-                        anyhow::anyhow!(
-                            "Batch entry {}: protocol value exceeds u8::MAX (255)",
-                            i
-                        )
-                    })?;
-                let version: u32 = entry["version"]
-                    .as_u64()
-                    .unwrap_or(0)
-                    .try_into()
-                    .map_err(|_| {
-                        anyhow::anyhow!(
-                            "Batch entry {}: version value exceeds u32::MAX",
-                            i
-                        )
-                    })?;
+                let protocol: u8 =
+                    entry["protocol"]
+                        .as_u64()
+                        .unwrap_or(4)
+                        .try_into()
+                        .map_err(|_| {
+                            anyhow::anyhow!(
+                                "Batch entry {}: protocol value exceeds u8::MAX (255)",
+                                i
+                            )
+                        })?;
+                let version: u32 =
+                    entry["version"]
+                        .as_u64()
+                        .unwrap_or(0)
+                        .try_into()
+                        .map_err(|_| {
+                            anyhow::anyhow!("Batch entry {}: version value exceeds u32::MAX", i)
+                        })?;
 
                 let ip_u128 = crate::cli::helpers::validate_ipv4(ip)?;
 
@@ -1444,7 +1434,7 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             unlock_coldkey(&mut wallet, password)?;
             confirm_action(
                 "WARNING: Killing pure proxy will make ALL funds in it PERMANENTLY inaccessible.\n\
-                 This operation CANNOT be undone. Type 'yes' to confirm:"
+                 This operation CANNOT be undone. Type 'yes' to confirm:",
             )?;
             let hash = client
                 .kill_pure_proxy(
@@ -1630,7 +1620,7 @@ pub(super) async fn handle_proxy(cmd: ProxyCommands, client: &Client, ctx: &Ctx<
             unlock_coldkey(&mut wallet, password)?;
             confirm_action(
                 "WARNING: This will revoke ALL proxy delegations for your account.\n\
-                 This cannot be undone. Confirm?"
+                 This cannot be undone. Confirm?",
             )?;
             println!("Removing all proxy delegations");
             let hash = client.remove_proxies(wallet.coldkey()?).await?;
@@ -2378,21 +2368,24 @@ mod tests {
         // would return vec![] here — silently skipping spending limit checks.
         // The NEW pattern must produce an Err:
         let result: Result<Vec<serde_json::Value>, _> = match bad_json.as_ref() {
-            Some(s) => serde_json::from_str(s).map_err(|e| {
-                anyhow::anyhow!("invalid --args JSON: {e}")
-            }),
+            Some(s) => {
+                serde_json::from_str(s).map_err(|e| anyhow::anyhow!("invalid --args JSON: {e}"))
+            }
             None => Ok(vec![]),
         };
-        assert!(result.is_err(), "malformed JSON must be rejected, not silently defaulted to empty");
+        assert!(
+            result.is_err(),
+            "malformed JSON must be rejected, not silently defaulted to empty"
+        );
     }
 
     #[test]
     fn valid_json_array_args_parses_correctly() {
         let good_json = Some("[1, \"0xabc\", true]".to_string());
         let result: Result<Vec<serde_json::Value>, _> = match good_json.as_ref() {
-            Some(s) => serde_json::from_str(s).map_err(|e| {
-                anyhow::anyhow!("invalid --args JSON: {e}")
-            }),
+            Some(s) => {
+                serde_json::from_str(s).map_err(|e| anyhow::anyhow!("invalid --args JSON: {e}"))
+            }
             None => Ok(vec![]),
         };
         assert!(result.is_ok(), "valid JSON array should parse successfully");
@@ -2403,9 +2396,9 @@ mod tests {
     fn none_args_yields_empty_vec() {
         let no_json: Option<String> = None;
         let result: Result<Vec<serde_json::Value>, _> = match no_json.as_ref() {
-            Some(s) => serde_json::from_str(s).map_err(|e| {
-                anyhow::anyhow!("invalid --args JSON: {e}")
-            }),
+            Some(s) => {
+                serde_json::from_str(s).map_err(|e| anyhow::anyhow!("invalid --args JSON: {e}"))
+            }
             None => Ok(vec![]),
         };
         assert!(result.is_ok());
@@ -2417,9 +2410,9 @@ mod tests {
         // A JSON object is valid JSON but not an array — should fail deserialization to Vec
         let obj_json = Some("{\"amount\": 100}".to_string());
         let result: Result<Vec<serde_json::Value>, _> = match obj_json.as_ref() {
-            Some(s) => serde_json::from_str(s).map_err(|e| {
-                anyhow::anyhow!("invalid --args JSON: {e}")
-            }),
+            Some(s) => {
+                serde_json::from_str(s).map_err(|e| anyhow::anyhow!("invalid --args JSON: {e}"))
+            }
             None => Ok(vec![]),
         };
         assert!(result.is_err(), "JSON object (not array) must be rejected");
@@ -2437,10 +2430,14 @@ mod tests {
         use sp_core::Pair;
 
         let alice = sp_core::crypto::AccountId32::from(
-            sp_core::sr25519::Pair::from_string("//Alice", None).unwrap().public()
+            sp_core::sr25519::Pair::from_string("//Alice", None)
+                .unwrap()
+                .public(),
         );
         let bob = sp_core::crypto::AccountId32::from(
-            sp_core::sr25519::Pair::from_string("//Bob", None).unwrap().public()
+            sp_core::sr25519::Pair::from_string("//Bob", None)
+                .unwrap()
+                .public(),
         );
         let mut ids = vec![alice, bob];
         ids.sort();
@@ -2460,8 +2457,17 @@ mod tests {
         let ms_ss58 = multisig_account.to_string();
 
         // This should be a deterministic, valid SS58 address
-        assert!(ms_ss58.starts_with('5'), "Multisig SS58 should start with '5': {}", ms_ss58);
-        assert_eq!(ms_ss58.len(), 48, "SS58 addresses are 48 chars: {}", ms_ss58);
+        assert!(
+            ms_ss58.starts_with('5'),
+            "Multisig SS58 should start with '5': {}",
+            ms_ss58
+        );
+        assert_eq!(
+            ms_ss58.len(),
+            48,
+            "SS58 addresses are 48 chars: {}",
+            ms_ss58
+        );
 
         // Verify it uses utilisuba, not teleport — the hash should NOT match a "teleport" derivation
         let mut hasher2 = blake2::Blake2bVar::new(32).unwrap();
@@ -2472,7 +2478,10 @@ mod tests {
         }
         let mut hash2 = [0u8; 32];
         hasher2.finalize_variable(&mut hash2).unwrap();
-        assert_ne!(hash, hash2, "utilisuba and teleport prefixes must produce different addresses");
+        assert_ne!(
+            hash, hash2,
+            "utilisuba and teleport prefixes must produce different addresses"
+        );
     }
 
     // ──── Issue 102: Port value validated with try_into ────
@@ -2482,7 +2491,11 @@ mod tests {
         // Port value > 65535 should be rejected, not silently truncated
         let port_val: u64 = 70000;
         let port_result: Result<u16, _> = port_val.try_into();
-        assert!(port_result.is_err(), "Port {} should not fit in u16", port_val);
+        assert!(
+            port_result.is_err(),
+            "Port {} should not fit in u16",
+            port_val
+        );
     }
 
     #[test]

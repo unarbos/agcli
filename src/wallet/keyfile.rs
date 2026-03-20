@@ -128,7 +128,8 @@ fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
         if let Err(e) = fs::set_permissions(&tmp_path, fs::Permissions::from_mode(mode)) {
             let _ = fs::remove_file(&tmp_path);
-            return Err(e).with_context(|| format!("Failed to set permissions on '{}'", tmp_path.display()));
+            return Err(e)
+                .with_context(|| format!("Failed to set permissions on '{}'", tmp_path.display()));
         }
     }
     let _ = mode; // suppress unused warning on non-unix
@@ -136,7 +137,12 @@ fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
     // Atomic rename into place
     fs::rename(&tmp_path, path).map_err(|e| {
         let _ = fs::remove_file(&tmp_path);
-        anyhow::anyhow!("rename '{}' -> '{}': {}", tmp_path.display(), path.display(), e)
+        anyhow::anyhow!(
+            "rename '{}' -> '{}': {}",
+            tmp_path.display(),
+            path.display(),
+            e
+        )
     })?;
     Ok(())
 }
@@ -305,8 +311,8 @@ pub fn read_public_key(path: &Path) -> Result<sr25519::Public> {
 fn derive_key(password: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
     let params = argon2::Params::new(
         256 * 1024, // m_cost: 256 MiB in KiB (strong, but half of Python's 512 MiB for usability)
-        4,          // t_cost: 4 iterations (Python uses 8, but Argon2id is stronger per-iteration than Argon2i)
-        1,          // p_cost: single-threaded (matches Python)
+        4, // t_cost: 4 iterations (Python uses 8, but Argon2id is stronger per-iteration than Argon2i)
+        1, // p_cost: single-threaded (matches Python)
         Some(KEY_LEN),
     )
     .map_err(|e| anyhow::anyhow!("argon2 params error: {}", e))?;
@@ -381,8 +387,10 @@ pub fn decrypt_nacl_keyfile_data(data: &[u8], password: &str) -> Result<String> 
         anyhow::bail!("NaCl keyfile too short");
     }
     let (nonce_bytes, ciphertext) = encrypted.split_at(24);
-    let cipher = XSalsa20Poly1305::new_from_slice(&key)
-        .map_err(|e| { key.zeroize(); anyhow::anyhow!("cipher init: {}", e) })?;
+    let cipher = XSalsa20Poly1305::new_from_slice(&key).map_err(|e| {
+        key.zeroize();
+        anyhow::anyhow!("cipher init: {}", e)
+    })?;
     key.zeroize(); // Wipe derived key from memory immediately after cipher init
     let nonce = crypto_secretbox::Nonce::from_slice(nonce_bytes);
     let plaintext = cipher.decrypt(nonce, ciphertext)
@@ -639,7 +647,11 @@ mod tests {
         // Drop the lock quickly so the read succeeds
         drop(_held);
         let (result, _elapsed) = handle.join().expect("thread panicked");
-        assert!(result.is_ok(), "Read should succeed after lock release: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Read should succeed after lock release: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap(), mnemonic);
     }
 
@@ -665,7 +677,10 @@ mod tests {
 
         let result = handle.join().expect("thread panicked");
         // Should succeed now that lock is released
-        assert!(result.is_ok(), "read_keyfile should succeed after lock release");
+        assert!(
+            result.is_ok(),
+            "read_keyfile should succeed after lock release"
+        );
     }
 
     #[test]
@@ -685,7 +700,11 @@ mod tests {
         // Release quickly
         drop(held);
         let result = handle.join().expect("thread panicked");
-        assert!(result.is_ok(), "read_public_key should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "read_public_key should succeed: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap(), pk);
     }
 
@@ -705,7 +724,10 @@ mod tests {
             msg
         );
         // File should NOT have been created
-        assert!(!path.exists(), "Keyfile should not be created with empty password");
+        assert!(
+            !path.exists(),
+            "Keyfile should not be created with empty password"
+        );
     }
 
     #[test]
@@ -715,7 +737,10 @@ mod tests {
         let path = dir.path().join("space_pw_coldkey");
         let mnemonic = "test words";
         let result = write_encrypted_keyfile(&path, mnemonic, " ");
-        assert!(result.is_ok(), "Whitespace password should be allowed (non-empty)");
+        assert!(
+            result.is_ok(),
+            "Whitespace password should be allowed (non-empty)"
+        );
         // Verify roundtrip
         let recovered = read_encrypted_keyfile(&path, " ").unwrap();
         assert_eq!(recovered, mnemonic);
@@ -733,7 +758,10 @@ mod tests {
 
         write_encrypted_keyfile(&path, mnemonic, password).unwrap();
         let recovered = read_encrypted_keyfile(&path, password).unwrap();
-        assert_eq!(mnemonic, recovered, "Zeroization should not break roundtrip");
+        assert_eq!(
+            mnemonic, recovered,
+            "Zeroization should not break roundtrip"
+        );
     }
 
     #[test]
@@ -747,7 +775,10 @@ mod tests {
 
         write_encrypted_keyfile(&path, mnemonic, password).unwrap();
         let recovered = read_any_encrypted_keyfile(&path, password).unwrap();
-        assert_eq!(mnemonic, recovered, "read_any_encrypted should work with zeroization");
+        assert_eq!(
+            mnemonic, recovered,
+            "read_any_encrypted should work with zeroization"
+        );
     }
 
     // ──── Issue 666: Argon2id hardened parameters ────
@@ -759,7 +790,10 @@ mod tests {
         let key = derive_key("test_password", &salt).unwrap();
         assert_eq!(key.len(), KEY_LEN);
         // Key should not be all zeros
-        assert!(key.iter().any(|&b| b != 0), "Derived key should not be all zeros");
+        assert!(
+            key.iter().any(|&b| b != 0),
+            "Derived key should not be all zeros"
+        );
     }
 
     #[test]
@@ -772,7 +806,10 @@ mod tests {
 
         write_encrypted_keyfile(&path, mnemonic, password).unwrap();
         let recovered = read_encrypted_keyfile(&path, password).unwrap();
-        assert_eq!(mnemonic, recovered, "Hardened Argon2id roundtrip should match");
+        assert_eq!(
+            mnemonic, recovered,
+            "Hardened Argon2id roundtrip should match"
+        );
     }
 
     #[test]
@@ -780,7 +817,10 @@ mod tests {
         let salt = [0xABu8; SALT_LEN];
         let key1 = derive_key("password_one", &salt).unwrap();
         let key2 = derive_key("password_two", &salt).unwrap();
-        assert_ne!(key1, key2, "Different passwords should produce different keys");
+        assert_ne!(
+            key1, key2,
+            "Different passwords should produce different keys"
+        );
     }
 
     #[test]
@@ -799,7 +839,10 @@ mod tests {
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         write_encrypted_keyfile(&path, mnemonic, "correct_pw").unwrap();
         let result = read_encrypted_keyfile(&path, "wrong_pw");
-        assert!(result.is_err(), "Wrong password should fail with hardened params");
+        assert!(
+            result.is_err(),
+            "Wrong password should fail with hardened params"
+        );
     }
 
     #[test]
@@ -863,7 +906,10 @@ mod tests {
         let path = dir.path().join("test_keyfile2");
         atomic_write(&path, b"test", 0o600).unwrap();
         let tmp_path = path.with_extension("tmp");
-        assert!(!tmp_path.exists(), "temp file should be cleaned up after successful write");
+        assert!(
+            !tmp_path.exists(),
+            "temp file should be cleaned up after successful write"
+        );
     }
 
     // ---- v29 regression tests ----
@@ -897,7 +943,11 @@ mod tests {
         // Verify it actually reads correctly after lock is free
         drop(_lock);
         let result = read_any_encrypted_keyfile(&path, password);
-        assert!(result.is_ok(), "read_any_encrypted_keyfile should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "read_any_encrypted_keyfile should succeed: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap().trim(), mnemonic);
     }
 
@@ -927,7 +977,11 @@ mod tests {
         let result = read_python_keyfile(&path, "password");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("read keyfile"), "should fail on file read, not lock: {}", msg);
+        assert!(
+            msg.contains("read keyfile"),
+            "should fail on file read, not lock: {}",
+            msg
+        );
     }
 
     #[test]
@@ -961,6 +1015,10 @@ mod tests {
         let result = decrypt_aes_keyfile_data(&[0u8; 5], &path, "pw");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("corrupted") || msg.contains("too short"), "got: {}", msg);
+        assert!(
+            msg.contains("corrupted") || msg.contains("too short"),
+            "got: {}",
+            msg
+        );
     }
 }

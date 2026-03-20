@@ -23,7 +23,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Clippy
-        run: cargo clippy --lib --bins --test wallet_test -- -D warnings
+        run: cargo clippy --lib --bins --test wallet_test --test cli_weights -- -D warnings
 
   test:
     name: Test
@@ -33,8 +33,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
-        run: cargo test --lib --test wallet_test
+        run: cargo test --lib --test wallet_test --test cli_weights
         timeout-minutes: 10
+
+  e2e-docker:
+    name: E2E (Docker localnet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify Docker daemon
+        run: docker version && docker info
+      - name: Pull subtensor localnet image
+        run: docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready
+      - name: Run e2e_local_chain
+        run: cargo test -p agcli --test e2e_test e2e_local_chain -- --nocapture
+        timeout-minutes: 45
 
   build:
     name: Build Release

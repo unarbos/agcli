@@ -37,7 +37,16 @@ fn now_secs() -> u64 {
 /// Returns `Some(data)` if cache hit, `None` if miss or expired.
 pub fn get<T: DeserializeOwned>(key: &str, ttl: Duration) -> Option<T> {
     // Sanitize key: reject path separators and traversal to prevent cache directory escape
-    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key: String = key
+        .chars()
+        .map(|c| {
+            if c == '/' || c == '\\' || c == '\0' {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
     let safe_key = safe_key.replace("..", "__");
     let path = cache_dir().join(format!("{}.json", safe_key));
     let data = match std::fs::read_to_string(&path) {
@@ -78,7 +87,16 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
     let json = serde_json::to_string(&entry).context("Failed to serialize cache entry")?;
 
     // Sanitize key: reject path separators and traversal to prevent cache directory escape
-    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key: String = key
+        .chars()
+        .map(|c| {
+            if c == '/' || c == '\\' || c == '\0' {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
     let safe_key = safe_key.replace("..", "__");
 
     // Atomic write: temp file in same dir, then rename
@@ -99,10 +117,7 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
     // Prune roughly every 10 writes (probabilistic, avoids filesystem scan overhead).
     // Uses a global counter instead of checking disk every time.
     static WRITE_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    if WRITE_COUNT
-        .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        % 10 == 9
-    {
+    if WRITE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 10 == 9 {
         prune_if_needed();
     }
     Ok(())
@@ -110,7 +125,16 @@ pub fn put<T: Serialize>(key: &str, data: &T) -> Result<()> {
 
 /// Read a stale cached value (ignores TTL). Used for stale-while-error fallback.
 pub fn get_stale<T: DeserializeOwned>(key: &str) -> Option<T> {
-    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key: String = key
+        .chars()
+        .map(|c| {
+            if c == '/' || c == '\\' || c == '\0' {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
     let safe_key = safe_key.replace("..", "__");
     let path = cache_dir().join(format!("{}.json", safe_key));
     let data = std::fs::read_to_string(&path).ok()?;
@@ -122,7 +146,16 @@ pub fn get_stale<T: DeserializeOwned>(key: &str) -> Option<T> {
 
 /// Remove a cached entry.
 pub fn remove(key: &str) {
-    let safe_key: String = key.chars().map(|c| if c == '/' || c == '\\' || c == '\0' { '_' } else { c }).collect();
+    let safe_key: String = key
+        .chars()
+        .map(|c| {
+            if c == '/' || c == '\\' || c == '\0' {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
     let safe_key = safe_key.replace("..", "__");
     let path = cache_dir().join(format!("{}.json", safe_key));
     let _ = std::fs::remove_file(&path);
@@ -371,7 +404,10 @@ mod tests {
         // "../../etc/passwd" → ".._.._ etc_passwd" → "______etc_passwd"
         let safe_key = "______etc_passwd";
         let path = cache_dir().join(format!("{}.json", safe_key));
-        assert!(path.exists(), "sanitized cache file should exist in cache dir");
+        assert!(
+            path.exists(),
+            "sanitized cache file should exist in cache dir"
+        );
         // Verify the dangerous path does NOT exist
         let dangerous = cache_dir().join("../../etc/passwd.json");
         assert!(!dangerous.exists(), "path traversal file should not exist");

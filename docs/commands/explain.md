@@ -1,6 +1,6 @@
 # explain — Built-in Concept Reference
 
-Built-in educational reference for Bittensor concepts. 33 topics covering all major protocol mechanics.
+Built-in educational reference for Bittensor concepts. 32 topics covering all major protocol mechanics.
 
 ## Usage
 
@@ -16,13 +16,14 @@ agcli explain --topic tempo
 # JSON: {"topic", "content"}
 ```
 
-## Available Topics (33)
+## Available Topics (32)
 | Topic | Description |
 |-------|-------------|
 | `tempo` | Block cadence for subnet weight evaluation |
 | `commit-reveal` | Two-phase weight submission scheme |
 | `yuma` | Yuma consensus — the incentive mechanism |
 | `rate-limits` | Weight setting frequency constraints |
+| `weights` | Setting weights: commands, commit-reveal, timeouts, common errors |
 | `stake-weight` | Minimum stake required to set weights |
 | `amm` | Automated Market Maker (Dynamic TAO pools) |
 | `bootstrap` | Getting started as a new subnet owner |
@@ -53,7 +54,7 @@ agcli explain --topic tempo
 
 ## Source Code
 **agcli handler**: [`src/cli/system_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/system_cmds.rs) — `handle_explain()` at L131
-**Topic definitions**: [`src/utils/explain.rs`](https://github.com/unconst/agcli/blob/main/src/utils/explain.rs) — 33 topics with fuzzy matching aliases
+**Topic definitions**: [`src/utils/explain.rs`](https://github.com/unconst/agcli/blob/main/src/utils/explain.rs) — 32 topics with fuzzy matching aliases
 
 **No on-chain interaction** — all content is embedded in the binary.
 

@@ -8,7 +8,7 @@ Lock TAO on subnets behind hotkeys to earn emission rewards. Staking converts TA
 Stake TAO on a subnet. Converts TAO → alpha via the subnet's AMM pool.
 
 ```bash
-agcli stake add --amount 10.0 --netuid 1 [--hotkey SS58] [--max-slippage 2.0] [--password PW] [--yes]
+agcli stake add --amount 10.0 --netuid 1 [--hotkey-address SS58] [--max-slippage 2.0] [--password PW] [--yes]
 ```
 
 **On-chain**: `SubtensorModule::add_stake(origin, hotkey, netuid, amount_staked)`
@@ -22,7 +22,7 @@ agcli stake add --amount 10.0 --netuid 1 [--hotkey SS58] [--max-slippage 2.0] [-
 Unstake alpha from a subnet. Converts alpha → TAO via the AMM pool.
 
 ```bash
-agcli stake remove --amount 5.0 --netuid 1 [--hotkey SS58] [--max-slippage 2.0]
+agcli stake remove --amount 5.0 --netuid 1 [--hotkey-address SS58] [--max-slippage 2.0]
 ```
 
 **On-chain**: `SubtensorModule::remove_stake(origin, hotkey, netuid, amount_unstaked)`
@@ -44,7 +44,7 @@ agcli stake list [--address SS58] [--at-block N]
 Move alpha between subnets (same hotkey). Sells alpha on source subnet, buys on destination.
 
 ```bash
-agcli stake move --amount 5.0 --from 1 --to 2 [--hotkey SS58]
+agcli stake move --amount 5.0 --from 1 --to 2 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::move_stake(origin, hotkey, origin_netuid, destination_netuid, alpha_amount)`
@@ -65,23 +65,23 @@ agcli stake swap --amount 5.0 --netuid 1 --from-hotkey HK1 --to-hotkey HK2
 Unstake all alpha from a hotkey across all subnets.
 
 ```bash
-agcli stake unstake-all [--hotkey SS58]
+agcli stake unstake-all [--hotkey-address SS58]
 ```
 
 ### stake add-limit / remove-limit / swap-limit
 Limit orders for staking operations. Execute when AMM price reaches target.
 
 ```bash
-agcli stake add-limit --amount 10.0 --netuid 1 --price 0.5 [--partial] [--hotkey SS58]
-agcli stake remove-limit --amount 5.0 --netuid 1 --price 0.8 [--partial] [--hotkey SS58]
-agcli stake swap-limit --amount 5.0 --from 1 --to 2 --price 0.5 [--partial] [--hotkey SS58]
+agcli stake add-limit --amount 10.0 --netuid 1 --price 0.5 [--partial] [--hotkey-address SS58]
+agcli stake remove-limit --amount 5.0 --netuid 1 --price 0.8 [--partial] [--hotkey-address SS58]
+agcli stake swap-limit --amount 5.0 --from 1 --to 2 --price 0.5 [--partial] [--hotkey-address SS58]
 ```
 
 ### stake childkey-take
 Set the childkey take percentage for a hotkey on a subnet.
 
 ```bash
-agcli stake childkey-take --take 10.0 --netuid 1 [--hotkey SS58]
+agcli stake childkey-take --take 10.0 --netuid 1 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::set_childkey_take(origin, hotkey, netuid, take)` where take is u16 (pct * 65535 / 100)
@@ -103,7 +103,7 @@ agcli stake set-children --netuid 1 --children "0.5:5Child1...,0.3:5Child2..."
 Remove ALL stake for a hotkey/subnet pair, optionally with a price limit.
 
 ```bash
-agcli stake remove --amount MAX --netuid 1 [--hotkey SS58]
+agcli stake remove --amount MAX --netuid 1 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::remove_stake_full_limit(origin, hotkey, netuid, limit_price)`
@@ -113,28 +113,28 @@ agcli stake remove --amount MAX --netuid 1 [--hotkey SS58]
 Recycle alpha tokens back to TAO (burns alpha, reduces `SubnetAlphaOut` — increases alpha price).
 
 ```bash
-agcli stake recycle-alpha --amount 100.0 --netuid 1 [--hotkey SS58]
+agcli stake recycle-alpha --amount 100.0 --netuid 1 [--hotkey-address SS58]
 ```
 
 ### stake burn-alpha
 Permanently burn alpha tokens. Unlike recycle, does NOT reduce `SubnetAlphaOut` (pool ratio unchanged).
 
 ```bash
-agcli stake burn-alpha --amount 50.0 --netuid 1 [--hotkey SS58]
+agcli stake burn-alpha --amount 50.0 --netuid 1 [--hotkey-address SS58]
 ```
 
 ### stake unstake-all-alpha
 Unstake all alpha across all subnets for a hotkey.
 
 ```bash
-agcli stake unstake-all-alpha [--hotkey SS58]
+agcli stake unstake-all-alpha [--hotkey-address SS58]
 ```
 
 ### stake claim-root
 Claim root network dividends for a specific subnet.
 
 ```bash
-agcli stake claim-root --netuid 1 [--hotkey SS58]
+agcli stake claim-root --netuid 1
 ```
 
 **On-chain**: `SubtensorModule::claim_root_dividends(origin, hotkey, netuid)`
@@ -143,7 +143,7 @@ agcli stake claim-root --netuid 1 [--hotkey SS58]
 Batch claim root dividends across multiple subnets.
 
 ```bash
-agcli stake process-claim [--hotkey SS58] [--netuids "1,2,3"]
+agcli stake process-claim [--hotkey-address SS58] [--netuids "1,2,3"]
 ```
 
 Iterates over all subnets where the hotkey has stake and calls `claim_root_dividends` for each.
@@ -152,7 +152,7 @@ Iterates over all subnets where the hotkey has stake and calls `claim_root_divid
 Set automatic staking destination for a subnet.
 
 ```bash
-agcli stake set-auto --netuid 1 [--hotkey SS58]
+agcli stake set-auto --netuid 1 [--hotkey-address SS58]
 ```
 
 ### stake show-auto
@@ -173,7 +173,7 @@ agcli stake set-claim --claim-type swap|keep|keep-subnets [--subnets "1,2,3"]
 Transfer stake to a different coldkey owner.
 
 ```bash
-agcli stake transfer-stake --dest 5Dest... --amount 10.0 --from 1 --to 2 [--hotkey SS58]
+agcli stake transfer-stake --dest 5Dest... --amount 10.0 --from 1 --to 2 [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::transfer_stake(origin, destination_coldkey, hotkey, origin_netuid, destination_netuid, alpha_amount)`
@@ -182,7 +182,7 @@ agcli stake transfer-stake --dest 5Dest... --amount 10.0 --from 1 --to 2 [--hotk
 Interactive or fully-scripted staking wizard.
 
 ```bash
-agcli stake wizard [--netuid 1] [--amount 5.0] [--hotkey SS58] [--password PW] [--yes]
+agcli stake wizard [--netuid 1] [--amount 5.0] [--hotkey-address SS58] [--password PW] [--yes]
 ```
 
 ## Global Flags That Affect Staking

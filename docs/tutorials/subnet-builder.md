@@ -44,7 +44,7 @@ Miners and validators must register on a subnet before participating.
 Burns TAO to register immediately:
 
 ```bash
-agcli subnet register-neuron 42
+agcli subnet register-neuron --netuid 42
 ```
 
 ### POW Registration (Free)
@@ -53,13 +53,13 @@ Solves a proof-of-work puzzle to register without burning TAO. Harder on competi
 
 ```bash
 # Use 8 CPU threads for POW solving
-agcli subnet pow 42 --threads 8
+agcli subnet pow --netuid 42 --threads 8
 ```
 
 **Tips:**
 - More threads = faster solve, but higher CPU usage
 - If POW fails after max attempts, consider burn registration instead
-- Check difficulty first: `agcli subnet hyperparams 42` (look at `difficulty`)
+- Check difficulty first: `agcli subnet hyperparams --netuid 42` (look at `difficulty`)
 
 ## Serving an Axon (Miners)
 
@@ -93,7 +93,7 @@ Validators rank miners by setting weights. This determines how emissions are dis
 agcli weights set --netuid 42 "0:100,1:200"
 
 # View the metagraph to see current weights/ranks
-agcli subnet metagraph 42
+agcli subnet metagraph --netuid 42
 ```
 
 ### Commit-Reveal Weights
@@ -112,7 +112,7 @@ agcli weights reveal --netuid 42 "0:100,1:200" abc123...
 Check if a subnet uses commit-reveal:
 
 ```bash
-agcli subnet hyperparams 42
+agcli subnet hyperparams --netuid 42
 # Look for: commit_reveal_weights = true
 ```
 
@@ -144,7 +144,7 @@ agcli root weights "1:100,2:200,3:50"
 agcli view subnet-analytics --netuid 42
 
 # Live metagraph (refreshes every N seconds)
-agcli subnet metagraph 42 --live 30
+agcli --live 30 subnet metagraph --netuid 42
 
 # Live dynamic TAO (prices, pools)
 agcli view dynamic --live 30
@@ -157,7 +157,7 @@ agcli subscribe blocks
 
 ## Subnet Hyperparameters Reference
 
-View with `agcli subnet hyperparams <netuid>`. Key parameters:
+View with `agcli subnet hyperparams --netuid <N>`. Key parameters:
 
 | Parameter | Description |
 |-----------|-------------|
@@ -180,7 +180,7 @@ View with `agcli subnet hyperparams <netuid>`. Key parameters:
 If you're the owner and want to remove your subnet:
 
 ```bash
-agcli subnet dissolve 42
+agcli subnet dissolve --netuid 42
 ```
 
 **Warning:** This is irreversible and destroys all neuron registrations on the subnet.

@@ -5,6 +5,9 @@
 
 use std::process::Command;
 
+/// agcli `explain` unknown-topic exit code (validation / bad input)
+const EXPLAIN_UNKNOWN_TOPIC_EXIT: i32 = 12;
+
 fn agcli_bin() -> Option<String> {
     std::env::var("CARGO_BIN_EXE_agcli").ok()
 }
@@ -81,14 +84,7 @@ fn weights_set_no_colon_fails() {
 
 #[test]
 fn weights_commit_empty_weights_fails() {
-    let (ok, _stdout, stderr) = run_agcli(&[
-        "weights",
-        "commit",
-        "--netuid",
-        "1",
-        "--weights",
-        "",
-    ]);
+    let (ok, _stdout, stderr) = run_agcli(&["weights", "commit", "--netuid", "1", "--weights", ""]);
     assert!(!ok, "weights commit with empty --weights should fail");
     assert!(
         stderr.to_lowercase().contains("empty") || stderr.to_lowercase().contains("weight"),
@@ -108,7 +104,10 @@ fn weights_set_netuid_zero_fails() {
         "0:100",
         "--dry-run",
     ]);
-    assert!(!ok, "weights set with netuid 0 should fail (root network not a user subnet)");
+    assert!(
+        !ok,
+        "weights set with netuid 0 should fail (root network not a user subnet)"
+    );
     assert!(
         stderr.to_lowercase().contains("netuid") || stderr.to_lowercase().contains("root"),
         "stderr should mention netuid or root: {}",
@@ -225,16 +224,50 @@ fn weights_commit_valid_args_exits_clean() {
 }
 
 #[test]
-fn weights_commit_reveal_empty_weights_fails() {
+fn weights_commit_reveal_netuid_zero_fails() {
     let (ok, _stdout, stderr) = run_agcli(&[
+        "weights",
+        "commit-reveal",
+        "--netuid",
+        "0",
+        "--weights",
+        "0:100",
+    ]);
+    assert!(!ok, "weights commit-reveal with netuid 0 should fail");
+    assert!(
+        stderr.to_lowercase().contains("netuid") || stderr.to_lowercase().contains("root"),
+        "stderr should mention netuid or root: {}",
+        stderr
+    );
+}
+
+#[test]
+fn weights_commit_reveal_valid_args_exits_clean() {
+    // Valid args; fails at wallet/chain without wallet — must not panic.
+    let (_ok, stdout, stderr) = run_agcli(&[
         "weights",
         "commit-reveal",
         "--netuid",
         "1",
         "--weights",
-        "",
+        "0:100,1:200",
     ]);
-    assert!(!ok, "weights commit-reveal with empty --weights should fail");
+    let combined = format!("{} {}", stdout, stderr);
+    assert!(
+        !combined.contains("panic") && !combined.contains("thread 'main' panicked"),
+        "commit-reveal with valid args must not panic; combined: {}",
+        combined
+    );
+}
+
+#[test]
+fn weights_commit_reveal_empty_weights_fails() {
+    let (ok, _stdout, stderr) =
+        run_agcli(&["weights", "commit-reveal", "--netuid", "1", "--weights", ""]);
+    assert!(
+        !ok,
+        "weights commit-reveal with empty --weights should fail"
+    );
     assert!(
         stderr.to_lowercase().contains("empty") || stderr.to_lowercase().contains("weight"),
         "stderr should mention empty or weight: {}",
@@ -265,7 +298,9 @@ fn weights_set_from_file_invalid_json_fails() {
         combined
     );
     assert!(
-        combined.to_lowercase().contains("json") || combined.to_lowercase().contains("weight") || combined.to_lowercase().contains("invalid"),
+        combined.to_lowercase().contains("json")
+            || combined.to_lowercase().contains("weight")
+            || combined.to_lowercase().contains("invalid"),
         "stderr should mention json/weight/invalid: {}",
         combined
     );
@@ -285,8 +320,93 @@ fn weights_set_json_object_non_numeric_weight_fails() {
     ]);
     assert!(!ok, "weights with non-numeric weight value should fail");
     assert!(
-        stderr.to_lowercase().contains("weight") || stderr.to_lowercase().contains("invalid") || stderr.to_lowercase().contains("number"),
+        stderr.to_lowercase().contains("weight")
+            || stderr.to_lowercase().contains("invalid")
+            || stderr.to_lowercase().contains("number"),
         "stderr should mention weight/invalid/number: {}",
         stderr
+    );
+}
+
+#[test]
+fn explain_weights_exits_clean() {
+    let bin = agcli_bin().expect("CARGO_BIN_EXE_agcli");
+    let out = Command::new(&bin)
+        .args(["explain", "--topic", "weights"])
+        .output()
+        .expect("run agcli explain");
+    assert!(out.status.success(), "explain weights: {:?}", out.status);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("SETTING WEIGHTS") || stdout.contains("weights --help"),
+        "stdout: {}",
+        stdout
+    );
+}
+
+#[test]
+fn explain_weights_alias_setweights_exits_clean() {
+    let bin = agcli_bin().expect("CARGO_BIN_EXE_agcli");
+    let out = Command::new(&bin)
+        .args(["explain", "--topic", "setweights"])
+        .output()
+        .expect("run agcli explain setweights");
+    assert!(out.status.success(), "explain setweights: {:?}", out.status);
+}
+
+#[test]
+fn explain_weights_full_loads_weights_md() {
+    let bin = agcli_bin().expect("CARGO_BIN_EXE_agcli");
+    let out = Command::new(&bin)
+        .args(["explain", "--topic", "weights", "--full"])
+        .output()
+        .expect("run agcli explain weights --full");
+    assert!(
+        out.status.success(),
+        "explain weights --full: {:?} stderr={}",
+        out.status,
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("# weights") || stdout.contains("Weight Setting"),
+        "expected weights.md header, got: {}",
+        &stdout[..stdout.len().min(200)]
+    );
+}
+
+#[test]
+fn explain_weights_full_alias_settingweights() {
+    let bin = agcli_bin().expect("CARGO_BIN_EXE_agcli");
+    let out = Command::new(&bin)
+        .args(["explain", "--topic", "settingweights", "--full"])
+        .output()
+        .expect("run agcli explain settingweights --full");
+    assert!(
+        out.status.success(),
+        "settingweights --full: {:?}",
+        out.status
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("# weights"),
+        "stdout head: {}",
+        &stdout[..stdout.len().min(120)]
+    );
+}
+
+#[test]
+fn explain_unknown_topic_exits_validation() {
+    let bin = agcli_bin().expect("CARGO_BIN_EXE_agcli");
+    let out = Command::new(&bin)
+        .args(["explain", "--topic", "xyzzy_nonexistent_topic_999"])
+        .output()
+        .expect("run agcli explain unknown");
+    assert!(!out.status.success());
+    assert_eq!(
+        out.status.code(),
+        Some(EXPLAIN_UNKNOWN_TOPIC_EXIT),
+        "stderr={}",
+        String::from_utf8_lossy(&out.stderr)
     );
 }

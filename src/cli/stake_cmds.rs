@@ -236,14 +236,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 crate::utils::short_ss58(&hk)
             );
             let hash = client
-                .swap_stake_mev(
-                    &pair,
-                    &hk,
-                    NetUid(from),
-                    NetUid(to),
-                    bal,
-                    mev,
-                )
+                .swap_stake_mev(&pair, &hk, NetUid(from), NetUid(to), bal, mev)
                 .await?;
             println!(
                 "Stake swapped. {} moved from SN{} to SN{}\n  Tx: {}",
@@ -372,7 +365,11 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             );
             Ok(())
         }
-        StakeCommands::SetChildren { netuid, children, hotkey } => {
+        StakeCommands::SetChildren {
+            netuid,
+            children,
+            hotkey,
+        } => {
             validate_netuid(netuid)?;
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, hotkey, password)?;
@@ -649,7 +646,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                         Ok(id) => ids.push(id),
                         Err(_) => {
                             eprintln!("Warning: ignoring invalid subnet ID '{}'", trimmed);
-                            tracing::warn!(input = trimmed, "Ignoring invalid subnet ID in process-claim");
+                            tracing::warn!(
+                                input = trimmed,
+                                "Ignoring invalid subnet ID in process-claim"
+                            );
                         }
                     }
                 }
@@ -658,7 +658,10 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
 
             // Fetch stakes to find all netuids where this hotkey has root emissions
             let coldkey_ss58 = resolve_and_validate_coldkey_address(
-                None, wallet_dir, wallet_name, "stake process-claim"
+                None,
+                wallet_dir,
+                wallet_name,
+                "stake process-claim",
             )?;
             let stakes = client.get_stake_for_coldkey(&coldkey_ss58).await?;
 
@@ -757,10 +760,7 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             print_tx_result(
                 output,
                 &hash,
-                &format!(
-                    "Full unstake from SN{} (limit {})",
-                    netuid, price
-                ),
+                &format!("Full unstake from SN{} (limit {})", netuid, price),
             );
             Ok(())
         }
@@ -1062,7 +1062,10 @@ mod tests {
         }
         assert_eq!(ids, vec![1, 2, 4], "valid IDs should be collected");
         assert_eq!(warnings.len(), 1, "should produce warning for 'invalid'");
-        assert!(warnings[0].contains("invalid"), "warning should mention the bad input");
+        assert!(
+            warnings[0].contains("invalid"),
+            "warning should mention the bad input"
+        );
     }
 
     #[test]
@@ -1078,7 +1081,11 @@ mod tests {
                 ids.push(id);
             }
         }
-        assert_eq!(ids, vec![1, 3], "empty entries should be skipped without error");
+        assert_eq!(
+            ids,
+            vec![1, 3],
+            "empty entries should be skipped without error"
+        );
     }
 
     // ── Issue 130: childkey take should round, not truncate ──

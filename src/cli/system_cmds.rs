@@ -281,6 +281,9 @@ fn load_full_doc(topic: &str, output: OutputFormat) -> Result<()> {
             ("amm", "subnet"),
             ("nominate", "delegate"),
             ("delegation", "delegate"),
+            ("settingweights", "weights"),
+            ("setweights", "weights"),
+            ("weightsetting", "weights"),
         ];
         for (alias, target) in &aliases {
             if normalized == *alias {
@@ -687,7 +690,11 @@ pub(super) async fn handle_batch(
     print_tx_result(
         output,
         &hash,
-        &format!("Batch ({} calls) submitted{}.", calls.len(), if mev { " (MEV shielded)" } else { "" }),
+        &format!(
+            "Batch ({} calls) submitted{}.",
+            calls.len(),
+            if mev { " (MEV shielded)" } else { "" }
+        ),
     );
     Ok(())
 }
@@ -718,20 +725,14 @@ mod tests {
     #[test]
     fn batch_validate_empty_array() {
         let result = validate_batch_file("[]", "test.json");
-        assert!(
-            result.is_err(),
-            "Empty batch should be rejected"
-        );
+        assert!(result.is_err(), "Empty batch should be rejected");
     }
 
     /// Verify validate_batch_file rejects non-array JSON.
     #[test]
     fn batch_validate_non_array() {
         let result = validate_batch_file(r#"{"pallet": "System"}"#, "test.json");
-        assert!(
-            result.is_err(),
-            "Non-array JSON should be rejected"
-        );
+        assert!(result.is_err(), "Non-array JSON should be rejected");
     }
 
     /// Verify validate_batch_file accepts valid batch JSON.
@@ -755,7 +756,11 @@ mod tests {
             n,
             if mev { " (MEV shielded)" } else { "" }
         );
-        assert!(msg.contains("MEV shielded"), "Message should indicate MEV: {}", msg);
+        assert!(
+            msg.contains("MEV shielded"),
+            "Message should indicate MEV: {}",
+            msg
+        );
 
         let msg_no_mev = format!(
             "Batch ({} calls) submitted{}.",

@@ -954,6 +954,8 @@ fn config_full_roundtrip() {
             limits.insert("*".into(), 500.0);
             limits
         }),
+        finalization_timeout: Some(42),
+        mortality_blocks: Some(128),
     };
 
     cfg.save_to(&path).unwrap();
@@ -968,6 +970,8 @@ fn config_full_roundtrip() {
     assert_eq!(loaded.output.as_deref(), Some("json"));
     assert_eq!(loaded.live_interval, Some(30));
     assert_eq!(loaded.batch, Some(true));
+    assert_eq!(loaded.finalization_timeout, Some(42));
+    assert_eq!(loaded.mortality_blocks, Some(128));
     let limits = loaded.spending_limits.unwrap();
     assert_eq!(*limits.get("1").unwrap(), 100.0);
     assert_eq!(*limits.get("*").unwrap(), 500.0);

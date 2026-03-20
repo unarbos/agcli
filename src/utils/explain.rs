@@ -7,6 +7,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
         "commitreveal" | "cr" => Some(COMMIT_REVEAL),
         "yuma" | "yumaconsensus" => Some(YUMA),
         "ratelimit" | "ratelimits" | "weightsratelimit" => Some(RATE_LIMITS),
+        "weights" | "settingweights" | "setweights" | "weightsetting" => Some(WEIGHTS),
         "stakeweight" | "stakeweightminimum" | "1000" => Some(STAKE_WEIGHT),
         "amm" | "dynamictao" | "dtao" | "pool" => Some(AMM),
         "bootstrap" => Some(BOOTSTRAP),
@@ -44,7 +45,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
             }
             None
         }
-        _ => None
+        _ => None,
     }
 }
 
@@ -55,6 +56,10 @@ pub fn list_topics() -> Vec<(&'static str, &'static str)> {
         ("commit-reveal", "Two-phase weight submission scheme"),
         ("yuma", "Yuma consensus — the incentive mechanism"),
         ("rate-limits", "Weight setting frequency constraints"),
+        (
+            "weights",
+            "Setting weights: commands, commit-reveal, timeouts, common errors",
+        ),
         ("stake-weight", "Minimum stake required to set weights"),
         ("amm", "Automated Market Maker (Dynamic TAO pools)"),
         ("bootstrap", "Getting started as a new subnet owner"),
@@ -94,7 +99,7 @@ Tempo is the number of blocks between weight evaluation rounds on a subnet.
 - At each tempo boundary, Yuma consensus runs: weights are evaluated, ranks
   computed, and emissions distributed.
 - Miners/validators are scored based on weights set during the tempo.
-- Check a subnet's tempo: `agcli subnet hyperparams <netuid>`
+- Check a subnet's tempo: `agcli subnet hyperparams --netuid <N>`
 - Blocks until next tempo = tempo - (current_block % tempo)
 
 Practical impact:
@@ -126,7 +131,7 @@ How to use it:
   agcli weights reveal --netuid 97 \"0:100,1:200\" mysecret
 
 Check if a subnet uses commit-reveal:
-  agcli subnet hyperparams <netuid>  →  commit_reveal_weights = true/false
+  agcli subnet hyperparams --netuid <N>  →  commit_reveal_weights = true/false
 
 The commit_reveal_weights_interval hyperparam controls how many tempos
 you must wait before revealing.";
@@ -157,7 +162,7 @@ Why it matters:
 - Miners who deliver real value to multiple validators earn more incentive.
 - Gaming the system (weight copying, collusion) is penalized by consensus.
 
-View metagraph: `agcli subnet metagraph <netuid>`";
+View metagraph: `agcli subnet metagraph --netuid <N>`";
 
 const RATE_LIMITS: &str = "\
 RATE LIMITS
@@ -171,13 +176,51 @@ weights_rate_limit: Number of blocks you must wait between set_weights calls.
 tx_rate_limit: Global transaction rate limit per account.
 
 How to check:
-  agcli subnet hyperparams <netuid>  →  weights_rate_limit
+  agcli subnet hyperparams --netuid <N>  →  weights_rate_limit
 
 Practical tips:
 - Before calling set_weights, check when you last set weights.
 - The error 'SettingWeightsTooFast' or 'TxRateLimitExceeded' means you need to wait.
 - Rate limits apply per-hotkey per-subnet, not globally.
 - Plan weight updates to be infrequent but well-timed (just before tempo).";
+
+const WEIGHTS: &str = "\
+SETTING WEIGHTS (agcli)
+=======================
+Discoverability (binary-only install):
+  `agcli weights --help` — all weight subcommands
+  `agcli explain --topic weights` — this summary (aliases: settingweights, setweights)
+  `agcli explain --topic weights --full` — full `docs/commands/weights.md` when that tree is available
+  `agcli explain` — list every built-in topic
+
+Quick path:
+
+1. Confirm the subnet exists (optional but fast)
+   - `agcli subnet show --netuid <N>` — unknown netuid exits **12** (same class of error as bad `--netuid` on weight commands)
+   - `agcli weights show --netuid <N>` — read-only view of on-chain weights; same **12** when the subnet is missing; no wallet; e2e **`weights_show_preflight`** + `get_all_weights` / `get_neurons_lite` / `get_weights_for_uid` in Phase 37 `test_all_weights`
+
+2. Pick the flow for your subnet
+   - `agcli subnet hyperparams --netuid <N>` → commit-reveal on/off and timing fields
+   - If commit-reveal off: `agcli weights set --netuid N \"uid:wt,...\"`
+   - If on: two-step `weights commit` + `weights reveal`, or one-shot `agcli weights commit-reveal ...`
+   - Multi-mechanism subnets: direct **`weights set-mechanism`** or CR **`weights commit-mechanism`** + **`weights reveal-mechanism`** (hash/salt rules mirror global commit/reveal; see **`docs/commands/weights.md`**)
+   - Hotkey: wallet hotkey *name* via `--hotkey` / `--hotkey-name`; use `--hotkey-address` only when a command expects an SS58.
+
+3. Sanity-check before spending fees
+   - `agcli weights set --netuid N ... --dry-run` (rate-limit context where available)
+
+4. Extrinsics wait for finalization by default (~30s)
+   - `--finalization-timeout`, env `AGCLI_FINALIZATION_TIMEOUT`, or `finalization_timeout` in ~/.agcli/config.toml
+   - Global RPC wait: `--timeout`
+
+5. When a transaction fails, agcli decodes Subtensor errors into plain language
+   - Look for `Reason:` / `Hint:` after the raw message
+   - Deeper context: `agcli explain commit-reveal`, `agcli explain rate-limits`, `agcli explain stake-weight`
+
+Common chain errors (names vary by metadata; numeric codes are decoded too):
+- Commit-reveal on vs off (use set vs commit/reveal / commit-reveal)
+- Rate limits on `set_weights` and on `commit_weights`
+- Min stake / validator permit / min UIDs / version key / weight sums (65535 cap)";
 
 const STAKE_WEIGHT: &str = "\
 STAKE-WEIGHT MINIMUM (1000τ)
@@ -201,7 +244,7 @@ If you're below the threshold:
      commit-reveal at lower thresholds).
 
 Check your stake: `agcli stake list`
-Check subnet requirements: `agcli subnet hyperparams <netuid>`";
+Check subnet requirements: `agcli subnet hyperparams --netuid <N>`";
 
 const AMM: &str = "\
 AMM (DYNAMIC TAO / ALPHA POOLS)
@@ -228,7 +271,7 @@ Key metrics:
 
 Tips for operators:
 - Don't stake/unstake large amounts on shallow pools — use limit orders.
-- Watch the pool depth: `agcli subnet show <netuid>` shows tao_in.
+- Watch the pool depth: `agcli subnet show --netuid <N>` shows tao_in.
 - The AMM means your alpha is always liquid — you can unstake anytime.";
 
 const BOOTSTRAP: &str = "\
@@ -255,16 +298,16 @@ Getting a new subnet operational step-by-step:
 
 5. REGISTER MINERS
    Miners register via burn or POW:
-   agcli subnet register-neuron <netuid>
-   agcli subnet pow <netuid>
+   agcli subnet register-neuron --netuid <N>
+   agcli subnet pow --netuid <N>
 
 6. ONBOARD VALIDATORS
    Other validators register and start setting weights.
    Your subnet becomes healthy when multiple validators independently score miners.
 
 7. MONITOR
-   agcli subnet metagraph <netuid>           — see all UIDs and scores
-   agcli view subnet-analytics <netuid>      — emission and performance stats
+   agcli subnet metagraph --netuid <N>       — see all UIDs and scores
+   agcli view subnet-analytics --netuid <N>  — emission and performance stats
 
 Common pitfalls:
 - Forgetting to set weights initially (no emissions flow if no weights set)
@@ -314,7 +357,7 @@ Distribution chain:
 
 Check emission rates:
   agcli view network                    — block emission, total stake
-  agcli subnet show <netuid>            — subnet emission per tempo
+  agcli subnet show --netuid <N>        — subnet emission per tempo
   agcli view subnet-analytics <netuid>  — detailed emission breakdown
   agcli view staking-analytics          — your personal emission estimates";
 
@@ -326,11 +369,11 @@ Neurons (miners/validators) must register on a subnet to participate.
 Two registration methods:
 
 1. BURN REGISTRATION — Pay TAO to register instantly.
-   agcli subnet register-neuron <netuid>
-   Cost varies per subnet and adjusts with demand (check `agcli subnet show`).
+   agcli subnet register-neuron --netuid <N>
+   Cost varies per subnet and adjusts with demand (check `agcli subnet show --netuid <N>`).
 
 2. POW REGISTRATION — Solve a proof-of-work puzzle.
-   agcli subnet pow <netuid> --threads 8
+   agcli subnet pow --netuid <N> --threads 8
    Free but competitive — difficulty adjusts to target registration rate.
 
 After registration:
@@ -364,8 +407,8 @@ Subnet lifecycle:
   5. Subnet grows or gets dissolved
 
 List subnets: `agcli subnet list`
-Subnet details: `agcli subnet show <netuid>`
-Hyperparams: `agcli subnet hyperparams <netuid>`";
+Subnet details: `agcli subnet show --netuid <N>` (same as `agcli subnet info --netuid <N>`)
+Hyperparams: `agcli subnet hyperparams --netuid <N>`";
 
 const VALIDATORS: &str = "\
 VALIDATORS
@@ -378,7 +421,7 @@ Validator responsibilities:
 3. Participate in Yuma consensus — accurate weights earn dividends.
 
 Becoming a validator:
-1. Register on the subnet: `agcli subnet register-neuron <netuid>`
+1. Register on the subnet: `agcli subnet register-neuron --netuid <N>`
 2. Accumulate enough stake-weight (typically 1000τ).
 3. Get validator_permit = true (top N validators by stake get permits).
 4. Set weights each tempo.
@@ -404,8 +447,8 @@ Miner responsibilities:
 3. Stay competitive — low-performing miners get deregistered.
 
 Becoming a miner:
-1. Register on the subnet: `agcli subnet register-neuron <netuid>`
-   Or via POW: `agcli subnet pow <netuid>`
+1. Register on the subnet: `agcli subnet register-neuron --netuid <N>`
+   Or via POW: `agcli subnet pow --netuid <N>`
 2. Set your axon endpoint: `agcli serve axon --netuid N --ip <ip> --port <port>`
 3. Run your miner software (subnet-specific).
 
@@ -431,7 +474,7 @@ Newly registered neurons get a grace period where they cannot be deregistered.
   registration arrives and the subnet is full.
 
 Check a subnet's immunity period:
-  agcli subnet hyperparams <netuid>  →  immunity_period
+  agcli subnet hyperparams --netuid <N>  →  immunity_period
 
 Why it matters:
 - New miners need time to set up their infrastructure and start responding.
@@ -446,7 +489,7 @@ earning a share of that validator's emissions.
 
 How it works:
 1. Validator sets their delegate take (0-11.11%): `agcli delegate increase-take <pct>`
-2. Nominator stakes through the validator's hotkey: `agcli stake add <amount> --netuid N --hotkey <validator_hotkey>`
+2. Nominator stakes through the validator's hotkey: `agcli stake add <amount> --netuid N --hotkey-address <validator_hotkey>`
 3. Emissions earned by the validator are split: validator keeps their take,
    rest is distributed pro-rata to all nominators.
 
@@ -672,7 +715,7 @@ General:
 - Block time: ~12 seconds.
 - Blocks per day: ~7200.
 - Max subnets: determined by governance (currently ~64).
-- Check current limits: `agcli subnet hyperparams <netuid>`";
+- Check current limits: `agcli subnet hyperparams --netuid <N>`";
 
 const HYPERPARAMS: &str = "\
 SUBNET HYPERPARAMETERS
@@ -680,7 +723,7 @@ SUBNET HYPERPARAMETERS
 Each subnet has ~32 tunable parameters stored on-chain. Some are owner-settable,
 others require the chain sudo key (root governance). Full reference: `agcli docs/hyperparameters.md`
 
-View them: `agcli subnet hyperparams <netuid>`
+View them: `agcli subnet hyperparams --netuid <N>`
 
 EPOCH & TIMING
 - tempo (u16, sudo): blocks per epoch. Default 360 (~72 min). Controls evaluation frequency.
@@ -759,7 +802,7 @@ How it works:
 - The serving_rate_limit hyperparameter controls how often axon info can be updated.
 
 Viewing axon info:
-- `agcli subnet metagraph <netuid> --uid <uid>` shows a neuron's axon details.
+- `agcli subnet metagraph --netuid <N> --uid <uid>` shows a neuron's axon details.
 - Entries with IP 0.0.0.0 or port 0 indicate a neuron that hasn't set its axon.
 
 For miners:
@@ -832,7 +875,7 @@ When to recycle vs burn:
 
 Slippage warning:
 - Both recycle and large unstakes go through the AMM.
-- Check the pool depth first: `agcli subnet show <netuid>` (look at tao_in).
+- Check the pool depth first: `agcli subnet show --netuid <N>` (look at tao_in).
 - Simulate before acting: `agcli view swap-sim --netuid <N> --alpha <amount>`";
 
 const POW_REGISTRATION: &str = "\
@@ -845,14 +888,14 @@ How it works:
 1. The chain publishes a target difficulty and a block hash as the 'input'.
 2. Your node iterates through nonces until it finds one that, when hashed with
    the input, produces a hash below the target difficulty.
-3. Submit the solution on-chain: `agcli subnet pow <netuid> --threads 8`
+3. Submit the solution on-chain: `agcli subnet pow --netuid <N> --threads 8`
 4. If valid and below difficulty, you get a UID on the subnet.
 
 Difficulty adjustment:
 - The chain adjusts difficulty based on the target_regs_per_interval parameter.
 - More PoW registrations → higher difficulty → harder puzzles.
 - Fewer registrations → lower difficulty → easier puzzles.
-- Check current difficulty: `agcli subnet hyperparams <netuid>` → difficulty
+- Check current difficulty: `agcli subnet hyperparams --netuid <N>` → difficulty
 
 Practical tips:
 - Use `--threads` to set the number of CPU threads for parallel searching.
@@ -909,14 +952,15 @@ Commands that support --at-block (historical wayback):
   agcli view account --at-block N
 
 Block explorer:
-  agcli block latest               # Current block info
-  agcli block info --number N      # Details for a specific block
-  agcli block range --from A --to B  # Summarize a range of blocks
+  agcli block latest               # Head: same RPC order as `handle_block` Latest; e2e `block_latest_preflight` in Phase 20 test_block_queries
+  agcli block info --number N      # get_block_hash → header + extrinsics + timestamp; e2e `block_info_preflight` in Phase 20 test_block_queries
+  agcli block range --from A --to B  # Concurrent hash batch then per-block ext+ts; e2e `block_range_preflight` in Phase 20 test_block_queries
 
 Historical diff (compare state between two blocks):
   agcli diff portfolio --block1 A --block2 B [--address SS58]
   agcli diff subnet --netuid X --block1 A --block2 B
   agcli diff network --block1 A --block2 B
+  agcli diff metagraph --netuid X --block1 A --block2 B   # changed/new neurons only; e2e Phase 20 `test_diff_queries`
 
 Known archive providers:
 - OnFinality:  wss://bittensor-finney.api.onfinality.io/public-ws (built-in)
@@ -951,6 +995,11 @@ Sub-commands:
     Compare network-wide stats between two blocks.
     Shows: total issuance, total stake, staking ratio, and subnet count.
 
+  agcli diff metagraph --netuid 1 --block1 4000000 --block2 5000000
+    Compare lite metagraph snapshots: lists neurons with stake/emission/incentive
+    deltas (or new UIDs / hotkey replacements). Empty output means no changes
+    above CLI thresholds.
+
 Tips:
 - Use --network archive for blocks older than the pruning window (~256 blocks).
 - All diff commands support --output json for machine-readable output.
@@ -978,8 +1027,14 @@ PHASE 1: PREPARATION
 
 PHASE 2: REGISTER YOUR SUBNET
 -------------------------------
+  # Read-only: current lock amount for subnet register / register-leased
+  agcli subnet create-cost
+
   # Register a new subnet (costs the current subnet lock amount)
   agcli subnet register
+
+  # Or register with identity metadata in one extrinsic (optional --github, --url, …)
+  agcli subnet register-with-identity --name 'My Subnet' --github opentensor/subtensor
 
   # Note the netuid printed in the output — you'll use it everywhere.
 
@@ -1054,10 +1109,47 @@ PHASE 6: ONGOING OPERATIONS
 
   # Save metagraph snapshots for historical comparison
   agcli subnet metagraph --netuid <N> --save
-  agcli subnet cache-diff --netuid <N>
-
-  # Subscribe to on-chain events for your subnet
-  agcli subscribe events --filter all --netuid <N>
+  agcli subnet cache-list --netuid <N>
+  agcli subnet cache-diff --netuid <N>   # unknown --netuid → exit 12 like subnet show
+  agcli subnet emission-split --netuid <N>   # mechanism split; unknown --netuid → exit 12 like subnet show
+  agcli subnet mechanism-count --netuid <N>
+  agcli subnet set-mechanism-count --netuid <N> --count K   # owner; unknown --netuid → exit 12 before wallet (e2e `subnet_owner_mechanism_writes`)
+  agcli subnet set-emission-split --netuid <N> --weights 50,50   # owner; parse/weight validation then exit 12 before wallet if SN missing (--yes skips confirm)
+  agcli subnet check-start --netuid <N>   # active / can_start / tempo; unknown --netuid → exit 12 like subnet show
+  agcli subnet set-param --netuid <N> --param list   # owner hyperparams; unknown --netuid → exit 12 before wallet (incl. list mode)
+  agcli subnet set-symbol --netuid <N> --symbol ALPHA   # owner token symbol; unknown --netuid → exit 12 after local symbol validation
+  agcli subnet trim --netuid <N> --max-uids 256   # owner max UID cap; unknown --netuid → exit 12 before wallet (--yes skips confirm)
+  agcli subnet register-neuron --netuid <N>   # burn register; unknown --netuid → exit 12 before hotkey unlock
+  agcli subnet list   # all subnets at pinned head; e2e `subnet_list` → `list_subnets` (no wallet / no --netuid)
+  agcli subnet create-cost   # subnet creation lock (read-only); same RPC as e2e `subnet_create_cost` line
+  agcli subnet register   # plain new subnet (no pre-submit cost read); e2e `subnet_register_plain` → same `get_subnet_registration_cost` as create-cost
+  agcli subnet register-with-identity --name '...'   # register + identity; e2e `subnet_register_with_identity` → get_subnet_identity
+  agcli subnet register-leased [--end-block N]   # new leased subnet; lock cost: `subnet create-cost` (same RPC as e2e log)
+  agcli subnet pow --netuid <N> --threads 4   # POW register; same preflight as register-neuron
+  agcli subnet snipe --netuid <N> --watch   # require_subnet_exists before stream; register modes + e2e sections 6b–6g
+  agcli subnet dissolve --netuid <N>   # owner schedule dissolve; unknown --netuid → exit 12 before wallet (--yes skips confirm)
+  agcli subnet terminate-lease --netuid <N>   # owner end leased subnet; unknown --netuid → exit 12 before wallet
+  agcli weights show --netuid <N> [--hotkey-address SS58] [--limit L]   # read-only; require_subnet_exists_for_weights_cmd then get_all_weights + get_neurons_lite (+ get_weights_for_uid); e2e `weights_show_preflight` + Phase 37 `test_all_weights`
+  agcli weights set --netuid <N> --weights 0:100   # direct set_weights when CR off; hyperparams before wallet; e2e `weights_set_preflight` + Phase 7
+  agcli weights commit --netuid <N> --weights 0:100   # commit-reveal phase 1; hyperparams existence check before wallet; e2e `weights_commit_preflight` + Phase 17
+  agcli weights reveal --netuid <N> --weights 0:100 --salt S   # commit-reveal phase 2; same preflight as commit; salt → u16 pairs; e2e `weights_reveal_preflight` + Phase 17
+  agcli weights commit-reveal --netuid <N> --weights 0:100 [--wait]   # one-shot CR or set_weights fallback; strict hyperparams RPC; e2e `weights_commit_reveal_preflight` + Phase 17
+  agcli weights status --netuid <N>   # pending CR commits for default hotkey; preflight like commit/reveal; post-wallet try_join reads; e2e `weights_status_preflight` in Phase 17 `test_reveal_weights_rejected_without_prior_commit`
+  agcli weights commit-timelocked --netuid <N> --weights 0:100 --round R   # drand timelock commit; hyperparams preflight then wallet; SDK loads CommitRevealWeightsVersion at submit; e2e `weights_commit_timelocked_preflight` in Phase 17 `test_commit_timelocked_weights_rejected_when_incorrect_commit_reveal_version`
+  agcli weights set-mechanism --netuid <N> --mechanism-id 0 --weights 0:100   # set_mechanism_weights; require_subnet_exists_for_weights_cmd before wallet; --dry-run JSON only; e2e `weights_set_mechanism_preflight` in Phase 5 `test_set_mechanism_weights`
+  agcli weights commit-mechanism --netuid <N> --mechanism-id 0 --hash 0x...   # commit_mechanism_weights; same preflight; --hash = 32-byte hex (blake2 over uids+weights+salt like `weights commit`); e2e `weights_commit_mechanism_preflight` in Phase 5 `test_commit_mechanism_weights`
+  agcli weights reveal-mechanism --netuid <N> --mechanism-id 0 --weights 0:65535 --salt S   # reveal_mechanism_weights; same preflight; salt → u16 pairs like `weights reveal`; e2e `weights_reveal_mechanism_preflight` in Phase 5 `test_reveal_mechanism_weights`
+  agcli block latest   # read-only head: get_block_number → get_block_hash → extrinsic_count + timestamp; e2e `block_latest_preflight` in Phase 20 `test_block_queries`
+  agcli block info --number N   # get_block_hash(N) → try_join!(header, extrinsic_count, timestamp); e2e `block_info_preflight` in Phase 20 `test_block_queries`
+  agcli block range --from A --to B   # span ≤1000; try_join_all(get_block_hash) then try_join_all per-hash ext+ts; e2e `block_range_preflight` in Phase 20 `test_block_queries`
+  agcli diff portfolio --block1 A --block2 B [--address SS58]   # try_join!(get_block_hash×2) then balance + stake maps at each hash; e2e `diff_portfolio_preflight` in Phase 20 `test_diff_queries`
+  agcli diff subnet --netuid N --block1 A --block2 B   # same hashes → try_join!(get_dynamic_info_at_block×2); missing subnet at a height → exit 12; e2e `diff_subnet_preflight` in Phase 20 `test_diff_queries`
+  agcli diff network --block1 A --block2 B   # six-way try_join: issuance, total_stake, all_subnets ×2 blocks; e2e `diff_network_preflight` in Phase 20 `test_diff_queries`
+  agcli diff metagraph --netuid N --block1 A --block2 B   # try_join!(get_neurons_lite_at_block×2) then local UID diff; e2e `diff_metagraph_preflight` in Phase 20 `test_diff_queries`
+  agcli subscribe blocks   # long-running: subscribe_finalized → extrinsics count per block; Ctrl+C; e2e Phase 26 `test_subscribe_blocks`
+  agcli subscribe events --filter all [--netuid <N>] [--account SS58]   # validate_event_filter + optional SS58 before subscribe_finalized → block.events(); e2e Phase 26 `subscribe_events_preflight` log in `test_subscribe_events_preflight`
+  agcli doctor   # top-level: connect_network → block# + total_networks + 3×get_block_number + disk cache + wallet path; always exit 0 (read OK/FAIL rows or JSON); e2e Phase 20 `doctor_preflight` in `test_doctor_preflight`
+  agcli balance [--address SS58]   # get_balance_ss58; --at-block → get_block_hash + get_balance_at_block; --watch polls; invalid --threshold → exit 12; e2e Phase 20 `balance_preflight` in `test_balance_preflight`
 
   # Security audit your account
   agcli audit
@@ -1067,7 +1159,8 @@ TIPS FOR OWNERS:
 - Use --output json for automation pipelines.
 - Set AGCLI_NETWORK=finney and AGCLI_WALLET=<name> in your shell profile.
 - Set-param shows the current value before confirming changes.
-- Run `agcli doctor` to verify connectivity and wallet health.
+- Run `agcli doctor` to verify connectivity and wallet health (`docs/commands/doctor.md`; exit 0 with per-row OK/FAIL).
+- Run `agcli balance` or `agcli balance --address …` for free TAO (`docs/commands/balance.md`; e2e `balance_preflight`).
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
 
 #[cfg(test)]

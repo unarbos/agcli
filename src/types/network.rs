@@ -228,10 +228,7 @@ mod tests {
     #[test]
     fn network_display_custom() {
         let net = Network::Custom("wss://my-node.example.com:9944".to_string());
-        assert_eq!(
-            format!("{}", net),
-            "custom(wss://my-node.example.com:9944)"
-        );
+        assert_eq!(format!("{}", net), "custom(wss://my-node.example.com:9944)");
     }
 
     #[test]

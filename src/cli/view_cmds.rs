@@ -100,7 +100,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             handle_swap_sim(client, netuid, tao, alpha, output).await
         }
         ViewCommands::Nominations { hotkey } => {
-            validate_ss58(&hotkey, "nominations --hotkey")?;
+            validate_ss58(&hotkey, "nominations --hotkey-address")?;
             handle_nominations(client, &hotkey, output).await
         }
         ViewCommands::Metagraph {
@@ -124,7 +124,7 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
         } => {
             validate_netuid(netuid)?;
             if let Some(ref hk) = hotkey {
-                validate_ss58(hk, "axon --hotkey")?;
+                validate_ss58(hk, "axon --hotkey-address")?;
             }
             handle_axon_lookup(client, NetUid(netuid), uid, hotkey.as_deref(), output).await
         }
@@ -326,7 +326,9 @@ async fn handle_portfolio_at_block(
         client.get_balance_at_block(addr, block_hash),
         client.get_stake_for_coldkey_at_block(addr, block_hash),
     )?;
-    let total_staked: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let total_staked: u64 = stakes
+        .iter()
+        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
     if output.is_json() {
         print_json(&serde_json::json!({
             "address": addr,
@@ -704,7 +706,9 @@ async fn handle_account_explorer(
             client.get_stake_for_coldkey_at_block(address, block_hash),
             client.get_identity_at_block(address, block_hash),
         )?;
-        let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+        let total_staked_rao: u64 = stakes
+            .iter()
+            .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
         let total_staked: f64 = total_staked_rao as f64 / 1e9;
         let total_value = balance.tao() + total_staked;
 
@@ -798,7 +802,9 @@ async fn handle_account_explorer(
     let dynamic_map = build_dynamic_map(&dynamic);
 
     if output.is_json() {
-        let total_staked: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+        let total_staked: u64 = stakes
+            .iter()
+            .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
         let positions: Vec<serde_json::Value> = stakes
             .iter()
             .map(|s| {
@@ -914,13 +920,15 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
         },
         client.get_neurons_lite(nuid),
         async {
-            Ok::<_, anyhow::Error>(match client.get_subnet_hyperparams_pinned(nuid, pin).await {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
-                    None
-                }
-            })
+            Ok::<_, anyhow::Error>(
+                match client.get_subnet_hyperparams_pinned(nuid, pin).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::debug!(netuid = nuid.0, error = %e, "get_subnet_hyperparams failed (non-fatal)");
+                        None
+                    }
+                },
+            )
         },
         async {
             Ok::<_, anyhow::Error>(match client.get_subnet_identity_pinned(nuid, pin).await {
@@ -944,7 +952,9 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
     let validators: Vec<_> = neurons.iter().filter(|n| n.validator_permit).collect();
     let miners: Vec<_> = neurons.iter().filter(|n| !n.validator_permit).collect();
 
-    let total_stake_rao: u64 = neurons.iter().fold(0u64, |acc, n| acc.saturating_add(n.stake.rao()));
+    let total_stake_rao: u64 = neurons
+        .iter()
+        .fold(0u64, |acc, n| acc.saturating_add(n.stake.rao()));
     let total_stake: f64 = total_stake_rao as f64 / 1e9;
     let total_emission: f64 = neurons.iter().map(|n| n.emission).sum();
     let avg_trust: f64 = if n > 0 {
@@ -1182,7 +1192,9 @@ async fn handle_staking_analytics(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let total_staked_rao: u64 = stakes
+        .iter()
+        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
     let total_staked: f64 = total_staked_rao as f64 / 1e9;
     let total_daily: f64 = positions
         .iter()
@@ -1381,7 +1393,8 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
         if !d.nominators.is_empty() {
             // Sort by index to avoid cloning the entire nominators vector
             let mut indices: Vec<usize> = (0..d.nominators.len()).collect();
-            indices.sort_unstable_by(|&a, &b| d.nominators[b].1.rao().cmp(&d.nominators[a].1.rao()));
+            indices
+                .sort_unstable_by(|&a, &b| d.nominators[b].1.rao().cmp(&d.nominators[a].1.rao()));
             println!("    Top nominators:");
             for &i in indices.iter().take(10) {
                 let (ref addr, ref stake) = d.nominators[i];
@@ -1424,13 +1437,15 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
             }
         },
         async {
-            Ok::<_, anyhow::Error>(match client.get_coldkey_swap_scheduled_pinned(address, pin).await {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::debug!(error = %e, "get_coldkey_swap_scheduled failed (non-fatal)");
-                    None
-                }
-            })
+            Ok::<_, anyhow::Error>(
+                match client.get_coldkey_swap_scheduled_pinned(address, pin).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::debug!(error = %e, "get_coldkey_swap_scheduled failed (non-fatal)");
+                        None
+                    }
+                },
+            )
         },
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
@@ -1469,11 +1484,11 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
     let mut findings: Vec<serde_json::Value> = Vec::new();
 
     // Check scheduled coldkey swap
-    if let Some((exec_block, new_coldkey)) = &coldkey_swap {
+    if let Some((exec_block, new_ck_hash)) = &coldkey_swap {
         findings.push(serde_json::json!({
             "category": "coldkey_swap",
             "severity": "high",
-            "message": format!("Coldkey swap scheduled! New coldkey: {} at block {}. If unauthorized, cancel immediately.", crate::utils::short_ss58(new_coldkey), exec_block),
+            "message": format!("Coldkey swap scheduled! New coldkey hash: {} at block {}. If unauthorized, cancel immediately.", crate::utils::short_ss58(new_ck_hash), exec_block),
         }));
     }
 
@@ -1504,7 +1519,9 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
     }
 
     // Check stake concentration
-    let total_staked_rao: u64 = stakes.iter().fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let total_staked_rao: u64 = stakes
+        .iter()
+        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
     let total_staked: f64 = total_staked_rao as f64 / 1e9;
     let total_value = balance.tao() + total_staked;
     if !stakes.is_empty() {
@@ -1649,9 +1666,9 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
             "num_proxies": proxies.len(),
             "is_delegate": delegate.is_some(),
             "has_identity": identity.is_some(),
-            "coldkey_swap_scheduled": coldkey_swap.as_ref().map(|(block, new_ck)| serde_json::json!({
+            "coldkey_swap_scheduled": coldkey_swap.as_ref().map(|(block, new_ck_hash)| serde_json::json!({
                 "execution_block": block,
-                "new_coldkey": new_ck,
+                "new_coldkey_hash": new_ck_hash,
             })),
             "childkey_delegations": childkey_json,
             "proxies": proxy_json,
@@ -1676,10 +1693,10 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         "  Has identity:  {}",
         if identity.is_some() { "yes" } else { "no" }
     );
-    if let Some((exec_block, ref new_ck)) = coldkey_swap {
+    if let Some((exec_block, ref new_ck_hash)) = coldkey_swap {
         println!(
-            "  CK Swap:       SCHEDULED → {} at block {}",
-            crate::utils::short_ss58(new_ck),
+            "  CK Swap:       SCHEDULED → hash {} at block {}",
+            crate::utils::short_ss58(new_ck_hash),
             exec_block
         );
     }
@@ -1854,15 +1871,14 @@ async fn handle_metagraph_view(
     limit: Option<usize>,
     output: OutputFormat,
 ) -> Result<()> {
+    client.require_subnet_exists(netuid, None).await?;
     let neurons = client.get_neurons_lite(netuid).await?;
 
     if let Some(block_num) = since_block {
         // Diff mode: compare current vs historical
         // Parallelize block hash lookup and current block number (independent queries)
-        let (block_hash, current_block) = tokio::try_join!(
-            client.get_block_hash(block_num),
-            client.get_block_number(),
-        )?;
+        let (block_hash, current_block) =
+            tokio::try_join!(client.get_block_hash(block_num), client.get_block_number(),)?;
         let old_neurons = client.get_neurons_lite_at_block(netuid, block_hash).await?;
 
         let old_map: std::collections::HashMap<u16, &crate::types::chain_data::NeuronInfoLite> =
@@ -2027,7 +2043,7 @@ async fn handle_axon_lookup(
                 .map(|n| n.uid)
                 .ok_or_else(|| anyhow::anyhow!("Hotkey {} not found on SN{}", hk, netuid.0))?
         }
-        (None, None) => anyhow::bail!("Provide either --uid or --hotkey"),
+        (None, None) => anyhow::bail!("Provide either --uid or --hotkey-address"),
     };
 
     let neuron = client.get_neuron(netuid, target_uid).await?;
@@ -2447,10 +2463,10 @@ mod tests {
         // Per-block emission = 1 TAO / 100 blocks = 0.01 TAO/block
         // Daily = 0.01 * 7200 = 72 TAO daily * share
         let (daily, _apy) = super::estimate_daily_emission_and_apy(
-            100.0,     // 100 TAO staked
-            1000.0,    // 1000 TAO in pool
+            100.0,         // 100 TAO staked
+            1000.0,        // 1000 TAO in pool
             1_000_000_000, // 1 TAO per tempo in RAO
-            100,       // tempo = 100 blocks
+            100,           // tempo = 100 blocks
         );
         let share = 100.0 / 1000.0; // 10%
         let expected_daily = (1.0 / 100.0) * 7200.0 * share; // 7.2
@@ -2465,13 +2481,10 @@ mod tests {
     #[test]
     fn apy_with_tempo_1_is_per_block() {
         // With tempo=1, emission IS per-block
-        let (daily1, _) = super::estimate_daily_emission_and_apy(
-            100.0, 1000.0, 1_000_000_000, 1,
-        );
+        let (daily1, _) = super::estimate_daily_emission_and_apy(100.0, 1000.0, 1_000_000_000, 1);
         // Compare with tempo=100 — should be 100x different
-        let (daily100, _) = super::estimate_daily_emission_and_apy(
-            100.0, 1000.0, 1_000_000_000, 100,
-        );
+        let (daily100, _) =
+            super::estimate_daily_emission_and_apy(100.0, 1000.0, 1_000_000_000, 100);
         let ratio = daily1 / daily100;
         assert!(
             (ratio - 100.0).abs() < 0.01,
@@ -2482,18 +2495,14 @@ mod tests {
 
     #[test]
     fn apy_zero_staked_returns_zero() {
-        let (daily, apy) = super::estimate_daily_emission_and_apy(
-            0.0, 1000.0, 1_000_000_000, 100,
-        );
+        let (daily, apy) = super::estimate_daily_emission_and_apy(0.0, 1000.0, 1_000_000_000, 100);
         assert_eq!(daily, 0.0);
         assert_eq!(apy, 0.0);
     }
 
     #[test]
     fn apy_zero_pool_returns_zero() {
-        let (daily, apy) = super::estimate_daily_emission_and_apy(
-            100.0, 0.0, 1_000_000_000, 100,
-        );
+        let (daily, apy) = super::estimate_daily_emission_and_apy(100.0, 0.0, 1_000_000_000, 100);
         assert_eq!(daily, 0.0);
         assert_eq!(apy, 0.0);
     }
@@ -2501,12 +2510,8 @@ mod tests {
     #[test]
     fn apy_tempo_zero_treated_as_one() {
         // tempo=0 should be clamped to 1 to avoid division by zero
-        let (daily, _) = super::estimate_daily_emission_and_apy(
-            100.0, 1000.0, 1_000_000_000, 0,
-        );
-        let (daily_t1, _) = super::estimate_daily_emission_and_apy(
-            100.0, 1000.0, 1_000_000_000, 1,
-        );
+        let (daily, _) = super::estimate_daily_emission_and_apy(100.0, 1000.0, 1_000_000_000, 0);
+        let (daily_t1, _) = super::estimate_daily_emission_and_apy(100.0, 1000.0, 1_000_000_000, 1);
         assert!(
             (daily - daily_t1).abs() < 0.001,
             "tempo=0 should behave like tempo=1"
@@ -2517,14 +2522,18 @@ mod tests {
     fn apy_calculation_reasonable_range() {
         // Typical subnet: 10 TAO/tempo, tempo=360, pool=100k TAO, staked=1000 TAO
         let (_, apy) = super::estimate_daily_emission_and_apy(
-            1000.0,            // 1k TAO staked
-            100_000.0,         // 100k TAO pool
-            10_000_000_000,    // 10 TAO/tempo
-            360,               // typical tempo
+            1000.0,         // 1k TAO staked
+            100_000.0,      // 100k TAO pool
+            10_000_000_000, // 10 TAO/tempo
+            360,            // typical tempo
         );
         // Sanity check: APY should be positive and < 10000%
         assert!(apy > 0.0, "APY should be positive, got {}", apy);
-        assert!(apy < 10000.0, "APY should be reasonable (<10000%), got {:.1}%", apy);
+        assert!(
+            apy < 10000.0,
+            "APY should be reasonable (<10000%), got {:.1}%",
+            apy
+        );
     }
 
     // ── Issue 83: u64 saturating_add prevents overflow ──
@@ -2557,7 +2566,9 @@ mod tests {
     fn rao_to_tao_conversion_preserves_precision() {
         // Summing in RAO (integer) then converting is more precise than f64 sum
         let rao_values: Vec<u64> = vec![1_000_000_001, 2_000_000_002, 3_000_000_003];
-        let total_rao: u64 = rao_values.iter().fold(0u64, |acc, &v| acc.saturating_add(v));
+        let total_rao: u64 = rao_values
+            .iter()
+            .fold(0u64, |acc, &v| acc.saturating_add(v));
         let total_tao = total_rao as f64 / 1e9;
         assert!(
             (total_tao - 6.000000006).abs() < 1e-9,

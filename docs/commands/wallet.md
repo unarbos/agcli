@@ -89,7 +89,7 @@ agcli wallet derive --input "word1 word2 ... word12"
 Associate a hotkey with your coldkey on-chain.
 
 ```bash
-agcli wallet associate-hotkey [--hotkey SS58]
+agcli wallet associate-hotkey [--hotkey-address SS58]
 ```
 
 **On-chain**: `SubtensorModule::try_associate_hotkey(origin, hotkey)`

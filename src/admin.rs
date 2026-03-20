@@ -805,26 +805,22 @@ mod tests {
     #[test]
     fn known_params_is_non_empty() {
         let params = known_params();
-        assert!(!params.is_empty(), "known_params should return a non-empty list");
+        assert!(
+            !params.is_empty(),
+            "known_params should return a non-empty list"
+        );
     }
 
     #[test]
     fn all_entries_have_non_empty_fields() {
         for (call_name, description, args) in known_params() {
-            assert!(
-                !call_name.is_empty(),
-                "call_name must not be empty"
-            );
+            assert!(!call_name.is_empty(), "call_name must not be empty");
             assert!(
                 !description.is_empty(),
                 "description must not be empty for {}",
                 call_name
             );
-            assert!(
-                !args.is_empty(),
-                "args must not be empty for {}",
-                call_name
-            );
+            assert!(!args.is_empty(), "args must not be empty for {}", call_name);
         }
     }
 
@@ -850,11 +846,7 @@ mod tests {
             "sudo_set_nominator_min_required_stake",
         ];
         for (call_name, _, args) in known_params() {
-            assert!(
-                !args.is_empty(),
-                "args must not be empty for {}",
-                call_name
-            );
+            assert!(!args.is_empty(), "args must not be empty for {}", call_name);
             if !global_params.contains(&call_name) {
                 assert_eq!(
                     args[0], "netuid: u16",

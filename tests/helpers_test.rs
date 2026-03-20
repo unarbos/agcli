@@ -1661,7 +1661,11 @@ fn validate_password_strength_empty_rejects() {
     let result = validate_password_strength("");
     assert!(result.is_err(), "Empty password should be rejected");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("Empty password"), "Error should mention empty password, got: {}", msg);
+    assert!(
+        msg.contains("Empty password"),
+        "Error should mention empty password, got: {}",
+        msg
+    );
 }
 
 #[test]
@@ -1672,7 +1676,10 @@ fn validate_password_strength_common_no_panic() {
         assert!(result.is_err(), "weak password {:?} should be rejected", pw);
         let msg = result.unwrap_err().to_string();
         assert!(
-            msg.contains("commonly") || msg.contains("dictionary") || msg.contains("short") || msg.contains("8"),
+            msg.contains("commonly")
+                || msg.contains("dictionary")
+                || msg.contains("short")
+                || msg.contains("8"),
             "got: {}",
             msg
         );
@@ -4999,7 +5006,11 @@ fn validate_admin_call_name_dots_rejected() {
 fn validate_admin_call_name_unknown_still_accepted_with_warning() {
     // Unknown calls are rejected (Issue 711) to prevent typos executing sudo
     let err = validate_admin_call_name("sudo_set_some_future_param").unwrap_err();
-    assert!(err.to_string().contains("Unknown admin call"), "got: {}", err);
+    assert!(
+        err.to_string().contains("Unknown admin call"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -5197,7 +5208,11 @@ fn resolve_and_validate_none_falls_back_to_wallet() {
     );
     assert!(result.is_err(), "nonexistent wallet dir should yield Err");
     let msg = result.unwrap_err().to_string();
-    assert!(msg.contains("Could not resolve") || msg.contains("wallet"), "got: {}", msg);
+    assert!(
+        msg.contains("Could not resolve") || msg.contains("wallet"),
+        "got: {}",
+        msg
+    );
 }
 
 #[test]
@@ -5412,44 +5427,65 @@ fn price_range_very_small_low() {
 fn spending_limit_move_stake_dest_subnet() {
     // move stake checks destination subnet — should pass with no config
     let result = agcli::cli::helpers::check_spending_limit(42, 1000.0);
-    assert!(result.is_ok(), "move-stake spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "move-stake spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_swap_stake_dest_subnet() {
     let result = agcli::cli::helpers::check_spending_limit(18, 500.0);
-    assert!(result.is_ok(), "swap-stake spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "swap-stake spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_add_limit_order() {
     let result = agcli::cli::helpers::check_spending_limit(1, 250.0);
-    assert!(result.is_ok(), "add-limit spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "add-limit spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_remove_limit_order() {
     let result = agcli::cli::helpers::check_spending_limit(3, 750.0);
-    assert!(result.is_ok(), "remove-limit spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "remove-limit spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_swap_limit_order() {
     let result = agcli::cli::helpers::check_spending_limit(99, 333.0);
-    assert!(result.is_ok(), "swap-limit spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "swap-limit spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_transfer_stake() {
     let result = agcli::cli::helpers::check_spending_limit(7, 100.0);
-    assert!(result.is_ok(), "transfer-stake spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "transfer-stake spending check should pass without config"
+    );
 }
 
 #[test]
 fn spending_limit_wizard() {
     // wizard now checks spending limit before staking
     let result = agcli::cli::helpers::check_spending_limit(12, 50.0);
-    assert!(result.is_ok(), "wizard spending check should pass without config");
+    assert!(
+        result.is_ok(),
+        "wizard spending check should pass without config"
+    );
 }
 
 // ──── Issue 636/637/638: Spending limit enforcement for raw calls ────
@@ -5459,11 +5495,13 @@ fn raw_call_spending_limit_add_stake_passes_without_config() {
     // Without any spending limits configured, all calls should pass
     let args: Vec<serde_json::Value> = vec![
         serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-        serde_json::json!(1),        // netuid
+        serde_json::json!(1),                 // netuid
         serde_json::json!(50_000_000_000u64), // 50 TAO in rao
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "add_stake", &args,
+        "SubtensorModule",
+        "add_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5472,9 +5510,8 @@ fn raw_call_spending_limit_add_stake_passes_without_config() {
 fn raw_call_spending_limit_non_subtensor_passes() {
     // Non-SubtensorModule calls should always pass
     let args: Vec<serde_json::Value> = vec![serde_json::json!(1000)];
-    let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "Balances", "transfer", &args,
-    );
+    let result =
+        agcli::cli::helpers::check_spending_limit_for_raw_call("Balances", "transfer", &args);
     assert!(result.is_ok());
 }
 
@@ -5483,7 +5520,9 @@ fn raw_call_spending_limit_unknown_call_passes() {
     // Unknown calls on SubtensorModule should pass (we only gate known staking calls)
     let args: Vec<serde_json::Value> = vec![serde_json::json!(1000)];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "unknown_extrinsic", &args,
+        "SubtensorModule",
+        "unknown_extrinsic",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5492,11 +5531,13 @@ fn raw_call_spending_limit_unknown_call_passes() {
 fn raw_call_spending_limit_remove_stake() {
     let args: Vec<serde_json::Value> = vec![
         serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-        serde_json::json!(2),           // netuid
+        serde_json::json!(2),                  // netuid
         serde_json::json!(100_000_000_000u64), // 100 TAO
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "remove_stake", &args,
+        "SubtensorModule",
+        "remove_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5507,12 +5548,14 @@ fn raw_call_spending_limit_move_stake() {
     let args: Vec<serde_json::Value> = vec![
         serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
         serde_json::json!("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"),
-        serde_json::json!(1),           // from
-        serde_json::json!(2),           // to
+        serde_json::json!(1),                 // from
+        serde_json::json!(2),                 // to
         serde_json::json!(25_000_000_000u64), // 25 TAO
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "move_stake", &args,
+        "SubtensorModule",
+        "move_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5527,7 +5570,9 @@ fn raw_call_spending_limit_swap_stake() {
         serde_json::json!(10_000_000_000u64), // 10 TAO
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "swap_stake", &args,
+        "SubtensorModule",
+        "swap_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5543,7 +5588,9 @@ fn raw_call_spending_limit_transfer_stake() {
         serde_json::json!(5_000_000_000u64), // 5 TAO
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "transfer_stake", &args,
+        "SubtensorModule",
+        "transfer_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5559,7 +5606,9 @@ fn raw_call_spending_limit_add_stake_limit() {
         serde_json::json!(true),
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "add_stake_limit", &args,
+        "SubtensorModule",
+        "add_stake_limit",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5569,7 +5618,9 @@ fn raw_call_spending_limit_too_few_args() {
     // If args are too few, should pass (let encoding fail later)
     let args: Vec<serde_json::Value> = vec![serde_json::json!("hotkey")];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "add_stake", &args,
+        "SubtensorModule",
+        "add_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5583,7 +5634,9 @@ fn raw_call_spending_limit_zero_amount() {
         serde_json::json!(0),
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "add_stake", &args,
+        "SubtensorModule",
+        "add_stake",
+        &args,
     );
     assert!(result.is_ok());
 }
@@ -5600,7 +5653,9 @@ fn raw_call_spending_limit_swap_stake_limit() {
         serde_json::json!(true),
     ];
     let result = agcli::cli::helpers::check_spending_limit_for_raw_call(
-        "SubtensorModule", "swap_stake_limit", &args,
+        "SubtensorModule",
+        "swap_stake_limit",
+        &args,
     );
     assert!(result.is_ok());
 }

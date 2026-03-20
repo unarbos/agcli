@@ -601,8 +601,10 @@ mod tests {
         let stale_data: Vec<DynamicInfo> = vec![make_dynamic_info(1, "TestNet")];
         disk_cache::put(key, &stale_data).unwrap();
 
-        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(1), true);
-        tokio::time::sleep(Duration::from_millis(5)).await;
+        // TTL must exceed the gap between `get_all_dynamic_info` (which populates
+        // `dynamic_by_netuid`) and the following `get_dynamic_info`; 1ms races under load.
+        let cache = QueryCache::with_ttl_and_disk(Duration::from_millis(100), true);
+        tokio::time::sleep(Duration::from_millis(120)).await;
 
         // Fetch fails — should fall back to stale disk data
         let result = cache
@@ -669,7 +671,11 @@ mod tests {
                 .await
                 .unwrap()
         };
-        assert_eq!(call_count.load(Ordering::SeqCst), 2, "invalidate must force a fresh fetch");
+        assert_eq!(
+            call_count.load(Ordering::SeqCst),
+            2,
+            "invalidate must force a fresh fetch"
+        );
         assert_eq!(refreshed[0].name, "FreshPrice");
     }
 
@@ -741,8 +747,16 @@ mod tests {
                 .await
                 .unwrap();
         }
-        assert_eq!(subnet_count.load(Ordering::SeqCst), 2, "subnets must re-fetch after invalidate");
-        assert_eq!(dynamic_count.load(Ordering::SeqCst), 2, "dynamic must re-fetch after invalidate");
+        assert_eq!(
+            subnet_count.load(Ordering::SeqCst),
+            2,
+            "subnets must re-fetch after invalidate"
+        );
+        assert_eq!(
+            dynamic_count.load(Ordering::SeqCst),
+            2,
+            "dynamic must re-fetch after invalidate"
+        );
     }
 
     /// Invalidate also clears per-netuid dynamic cache entries.
@@ -774,7 +788,9 @@ mod tests {
 
         // Per-netuid must re-fetch
         let fresh = cache
-            .get_dynamic_info(1, || async { Ok(Some(make_dynamic_info(1, "AfterInvalidate"))) })
+            .get_dynamic_info(1, || async {
+                Ok(Some(make_dynamic_info(1, "AfterInvalidate")))
+            })
             .await
             .unwrap();
         assert_eq!(fresh.unwrap().name, "AfterInvalidate");

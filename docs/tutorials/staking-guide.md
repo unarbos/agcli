@@ -51,7 +51,7 @@ agcli stake wizard --netuid 1 --amount 10.0 --password mypass --yes
 agcli stake add --amount 100.0 --netuid 1
 
 # Stake with a specific hotkey
-agcli stake add --amount 50.0 --netuid 1 --hotkey 5HotkeyAddress...
+agcli stake add --amount 50.0 --netuid 1 --hotkey-address 5HotkeyAddress...
 
 # View all your positions
 agcli stake list
@@ -67,10 +67,10 @@ agcli view staking-analytics
 agcli stake remove --amount 25.0 --netuid 1
 
 # Unstake everything from a specific hotkey
-agcli stake unstake-all --hotkey 5HotkeyAddress...
+agcli stake unstake-all --hotkey-address 5HotkeyAddress...
 
 # Unstake all alpha tokens across all subnets
-agcli stake unstake-all-alpha --hotkey 5HotkeyAddress...
+agcli stake unstake-all-alpha --hotkey-address 5HotkeyAddress...
 ```
 
 ## Moving and Swapping Stake
@@ -134,7 +134,7 @@ agcli delegate decrease-take --take 10.0
 agcli delegate increase-take --take 12.0
 
 # View who delegates to a hotkey
-agcli view nominations --hotkey 5Hotkey...
+agcli view nominations --hotkey-address 5Hotkey...
 ```
 
 ## Childkey Delegation

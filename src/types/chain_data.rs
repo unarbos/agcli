@@ -562,10 +562,7 @@ mod tests {
         assert_eq!(deserialized.alpha_in_emission, info.alpha_in_emission);
         assert_eq!(deserialized.tao_in_emission, info.tao_in_emission);
         assert_eq!(deserialized.subnet_volume, info.subnet_volume);
-        assert_eq!(
-            deserialized.total_emission(),
-            info.total_emission()
-        );
+        assert_eq!(deserialized.total_emission(), info.total_emission());
     }
 
     // ── AxonInfo & PrometheusInfo ──────────────────────────────────

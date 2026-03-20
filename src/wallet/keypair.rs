@@ -119,10 +119,18 @@ mod tests {
         // Verify mnemonic generation still produces valid keypairs
         // after adding entropy zeroization
         let (pair1, mnemonic) = generate_mnemonic_keypair().unwrap();
-        assert_eq!(mnemonic.split_whitespace().count(), 12, "Should produce 12-word mnemonic");
+        assert_eq!(
+            mnemonic.split_whitespace().count(),
+            12,
+            "Should produce 12-word mnemonic"
+        );
         // Re-derive from mnemonic should produce same key
         let pair2 = pair_from_mnemonic(&mnemonic).unwrap();
-        assert_eq!(pair1.public(), pair2.public(), "Re-derived key should match");
+        assert_eq!(
+            pair1.public(),
+            pair2.public(),
+            "Re-derived key should match"
+        );
     }
 
     #[test]
@@ -133,7 +141,11 @@ mod tests {
         let pair = pair_from_seed_hex(alice_seed).unwrap();
         // Just verify it produces a valid key
         let ss58 = to_ss58(&pair.public(), 42);
-        assert!(ss58.starts_with('5'), "SS58 should start with 5, got {}", ss58);
+        assert!(
+            ss58.starts_with('5'),
+            "SS58 should start with 5, got {}",
+            ss58
+        );
     }
 
     #[test]
@@ -158,7 +170,11 @@ mod tests {
         let alice_seed = "0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a";
         let pair1 = pair_from_seed_hex(alice_seed).unwrap();
         let pair2 = pair_from_seed_hex(alice_seed).unwrap();
-        assert_eq!(pair1.public(), pair2.public(), "Same seed must produce same key");
+        assert_eq!(
+            pair1.public(),
+            pair2.public(),
+            "Same seed must produce same key"
+        );
     }
 
     #[test]

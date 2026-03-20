@@ -22,7 +22,7 @@ agcli commitment set --netuid 1 --data "endpoint:http://1.2.3.4:8091,version:1.0
 Read the commitment for a specific hotkey on a subnet.
 
 ```bash
-agcli commitment get --netuid 1 --hotkey 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli commitment get --netuid 1 --hotkey-address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 # JSON: {"hotkey", "netuid", "block", "fields": [...]}
 ```
 
