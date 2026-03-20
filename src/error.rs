@@ -79,6 +79,10 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || (msg.contains("subnet") && msg.contains("not found"))
         // `agcli balance --threshold` (`validate_threshold` in helpers.rs)
         || msg.contains("balance --threshold")
+        // `agcli transfer` / `transfer-keep-alive` — `validate_amount(..., "transfer amount")`
+        || msg.contains("transfer amount")
+        // `validate_ss58(..., "destination")` on `--dest`
+        || msg.contains("invalid destination")
     {
         return exit_code::VALIDATION;
     }
@@ -202,6 +206,10 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: List subnets with `agcli subnet list`, then `agcli subnet show --netuid <N>` (alias: `subnet info`), `agcli subnet hyperparams --netuid <N>`, `agcli subnet metagraph --netuid <N>`, `agcli diff subnet --netuid <N>`, `agcli diff metagraph --netuid <N>`, `agcli subnet cost --netuid <N>`, `agcli subnet emissions --netuid <N>`, `agcli subnet health --netuid <N>`, `agcli subnet probe --netuid <N>`, `agcli subnet commits --netuid <N>`, `agcli subnet watch --netuid <N>`, `agcli subnet monitor --netuid <N>`, `agcli subnet liquidity --netuid <N>`, `agcli subnet cache-load --netuid <N>`, `agcli subnet cache-list --netuid <N>`, `agcli subnet cache-diff --netuid <N>`, `agcli subnet cache-prune --netuid <N>`, `agcli subnet emission-split --netuid <N>`, `agcli subnet mechanism-count --netuid <N>`, `agcli subnet set-mechanism-count --netuid <N>`, `agcli subnet set-emission-split --netuid <N>`, `agcli subnet check-start --netuid <N>`, `agcli subnet start --netuid <N>`, `agcli subnet snipe --netuid <N>`, `agcli subnet set-param --netuid <N>`, `agcli subnet set-symbol --netuid <N>`, `agcli subnet trim --netuid <N>`, `agcli subnet register-neuron --netuid <N>`, `agcli subnet pow --netuid <N>`, `agcli subnet dissolve --netuid <N>`, `agcli subnet root-dissolve --netuid <N>`, `agcli subnet terminate-lease --netuid <N>`, `agcli weights set --netuid <N>`, `agcli weights commit --netuid <N>`, `agcli weights reveal --netuid <N>`, `agcli weights commit-reveal --netuid <N>`, `agcli weights status --netuid <N>`, `agcli weights commit-timelocked --netuid <N>`, `agcli weights set-mechanism --netuid <N>`, `agcli weights commit-mechanism --netuid <N>`, `agcli weights reveal-mechanism --netuid <N>`, or `agcli weights show --netuid <N>`")
             } else if lower.contains("balance --threshold") {
                 Some("Tip: Use a non-negative finite TAO amount, e.g. `agcli balance --watch --threshold 1.0` (see `docs/commands/balance.md`)")
+            } else if lower.contains("transfer amount") {
+                Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/transfer.md` and `agcli transfer --help`)")
+            } else if lower.contains("invalid destination") {
+                Some("Tip: Use `--dest` with a valid SS58 coldkey address (see `docs/commands/transfer.md` and `agcli wallet show`)")
             } else {
                 None
             }
@@ -247,6 +255,24 @@ mod tests {
     fn classify_insufficient_balance() {
         let err = anyhow::anyhow!("Extrinsic failed: insufficient balance for transfer");
         assert_eq!(classify(&err), exit_code::CHAIN);
+    }
+
+    #[test]
+    fn classify_transfer_amount_validation() {
+        let err = anyhow::anyhow!("Invalid transfer amount: -1. Amount cannot be negative.");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("transfer.md")));
+    }
+
+    #[test]
+    fn classify_transfer_dest_validation() {
+        let err = anyhow::anyhow!(
+            "Invalid destination: address cannot be empty.\n  Tip: provide a valid Bittensor SS58 address (48 characters, starts with '5')."
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("transfer.md")));
     }
 
     #[test]

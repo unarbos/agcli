@@ -21,6 +21,7 @@
 //!   Bob:   5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 
 use agcli::chain::Client;
+use agcli::cli::helpers::{validate_amount, validate_ss58};
 use agcli::extrinsics::compute_weight_commit_hash;
 use agcli::queries::subnet::list_subnets;
 use agcli::types::balance::Balance;
@@ -651,6 +652,7 @@ async fn e2e_local_chain() {
     test_diff_queries(&mut client, primary_sn).await;
     test_doctor_preflight(&mut client).await;
     test_balance_preflight(&mut client).await;
+    test_transfer_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -5693,6 +5695,46 @@ async fn test_balance_preflight(client: &mut Client) {
 
     println!(
         "[PASS] balance_preflight — one-shot + pinned head (mirrors `handle_balance` in `commands.rs`)"
+    );
+}
+
+/// Preflight for `agcli transfer` / `transfer-keep-alive` — same local checks + `get_balance_ss58`
+/// order as `Commands::Transfer` / `TransferKeepAlive` in `commands.rs` (before confirm/submit).
+/// `transfer-all` has no client-side balance RPC before submit.
+async fn test_transfer_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    validate_ss58(BOB_SS58, "destination").expect("transfer_preflight dest SS58");
+    let probe_tao = 1.0_f64;
+    validate_amount(probe_tao, "transfer amount").expect("transfer_preflight amount");
+
+    let alice = client
+        .get_balance_ss58(ALICE_SS58)
+        .await
+        .expect("transfer_preflight get_balance_ss58 Alice");
+    let need = Balance::from_tao(probe_tao);
+    assert!(
+        alice.rao() >= need.rao(),
+        "Alice should have at least {:.6}τ free for preflight mirror",
+        probe_tao
+    );
+    println!(
+        "  transfer_preflight (`Commands::Transfer` / `TransferKeepAlive`): validate_ss58(dest) + validate_amount → get_balance_ss58(signer) ≥ amount — Alice has {:.6}τ, need {:.6}τ",
+        alice.tao(),
+        probe_tao
+    );
+
+    let bob = client
+        .get_balance_ss58(BOB_SS58)
+        .await
+        .expect("transfer_preflight get_balance_ss58 Bob");
+    println!(
+        "  transfer_all_preflight (`Commands::TransferAll`): validate_ss58(dest) only before wallet; Bob balance snapshot {:.6}τ (optional sanity)",
+        bob.tao()
+    );
+
+    println!(
+        "[PASS] transfer_preflight — mirrors pre-submit path in `commands.rs` (see docs/commands/transfer.md)"
     );
 }
 

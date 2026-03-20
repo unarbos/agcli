@@ -35,7 +35,7 @@ Stake TAO on subnet       → agcli stake add --amount 10 --netuid 1 --password 
 Unstake                   → agcli stake remove --amount 5 --netuid 1 --password p --yes
 View all stakes           → agcli --output json stake list
 Full portfolio            → agcli --output json view portfolio
-Transfer TAO              → agcli transfer --dest 5D... --amount 10 --password p --yes
+Transfer TAO              → agcli transfer --dest 5FHn... --amount 10 --password p --yes   # e2e Phase 20 `transfer_preflight`; see docs/commands/transfer.md
 Show on-chain weights     → agcli weights show --netuid 1
 Set weights               → agcli weights set --netuid 1 --weights "0:100,1:200" --dry-run
 Commit weights (CR p1)    → agcli weights commit --netuid 1 --weights "0:100,1:200"
@@ -118,7 +118,7 @@ Detailed per-command docs: `docs/commands/*.md` (on-chain behavior, pallet refs,
 |-------|------|-------------|
 | Wallet | [wallet.md](commands/wallet.md) | create, list, show, import, sign, verify, derive |
 | Balance | [balance.md](commands/balance.md) | one-shot / `--at-block` / `--watch` + `--threshold`; e2e Phase 20 `balance_preflight` |
-| Transfer | [transfer.md](commands/transfer.md) | transfer, transfer-all |
+| Transfer | [transfer.md](commands/transfer.md) | `transfer` (allow_death), `transfer-all`, `transfer-keep-alive`; e2e Phase 20 `transfer_preflight` + Phase 2 `test_transfer` + Phase 16 `test_transfer_all` |
 | Stake | [stake.md](commands/stake.md) | add, remove, move, swap, list, wizard, limits, childkeys |
 | Subnet | [subnet.md](commands/subnet.md) | list, show, metagraph, register, register-leased, register-neuron, pow, snipe, hyperparams, watch, monitor, health, emissions, cost, liquidity, set-param, set-symbol, trim, terminate-lease |
 | Weights | [weights.md](commands/weights.md) | show, set, commit, reveal, commit-reveal, status |
