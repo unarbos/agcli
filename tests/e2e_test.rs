@@ -653,6 +653,7 @@ async fn e2e_local_chain() {
     test_doctor_preflight(&mut client).await;
     test_balance_preflight(&mut client).await;
     test_transfer_preflight(&mut client).await;
+    test_stake_list_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -5735,6 +5736,50 @@ async fn test_transfer_preflight(client: &mut Client) {
 
     println!(
         "[PASS] transfer_preflight — mirrors pre-submit path in `commands.rs` (see docs/commands/transfer.md)"
+    );
+}
+
+/// Preflight for `agcli stake list` — same RPC order as `StakeCommands::List` in `stake_cmds.rs`
+/// (latest: `get_stake_for_coldkey`; `--at-block`: `get_block_hash` then `get_stake_for_coldkey_at_block`).
+async fn test_stake_list_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    validate_ss58(ALICE_SS58, "stake list --address")
+        .expect("stake_list_preflight validate_ss58 (explicit --address path)");
+
+    let stakes = client
+        .get_stake_for_coldkey(ALICE_SS58)
+        .await
+        .expect("stake_list_preflight get_stake_for_coldkey");
+    println!(
+        "  stake_list_preflight (`StakeCommands::List` latest): get_stake_for_coldkey → {} position(s)",
+        stakes.len()
+    );
+
+    let head = client
+        .get_block_number()
+        .await
+        .expect("stake_list_preflight get_block_number");
+    let block_num: u32 = head
+        .try_into()
+        .expect("block height should fit u32 on localnet");
+    let block_hash = client
+        .get_block_hash(block_num)
+        .await
+        .expect("stake_list_preflight get_block_hash");
+    let stakes_at = client
+        .get_stake_for_coldkey_at_block(ALICE_SS58, block_hash)
+        .await
+        .expect("stake_list_preflight get_stake_for_coldkey_at_block");
+    println!(
+        "  stake_list_preflight (`StakeCommands::List` --at-block): block={} hash={:?} → {} position(s)",
+        block_num,
+        block_hash,
+        stakes_at.len()
+    );
+
+    println!(
+        "[PASS] stake_list_preflight — one-shot + pinned head (mirrors `handle_stake` List in `stake_cmds.rs`)"
     );
 }
 

@@ -2,6 +2,68 @@
 
 Lock TAO on subnets behind hotkeys to earn emission rewards. Staking converts TAO into subnet-specific alpha tokens via the AMM pool.
 
+## stake list — Positions per coldkey (read-only)
+
+List **alpha stake positions** for a coldkey (default wallet coldkey or `--address`). Optional **historical** snapshot at a block height. No extrinsic; no wallet unlock unless the default coldkey must be read from disk.
+
+**Discoverability:** `agcli stake list --help`; Tier 1 in [`docs/llm.txt`](../llm.txt) maps “View all stakes” → `agcli --output json stake list`; `agcli explain` Phase 6 lists the command with the e2e log name; this file is linked from the command table in `llm.txt`.
+
+### Latest state
+
+```bash
+agcli stake list
+agcli stake list --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --output json stake list --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --output csv stake list
+```
+
+With `--output json`, the CLI prints a **JSON array** of stake rows (serialized `StakeInfo`: `netuid`, `hotkey`, `coldkey`, `stake`, `alpha_stake`, …). With `--output csv`, the header is `netuid,hotkey,stake_rao,alpha_raw`. An empty portfolio yields an empty array/CSV body or the human line `No stakes found for …`.
+
+### Historical (`--at-block`)
+
+```bash
+agcli stake list --at-block 4000000
+agcli stake list --at-block 4000000 --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --network archive stake list --at-block 3500000 --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+```
+
+Pruned nodes only retain recent state. Older heights need an **archive** endpoint (`--network archive` or `--endpoint <archive-ws>`). Runtime API failures at a pinned block are wrapped with **`annotate_at_block_error`** (same family of hints as `agcli balance --at-block` — see `src/chain/mod.rs` / `get_stake_for_coldkey_at_block` in `src/chain/queries.rs`).
+
+## Read path (RPC / runtime API)
+
+Order matches [`StakeCommands::List`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (handler `handle_stake`, `List` branch):
+
+1. **`connect`** (global network / endpoint) — same as other stake subcommands (`src/cli/commands.rs` dispatch).
+2. **`resolve_and_validate_coldkey_address`** — if `--address` is set, **`validate_ss58(..., "stake list --address")`**; else coldkey from wallet (`src/cli/helpers.rs`). Empty / unresolved coldkey bails before RPC (same pattern as `agcli balance`).
+3. **If `--at-block`:** `get_block_hash(block)` → **`get_stake_for_coldkey_at_block(&addr, hash)`** (`src/chain/queries.rs`).
+4. **Else:** **`get_stake_for_coldkey(&addr)`** (latest via runtime API at head).
+5. **Render:** `render_rows` — human table, JSON array, or CSV (`src/cli/helpers.rs`).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Successful query (including **empty** stake list). |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on `connect` or hard RPC errors. |
+| **12** | Validation: invalid **`--address`** (SS58) and other input classified as validation in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **15** | Timeout when applicable. |
+| **1** | Generic: e.g. **`Block N not found`** for **`--at-block`**, could not resolve coldkey when no **`--address`** and wallet has no coldkey, or uncategorized errors. |
+
+Invalid **`--address`** messages include the label **`stake list --address`** — [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs) treats that substring as validation **12**; [`hint`](https://github.com/unconst/agcli/blob/main/src/error.rs) points at **`docs/commands/stake.md`**.
+
+## E2E
+
+Log lines **`stake_list_preflight`** in Phase 20 [`test_stake_list_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_ss58`** with label **`stake list --address`** (explicit-address path), **`get_stake_for_coldkey`**, then **`get_block_number`** → **`get_block_hash`** → **`get_stake_for_coldkey_at_block`** at head — same RPC sequence as the CLI’s latest and **`--at-block`** branches. Deeper stake RPC coverage remains in Phase 5 **`test_stake_queries`**.
+
+## Related
+
+- `agcli balance` — free TAO (not staked)
+- `agcli view portfolio` — balance + stakes + pricing
+- `agcli diff portfolio` — stake map at two blocks
+
+---
+
 ## Subcommands
 
 ### stake add
@@ -31,14 +93,7 @@ agcli stake remove --amount 5.0 --netuid 1 [--hotkey-address SS58] [--max-slippa
 - Errors: `NotEnoughStakeToWithdraw`, `StakingRateLimitExceeded`, `InsufficientLiquidity`
 
 ### stake list
-Show all stakes for a coldkey across all subnets.
-
-```bash
-agcli stake list [--address SS58] [--at-block N]
-# JSON output: [{"netuid", "hotkey", "stake_rao", "alpha_raw"}]
-```
-
-**On-chain**: reads `StakingHotkeys` → per-hotkey `Stake` entries. No extrinsic.
+See **[stake list](#stake-list--positions-per-coldkey-read-only)** (read path, JSON/CSV, `--at-block`, exit codes, e2e).
 
 ### stake move
 Move alpha between subnets (same hotkey). Sells alpha on source subnet, buys on destination.
@@ -202,7 +257,7 @@ agcli stake wizard [--netuid 1] [--amount 5.0] [--hotkey-address SS58] [--passwo
 | `AmountTooLow` | Stake amount below minimum | Increase amount |
 
 ## Source Code
-**agcli handler**: [`src/cli/stake_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) — `handle_stake()` at L9, subcommands: Add L100, Remove L140, List L17, Move L165, Swap L188, UnstakeAll L216, AddLimit L233, RemoveLimit L257, SwapLimit L356, ChildkeyTake L278, SetChildren L298, RecycleAlpha L314, BurnAlpha L340, UnstakeAllAlpha L330, ClaimRoot L226, ProcessClaim L480, SetAuto L378, ShowAuto L395, SetClaim L417, TransferStake L457, Wizard L554
+**agcli handler**: [`src/cli/stake_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) — `handle_stake()` (`StakeCommands::List` is the read-only entry above; other variants follow in the same file).
 
 **Subtensor pallet**:
 - [`staking/add_stake.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/staking/add_stake.rs) — `add_stake` extrinsic + AMM swap

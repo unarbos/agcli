@@ -83,6 +83,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("transfer amount")
         // `validate_ss58(..., "destination")` on `--dest`
         || msg.contains("invalid destination")
+        // `validate_ss58(..., "stake list --address")` on `stake list --address`
+        || msg.contains("stake list --address")
     {
         return exit_code::VALIDATION;
     }
@@ -210,6 +212,8 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/transfer.md` and `agcli transfer --help`)")
             } else if lower.contains("invalid destination") {
                 Some("Tip: Use `--dest` with a valid SS58 coldkey address (see `docs/commands/transfer.md` and `agcli wallet show`)")
+            } else if lower.contains("stake list --address") {
+                Some("Tip: Use `--address` with a valid SS58 coldkey (see `docs/commands/stake.md` and `agcli stake list --help`)")
             } else {
                 None
             }
@@ -273,6 +277,16 @@ mod tests {
         assert_eq!(classify(&err), exit_code::VALIDATION);
         let msg = format!("{err:#}");
         assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("transfer.md")));
+    }
+
+    #[test]
+    fn classify_stake_list_address_validation_hint() {
+        let err = anyhow::anyhow!(
+            "Invalid stake list --address: address cannot be empty.\n  Tip: provide a valid Bittensor SS58 address (48 characters, starts with '5')."
+        );
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake.md")));
     }
 
     #[test]
