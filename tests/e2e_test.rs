@@ -657,6 +657,7 @@ async fn e2e_local_chain() {
     test_transfer_preflight(&mut client).await;
     test_stake_list_preflight(&mut client).await;
     test_stake_add_preflight(&mut client).await;
+    test_stake_remove_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -5829,6 +5830,39 @@ async fn test_stake_add_preflight(client: &mut Client) {
 
     println!(
         "[PASS] stake_add_preflight — mirrors pre-wallet checks in `handle_stake` Add (`stake_cmds.rs`)"
+    );
+}
+
+/// Preflight for `agcli stake remove` — same validation + optional slippage RPC bundle as
+/// `StakeCommands::Remove` in `stake_cmds.rs` (before `unlock_and_resolve` / extrinsic). No
+/// `check_spending_limit` or balance read on this path.
+async fn test_stake_remove_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    let netuid = 1u16;
+    let n = NetUid(netuid);
+    validate_netuid(netuid).expect("stake_remove_preflight validate_netuid");
+
+    let probe_tao = 1.0_f64;
+    validate_amount(probe_tao, "unstake amount").expect("stake_remove_preflight validate_amount");
+    println!(
+        "  stake_remove_preflight (`StakeCommands::Remove`): validate_netuid → validate_amount (`unstake amount`)"
+    );
+
+    let rao = safe_rao(probe_tao);
+    let (price_raw, swap) = tokio::try_join!(
+        client.current_alpha_price(n),
+        client.sim_swap_alpha_for_tao(n, rao),
+    )
+    .expect("stake_remove_preflight slippage RPC bundle");
+    let (tao_out, _tao_fee, _alpha_fee) = swap;
+    println!(
+        "  stake_remove_preflight (`--max-slippage` try_join): current_alpha_price={} sim_swap_alpha_for_tao → tao_amount={} (same inputs as `check_slippage` sell path)",
+        price_raw, tao_out
+    );
+
+    println!(
+        "[PASS] stake_remove_preflight — mirrors pre-wallet validation + slippage sim in `handle_stake` Remove (`stake_cmds.rs`)"
     );
 }
 

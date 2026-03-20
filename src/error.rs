@@ -87,6 +87,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("stake list --address")
         // `validate_amount(..., "stake amount")` on `stake add` / related stake writes
         || msg.contains("stake amount")
+        // `validate_amount(..., "unstake amount")` on `stake remove`
+        || msg.contains("unstake amount")
         // `validate_netuid` — root / invalid user netuid before stake commands
         || msg.contains("invalid netuid")
         // `check_spending_limit` in helpers.rs (local config guard)
@@ -222,6 +224,9 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Use `--dest` with a valid SS58 coldkey address (see `docs/commands/transfer.md` and `agcli wallet show`)")
             } else if lower.contains("stake list --address") {
                 Some("Tip: Use `--address` with a valid SS58 coldkey (see `docs/commands/stake.md` and `agcli stake list --help`)")
+            } else if lower.contains("unstake amount") {
+                // Must be before `stake amount` — "unstake amount" contains the substring "stake amount".
+                Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake remove --help`)")
             } else if lower.contains("stake amount") {
                 Some("Tip: Use `--amount` with a positive finite TAO value (see `docs/commands/stake.md` and `agcli stake add --help`)")
             } else if lower.contains("invalid netuid") {
@@ -309,6 +314,14 @@ mod tests {
         assert_eq!(classify(&err), exit_code::VALIDATION);
         let msg = format!("{err:#}");
         assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake.md")));
+    }
+
+    #[test]
+    fn classify_unstake_amount_validation_hint() {
+        let err = anyhow::anyhow!("Invalid unstake amount: -1. Amount cannot be negative.");
+        assert_eq!(classify(&err), exit_code::VALIDATION);
+        let msg = format!("{err:#}");
+        assert!(hint(exit_code::VALIDATION, &msg).is_some_and(|s| s.contains("stake remove")));
     }
 
     #[test]

@@ -111,6 +111,50 @@ Invalid **`--amount`** messages use the **`stake amount`** label — **`classify
 
 Log lines **`stake_add_preflight`** in Phase 20 [`test_stake_add_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_amount`** with label **`stake amount`**, **`check_spending_limit`**, **`get_balance_ss58`**(Alice) ≥ amount, then **`try_join!(current_alpha_price, sim_swap_tao_for_alpha)`** — same RPC inputs as the **`--max-slippage`** branch’s **`check_slippage`** buy path. Full **`add_stake`** / **`remove_stake`** extrinsics remain in Phase 8 **`test_add_remove_stake`**.
 
+---
+
+## stake remove — Unstake alpha to free TAO (wallet)
+
+Burn **alpha** on a subnet for the wallet **hotkey** (default wallet hotkey or `--hotkey-address`) and receive **free TAO** on the **coldkey** via the AMM (`swap_alpha_for_tao`). There is **no** client-side balance preflight (unlike **`stake add`**); insufficient alpha / dispatch errors surface from the chain or from **`--max-slippage`** simulation.
+
+**Discoverability:** `agcli stake remove --help`; Tier 1 “Unstake” line in [`docs/llm.txt`](../llm.txt); `agcli explain` Phase 6; Stake row in `llm.txt` links here.
+
+### After `cargo install`
+
+```bash
+agcli stake remove --amount 1.0 --netuid 1 --password p --yes
+agcli stake remove --amount 0.5 --netuid 1 --hotkey-address 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty --password p --yes
+agcli stake remove --amount 2.0 --netuid 1 --max-slippage 2.0 --password p --yes
+```
+
+## Read path (validation → optional slippage → submit)
+
+Order matches [`StakeCommands::Remove`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (`handle_stake`, `Remove` branch, lines 146–175):
+
+1. **`connect`** (from `commands.rs` dispatch).
+2. **`validate_netuid(netuid)`** — **SN0** rejected before wallet.
+3. **`validate_amount(amount, "unstake amount")`** — positive, finite TAO-scale amount (same `validate_amount` helper as other stake writes).
+4. **`unlock_and_resolve`** — coldkey + hotkey SS58.
+5. **Optional slippage:** if **`--max-slippage`** is set, **`check_slippage(..., is_buy=false)`** runs **`try_join!(current_alpha_price, sim_swap_alpha_for_tao)`** (`src/chain/queries.rs`); aborts if estimated slippage exceeds the cap (or warns above ~2% when within cap). **No** **`check_spending_limit`** on remove (unstaking returns TAO to the user).
+6. **`remove_stake_mev`** — extrinsic via `stake_op`. Success output is human **Tx:** (not global `--output json` today).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Remove-stake extrinsic submitted and finalized path OK. |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on **`connect`** or hard RPC errors during optional slippage preflight. |
+| **11** | Auth: wallet / password / hotkey resolution (`unlock_and_resolve`). |
+| **12** | Validation: invalid **`--netuid`**, invalid **`--amount`** (**`unstake amount`** label), and other messages classified in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **13** | Chain / client guardrails: **`--max-slippage`** exceeded (**`slippage`** + **`maximum allowed`**); dispatch errors (**`NotEnoughStakeToWithdraw`**, **`StakingRateLimitExceeded`**, **`InsufficientLiquidity`**, …). |
+| **15** | Timeout when applicable. |
+| **1** | Uncategorized errors. |
+
+## E2E
+
+Log lines **`stake_remove_preflight`** in Phase 20 [`test_stake_remove_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_amount`** with label **`unstake amount`**, then **`try_join!(current_alpha_price, sim_swap_alpha_for_tao)`** — same RPC bundle as **`check_slippage`** sell path when **`--max-slippage`** is set. Full extrinsic path remains in Phase 8 **`test_add_remove_stake`**.
+
 ## Subcommands
 
 ### stake add
@@ -120,16 +164,10 @@ See **[stake add](#stake-add--stake-tao-on-a-subnet-wallet)** (read path, slippa
 **On-chain**: `SubtensorModule::add_stake(origin, hotkey, netuid, amount_staked)` — withdraw TAO from coldkey → `stake_into_subnet()` → AMM `swap_tao_for_alpha()` → alpha shares on **`Alpha(hotkey, coldkey, netuid)`**; events **`StakeAdded`**.
 
 ### stake remove
-Unstake alpha from a subnet. Converts alpha → TAO via the AMM pool.
 
-```bash
-agcli stake remove --amount 5.0 --netuid 1 [--hotkey-address SS58] [--max-slippage 2.0]
-```
+See **[stake remove](#stake-remove--unstake-alpha-to-free-tao-wallet)** (read path, slippage, exit codes, e2e).
 
-**On-chain**: `SubtensorModule::remove_stake(origin, hotkey, netuid, amount_unstaked)`
-- Flow: decrease alpha shares → `unstake_from_subnet()` → `swap_alpha_for_tao()` via AMM → deposit TAO to coldkey
-- Events: `StakeRemoved(coldkey, hotkey, tao_amount, alpha_amount, netuid, block)`
-- Errors: `NotEnoughStakeToWithdraw`, `StakingRateLimitExceeded`, `InsufficientLiquidity`
+**On-chain**: `SubtensorModule::remove_stake(origin, hotkey, netuid, amount_unstaked)` — alpha → TAO via AMM; events **`StakeRemoved`**; errors include **`NotEnoughStakeToWithdraw`**, **`StakingRateLimitExceeded`**, **`InsufficientLiquidity`**.
 
 ### stake list
 See **[stake list](#stake-list--positions-per-coldkey-read-only)** (read path, JSON/CSV, `--at-block`, exit codes, e2e).

@@ -1153,6 +1153,7 @@ PHASE 6: ONGOING OPERATIONS
   agcli transfer --dest SS58 --amount τ   # transfer_allow_death; validate_ss58 + validate_amount + get_balance_ss58 preflight; `transfer-all` / `transfer-keep-alive` variants; invalid dest/amount → exit 12; e2e Phase 20 `transfer_preflight` in `test_transfer_preflight`
   agcli stake list [--address SS58]   # get_stake_for_coldkey; --at-block → get_block_hash + get_stake_for_coldkey_at_block; invalid --address → exit 12 + stake.md hint; e2e Phase 20 `stake_list_preflight` in `test_stake_list_preflight`
   agcli stake add --amount τ --netuid N [--max-slippage PCT]   # validate_netuid + validate_amount + check_spending_limit → unlock → get_balance → optional slippage try_join (alpha price + sim swap); insufficient/slippage → exit 13; e2e Phase 20 `stake_add_preflight` in `test_stake_add_preflight`
+  agcli stake remove --amount τ --netuid N [--max-slippage PCT]   # validate_netuid + validate_amount (`unstake amount`) → unlock → optional sell-path slippage try_join (`current_alpha_price` + `sim_swap_alpha_for_tao`); slippage → exit 13; e2e Phase 20 `stake_remove_preflight` in `test_stake_remove_preflight`
 
   # Security audit your account
   agcli audit
@@ -1167,6 +1168,7 @@ TIPS FOR OWNERS:
 - Use `agcli transfer` / `transfer-all` / `transfer-keep-alive` for coldkey TAO moves (`docs/commands/transfer.md`; e2e `transfer_preflight`).
 - Use `agcli stake list` / `stake list --address …` for staked positions (`docs/commands/stake.md`; e2e `stake_list_preflight`).
 - Use `agcli stake add` to lock TAO as alpha on a subnet (`docs/commands/stake.md`; e2e `stake_add_preflight`, extrinsic coverage `test_add_remove_stake`).
+- Use `agcli stake remove` to convert alpha back to free TAO (`docs/commands/stake.md`; e2e `stake_remove_preflight`, same Phase 8 extrinsic test).
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
 
 #[cfg(test)]
