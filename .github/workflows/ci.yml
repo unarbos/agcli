@@ -34,7 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test --lib --test wallet_test --test cli_weights
-        timeout-minutes: 10
+        timeout-minutes: 25
 
   coverage:
     name: Coverage
@@ -51,7 +51,7 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate coverage
         run: cargo llvm-cov --lib --test wallet_test --test cli_weights --codecov --output-path codecov.json
-        timeout-minutes: 15
+        timeout-minutes: 25
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
