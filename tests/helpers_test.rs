@@ -1648,8 +1648,11 @@ fn validate_password_strength_strong_no_panic() {
 
 #[test]
 fn validate_password_strength_short_no_panic() {
-    // Short but non-empty — warns but succeeds
-    validate_password_strength("ab").unwrap();
+    // Short passwords are rejected (min 8 chars); function returns Err, does not panic
+    let result = validate_password_strength("ab");
+    assert!(result.is_err(), "short password should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("short") || msg.contains("8"), "got: {}", msg);
 }
 
 #[test]
@@ -1663,21 +1666,35 @@ fn validate_password_strength_empty_rejects() {
 
 #[test]
 fn validate_password_strength_common_no_panic() {
-    validate_password_strength("password").unwrap();
-    validate_password_strength("12345678").unwrap();
-    validate_password_strength("qwerty").unwrap();
+    // Common or short passwords are rejected; function returns Err, does not panic
+    for pw in ["password", "12345678", "qwerty"] {
+        let result = validate_password_strength(pw);
+        assert!(result.is_err(), "weak password {:?} should be rejected", pw);
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("commonly") || msg.contains("dictionary") || msg.contains("short") || msg.contains("8"),
+            "got: {}",
+            msg
+        );
+    }
 }
 
 #[test]
 fn validate_password_strength_single_type_no_panic() {
+    // Single character type: "abcdefgh" and "ABCDEFGH" pass (warning only); "12345678" is common -> rejected
     validate_password_strength("abcdefgh").unwrap();
-    validate_password_strength("12345678").unwrap();
     validate_password_strength("ABCDEFGH").unwrap();
+    let result = validate_password_strength("12345678");
+    assert!(result.is_err(), "12345678 is common and should be rejected");
 }
 
 #[test]
 fn validate_password_strength_mixed_no_panic() {
-    validate_password_strength("aB1!").unwrap();
+    // Mixed but too short (4 chars); rejected, function returns Err
+    let result = validate_password_strength("aB1!");
+    assert!(result.is_err(), "4-char password should be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("short") || msg.contains("8"), "got: {}", msg);
 }
 
 // ── validate_port ──
@@ -2406,7 +2423,6 @@ fn parse_children_trailing_comma_ok() {
     assert_eq!(result.unwrap().len(), 1);
 }
 
-#[test]
 // ──── validate_derive_input tests ────
 #[test]
 fn validate_derive_input_valid_hex_32_bytes() {
@@ -3866,10 +3882,10 @@ fn view_limit_huge() {
 
 #[test]
 fn admin_call_valid_names() {
+    // Only known AdminUtils call names (from admin::known_params()) are accepted
     assert!(validate_admin_call_name("sudo_set_tempo").is_ok());
-    assert!(validate_admin_call_name("set_max_allowed_validators").is_ok());
-    assert!(validate_admin_call_name("SetTempo").is_ok());
-    assert!(validate_admin_call_name("a").is_ok());
+    assert!(validate_admin_call_name("sudo_set_max_allowed_validators").is_ok());
+    assert!(validate_admin_call_name("sudo_set_difficulty").is_ok());
 }
 
 #[test]
@@ -3933,8 +3949,14 @@ fn admin_call_too_long() {
 
 #[test]
 fn admin_call_exact_max_length() {
+    // 128-char unknown name passes length check but is rejected as unknown
     let name = "a".repeat(128);
-    assert!(validate_admin_call_name(&name).is_ok());
+    let err = validate_admin_call_name(&name).unwrap_err();
+    assert!(
+        err.to_string().contains("Unknown admin call") || err.to_string().contains("too long"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -3960,7 +3982,8 @@ fn admin_call_unicode() {
 
 #[test]
 fn admin_call_with_numbers_ok() {
-    assert!(validate_admin_call_name("set_max_uids_v2").is_ok());
+    // Known call with numbers in name
+    assert!(validate_admin_call_name("sudo_set_max_allowed_uids").is_ok());
 }
 
 #[test]
@@ -4974,14 +4997,20 @@ fn validate_admin_call_name_dots_rejected() {
 
 #[test]
 fn validate_admin_call_name_unknown_still_accepted_with_warning() {
-    // Unknown calls should still pass (warning only, for future chain calls)
-    assert!(validate_admin_call_name("sudo_set_some_future_param").is_ok());
+    // Unknown calls are rejected (Issue 711) to prevent typos executing sudo
+    let err = validate_admin_call_name("sudo_set_some_future_param").unwrap_err();
+    assert!(err.to_string().contains("Unknown admin call"), "got: {}", err);
 }
 
 #[test]
 fn validate_admin_call_name_case_sensitive() {
-    // Valid format but unknown call — still accepted with warning
-    assert!(validate_admin_call_name("Sudo_Set_Tempo").is_ok());
+    // Matching is case-sensitive; known list uses lowercase snake_case
+    let err = validate_admin_call_name("Sudo_Set_Tempo").unwrap_err();
+    assert!(
+        err.to_string().contains("Unknown admin call"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -4991,8 +5020,14 @@ fn validate_admin_call_name_with_whitespace_trimmed() {
 
 #[test]
 fn validate_admin_call_name_max_length_boundary() {
+    // 128-char unknown name is rejected (format ok, not in known list)
     let name = "a".repeat(128);
-    assert!(validate_admin_call_name(&name).is_ok());
+    let err = validate_admin_call_name(&name).unwrap_err();
+    assert!(
+        err.to_string().contains("Unknown admin call") || err.to_string().contains("too long"),
+        "got: {}",
+        err
+    );
 }
 
 #[test]
@@ -5153,15 +5188,16 @@ fn resolve_and_validate_accepts_valid_ss58() {
 
 #[test]
 fn resolve_and_validate_none_falls_back_to_wallet() {
-    // With None address and nonexistent wallet dir, should return empty string (from wallet fallback)
+    // With None address and nonexistent wallet dir, fallback tries to open wallet and fails -> Err
     let result = resolve_and_validate_coldkey_address(
         None,
         "/tmp/nonexistent_wallet_dir_xyz",
         "default",
         "test --address",
     );
-    // Should not error — None means use wallet, which just returns empty on failure
-    assert!(result.is_ok());
+    assert!(result.is_err(), "nonexistent wallet dir should yield Err");
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("Could not resolve") || msg.contains("wallet"), "got: {}", msg);
 }
 
 #[test]

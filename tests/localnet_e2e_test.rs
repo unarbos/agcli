@@ -66,6 +66,15 @@ fn alice() -> sr25519::Pair {
     sr25519::Pair::from_string(ALICE_URI, None).unwrap()
 }
 
+/// Return true if Docker is available (binary exists and runs).
+fn docker_available() -> bool {
+    std::process::Command::new("docker")
+        .args(["version"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
 /// Known chain-specific errors that should be treated as SKIP, not FAIL.
 /// These arise from runtime version differences, timing windows, and fast-block pruning.
 fn is_skippable_error(msg: &str) -> bool {
@@ -102,6 +111,10 @@ fn assert_admin_result(name: &str, result: Result<String, anyhow::Error>) {
 
 #[tokio::test]
 async fn t01_localnet_start() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     cleanup_stale();
 
     let info = localnet::start(&test_config()).await.expect("start failed");
@@ -118,6 +131,10 @@ async fn t01_localnet_start() {
 
 #[tokio::test]
 async fn t02_localnet_status_running() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let st = localnet::status(TEST_CONTAINER, TEST_PORT)
         .await
         .expect("status failed");
@@ -133,6 +150,10 @@ async fn t02_localnet_status_running() {
 
 #[tokio::test]
 async fn t03_localnet_logs() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let log = localnet::logs(TEST_CONTAINER, Some(20)).expect("logs failed");
     assert!(!log.is_empty(), "logs should not be empty");
     println!(
@@ -144,6 +165,10 @@ async fn t03_localnet_logs() {
 
 #[tokio::test]
 async fn t04_localnet_status_not_found() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let st = localnet::status("nonexistent_container_xyz", 19999)
         .await
         .expect("status should not error for missing container");
@@ -155,6 +180,10 @@ async fn t04_localnet_status_not_found() {
 
 #[tokio::test]
 async fn t05_localnet_stop_not_found() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let result = localnet::stop("nonexistent_container_xyz");
     assert!(result.is_err(), "stop of missing container should error");
     let err = result.unwrap_err().to_string();
@@ -168,6 +197,10 @@ async fn t05_localnet_stop_not_found() {
 
 #[tokio::test]
 async fn t06_localnet_logs_not_found() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let result = localnet::logs("nonexistent_container_xyz", None);
     assert!(result.is_err());
     println!("[PASS] t06_localnet_logs_not_found");
@@ -185,6 +218,10 @@ async fn t06_localnet_logs_not_found() {
 
 #[tokio::test]
 async fn t10_admin_requires_subnet() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     // Reset the chain to get fresh state — on fast-block chains, state from
     // minutes ago gets pruned, causing "State already discarded" errors.
     let info = localnet::reset(&test_config())
@@ -247,6 +284,10 @@ async fn connect_and_get_netuid() -> Option<(Client, u16)> {
 
 #[tokio::test]
 async fn t11_admin_set_tempo() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] t11_admin_set_tempo — could not connect or no subnet");
         return;
@@ -259,6 +300,10 @@ async fn t11_admin_set_tempo() {
 
 #[tokio::test]
 async fn t12_admin_set_max_validators() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -271,6 +316,10 @@ async fn t12_admin_set_max_validators() {
 
 #[tokio::test]
 async fn t13_admin_set_max_uids() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -283,6 +332,10 @@ async fn t13_admin_set_max_uids() {
 
 #[tokio::test]
 async fn t14_admin_set_immunity_period() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -295,6 +348,10 @@ async fn t14_admin_set_immunity_period() {
 
 #[tokio::test]
 async fn t15_admin_set_min_weights() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -307,6 +364,10 @@ async fn t15_admin_set_min_weights() {
 
 #[tokio::test]
 async fn t16_admin_set_max_weight_limit() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -321,6 +382,10 @@ async fn t16_admin_set_max_weight_limit() {
 
 #[tokio::test]
 async fn t17_admin_set_weights_rate_limit() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -333,6 +398,10 @@ async fn t17_admin_set_weights_rate_limit() {
 
 #[tokio::test]
 async fn t18_admin_set_difficulty() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -345,6 +414,10 @@ async fn t18_admin_set_difficulty() {
 
 #[tokio::test]
 async fn t19_admin_set_activity_cutoff() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -357,6 +430,10 @@ async fn t19_admin_set_activity_cutoff() {
 
 #[tokio::test]
 async fn t20_admin_set_commit_reveal() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -369,6 +446,10 @@ async fn t20_admin_set_commit_reveal() {
 
 #[tokio::test]
 async fn t21_admin_raw_call() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let Some((client, netuid)) = connect_and_get_netuid().await else {
         println!("[SKIP] — could not connect or no subnet");
         return;
@@ -403,6 +484,10 @@ async fn t22_admin_known_params() {
 
 #[tokio::test]
 async fn t30_scaffold_default_config() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     // Aggressively clean up any stale containers on port 9948
     let _ = std::process::Command::new("docker")
         .args(["rm", "-f", "agcli_scaffold_test"])
@@ -577,6 +662,10 @@ async fn t33_scaffold_load_missing_file() {
 
 #[tokio::test]
 async fn t90_localnet_reset() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     let info = localnet::reset(&test_config()).await.expect("reset failed");
     assert_eq!(info.container_name, TEST_CONTAINER);
     assert!(info.block_height > 0);
@@ -588,6 +677,10 @@ async fn t90_localnet_reset() {
 
 #[tokio::test]
 async fn t91_localnet_stop() {
+    if !docker_available() {
+        eprintln!("[localnet_e2e] Docker not available — skipping.");
+        return;
+    }
     localnet::stop(TEST_CONTAINER).expect("stop failed");
 
     // Verify it's stopped
