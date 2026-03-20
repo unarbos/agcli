@@ -797,9 +797,40 @@ mod tests {
     #[test]
     fn parse_json_weights_valid_object() {
         let input = r#"{"0": 100, "1": 200}"#;
-        let (uids, weights) = parse_json_weights(input).unwrap();
+        let (uids, wts) = parse_json_weights(input).unwrap();
         assert!(uids.contains(&0u16));
         assert!(uids.contains(&1u16));
+        assert_eq!(uids.len(), wts.len());
+    }
+
+    #[test]
+    fn parse_json_weights_empty_array_rejects() {
+        let err = parse_json_weights("[]").unwrap_err();
+        assert!(
+            err.to_string().contains("No weights found"),
+            "empty array should error: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_json_weights_empty_object_rejects() {
+        let err = parse_json_weights("{}").unwrap_err();
+        assert!(
+            err.to_string().contains("No weights found"),
+            "empty object should error: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_json_weights_object_invalid_uid_key_rejects() {
+        let err = parse_json_weights(r#"{"not_a_number": 100}"#).unwrap_err();
+        assert!(
+            err.to_string().contains("Invalid UID") || err.to_string().contains("0–65535"),
+            "invalid UID key should error: {}",
+            err
+        );
     }
 
     /// H-18 fix: UID > 65535 should error, not silently truncate.

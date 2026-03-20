@@ -1183,8 +1183,8 @@ pub enum WeightCommands {
         /// Subnet UID
         #[arg(long)]
         netuid: u16,
-        /// Show only weights set by this hotkey
-        #[arg(long)]
+        /// Show only weights set by this hotkey (SS58 address)
+        #[arg(long = "hotkey-address")]
         hotkey: Option<String>,
         /// Limit output to top N validators
         #[arg(long)]

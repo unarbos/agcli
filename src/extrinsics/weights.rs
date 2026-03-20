@@ -51,6 +51,16 @@ mod tests {
     }
 
     #[test]
+    fn commit_hash_empty_uids_and_values() {
+        // Empty uids/values should still produce a valid hash (salt only).
+        let salt = b"saltonly";
+        let h = compute_weight_commit_hash(&[], &[], salt).unwrap();
+        assert_eq!(h.len(), 32);
+        let h2 = compute_weight_commit_hash(&[], &[], salt).unwrap();
+        assert_eq!(h, h2);
+    }
+
+    #[test]
     fn commit_hash_matches_inline_blake2b() {
         // Verify our function produces the same result as the inline Blake2b
         // code that was previously duplicated in weights_cmds.rs
