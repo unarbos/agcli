@@ -435,6 +435,10 @@ pub async fn execute(cli: Cli) -> Result<()> {
             subnet_cmds::handle_subnet(cmd, &client, &ctx).await
         }
         Commands::Weights(cmd) => {
+            weights_cmds::validate_weights_args(&cmd)?;
+            if weights_cmds::weights_cmd_requires_wallet(&cmd) {
+                open_wallet(ctx.wallet_dir, ctx.wallet_name)?;
+            }
             let client = connect(&network, dry_run, best, finalization_timeout, mortality_blocks).await?;
             weights_cmds::handle_weights(cmd, &client, &ctx).await
         }

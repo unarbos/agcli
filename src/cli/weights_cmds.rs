@@ -96,6 +96,111 @@ fn parse_json_weights(json_str: &str) -> Result<(Vec<u16>, Vec<u16>)> {
     Ok((uids, weights))
 }
 
+/// True for weight subcommands that need a wallet (set/commit/reveal/mechanism).
+/// Used to validate wallet before connecting to the chain so missing-wallet fails fast.
+pub fn weights_cmd_requires_wallet(cmd: &WeightCommands) -> bool {
+    matches!(
+        cmd,
+        WeightCommands::Set { .. }
+            | WeightCommands::Commit { .. }
+            | WeightCommands::Reveal { .. }
+            | WeightCommands::CommitTimelocked { .. }
+            | WeightCommands::CommitReveal { .. }
+            | WeightCommands::Status { .. }
+            | WeightCommands::SetMechanism { .. }
+            | WeightCommands::CommitMechanism { .. }
+            | WeightCommands::RevealMechanism { .. }
+    )
+}
+
+/// Validate weights command arguments before opening wallet or connecting.
+/// Ensures bad args (empty weights, netuid 0, invalid JSON) fail fast with the right message.
+pub fn validate_weights_args(cmd: &WeightCommands) -> Result<()> {
+    match cmd {
+        WeightCommands::Set {
+            netuid,
+            weights,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            resolve_weights(weights)?;
+        }
+        WeightCommands::Commit { netuid, weights, .. } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            resolve_weights(weights)?;
+        }
+        WeightCommands::Reveal {
+            netuid,
+            weights,
+            salt,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            if salt.is_empty() {
+                anyhow::bail!("Reveal requires a non-empty --salt (the salt used when committing).");
+            }
+            resolve_weights(weights)?;
+        }
+        WeightCommands::CommitTimelocked {
+            netuid,
+            weights,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            resolve_weights(weights)?;
+        }
+        WeightCommands::CommitReveal { netuid, weights, .. } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            resolve_weights(weights)?;
+        }
+        WeightCommands::SetMechanism {
+            netuid,
+            weights,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            resolve_weights(weights)?;
+        }
+        WeightCommands::CommitMechanism {
+            netuid,
+            hash: hash_hex,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            let _: [u8; 32] = hex::decode(hash_hex.trim_start_matches("0x"))
+                .map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?
+                .try_into()
+                .map_err(|v: Vec<u8>| {
+                    anyhow::anyhow!("Hash must be exactly 32 bytes, got {} bytes", v.len())
+                })?;
+        }
+        WeightCommands::RevealMechanism {
+            netuid,
+            weights,
+            salt,
+            ..
+        } => {
+            validate_netuid(*netuid)?;
+            validate_weight_input(weights)?;
+            if salt.is_empty() {
+                anyhow::bail!("Reveal requires a non-empty --salt.");
+            }
+            resolve_weights(weights)?;
+        }
+        WeightCommands::Show { .. } => {}
+        WeightCommands::Status { netuid } => {
+            validate_netuid(*netuid)?;
+        }
+    }
+    Ok(())
+}
+
 pub(super) async fn handle_weights(
     cmd: WeightCommands,
     client: &Client,
