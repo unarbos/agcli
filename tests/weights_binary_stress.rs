@@ -117,6 +117,27 @@ fn weights_set_netuid_zero_fails() {
 }
 
 #[test]
+fn weights_set_negative_weight_fails() {
+    let (ok, _stdout, stderr) = run_agcli(&[
+        "weights",
+        "set",
+        "--netuid",
+        "1",
+        "--weights",
+        "0:-1",
+        "--dry-run",
+    ]);
+    assert!(!ok, "weights set with negative weight should fail");
+    assert!(
+        stderr.to_lowercase().contains("weight")
+            || stderr.to_lowercase().contains("invalid")
+            || stderr.contains("65535"),
+        "stderr should mention weight/invalid/range: {}",
+        stderr
+    );
+}
+
+#[test]
 fn weights_set_valid_pair_dry_run_exits_clean() {
     // With --dry-run and valid weights, we may fail at wallet/chain (no wallet), but must not panic.
     let (_ok, stdout, stderr) = run_agcli(&[
