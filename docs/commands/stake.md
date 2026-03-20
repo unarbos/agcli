@@ -155,6 +155,56 @@ Order matches [`StakeCommands::Remove`](https://github.com/unconst/agcli/blob/ma
 
 Log lines **`stake_remove_preflight`** in Phase 20 [`test_stake_remove_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_amount`** with label **`unstake amount`**, then **`try_join!(current_alpha_price, sim_swap_alpha_for_tao)`** — same RPC bundle as **`check_slippage`** sell path when **`--max-slippage`** is set. Full extrinsic path remains in Phase 8 **`test_add_remove_stake`**.
 
+---
+
+## stake move — Move alpha between subnets (same hotkey)
+
+Move **alpha** from a **source** subnet to a **destination** subnet for the wallet **hotkey** (default wallet hotkey or **`--hotkey-address`**). On-chain this runs **`move_stake`**: alpha out of the source pool, TAO through the coldkey, alpha into the destination pool (see **`Subcommands`** on-chain notes below).
+
+**Discoverability:** `agcli stake move --help`; Tier 1 line in [`docs/llm.txt`](../llm.txt); `agcli explain` Phase 6; Stake row in `llm.txt` links here.
+
+### After `cargo install`
+
+```bash
+cargo install --path .   # or: cargo install agcli --locked
+agcli stake move --amount 1.0 --from 1 --to 2 --password p --yes
+agcli stake move --amount 0.5 --from 1 --to 2 --hotkey-address 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty --password p --yes
+```
+
+Global flags (`--network`, `--endpoint`, `--wallet-dir`, `--wallet`, `--mev`, …) apply like other stake writes.
+
+## Read path (validation → submit)
+
+Order matches [`StakeCommands::Move`](https://github.com/unconst/agcli/blob/main/src/cli/stake_cmds.rs) in `src/cli/stake_cmds.rs` (`handle_stake`, `Move` branch, lines 177–208):
+
+1. **`connect`** (from `commands.rs` dispatch).
+2. **`validate_netuid(from)`** — **SN0** rejected before wallet.
+3. **`validate_netuid(to)`** — same.
+4. If **`from == to`**, bail with a clear message (**not** classified as exit **12**; treated as a generic pre-wallet error → typically exit **1**).
+5. **`validate_amount(amount, "move amount")`** — positive, finite amount (same helper as other stake writes; error text contains **`move amount`** for [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs)).
+6. **`check_spending_limit(to, amount)`** — optional per-subnet / global caps from `agcli config`, keyed on the **destination** subnet **`--to`** (same helper as **`stake add`** / **`stake swap`**).
+7. **`unlock_and_resolve`** — coldkey + hotkey SS58.
+8. **`move_stake_mev`** — extrinsic via `stake_op`. **No** client-side balance or **`--max-slippage`** preflight on this path (unlike **`stake add`** / **`stake remove`**). Success output is human **Tx:** (not global `--output json` today).
+
+## Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Move-stake extrinsic submitted and finalized path OK. |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on **`connect`** or hard RPC errors after unlock (e.g. submit path). |
+| **11** | Auth: wallet / password / hotkey resolution (`unlock_and_resolve`). |
+| **12** | Validation: invalid **`--from`** / **`--to`** (**SN0** / **`invalid netuid`**), invalid **`--amount`** (**`move amount`** in the error text), **spending limit exceeded** (local config), and other messages classified in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **13** | Chain / client: dispatch errors (**`NotEnoughStakeToWithdraw`**, **`StakingRateLimitExceeded`**, **`InsufficientLiquidity`**, **`SubnetNotExists`**, …) after submit. |
+| **15** | Timeout when applicable. |
+| **1** | e.g. **`from == to`** (same source and destination subnet), or uncategorized errors. |
+
+Invalid **`--amount`** messages use the **`move amount`** label — **`classify`** → **12** with a **`hint`** pointing at **`docs/commands/stake.md`** / **`stake move --help`**.
+
+## E2E
+
+Log lines **`stake_move_preflight`** in Phase 20 [`test_stake_move_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_netuid(1)`**, **`validate_netuid(2)`**, **`validate_amount`** with label **`move amount`**, **`check_spending_limit(2, amount)`** — same pre-wallet sequence as **`StakeCommands::Move`** (no RPC bundle before wallet). A real **`move_stake`** extrinsic is not required for this preflight; use a funded wallet against subnets where you hold alpha.
+
 ## Subcommands
 
 ### stake add
@@ -173,11 +223,8 @@ See **[stake remove](#stake-remove--unstake-alpha-to-free-tao-wallet)** (read pa
 See **[stake list](#stake-list--positions-per-coldkey-read-only)** (read path, JSON/CSV, `--at-block`, exit codes, e2e).
 
 ### stake move
-Move alpha between subnets (same hotkey). Sells alpha on source subnet, buys on destination.
 
-```bash
-agcli stake move --amount 5.0 --from 1 --to 2 [--hotkey-address SS58]
-```
+See **[stake move](#stake-move--move-alpha-between-subnets-same-hotkey)** (read path, spending limit on **`--to`**, exit codes, e2e).
 
 **On-chain**: `SubtensorModule::move_stake(origin, hotkey, origin_netuid, destination_netuid, alpha_amount)`
 - Events: `StakeMoved(coldkey, origin_hotkey, origin_netuid, dest_hotkey, dest_netuid, tao_equivalent)`

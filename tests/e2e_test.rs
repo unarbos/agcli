@@ -658,6 +658,7 @@ async fn e2e_local_chain() {
     test_stake_list_preflight(&mut client).await;
     test_stake_add_preflight(&mut client).await;
     test_stake_remove_preflight(&mut client).await;
+    test_stake_move_preflight(&mut client).await;
     test_view_portfolio_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
@@ -5864,6 +5865,29 @@ async fn test_stake_remove_preflight(client: &mut Client) {
 
     println!(
         "[PASS] stake_remove_preflight — mirrors pre-wallet validation + slippage sim in `handle_stake` Remove (`stake_cmds.rs`)"
+    );
+}
+
+/// Preflight for `agcli stake move` — same validation order as `StakeCommands::Move` in
+/// `stake_cmds.rs` before `unlock_and_resolve` (no balance or slippage RPC on this path).
+async fn test_stake_move_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    let from = 1u16;
+    let to = 2u16;
+    validate_netuid(from).expect("stake_move_preflight validate_netuid(from)");
+    validate_netuid(to).expect("stake_move_preflight validate_netuid(to)");
+
+    let probe_tao = 1.0_f64;
+    validate_amount(probe_tao, "move amount").expect("stake_move_preflight validate_amount");
+    check_spending_limit(to, probe_tao).expect("stake_move_preflight check_spending_limit(to)");
+    println!(
+        "  stake_move_preflight (`StakeCommands::Move`): validate_netuid(--from) → validate_netuid(--to) → validate_amount (`move amount`) → check_spending_limit(destination --to) — from=SN{}, to=SN{}",
+        from, to
+    );
+
+    println!(
+        "[PASS] stake_move_preflight — mirrors pre-wallet checks in `handle_stake` Move (`stake_cmds.rs`)"
     );
 }
 
