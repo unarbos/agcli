@@ -1154,6 +1154,7 @@ PHASE 6: ONGOING OPERATIONS
   agcli stake list [--address SS58]   # get_stake_for_coldkey; --at-block → get_block_hash + get_stake_for_coldkey_at_block; invalid --address → exit 12 + stake.md hint; e2e Phase 20 `stake_list_preflight` in `test_stake_list_preflight`
   agcli stake add --amount τ --netuid N [--max-slippage PCT]   # validate_netuid + validate_amount + check_spending_limit → unlock → get_balance → optional slippage try_join (alpha price + sim swap); insufficient/slippage → exit 13; e2e Phase 20 `stake_add_preflight` in `test_stake_add_preflight`
   agcli stake remove --amount τ --netuid N [--max-slippage PCT]   # validate_netuid + validate_amount (`unstake amount`) → unlock → optional sell-path slippage try_join (`current_alpha_price` + `sim_swap_alpha_for_tao`); slippage → exit 13; e2e Phase 20 `stake_remove_preflight` in `test_stake_remove_preflight`
+  agcli view portfolio [--address SS58]   # resolve/validate coldkey; latest: pin_latest_block → try_join(balance, stakes, dynamic); --at-block: get_block_hash → try_join(balance, stakes); invalid --address → exit 12 + view.md hint; e2e Phase 20 `view_portfolio_preflight` in `test_view_portfolio_preflight`
 
   # Security audit your account
   agcli audit
@@ -1169,6 +1170,7 @@ TIPS FOR OWNERS:
 - Use `agcli stake list` / `stake list --address …` for staked positions (`docs/commands/stake.md`; e2e `stake_list_preflight`).
 - Use `agcli stake add` to lock TAO as alpha on a subnet (`docs/commands/stake.md`; e2e `stake_add_preflight`, extrinsic coverage `test_add_remove_stake`).
 - Use `agcli stake remove` to convert alpha back to free TAO (`docs/commands/stake.md`; e2e `stake_remove_preflight`, same Phase 8 extrinsic test).
+- Use `agcli view portfolio` for balance + priced stake positions (`docs/commands/view.md`; e2e `view_portfolio_preflight`).
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
 
 #[cfg(test)]
@@ -1300,6 +1302,15 @@ mod tests {
     #[test]
     fn known_topic_owner_workflow() {
         assert!(explain("ow").is_some());
+    }
+
+    #[test]
+    fn owner_workflow_mentions_view_portfolio_preflight() {
+        let t = explain("ow").expect("owner workflow topic");
+        assert!(
+            t.contains("view_portfolio_preflight"),
+            "Phase 6 cheat sheet should reference e2e view portfolio preflight"
+        );
     }
 
     // --- Alias tests ---

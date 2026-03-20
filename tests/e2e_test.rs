@@ -658,6 +658,7 @@ async fn e2e_local_chain() {
     test_stake_list_preflight(&mut client).await;
     test_stake_add_preflight(&mut client).await;
     test_stake_remove_preflight(&mut client).await;
+    test_view_portfolio_preflight(&mut client).await;
 
     // ── Phase 21: View queries ──
     reconnect!();
@@ -5863,6 +5864,61 @@ async fn test_stake_remove_preflight(client: &mut Client) {
 
     println!(
         "[PASS] stake_remove_preflight — mirrors pre-wallet validation + slippage sim in `handle_stake` Remove (`stake_cmds.rs`)"
+    );
+}
+
+/// Preflight for `agcli view portfolio` — same pinned-head RPC bundle as
+/// [`agcli::queries::portfolio::fetch_portfolio`] and the `--at-block` pair as
+/// `handle_portfolio_at_block` in `view_cmds.rs` (no wallet unlock on this command).
+async fn test_view_portfolio_preflight(client: &mut Client) {
+    ensure_alive(client).await;
+
+    validate_ss58(ALICE_SS58, "portfolio --address")
+        .expect("view_portfolio_preflight validate_ss58 (explicit --address path)");
+
+    let block_hash = client
+        .pin_latest_block()
+        .await
+        .expect("view_portfolio_preflight pin_latest_block");
+    let (balance, stakes, dynamic) = tokio::try_join!(
+        client.get_balance_at_hash(ALICE_SS58, block_hash),
+        client.get_stake_for_coldkey_at_block(ALICE_SS58, block_hash),
+        client.get_all_dynamic_info_at_block(block_hash),
+    )
+    .expect("view_portfolio_preflight fetch_portfolio try_join");
+    println!(
+        "  view_portfolio_preflight (`fetch_portfolio` / latest): pin_latest_block → try_join(balance, stakes, dynamic) — free={:.4}τ, stake_rows={}, dynamic_subnets={}",
+        balance.tao(),
+        stakes.len(),
+        dynamic.len()
+    );
+
+    let head = client
+        .get_block_number()
+        .await
+        .expect("view_portfolio_preflight get_block_number");
+    let block_num: u32 = head
+        .try_into()
+        .expect("block height should fit u32 on localnet");
+    let hash_at = client
+        .get_block_hash(block_num)
+        .await
+        .expect("view_portfolio_preflight get_block_hash");
+    let (bal_at, stakes_at) = tokio::try_join!(
+        client.get_balance_at_block(ALICE_SS58, hash_at),
+        client.get_stake_for_coldkey_at_block(ALICE_SS58, hash_at),
+    )
+    .expect("view_portfolio_preflight at_block try_join");
+    println!(
+        "  view_portfolio_preflight (`--at-block` / `handle_portfolio_at_block`): block={} hash={:?} — free={:.4}τ, stake_rows={}",
+        block_num,
+        hash_at,
+        bal_at.tao(),
+        stakes_at.len()
+    );
+
+    println!(
+        "[PASS] view_portfolio_preflight — mirrors `ViewCommands::Portfolio` latest + `--at-block` in `view_cmds.rs`"
     );
 }
 

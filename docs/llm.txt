@@ -34,7 +34,7 @@ List wallets              → agcli --output json wallet list
 Stake TAO on subnet       → agcli stake add --amount 10 --netuid 1 --password p --yes   # e2e Phase 20 `stake_add_preflight` in tests/e2e_test.rs; full add/remove Phase 8 `test_add_remove_stake`
 Unstake                   → agcli stake remove --amount 5 --netuid 1 --password p --yes   # e2e Phase 20 `stake_remove_preflight` in tests/e2e_test.rs; full add/remove Phase 8 `test_add_remove_stake`
 View all stakes           → agcli --output json stake list   # e2e Phase 20 `stake_list_preflight` in tests/e2e_test.rs
-Full portfolio            → agcli --output json view portfolio
+Full portfolio            → agcli --output json view portfolio   # e2e Phase 20 `view_portfolio_preflight` in tests/e2e_test.rs; docs/commands/view.md
 Transfer TAO              → agcli transfer --dest 5FHn... --amount 10 --password p --yes   # e2e Phase 20 `transfer_preflight`; see docs/commands/transfer.md
 Show on-chain weights     → agcli weights show --netuid 1
 Set weights               → agcli weights set --netuid 1 --weights "0:100,1:200" --dry-run

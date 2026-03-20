@@ -2,17 +2,73 @@
 
 Read-only commands for querying chain state, analytics, and account information. No wallet unlock required for most commands.
 
+## view portfolio — Full coldkey portfolio (read-only)
+
+Aggregates **free TAO**, **total staked** (TAO equivalent), and **per-subnet positions** (alpha, hotkey, subnet name, price) for a coldkey. Uses the default wallet coldkey or **`--address`**. Supports **`--at-block`**, **`--live`**, and global **`--output json|csv`**. No hot/cold unlock — only reads the default coldkey from disk when **`--address`** is omitted.
+
+**Discoverability:** `agcli view portfolio --help`; Tier 1 in [`docs/llm.txt`](../llm.txt); `agcli explain --topic ow` (Phase 6) references the e2e log name; View row in `llm.txt` → this file.
+
+### After `cargo install`
+
+```bash
+cargo install --git https://github.com/unconst/agcli
+agcli view portfolio
+agcli view portfolio --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --output json view portfolio --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --output csv view portfolio
+agcli view portfolio --at-block 100
+agcli --network archive view portfolio --at-block 3500000 --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+agcli --live 30 view portfolio
+```
+
+### Read path (RPC / runtime API)
+
+Order matches [`ViewCommands::Portfolio`](https://github.com/unconst/agcli/blob/main/src/cli/view_cmds.rs) in `src/cli/view_cmds.rs` (`handle_view`, `Portfolio` branch):
+
+1. **`connect`** (global network / endpoint — same as other view commands).
+2. **`resolve_and_validate_coldkey_address`** — if **`--address`** is set, **`validate_ss58(..., "portfolio --address")`**; else coldkey from wallet (`src/cli/helpers.rs`). Unresolved / empty coldkey bails before RPC (same pattern as `agcli balance` / `agcli stake list`).
+3. **If `--at-block`:** **`get_block_hash(block)`** → **`try_join!(get_balance_at_block(addr, hash), get_stake_for_coldkey_at_block(addr, hash))`** — compact JSON (see below); no dynamic-info merge on this path.
+4. **Else if `--live`:** polling loop calling **`fetch_portfolio`** each interval (`src/queries/portfolio.rs`, `src/live.rs`).
+5. **Else (latest):** **`handle_portfolio`** → **`fetch_portfolio`**: **`pin_latest_block`** → **`try_join!(get_balance_at_hash, get_stake_for_coldkey_at_block, get_all_dynamic_info_at_block)`** — dynamic info fills subnet name and price; if that RPC fails, the code logs a warning and treats dynamic data as empty (`src/queries/portfolio.rs`).
+
+### JSON shapes
+
+**Latest** (`--output json`) — serialized [`Portfolio`](https://github.com/unconst/agcli/blob/main/src/queries/portfolio.rs): `coldkey_ss58`, `free_balance`, `total_staked`, `positions` (`netuid`, `subnet_name`, `hotkey_ss58`, `alpha_stake`, `tao_equivalent`, `price`). Field names/types follow `serde` on `Balance` and the struct definitions in the crate.
+
+**`--at-block`** — object built in `handle_portfolio_at_block`: `address`, `block`, `free_balance_rao` / `free_balance_tao`, `total_staked_rao` / `total_staked_tao`, `stakes` (`hotkey`, `netuid`, `stake_rao`, `stake_tao`).
+
+### Exit codes
+
+| Code | When |
+|------|------|
+| **0** | Successful query (including **empty** positions / stakes). |
+| **2** | Clap / invalid global flags. |
+| **10** | Network / WebSocket failure on `connect` or hard RPC errors. |
+| **12** | Validation: invalid **`--address`** (SS58) per [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **15** | Timeout when applicable. |
+| **1** | Generic: e.g. **`Block N not found`** for **`--at-block`**, could not resolve coldkey when no **`--address`**, pruned state at a historical height, or uncategorized errors. |
+
+Messages for bad **`--address`** include **`portfolio --address`** — [`hint`](https://github.com/unconst/agcli/blob/main/src/error.rs) points at **`docs/commands/view.md`**.
+
+### E2E
+
+Log lines **`view_portfolio_preflight`** in Phase 20 [`test_view_portfolio_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_ss58`** with label **`portfolio --address`**, **`pin_latest_block`** → **`try_join!(get_balance_at_hash, get_stake_for_coldkey_at_block, get_all_dynamic_info_at_block)`**, then head **`get_block_hash`** + **`try_join!(get_balance_at_block, get_stake_for_coldkey_at_block)`** — mirrors latest **`fetch_portfolio`** and **`--at-block`**. Broader view RPC checks remain in Phase 21 **`test_view_queries`**.
+
+### Related
+
+- `agcli balance` — free TAO only
+- `agcli stake list` — stakes only (no dynamic price/name merge)
+- `agcli diff portfolio` — compare two block heights
+
+---
+
 ## Subcommands
 
 ### view portfolio
-Full stake portfolio for a coldkey: balance, all stake positions, alpha holdings, estimated values.
 
-```bash
-agcli view portfolio [--address SS58] [--at-block N]
-# JSON: {"address", "balance", "total_stake", "positions": [...]}
-```
+See **[view portfolio](#view-portfolio--full-coldkey-portfolio-read-only)** (install examples, read path, JSON, **`--at-block`**, **`--live`**, exit **12** for bad **`--address`**, e2e).
 
-Uses parallelized queries (`try_join!`) for fast loading.
+**Read-only:** `System::Account`, stake storage, dynamic info (latest path). No extrinsic.
 
 ### view network
 Network-wide overview: total issuance, total stake, emission rate, block height, active subnets.
