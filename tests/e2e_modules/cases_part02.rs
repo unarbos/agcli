@@ -454,8 +454,11 @@ pub async fn test_set_weights_rejected_on_invalid_uid(client: &mut Client, netui
     );
 }
 
-/// Sum of weights must not exceed 65535 — `MaxWeightExceeded` (index 26).
-pub async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Client, netuid: NetUid) {
+/// The runtime normalizes weight vectors so that they sum to at most
+/// `max_weight_limit` (default 65535).  A submission whose raw sum exceeds
+/// that value is NOT rejected — the chain rescales internally.  Verify
+/// that the extrinsic succeeds when the raw sum overflows u16::MAX.
+pub async fn test_set_weights_normalized_on_overflow(client: &mut Client, netuid: NetUid) {
     ensure_alive(client).await;
     let alice = dev_pair(ALICE_URI);
     let _alice_uid = ensure_alice_on_subnet(client, netuid).await;
@@ -473,7 +476,7 @@ pub async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Clien
             Err(e) => {
                 let msg = format!("{e}");
                 if !msg.contains("AlreadyRegistered") && attempt == 15 {
-                    println!("  max-weight e2e: [WARN] burned_register Bob: {msg}");
+                    println!("  overflow-weight e2e: [WARN] burned_register Bob: {msg}");
                 }
             }
         }
@@ -483,10 +486,10 @@ pub async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Clien
     let neurons = client
         .get_neurons_lite(netuid)
         .await
-        .expect("get_neurons_lite for max-weight e2e");
+        .expect("get_neurons_lite for overflow-weight e2e");
     assert!(
         neurons.len() >= 2,
-        "SN{} needs ≥2 neurons for MaxWeightExceeded e2e; have {}",
+        "SN{} needs ≥2 neurons for overflow-weight e2e; have {}",
         netuid.0,
         neurons.len()
     );
@@ -495,25 +498,32 @@ pub async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Clien
     uids.dedup();
     assert!(
         uids.len() >= 2,
-        "SN{} needs two distinct UIDs for max-weight e2e",
+        "SN{} needs two distinct UIDs for overflow-weight e2e",
         netuid.0
     );
     let uid_a = uids[0];
     let uid_b = uids[1];
 
-    // 35000 + 31000 = 66000 > 65535
+    // 35000 + 31000 = 66000 > 65535 — runtime normalizes, does not reject
     let uids = vec![uid_a, uid_b];
     let weights = vec![35_000u16, 31_000u16];
     let version_key = 0u64;
 
-    let mut err_msg = String::new();
+    let mut last_err = String::new();
+    let mut ok = false;
     for attempt in 1..=5u32 {
         ensure_alive(client).await;
         match client
             .set_weights(&alice, netuid, &uids, &weights, version_key)
             .await
         {
-            Ok(hash) => panic!("set_weights with sum > 65535 should fail; got {hash}"),
+            Ok(hash) => {
+                println!(
+                    "  overflow-weight accepted (normalized by runtime): {hash}"
+                );
+                ok = true;
+                break;
+            }
             Err(e) => {
                 let msg = format!("{e}");
                 if (msg.contains("connection")
@@ -525,17 +535,17 @@ pub async fn test_set_weights_rejected_on_max_weight_exceeded(client: &mut Clien
                     tokio::time::sleep(Duration::from_millis(1000)).await;
                     continue;
                 }
-                err_msg = msg;
+                last_err = msg;
                 break;
             }
         }
     }
     assert!(
-        err_msg.contains("MaxWeightExceeded") || err_msg.contains("Custom error: 26"),
-        "expected MaxWeightExceeded (or custom 26), got: {err_msg}"
+        ok,
+        "expected chain to normalize overflow weights; got error: {last_err}"
     );
     println!(
-        "[PASS] set_weights rejected when weight sum exceeds max on SN{}",
+        "[PASS] set_weights with overflow sum accepted (normalized) on SN{}",
         netuid.0
     );
 }

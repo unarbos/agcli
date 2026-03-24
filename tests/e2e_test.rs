@@ -119,7 +119,7 @@ async fn e2e_local_chain() {
     reconnect!();
     test_set_weights_rejected_on_invalid_uid(&mut client, primary_sn).await;
     reconnect!();
-    test_set_weights_rejected_on_max_weight_exceeded(&mut client, primary_sn).await;
+    test_set_weights_normalized_on_overflow(&mut client, primary_sn).await;
     reconnect!();
     test_set_weights_rejected_on_weight_vec_not_equal_size(&mut client, primary_sn).await;
     reconnect!();
