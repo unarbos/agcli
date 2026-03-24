@@ -2729,62 +2729,7 @@ impl Cli {
     /// not distinguish "user passed the default" from "clap filled in the default".
     pub fn apply_config(&mut self, cfg: &crate::config::Config) {
         let args: Vec<String> = std::env::args().collect();
-        let has = |flag: &str| cli_has_flag(&args, flag);
-
-        // Only apply config if the user did NOT explicitly pass the flag
-        if !has("--network") && !has("-n") {
-            if let Some(ref n) = cfg.network {
-                self.network = n.clone();
-            }
-        }
-        if self.endpoint.is_none() {
-            self.endpoint = cfg.endpoint.clone();
-        }
-        if !has("--wallet-dir") {
-            if let Some(ref d) = cfg.wallet_dir {
-                self.wallet_dir = d.clone();
-            }
-        }
-        if !has("--wallet") && !has("-w") {
-            if let Some(ref w) = cfg.wallet {
-                self.wallet = w.clone();
-            }
-        }
-        if !has("--hotkey-name") && !has("--hotkey") {
-            if let Some(ref h) = cfg.hotkey {
-                self.hotkey_name = h.clone();
-            }
-        }
-        if !has("--output") {
-            if let Some(ref o) = cfg.output {
-                match o.as_str() {
-                    "json" => self.output = OutputFormat::Json,
-                    "csv" => self.output = OutputFormat::Csv,
-                    _ => {} // keep Table for unknown values
-                }
-            }
-        }
-        if self.proxy.is_none() {
-            self.proxy = cfg.proxy.clone();
-        }
-        if !self.batch {
-            if let Some(true) = cfg.batch {
-                self.batch = true;
-            }
-        }
-        // Apply config live_interval when --live was not passed on CLI (Issue 75)
-        if self.live.is_none() {
-            if let Some(interval) = cfg.live_interval {
-                self.live = Some(Some(interval));
-            }
-        }
-        // Apply config finalization_timeout and mortality_blocks
-        if self.finalization_timeout.is_none() {
-            self.finalization_timeout = cfg.finalization_timeout;
-        }
-        if self.mortality_blocks.is_none() {
-            self.mortality_blocks = cfg.mortality_blocks;
-        }
+        self.apply_config_with_args(cfg, &args);
     }
 
     /// Apply config using explicit args list (for testing without relying on std::env::args).
@@ -3077,5 +3022,191 @@ mod tests {
             "0:100",
         ]);
         assert!(!cli.dry_run, "global --dry-run should be false by default");
+    }
+
+    // ── OutputFormat::is_csv coverage ──
+
+    #[test]
+    fn output_format_is_csv() {
+        assert!(OutputFormat::Csv.is_csv());
+        assert!(!OutputFormat::Json.is_csv());
+        assert!(!OutputFormat::Table.is_csv());
+    }
+
+    // ── apply_config_with_args: remaining branch coverage ──
+
+    #[test]
+    fn apply_config_output_json() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.output = Some("json".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert!(cli.output.is_json());
+    }
+
+    #[test]
+    fn apply_config_output_csv() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.output = Some("csv".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert!(cli.output.is_csv());
+    }
+
+    #[test]
+    fn apply_config_output_unknown_stays_table() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.output = Some("xml".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert!(!cli.output.is_json() && !cli.output.is_csv());
+    }
+
+    #[test]
+    fn apply_config_output_not_overridden_by_cli_flag() {
+        let mut cli = Cli::parse_from(["agcli", "--output", "json", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.output = Some("csv".into());
+        let args: Vec<String> = vec![
+            "agcli".into(),
+            "--output".into(),
+            "json".into(),
+            "config".into(),
+            "show".into(),
+        ];
+        cli.apply_config_with_args(&cfg, &args);
+        assert!(cli.output.is_json(), "CLI --output should take precedence");
+    }
+
+    #[test]
+    fn apply_config_wallet_dir() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.wallet_dir = Some("/custom/path".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.wallet_dir, "/custom/path");
+    }
+
+    #[test]
+    fn apply_config_wallet_name() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.wallet = Some("mywallet".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.wallet, "mywallet");
+    }
+
+    #[test]
+    fn apply_config_hotkey_name() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.hotkey = Some("myhotkey".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.hotkey_name, "myhotkey");
+    }
+
+    #[test]
+    fn apply_config_batch_mode() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(!cli.batch);
+        let mut cfg = crate::config::Config::default();
+        cfg.batch = Some(true);
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert!(cli.batch);
+    }
+
+    #[test]
+    fn apply_config_endpoint() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(cli.endpoint.is_none());
+        let mut cfg = crate::config::Config::default();
+        cfg.endpoint = Some("wss://custom.endpoint:443".into());
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.endpoint.as_deref(), Some("wss://custom.endpoint:443"));
+    }
+
+    #[test]
+    fn apply_config_finalization_timeout() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(cli.finalization_timeout.is_none());
+        let mut cfg = crate::config::Config::default();
+        cfg.finalization_timeout = Some(60);
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.finalization_timeout, Some(60));
+    }
+
+    #[test]
+    fn apply_config_finalization_timeout_not_overridden_by_flag() {
+        let mut cli = Cli::parse_from([
+            "agcli",
+            "--finalization-timeout",
+            "30",
+            "config",
+            "show",
+        ]);
+        let mut cfg = crate::config::Config::default();
+        cfg.finalization_timeout = Some(60);
+        let args: Vec<String> = vec![
+            "agcli".into(),
+            "--finalization-timeout".into(),
+            "30".into(),
+            "config".into(),
+            "show".into(),
+        ];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.finalization_timeout, Some(30));
+    }
+
+    #[test]
+    fn apply_config_mortality_blocks() {
+        let mut cli = Cli::parse_from(["agcli", "config", "show"]);
+        assert!(cli.mortality_blocks.is_none());
+        let mut cfg = crate::config::Config::default();
+        cfg.mortality_blocks = Some(32);
+        let args: Vec<String> = vec!["agcli".into(), "config".into(), "show".into()];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.mortality_blocks, Some(32));
+    }
+
+    #[test]
+    fn apply_config_mortality_blocks_not_overridden_by_flag() {
+        let mut cli =
+            Cli::parse_from(["agcli", "--mortality-blocks", "16", "config", "show"]);
+        let mut cfg = crate::config::Config::default();
+        cfg.mortality_blocks = Some(64);
+        let args: Vec<String> = vec![
+            "agcli".into(),
+            "--mortality-blocks".into(),
+            "16".into(),
+            "config".into(),
+            "show".into(),
+        ];
+        cli.apply_config_with_args(&cfg, &args);
+        assert_eq!(cli.mortality_blocks, Some(16));
+    }
+
+    #[test]
+    fn resolve_network_archive() {
+        let cli = Cli::parse_from(["agcli", "--network", "archive", "config", "show"]);
+        assert!(matches!(cli.resolve_network(), Network::Archive));
+    }
+
+    #[test]
+    fn resolve_network_custom() {
+        let cli =
+            Cli::parse_from(["agcli", "--network", "ws://custom:9944", "config", "show"]);
+        match cli.resolve_network() {
+            Network::Custom(s) => assert_eq!(s, "ws://custom:9944"),
+            other => panic!("expected Custom, got {:?}", other),
+        }
     }
 }

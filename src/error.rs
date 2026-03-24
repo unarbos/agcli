@@ -1077,4 +1077,372 @@ mod tests {
         assert!(h.is_some());
         assert!(h.unwrap().contains("check-swap"));
     }
+
+    // ──── Exhaustive CHAIN hint branch coverage ────
+
+    #[test]
+    fn hint_chain_swap_insufficient_liquidity() {
+        let h = hint(exit_code::CHAIN, "Swap::InsufficientLiquidity on pool");
+        assert!(h.is_some_and(|s| s.contains("AMM") && s.contains("pool depth")));
+    }
+
+    #[test]
+    fn hint_chain_insufficientliquidity_subtensor() {
+        // Non-swap variant — must differ from the AMM message
+        let h = hint(exit_code::CHAIN, "InsufficientLiquidity stake path");
+        assert!(h.is_some_and(|s| s.contains("Subtensor")));
+    }
+
+    #[test]
+    fn hint_chain_swap_subtoken_disabled() {
+        let h = hint(exit_code::CHAIN, "Swap::SubtokenDisabled");
+        assert!(h.is_some_and(|s| s.contains("subtoken")));
+    }
+
+    #[test]
+    fn hint_chain_registry_not_registered() {
+        let h = hint(exit_code::CHAIN, "Registry::NotRegistered");
+        assert!(h.is_some_and(|s| s.contains("identity")));
+    }
+
+    #[test]
+    fn hint_chain_call_disabled() {
+        let h = hint(exit_code::CHAIN, "CallDisabled on this subnet");
+        assert!(h.is_some_and(|s| s.contains("disabled")));
+    }
+
+    #[test]
+    fn hint_chain_coldkey_swap_already_disputed() {
+        let h = hint(exit_code::CHAIN, "ColdkeySwapAlreadyDisputed");
+        assert!(h.is_some_and(|s| s.contains("check-swap")));
+    }
+
+    #[test]
+    fn hint_chain_coldkey_swap_disputed() {
+        let h = hint(exit_code::CHAIN, "ColdkeySwapDisputed");
+        assert!(h.is_some_and(|s| s.contains("check-swap")));
+    }
+
+    #[test]
+    fn hint_chain_coldkey_swap_clear_too_early() {
+        let h = hint(exit_code::CHAIN, "ColdkeySwapClearTooEarly");
+        assert!(h.is_some_and(|s| s.contains("check-swap")));
+    }
+
+    #[test]
+    fn hint_chain_admin_action_weights_window() {
+        let h = hint(
+            exit_code::CHAIN,
+            "AdminActionProhibitedDuringWeightsWindow",
+        );
+        assert!(h.is_some_and(|s| s.contains("weights window")));
+    }
+
+    #[test]
+    fn hint_chain_transactor_should_be_hotkey() {
+        let h = hint(exit_code::CHAIN, "TransactorAccountShouldBeHotkey");
+        assert!(h.is_some_and(|s| s.contains("hotkey")));
+    }
+
+    #[test]
+    fn hint_chain_root_network_does_not_exist() {
+        let h = hint(exit_code::CHAIN, "RootNetworkDoesNotExist");
+        assert!(h.is_some_and(|s| s.contains("endpoint")));
+    }
+
+    #[test]
+    fn hint_chain_lease_does_not_exist() {
+        let h = hint(exit_code::CHAIN, "LeaseDoesNotExist");
+        assert!(h.is_some_and(|s| s.contains("lease")));
+    }
+
+    #[test]
+    fn hint_chain_lease_has_no_end_block() {
+        let h = hint(exit_code::CHAIN, "LeaseHasNoEndBlock");
+        assert!(h.is_some_and(|s| s.contains("lease") || s.contains("Lease")));
+    }
+
+    #[test]
+    fn hint_chain_invalid_lease_beneficiary() {
+        let h = hint(exit_code::CHAIN, "InvalidLeaseBeneficiary");
+        assert!(h.is_some_and(|s| s.contains("beneficiary")));
+    }
+
+    #[test]
+    fn hint_chain_beneficiary_does_not_own_hotkey() {
+        let h = hint(exit_code::CHAIN, "BeneficiaryDoesNotOwnHotkey");
+        assert!(h.is_some_and(|s| s.contains("beneficiary")));
+    }
+
+    #[test]
+    fn hint_chain_expected_beneficiary_origin() {
+        let h = hint(exit_code::CHAIN, "ExpectedBeneficiaryOrigin");
+        assert!(h.is_some_and(|s| s.contains("beneficiary")));
+    }
+
+    #[test]
+    fn hint_chain_lease_cannot_end_in_past() {
+        let h = hint(exit_code::CHAIN, "LeaseCannotEndInThePast");
+        assert!(h.is_some_and(|s| s.contains("future")));
+    }
+
+    #[test]
+    fn hint_chain_need_waiting_more_blocks() {
+        let h = hint(exit_code::CHAIN, "NeedWaitingMoreBlocksToStarCall");
+        assert!(h.is_some_and(|s| s.contains("check-start")));
+    }
+
+    #[test]
+    fn hint_chain_subnet_does_not_exist() {
+        let h = hint(exit_code::CHAIN, "SubnetDoesNotExist");
+        assert!(h.is_some_and(|s| s.contains("subnet list")));
+    }
+
+    #[test]
+    fn hint_chain_adminutils_invalid_value() {
+        let h = hint(exit_code::CHAIN, "AdminUtils::InvalidValue");
+        assert!(h.is_some_and(|s| s.contains("hyperparams")));
+    }
+
+    #[test]
+    fn hint_chain_value_not_in_bounds() {
+        let h = hint(exit_code::CHAIN, "ValueNotInBounds");
+        assert!(h.is_some_and(|s| s.contains("hyperparams")));
+    }
+
+    #[test]
+    fn hint_chain_max_validators_larger() {
+        let h = hint(exit_code::CHAIN, "MaxValidatorsLargerThanMaxUids");
+        assert!(h.is_some_and(|s| s.contains("hyperparams")));
+    }
+
+    #[test]
+    fn hint_chain_proxy_too_many() {
+        let h = hint(exit_code::CHAIN, "Proxy::TooMany");
+        assert!(h.is_some_and(|s| s.contains("proxy") || s.contains("proxies")));
+    }
+
+    #[test]
+    fn hint_chain_proxy_not_found() {
+        let h = hint(exit_code::CHAIN, "Proxy::NotFound");
+        assert!(h.is_some_and(|s| s.contains("proxy") || s.contains("delegate")));
+    }
+
+    #[test]
+    fn hint_chain_proxy_duplicate() {
+        let h = hint(exit_code::CHAIN, "Proxy::Duplicate");
+        assert!(h.is_some_and(|s| s.contains("proxy")));
+    }
+
+    #[test]
+    fn hint_chain_proxy_no_permission() {
+        let h = hint(exit_code::CHAIN, "Proxy::NoPermission");
+        assert!(h.is_some_and(|s| s.contains("proxy")));
+    }
+
+    #[test]
+    fn hint_chain_unproxyable() {
+        let h = hint(exit_code::CHAIN, "Unproxyable");
+        assert!(h.is_some_and(|s| s.contains("proxy")));
+    }
+
+    #[test]
+    fn hint_chain_delegate_take_too_low() {
+        let h = hint(exit_code::CHAIN, "DelegateTakeTooLow");
+        assert!(h.is_some_and(|s| s.contains("take")));
+    }
+
+    #[test]
+    fn hint_chain_fee_rate_too_high() {
+        let h = hint(exit_code::CHAIN, "FeeRateTooHigh");
+        assert!(h.is_some_and(|s| s.contains("swap") || s.contains("DEX")));
+    }
+
+    #[test]
+    fn hint_chain_price_limit_exceeded() {
+        let h = hint(exit_code::CHAIN, "PriceLimitExceeded");
+        assert!(h.is_some_and(|s| s.contains("swap") || s.contains("DEX")));
+    }
+
+    #[test]
+    fn hint_chain_too_many_swap_steps() {
+        let h = hint(exit_code::CHAIN, "TooManySwapSteps");
+        assert!(h.is_some_and(|s| s.contains("swap") || s.contains("DEX")));
+    }
+
+    #[test]
+    fn hint_chain_too_many_calls() {
+        let h = hint(exit_code::CHAIN, "ToomanyCalls in batch");
+        assert!(h.is_some_and(|s| s.contains("batch") || s.contains("Batch")));
+    }
+
+    #[test]
+    fn hint_chain_drand_connection_failure() {
+        let h = hint(exit_code::CHAIN, "DrandConnectionFailure");
+        assert!(h.is_some_and(|s| s.contains("drand")));
+    }
+
+    #[test]
+    fn hint_chain_unverified_pulse() {
+        let h = hint(exit_code::CHAIN, "UnverifiedPulse");
+        assert!(h.is_some_and(|s| s.contains("drand")));
+    }
+
+    #[test]
+    fn hint_chain_invalid_crowdloan_id() {
+        let h = hint(exit_code::CHAIN, "InvalidCrowdloanId");
+        assert!(h.is_some_and(|s| s.contains("crowdloan") || s.contains("Crowdloan")));
+    }
+
+    #[test]
+    fn hint_chain_contribution_period() {
+        let h = hint(exit_code::CHAIN, "ContributionPeriod");
+        assert!(h.is_some_and(|s| s.contains("crowdloan") || s.contains("Crowdloan")));
+    }
+
+    #[test]
+    fn hint_chain_crowdloan_underflow() {
+        let h = hint(exit_code::CHAIN, "Crowdloan::Underflow");
+        assert!(h.is_some_and(|s| s.contains("crowdloan") || s.contains("Crowdloan")));
+    }
+
+    #[test]
+    fn hint_chain_swap_mechanism_does_not_exist() {
+        let h = hint(exit_code::CHAIN, "Swap::MechanismDoesNotExist");
+        assert!(h.is_some_and(|s| s.contains("subnet")));
+    }
+
+    #[test]
+    fn hint_chain_crowdloan_insufficient_balance() {
+        let h = hint(exit_code::CHAIN, "Crowdloan::InsufficientBalance");
+        assert!(h.is_some_and(|s| s.contains("balance")));
+    }
+
+    #[test]
+    fn hint_chain_swap_insufficient_balance() {
+        let h = hint(exit_code::CHAIN, "Swap::InsufficientBalance");
+        assert!(h.is_some_and(|s| s.contains("balance")));
+    }
+
+    #[test]
+    fn hint_chain_crowdloan_overflow() {
+        let h = hint(exit_code::CHAIN, "Crowdloan::Overflow");
+        assert!(h.is_some_and(|s| s.contains("crowdloan") || s.contains("Crowdloan")));
+    }
+
+    #[test]
+    fn hint_chain_drand_none_value() {
+        let h = hint(exit_code::CHAIN, "Drand::NoneValue");
+        assert!(h.is_some_and(|s| s.contains("drand") || s.contains("Drand")));
+    }
+
+    #[test]
+    fn hint_chain_drand_storage_overflow() {
+        let h = hint(exit_code::CHAIN, "Drand::StorageOverflow");
+        assert!(h.is_some_and(|s| s.contains("drand") || s.contains("Drand")));
+    }
+
+    #[test]
+    fn hint_chain_shield_unreachable() {
+        let h = hint(exit_code::CHAIN, "Shield::Unreachable");
+        assert!(h.is_some_and(|s| s.contains("Shield")));
+    }
+
+    #[test]
+    fn hint_chain_runtime_pallet_error() {
+        let h = hint(
+            exit_code::CHAIN,
+            "runtime pallet `SubtensorModule` returned error `SomeNewError`",
+        );
+        assert!(h.is_some_and(|s| s.contains("pallet")));
+    }
+
+    #[test]
+    fn hint_chain_generic_fallback() {
+        let h = hint(exit_code::CHAIN, "some unknown chain error");
+        assert!(h.is_some_and(|s| s.contains("doctor")));
+    }
+
+    #[test]
+    fn hint_chain_hotkeynotregisteredinnetwork() {
+        let h = hint(exit_code::CHAIN, "HotkeyNotRegisteredInNetwork");
+        assert!(h.is_some_and(|s| s.contains("register")));
+    }
+
+    #[test]
+    fn hint_chain_lease_has_not_ended() {
+        let h = hint(exit_code::CHAIN, "LeaseHasNotEnded");
+        assert!(h.is_some_and(|s| s.contains("lease") || s.contains("Lease")));
+    }
+
+    #[test]
+    fn hint_chain_not_proxy() {
+        let h = hint(exit_code::CHAIN, "NotProxy error");
+        assert!(h.is_some_and(|s| s.contains("proxy")));
+    }
+
+    #[test]
+    fn hint_chain_delegate_take_too_high() {
+        let h = hint(exit_code::CHAIN, "DelegateTakeTooHigh");
+        assert!(h.is_some_and(|s| s.contains("take")));
+    }
+
+    // ──── Typed error downcast coverage ────
+
+    #[test]
+    fn classify_io_error_not_found() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err = anyhow::Error::new(io_err);
+        assert_eq!(classify(&err), exit_code::IO);
+    }
+
+    #[test]
+    fn classify_io_error_already_exists() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::AlreadyExists, "file exists");
+        let err = anyhow::Error::new(io_err);
+        assert_eq!(classify(&err), exit_code::IO);
+    }
+
+    #[test]
+    fn classify_io_error_timed_out() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::TimedOut, "operation timed out");
+        let err = anyhow::Error::new(io_err);
+        assert_eq!(classify(&err), exit_code::TIMEOUT);
+    }
+
+    #[test]
+    fn classify_io_error_connection_reset() {
+        let io_err =
+            std::io::Error::new(std::io::ErrorKind::ConnectionReset, "connection reset");
+        let err = anyhow::Error::new(io_err);
+        assert_eq!(classify(&err), exit_code::NETWORK);
+    }
+
+    #[test]
+    fn classify_io_error_connection_aborted() {
+        let io_err =
+            std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted");
+        let err = anyhow::Error::new(io_err);
+        assert_eq!(classify(&err), exit_code::NETWORK);
+    }
+
+    #[test]
+    fn classify_io_error_other_falls_through() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::Other, "something else");
+        let err = anyhow::Error::new(io_err);
+        // "Other" kind doesn't match specific IO patterns, falls through to heuristic
+        assert_eq!(classify(&err), exit_code::GENERIC);
+    }
+
+    #[test]
+    fn hint_validation_balance_threshold() {
+        let h = hint(exit_code::VALIDATION, "balance --threshold must be non-negative");
+        assert!(h.is_some_and(|s| s.contains("balance.md")));
+    }
+
+    #[test]
+    fn hint_validation_invalid_event_filter() {
+        let h = hint(exit_code::VALIDATION, "Invalid event filter: xyz");
+        assert!(h.is_some_and(|s| s.contains("subscribe events")));
+    }
 }

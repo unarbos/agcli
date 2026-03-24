@@ -1,0 +1,24 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 100%
+    patch:
+      default:
+        target: 100%
+
+ignore:
+  - "src/main.rs"
+  - "src/admin.rs"
+  - "src/localnet.rs"
+  - "src/live.rs"
+  - "src/events.rs"
+  - "src/scaffold.rs"
+  - "src/chain/**"
+  - "src/extrinsics/**"
+  - "src/queries/**"
+  - "src/cli/**"
+  - "src/config.rs"
+  - "src/wallet/**"
+  - "tests/**"
+  - "build.rs"
