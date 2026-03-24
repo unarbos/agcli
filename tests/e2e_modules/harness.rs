@@ -287,9 +287,9 @@ pub fn retry_delay_ms(msg: &str) -> u64 {
         || msg.contains("NeuronNoValidatorPermit")
         || msg.contains("dispatch failed")
     {
-        5_000
+        1_500
     } else if msg.contains("Custom error") {
-        5_000
+        1_500
     } else if msg.contains("subscription") || msg.contains("closed") {
         2_000
     } else if msg.contains("outdated") {
@@ -409,7 +409,7 @@ pub async fn sudo_admin_call(
     fields: Vec<subxt::dynamic::Value>,
 ) -> Result<String, String> {
     let mut result: Result<String, String> = Err("max retries".to_string());
-    for attempt in 1u32..=20 {
+    for attempt in 1u32..=8 {
         match client
             .submit_sudo_raw_call_checked(alice, "AdminUtils", call, fields.clone())
             .await
@@ -420,7 +420,7 @@ pub async fn sudo_admin_call(
             }
             Err(e) => {
                 let msg = format!("{}", e);
-                if is_retryable(&msg) && attempt < 20 {
+                if is_retryable(&msg) && attempt < 8 {
                     if is_conn_dead(&msg) {
                         ensure_alive(client).await;
                     } else if needs_fresh_conn(&msg) {
@@ -487,7 +487,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_subtoken_enabled",
         vec![Value::u128(sn.0 as u128), Value::bool(true)],
-        10,
+        5,
     )
     .await
     {
@@ -502,7 +502,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_commit_reveal_weights_enabled",
         vec![Value::u128(sn.0 as u128), Value::bool(false)],
-        10,
+        5,
     )
     .await
     {
@@ -521,7 +521,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
             alice,
             name,
             vec![Value::u128(sn.0 as u128), Value::u128(0)],
-            10,
+            5,
         )
         .await
         {
@@ -537,7 +537,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_max_allowed_validators",
         vec![Value::u128(sn.0 as u128), Value::u128(256)],
-        10,
+        5,
     )
     .await
     {
@@ -552,7 +552,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_target_registrations_per_interval",
         vec![Value::u128(sn.0 as u128), Value::u128(100)],
-        10,
+        5,
     )
     .await;
     wait_blocks(client, 2).await;
@@ -563,7 +563,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_difficulty",
         vec![Value::u128(sn.0 as u128), Value::u128(1)],
-        10,
+        5,
     )
     .await;
     wait_blocks(client, 2).await;
@@ -574,7 +574,7 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
         alice,
         "sudo_set_min_burn",
         vec![Value::u128(sn.0 as u128), Value::u128(1_000_000_000)],
-        10,
+        5,
     )
     .await;
 
