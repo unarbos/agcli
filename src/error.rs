@@ -1131,10 +1131,7 @@ mod tests {
 
     #[test]
     fn hint_chain_admin_action_weights_window() {
-        let h = hint(
-            exit_code::CHAIN,
-            "AdminActionProhibitedDuringWeightsWindow",
-        );
+        let h = hint(exit_code::CHAIN, "AdminActionProhibitedDuringWeightsWindow");
         assert!(h.is_some_and(|s| s.contains("weights window")));
     }
 
@@ -1412,8 +1409,7 @@ mod tests {
 
     #[test]
     fn classify_io_error_connection_reset() {
-        let io_err =
-            std::io::Error::new(std::io::ErrorKind::ConnectionReset, "connection reset");
+        let io_err = std::io::Error::new(std::io::ErrorKind::ConnectionReset, "connection reset");
         let err = anyhow::Error::new(io_err);
         assert_eq!(classify(&err), exit_code::NETWORK);
     }
@@ -1436,7 +1432,10 @@ mod tests {
 
     #[test]
     fn hint_validation_balance_threshold() {
-        let h = hint(exit_code::VALIDATION, "balance --threshold must be non-negative");
+        let h = hint(
+            exit_code::VALIDATION,
+            "balance --threshold must be non-negative",
+        );
         assert!(h.is_some_and(|s| s.contains("balance.md")));
     }
 
