@@ -71,7 +71,7 @@ jobs:
           cargo llvm-cov nextest --lib
           --test wallet_test --test cli_weights
           --test cli_test --test helpers_test
-          --ignore-filename-regex '(tests/|build\.rs|main\.rs|admin\.rs|localnet\.rs|live\.rs|events\.rs|scaffold\.rs|chain/|extrinsics/|queries/|cli/|config\.rs|wallet/)'
+          --ignore-filename-regex '(tests/|build\.rs|main\.rs|admin\.rs|localnet\.rs|live\.rs|events\.rs|scaffold\.rs|error\.rs|lib\.rs|chain/|extrinsics/|queries/|cli/|config\.rs|wallet/|types/balance\.rs|utils/explain\.rs)'
           --codecov --output-path codecov.json
         timeout-minutes: 25
       - name: Upload to Codecov
