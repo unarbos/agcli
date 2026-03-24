@@ -202,13 +202,20 @@ pub async fn test_snipe_register(client: &mut Client) {
     let netuid = NetUid(total - 1);
 
     // Pre-check: verify subnet has open slots
+    // NOTE: SubnetInfo from the runtime API lacks registration_allowed (always false),
+    // so we must check hyperparams for the authoritative value.
     let info = client
         .get_subnet_info(netuid)
         .await
         .expect("subnet info")
         .expect("subnet should exist");
+    let hyper = client
+        .get_subnet_hyperparams(netuid)
+        .await
+        .expect("subnet hyperparams")
+        .expect("subnet hyperparams should exist");
     assert!(
-        info.registration_allowed,
+        hyper.registration_allowed,
         "registration should be allowed on SN{}",
         netuid.0
     );
