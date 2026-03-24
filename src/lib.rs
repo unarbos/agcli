@@ -13,7 +13,8 @@
 //! async fn main() -> anyhow::Result<()> {
 //!     let client = Client::connect("wss://entrypoint-finney.opentensor.ai:443").await?;
 //!     let wallet = Wallet::open("~/.bittensor/wallets/default")?;
-//!     let balance = client.get_balance(&wallet.coldkey_public()).await?;
+//!     let coldkey = wallet.coldkey_public()?;
+//!     let balance = client.get_balance(&coldkey).await?;
 //!     println!("Balance: {} TAO", balance.tao());
 //!     Ok(())
 //! }

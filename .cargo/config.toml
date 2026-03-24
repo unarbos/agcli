@@ -1,0 +1,4 @@
+# cargo-nextest must be installed (see .config/nextest.toml, scripts/install-nextest.sh).
+[alias]
+nt = "nextest run"
+nt-ci = "nextest run --lib --test wallet_test --test cli_weights"

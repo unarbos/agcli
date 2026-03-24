@@ -1,0 +1,10 @@
+# cargo-nextest — https://nexte.st/book/config.html
+# Install (once per machine): ./scripts/install-nextest.sh
+# or: cargo install cargo-nextest --locked
+
+[profile.default]
+test-threads = "num-cpus"
+
+[profile.ci]
+# GitHub Actions sets NEXTEST_PROFILE=ci in .github/workflows/ci.yml
+retries = 1

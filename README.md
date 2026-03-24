@@ -3,13 +3,7 @@
 [![CI](https://github.com/unarbos/agcli/actions/workflows/ci.yml/badge.svg)](https://github.com/unarbos/agcli/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/unarbos/agcli/graph/badge.svg)](https://codecov.io/gh/unarbos/agcli)
 
-Fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network.
-
-The **CI** badge reflects the [main workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) only: formatting, Clippy, `cargo test` on the library plus `wallet_test` / `cli_weights`, coverage upload, and release build. It does **not** include Docker or live-chain e2e tests (those run in a separate [E2E workflow](https://github.com/unarbos/agcli/actions/workflows/e2e.yml)).
-
-## Coverage
-
-Codecov and the **coverage** job use the same scope as CI tests above ([`cargo llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) on the library + `wallet_test` / `cli_weights` only — no e2e). Use the Codecov badge above or open **Coverage** in the [CI workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) for the latest tree, PR diffs, and file-level line coverage. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
+Agents first, fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network.
 
 ## Install
 

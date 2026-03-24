@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   METADATA_CHAIN_ENDPOINT: wss://entrypoint-finney.opentensor.ai:443
+  NEXTEST_PROFILE: ci
 
 jobs:
   check:
@@ -32,8 +33,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
       - name: Run tests
-        run: cargo test --lib --test wallet_test --test cli_weights
+        run: cargo nextest run --lib --test wallet_test --test cli_weights
         timeout-minutes: 25
 
   coverage:
@@ -49,8 +51,9 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
       - name: Generate coverage
-        run: cargo llvm-cov --lib --test wallet_test --test cli_weights --codecov --output-path codecov.json
+        run: cargo llvm-cov nextest --lib --test wallet_test --test cli_weights --codecov --output-path codecov.json
         timeout-minutes: 25
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
