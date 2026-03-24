@@ -481,6 +481,21 @@ pub async fn setup_subnet(client: &mut Client, alice: &sr25519::Pair, sn: NetUid
 
     println!("── Setup SN{} ──", sn.0);
 
+    // Enable registration on the subnet
+    match robust_sudo(
+        client,
+        alice,
+        "sudo_set_network_registration_allowed",
+        vec![Value::u128(sn.0 as u128), Value::bool(true)],
+        5,
+    )
+    .await
+    {
+        Ok(hash) => println!("  registration_allowed SN{}: {hash}", sn.0),
+        Err(e) => println!("  [WARN] registration_allowed SN{}: {}", sn.0, e),
+    }
+    wait_blocks(client, 2).await;
+
     // Enable subtokens
     match robust_sudo(
         client,
