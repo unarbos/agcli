@@ -21,7 +21,17 @@ const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 
 /// Maximum time to wait for a keyfile lock before giving up.
+///
+/// Release builds use a long timeout: hardened Argon2id (256 MiB) per read/write means
+/// many threads queued on one file (e.g. `concurrent_wallet_writes_no_corruption`) can
+/// exceed tens of seconds on CI.
+///
+/// When the library is built with `cfg(test)` for **unit tests**, this stays shorter so
+/// `lock_timeout_on_held_lock` does not wait minutes.
+#[cfg(test)]
 const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+#[cfg(not(test))]
+const LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(180);
 
 /// Wallet directory lock — held for the whole of `Wallet::create` / import, including
 /// hardened Argon2id (256 MiB). On slow CI runners that can exceed [`LOCK_TIMEOUT`], which
@@ -30,7 +40,7 @@ const WALLET_DIR_LOCK_TIMEOUT: std::time::Duration = std::time::Duration::from_s
 
 /// Acquire an exclusive advisory lock on a keyfile path with timeout.
 /// Returns the lock file handle (lock released on drop).
-/// Times out after 10 seconds to prevent indefinite hangs if another process
+/// Times out after [`LOCK_TIMEOUT`] to prevent indefinite hangs if another process
 /// crashed while holding the lock.
 fn lock_keyfile(path: &Path) -> Result<fs::File> {
     let lock_path = path.with_extension("lock");
@@ -471,7 +481,7 @@ mod tests {
         // Verify that concurrent reads and writes to the same keyfile
         // are safely serialized via advisory locks.
         // Use 2 threads — hardened Argon2id KDF (256 MiB) makes each KDF ~8-15s, and
-        // with serialized exclusive locks, too many threads exceeds the 30s lock timeout.
+        // with serialized exclusive locks, too many threads can exceed the release lock timeout.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("concurrent_coldkey");
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -676,7 +686,7 @@ mod tests {
         let p = path.clone();
         let handle = std::thread::spawn(move || read_keyfile(&p));
 
-        // Wait a bit then release so the test doesn't take 30s
+        // Wait a bit then release so the test doesn't wait for LOCK_TIMEOUT
         std::thread::sleep(std::time::Duration::from_millis(100));
         drop(held_lock);
 
