@@ -249,6 +249,38 @@ pub async fn ensure_alice_on_subnet(client: &mut Client, netuid: NetUid) -> u16 
             wait_blocks(client, 1).await;
         }
     }
+
+    // Stake TAO so Alice gets a validator permit (permits require non-zero stake)
+    let stake_amount = Balance::from_tao(1000.0);
+    for attempt in 1..=5u32 {
+        ensure_alive(client).await;
+        match client
+            .add_stake(&alice, ALICE_SS58, netuid, stake_amount)
+            .await
+        {
+            Ok(_hash) => {
+                println!(
+                    "  staked 1000 TAO on SN{} for validator permit",
+                    netuid.0
+                );
+                break;
+            }
+            Err(e) => {
+                let msg = format!("{e}");
+                if is_retryable(&msg) && attempt < 5 {
+                    tokio::time::sleep(Duration::from_millis(retry_delay_ms(&msg))).await;
+                    continue;
+                }
+                println!(
+                    "  [WARN] stake for validator permit SN{}: {}",
+                    netuid.0, msg
+                );
+                break;
+            }
+        }
+    }
+    wait_blocks(client, 2).await;
+
     uid
 }
 
