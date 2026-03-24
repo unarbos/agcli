@@ -3146,13 +3146,7 @@ mod tests {
 
     #[test]
     fn apply_config_finalization_timeout_not_overridden_by_flag() {
-        let mut cli = Cli::parse_from([
-            "agcli",
-            "--finalization-timeout",
-            "30",
-            "config",
-            "show",
-        ]);
+        let mut cli = Cli::parse_from(["agcli", "--finalization-timeout", "30", "config", "show"]);
         let mut cfg = crate::config::Config::default();
         cfg.finalization_timeout = Some(60);
         let args: Vec<String> = vec![
@@ -3179,8 +3173,7 @@ mod tests {
 
     #[test]
     fn apply_config_mortality_blocks_not_overridden_by_flag() {
-        let mut cli =
-            Cli::parse_from(["agcli", "--mortality-blocks", "16", "config", "show"]);
+        let mut cli = Cli::parse_from(["agcli", "--mortality-blocks", "16", "config", "show"]);
         let mut cfg = crate::config::Config::default();
         cfg.mortality_blocks = Some(64);
         let args: Vec<String> = vec![
@@ -3202,8 +3195,7 @@ mod tests {
 
     #[test]
     fn resolve_network_custom() {
-        let cli =
-            Cli::parse_from(["agcli", "--network", "ws://custom:9944", "config", "show"]);
+        let cli = Cli::parse_from(["agcli", "--network", "ws://custom:9944", "config", "show"]);
         match cli.resolve_network() {
             Network::Custom(s) => assert_eq!(s, "ws://custom:9944"),
             other => panic!("expected Custom, got {:?}", other),
