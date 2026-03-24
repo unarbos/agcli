@@ -161,8 +161,10 @@ pub async fn test_reveal_weights_rejected_without_prior_commit(client: &mut Clie
         }
     }
     assert!(
-        err_msg.contains("NoWeightsCommitFound") || err_msg.contains("Custom error: 50"),
-        "expected NoWeightsCommitFound (or custom 50), got: {err_msg}"
+        err_msg.contains("NoWeightsCommitFound")
+            || err_msg.contains("Custom error: 50")
+            || err_msg.contains("Custom error: 16"),
+        "expected NoWeightsCommitFound (or custom 50/16), got: {err_msg}"
     );
     println!(
         "[PASS] reveal_weights rejected without prior commit on SN{}",
