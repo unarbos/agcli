@@ -706,8 +706,15 @@ proptest! {
 }
 
 // ──── Wallet encrypt/decrypt file roundtrip property tests ────
+//
+// Encrypted keyfile paths use Argon2id (256 MiB) per `derive_key` call. Proptest's default
+// 256 cases × multiple KDFs per case can take hours. Each case here is often ~20–40s on a
+// typical CPU, so keep `cases` at 1 (one random draw per test). `keyfile.rs` unit tests
+// already cover fixed-password roundtrips. For deeper fuzzing, raise `with_cases` locally.
 
 proptest! {
+    #![proptest_config(proptest::test_runner::Config::with_cases(1))]
+
     /// write_encrypted_keyfile → read_encrypted_keyfile roundtrip
     #[test]
     fn fuzz_encrypt_decrypt_roundtrip(
@@ -740,7 +747,9 @@ proptest! {
         prop_assert!(result.is_err(),
             "decrypting with wrong password should fail");
     }
+}
 
+proptest! {
     /// write_keyfile → read_keyfile roundtrip (unencrypted hotkey style)
     #[test]
     fn fuzz_unencrypted_keyfile_roundtrip(_dummy in 0u8..5) {
@@ -769,8 +778,12 @@ proptest! {
 }
 
 // ──── Wallet full lifecycle property tests ────
+//
+// Same Argon2 cost as encrypted keyfiles inside `Wallet::create` / unlock paths.
 
 proptest! {
+    #![proptest_config(proptest::test_runner::Config::with_cases(1))]
+
     /// Full wallet lifecycle: create → open → unlock → sign → verify
     #[test]
     fn fuzz_wallet_lifecycle(

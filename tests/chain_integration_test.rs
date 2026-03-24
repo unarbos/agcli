@@ -1,5 +1,5 @@
 //! Extended integration tests against the live Finney chain.
-//! Run with: cargo test --test chain_integration_test -- --nocapture
+//! Run with: cargo test --features e2e --test chain_integration_test -- --nocapture
 //!
 //! All assertions run sequentially within a single tokio runtime,
 //! sharing one WebSocket connection to avoid rate-limiting and

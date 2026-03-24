@@ -94,7 +94,7 @@ echo "── Step 4: Funding wallet from Alice ──"
 # The cleanest approach: use our own agcli to import Alice and transfer
 
 echo "  Note: Must fund wallet externally (Alice→test wallet transfer)"
-echo "  For a full automated test, use: cargo test --test e2e_test"
+echo "  For a full automated test, use: cargo test --features e2e --test e2e_test"
 echo ""
 
 # ── 5. Test snipe command (dry run, no funds) ──
@@ -147,7 +147,7 @@ echo "║              All Pre-flight Tests Passed                ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 echo "For a full registration test with funded wallet, use:"
-echo "  cargo test --test e2e_test -- --nocapture"
+echo "  cargo test --features e2e --test e2e_test -- --nocapture"
 echo ""
 echo "Or fund the test wallet manually:"
 echo "  # Transfer 1 TAO to $COLDKEY_SS58"

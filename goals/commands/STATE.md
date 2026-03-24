@@ -12,6 +12,6 @@
 
 **Left:** Step 53 — e.g. **`stake swap-limit`** or **`stake unstake-all-alpha`**; optional full **`e2e_local_chain`** Docker run.
 
-**Tests run:** `cargo fmt --all`; `cargo test -p agcli error::tests::classify_hotkey_address_validation_hint --lib`; `cargo test -p agcli utils::explain::tests::owner_workflow_mentions_stake_unstake_all_preflight --lib`; `cargo test -p agcli --test e2e_test e2e_local_chain` **`--no-run`** — **passed**.
+**Tests run:** `cargo fmt --all`; `cargo test -p agcli error::tests::classify_hotkey_address_validation_hint --lib`; `cargo test -p agcli utils::explain::tests::owner_workflow_mentions_stake_unstake_all_preflight --lib`; `cargo test -p agcli --features e2e --test e2e_test e2e_local_chain` **`--no-run`** — **passed**.
 
 **Git:** Commit + push **project files only** (excludes **`.github/workflows/ci.yml`**, **`tests/wallet_test.rs`**).

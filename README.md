@@ -5,9 +5,11 @@
 
 Fast, safe Rust toolkit for the [Bittensor](https://bittensor.com) network.
 
+The **CI** badge reflects the [main workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) only: formatting, Clippy, `cargo test` on the library plus `wallet_test` / `cli_weights`, coverage upload, and release build. It does **not** include Docker or live-chain e2e tests (those run in a separate [E2E workflow](https://github.com/unarbos/agcli/actions/workflows/e2e.yml)).
+
 ## Coverage
 
-CI generates reports with [`cargo llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) (library + `wallet_test` / `cli_weights`) and uploads them to **[Codecov](https://codecov.io/gh/unarbos/agcli)**. Use the Codecov badge above or open **Coverage** in the [CI workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) for the latest tree, PR diffs, and file-level line coverage. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
+Codecov and the **coverage** job use the same scope as CI tests above ([`cargo llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) on the library + `wallet_test` / `cli_weights` only — no e2e). Use the Codecov badge above or open **Coverage** in the [CI workflow](https://github.com/unarbos/agcli/actions/workflows/ci.yml) for the latest tree, PR diffs, and file-level line coverage. Wallets, staking, transfers, subnets, weights, metagraph queries, Dynamic TAO, monitoring, and more.
 
 ## Install
 
@@ -115,7 +117,7 @@ agcli/
 │   └── tutorials/            # 5 step-by-step guides
 ├── examples/
 │   └── scaffold.toml         # Example scaffold configuration
-├── tests/                    # 7 integration test files
+├── tests/                    # Integration tests (+ `cli_test_modules/`, `helpers_test_modules/`, `e2e_modules/`)
 ├── build.rs                  # Compile-time chain metadata fetch
 └── Cargo.toml
 ```

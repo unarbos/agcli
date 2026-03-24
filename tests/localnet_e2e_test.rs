@@ -7,7 +7,7 @@
 //!   docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready
 //!
 //! Run with:
-//!   cargo test --test localnet_e2e_test -- --nocapture --test-threads=1
+//!   cargo test --features e2e --test localnet_e2e_test -- --nocapture --test-threads=1
 //!
 //! Tests MUST run sequentially (--test-threads=1) because they share a single
 //! Docker container on port 9946 (using a non-default port to avoid conflicts

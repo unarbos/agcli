@@ -76,6 +76,28 @@ strip = true
 default = ["cli"]
 cli = []
 sdk-only = []
+# Enables Docker / live-chain integration test targets (not run by default `cargo test`).
+e2e = []
+
+[[test]]
+name = "e2e_test"
+path = "tests/e2e_test.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "user_flows_e2e"
+path = "tests/user_flows_e2e.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "localnet_e2e_test"
+path = "tests/localnet_e2e_test.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "chain_integration_test"
+path = "tests/chain_integration_test.rs"
+required-features = ["e2e"]
 
 [dev-dependencies]
 tempfile = "3.27.0"

@@ -13,7 +13,7 @@
 //! Requires: `docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready`
 //!
 //! Run with:
-//!   cargo test --test user_flows_e2e -- --nocapture
+//!   cargo test --features e2e --test user_flows_e2e -- --nocapture
 //!
 //! The test harness:
 //!   1. Starts a local subtensor chain via Docker (fast-block mode, 250ms blocks).

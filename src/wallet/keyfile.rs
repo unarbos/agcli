@@ -940,7 +940,7 @@ mod tests {
             // This should block because we hold the lock
             let start = std::time::Instant::now();
             // We can't really test "blocks" easily, but we can verify it works after lock release
-            drop(std::hint::black_box(&path_clone));
+            let _ = std::hint::black_box(&path_clone);
             start.elapsed()
         });
         handle.join().unwrap();

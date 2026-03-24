@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn coldkey_public_errors_when_not_unlocked() {
         let dir = tempfile::tempdir().unwrap();
-        let (wallet, _, _) = Wallet::create(dir.path(), "test667", "pass", "default").unwrap();
+        let (_wallet, _, _) = Wallet::create(dir.path(), "test667", "pass", "default").unwrap();
         // Re-open without unlocking
         let w = Wallet::open(dir.path().join("test667")).unwrap();
         // coldkey_public() should error, not return a zero key

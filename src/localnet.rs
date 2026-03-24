@@ -357,8 +357,6 @@ async fn get_block_height(endpoint: &str) -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // ── Issue 142: port 65534 off-by-one ──
 
     /// Port validation helper matching the logic in start().
