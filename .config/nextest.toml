@@ -7,4 +7,6 @@ test-threads = "num-cpus"
 
 [profile.ci]
 # GitHub Actions sets NEXTEST_PROFILE=ci in .github/workflows/ci.yml
-retries = 1
+test-threads = "num-cpus"
+# Retries double runtime on flakes; keep CI fast.
+retries = 0

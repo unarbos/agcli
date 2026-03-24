@@ -2991,4 +2991,3 @@ fn parse_drand_write_pulse_missing_payload() {
         "drand write-pulse without --payload should fail"
     );
 }
-

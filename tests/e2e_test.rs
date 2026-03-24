@@ -33,8 +33,8 @@ mod e2e_cases {
     include!("e2e_modules/cases_part03.rs");
 }
 
-use e2e_harness::*;
 use e2e_cases::*;
+use e2e_harness::*;
 
 // ──────── Tests ────────
 
@@ -318,4 +318,3 @@ async fn e2e_local_chain() {
         .args(["rm", "-f", CONTAINER_NAME])
         .output();
 }
-

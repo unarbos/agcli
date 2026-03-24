@@ -2998,4 +2998,3 @@ fn parse_stake_process_claim_with_netuids() {
         agcli::cli::Cli::try_parse_from(["agcli", "stake", "process-claim", "--netuids", "1,2,3"]);
     assert!(cli.is_ok(), "{:?}", cli.err());
 }
-

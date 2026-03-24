@@ -1405,4 +1405,3 @@ fn validate_ipv4_rejects_loopback() {
     let msg = result.unwrap_err().to_string();
     assert!(msg.contains("loopback"), "msg: {}", msg);
 }
-

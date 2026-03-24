@@ -3004,4 +3004,3 @@ fn parse_view_metagraph_missing_netuid_v2() {
     let cli = agcli::cli::Cli::try_parse_from(["agcli", "view", "metagraph"]);
     assert!(cli.is_err(), "view metagraph missing netuid should fail");
 }
-

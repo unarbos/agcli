@@ -354,7 +354,8 @@ macro_rules! retry_extrinsic {
                         } else if needs_fresh_conn(&msg) {
                             let _ = $client.reconnect().await;
                         }
-                        tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg))).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg)))
+                            .await;
                         continue;
                     }
                     panic!("extrinsic failed after {} attempts: {}", __re_attempt, e);
@@ -385,7 +386,8 @@ macro_rules! try_extrinsic {
                         } else if needs_fresh_conn(&msg) {
                             let _ = $client.reconnect().await;
                         }
-                        tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg))).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg)))
+                            .await;
                         continue;
                     }
                     __te_result = Err(msg);
@@ -424,7 +426,8 @@ pub async fn sudo_admin_call(
                     } else if needs_fresh_conn(&msg) {
                         let _ = client.reconnect().await;
                     }
-                    tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg))).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms(&msg)))
+                        .await;
                     continue;
                 }
                 result = Err(msg);

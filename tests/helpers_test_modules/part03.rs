@@ -1410,4 +1410,3 @@ fn validate_subnet_name_valid_max_length() {
     let name = "a".repeat(256);
     assert!(validate_subnet_name(&name, "name").is_ok());
 }
-

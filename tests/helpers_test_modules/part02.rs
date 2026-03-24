@@ -1410,4 +1410,3 @@ fn evm_address_21_bytes() {
         validate_evm_address("0x1234567890abcdef1234567890abcdef123456789a", "test").unwrap_err();
     assert!(err.to_string().contains("20 bytes"), "got: {}", err);
 }
-

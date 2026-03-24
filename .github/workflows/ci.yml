@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   METADATA_CHAIN_ENDPOINT: wss://entrypoint-finney.opentensor.ai:443
@@ -24,7 +28,12 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Clippy
-        run: cargo clippy --lib --bins --test wallet_test --test cli_weights -- -D warnings
+        # Same integration crates as the nextest job (avoid `--tests`: pulls proptest/stress + full `#[cfg(test)]` clippy).
+        run: >-
+          cargo clippy --lib --bins
+          --test wallet_test --test cli_weights
+          --test cli_test --test helpers_test
+          -- -D warnings
 
   test:
     name: Test
@@ -35,11 +44,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@nextest
       - name: Run tests
-        run: cargo nextest run --lib --test wallet_test --test cli_weights
+        run: >-
+          cargo nextest run --lib
+          --test wallet_test --test cli_weights
+          --test cli_test --test helpers_test
         timeout-minutes: 25
 
   coverage:
     name: Coverage
+    # Same tests as `test` but with llvm-cov instrumentation — skip on PRs to save ~15–25 min.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,7 +67,11 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
       - name: Generate coverage
-        run: cargo llvm-cov nextest --lib --test wallet_test --test cli_weights --codecov --output-path codecov.json
+        run: >-
+          cargo llvm-cov nextest --lib
+          --test wallet_test --test cli_weights
+          --test cli_test --test helpers_test
+          --codecov --output-path codecov.json
         timeout-minutes: 25
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
@@ -64,6 +82,7 @@ jobs:
 
   build:
     name: Build Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

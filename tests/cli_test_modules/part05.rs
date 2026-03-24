@@ -3007,4 +3007,3 @@ fn parse_delegate_show_no_hotkey_s18() {
     let cli = agcli::cli::Cli::try_parse_from(["agcli", "delegate", "show"]);
     assert!(cli.is_ok(), "delegate show no hotkey: {:?}", cli.err());
 }
-

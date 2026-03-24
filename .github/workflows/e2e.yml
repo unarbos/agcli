@@ -1,10 +1,15 @@
 name: E2E
 
+# Heavy job (image pull + long chain test). Run on main pushes and manual trigger only —
+# not on every PR, so CI stays responsive.
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always

@@ -3002,4 +3002,3 @@ fn parse_weights_reveal_mechanism_missing_netuid() {
         "reveal-mechanism without --netuid should fail"
     );
 }
-
