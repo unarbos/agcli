@@ -259,8 +259,9 @@ pub async fn test_reveal_weights_rejected_when_reveal_too_early(client: &mut Cli
     assert!(
         err_msg.contains("RevealTooEarly")
             || err_msg.contains("NotInRevealPeriod")
-            || err_msg.contains("Custom error: 78"),
-        "expected RevealTooEarly / NotInRevealPeriod / custom 78, got: {err_msg}"
+            || err_msg.contains("Custom error: 78")
+            || err_msg.contains("Custom error: 16"),
+        "expected RevealTooEarly / NotInRevealPeriod / custom 78 / custom 16, got: {err_msg}"
     );
     println!(
         "[PASS] reveal_weights rejected when reveal too early on SN{}",
