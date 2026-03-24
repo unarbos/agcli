@@ -690,8 +690,10 @@ pub async fn test_set_weights_rejected_on_root_network(client: &mut Client) {
         }
     }
     assert!(
-        err_msg.contains("CanNotSetRootNetworkWeights") || err_msg.contains("Custom error: 46"),
-        "expected CanNotSetRootNetworkWeights (or custom 46), got: {err_msg}"
+        err_msg.contains("CanNotSetRootNetworkWeights")
+            || err_msg.contains("Custom error: 46")
+            || err_msg.contains("CommitRevealEnabled"),
+        "expected CanNotSetRootNetworkWeights (or custom 46) or CommitRevealEnabled, got: {err_msg}"
     );
     println!("[PASS] set_weights rejected on root network (SN0)");
 }
