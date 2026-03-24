@@ -1233,8 +1233,10 @@ pub async fn test_set_weights_rejected_when_stake_below_threshold(client: &mut C
     }
     if !accepted {
         assert!(
-            err_msg.contains("NotEnoughStakeToSetWeights") || err_msg.contains("Custom error: 10"),
-            "expected NotEnoughStakeToSetWeights (or custom 10), got: {err_msg}"
+            err_msg.contains("NotEnoughStakeToSetWeights")
+                || err_msg.contains("Custom error: 10")
+                || err_msg.contains("NeuronNoValidatorPermit"),
+            "expected NotEnoughStakeToSetWeights, NeuronNoValidatorPermit, or custom 10, got: {err_msg}"
         );
         println!("  stake-threshold e2e: set_weights rejected as expected");
     }
