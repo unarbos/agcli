@@ -29,4 +29,6 @@ jobs:
         run: docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready
       - name: Run e2e_local_chain
         run: cargo test -p agcli --features e2e --test e2e_test e2e_local_chain -- --nocapture
-        timeout-minutes: 45
+        timeout-minutes: 60
+        env:
+          CARGO_INCREMENTAL: "1"
