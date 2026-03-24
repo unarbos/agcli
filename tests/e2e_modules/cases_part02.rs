@@ -1875,7 +1875,7 @@ pub async fn test_subnet_identity(client: &mut Client, netuid: NetUid) {
 
     let identity = SubnetIdentity {
         subnet_name: "E2E Test Subnet".to_string(),
-        github_repo: "https://github.com/unconst/agcli".to_string(),
+        github_repo: "https://github.com/unarbos/agcli".to_string(),
         subnet_contact: "test@example.com".to_string(),
         subnet_url: "https://example.com/subnet".to_string(),
         discord: "agcli#1234".to_string(),

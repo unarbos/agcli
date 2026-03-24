@@ -22,7 +22,7 @@ agcli balance --at-block 4000000 --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXC
 agcli --network archive balance --at-block 3500000 --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 ```
 
-Pruned nodes only retain recent state (~256 blocks). Older heights need an **archive** endpoint (`--network archive` or `--endpoint <archive-ws>`). Pruned-state errors from storage are wrapped with a hint that mentions `agcli balance --at-block … --network archive` (see [`annotate_at_block_error`](https://github.com/unconst/agcli/blob/main/src/chain/mod.rs) in `src/chain/mod.rs`).
+Pruned nodes only retain recent state (~256 blocks). Older heights need an **archive** endpoint (`--network archive` or `--endpoint <archive-ws>`). Pruned-state errors from storage are wrapped with a hint that mentions `agcli balance --at-block … --network archive` (see [`annotate_at_block_error`](https://github.com/unarbos/agcli/blob/main/src/chain/mod.rs) in `src/chain/mod.rs`).
 
 ### Watch mode
 
@@ -37,7 +37,7 @@ Watch mode runs until **Ctrl+C**. A failed poll prints a warning, waits, and ret
 
 ## Read path (RPC / storage)
 
-Order matches [`Commands::Balance`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs) in `src/cli/commands.rs` (201–325):
+Order matches [`Commands::Balance`](https://github.com/unarbos/agcli/blob/main/src/cli/commands.rs) in `src/cli/commands.rs` (201–325):
 
 1. **`validate_threshold`** when `--threshold` is set (`src/cli/helpers.rs`).
 2. **`connect`** (global network / endpoint).
@@ -73,29 +73,29 @@ Order matches [`Commands::Balance`](https://github.com/unconst/agcli/blob/main/s
 | **0** | Successful one-shot or historical query; watch mode until Ctrl+C (including continued run after transient RPC errors in the loop). |
 | **2** | Clap / invalid global flags (unknown option, bad value where clap parses). |
 | **10** | Network / WebSocket failure (e.g. cannot connect, connection reset) — typical for failed `connect` or hard RPC errors on one-shot paths. |
-| **12** | Validation: invalid **`--address`** (SS58), or other input classified as validation in [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **12** | Validation: invalid **`--address`** (SS58), or other input classified as validation in [`src/error.rs`](https://github.com/unarbos/agcli/blob/main/src/error.rs). |
 | **15** | Timeout (when a timeout applies to the operation). |
 | **1** | Generic / other: e.g. negative or non-finite **`--threshold`**, **`--at-block`** hash lookup failure (`Block N not found`), unresolved coldkey when no **`--address`** (wallet empty / missing), or uncategorized errors. |
 
-Classification follows [`agcli::error::classify`](https://github.com/unconst/agcli/blob/main/src/error.rs). **`--threshold`** validation failures include a [`hint`](https://github.com/unconst/agcli/blob/main/src/error.rs) for exit **12**.
+Classification follows [`agcli::error::classify`](https://github.com/unarbos/agcli/blob/main/src/error.rs). **`--threshold`** validation failures include a [`hint`](https://github.com/unarbos/agcli/blob/main/src/error.rs) for exit **12**.
 
 ## Common issues
 
 | Symptom | Cause | What to do |
 |---------|-------|------------|
-| Pruned / unknown block / state discarded on **`--at-block`** | Full node without archive history | Use **`--network archive`** or an archive **`--endpoint`** (see [`explain` archive topic](https://github.com/unconst/agcli/blob/main/src/utils/explain.rs) and `agcli explain archive`). |
+| Pruned / unknown block / state discarded on **`--at-block`** | Full node without archive history | Use **`--network archive`** or an archive **`--endpoint`** (see [`explain` archive topic](https://github.com/unarbos/agcli/blob/main/src/utils/explain.rs) and `agcli explain archive`). |
 | Cannot resolve coldkey | No **`--address`** and default wallet has no coldkey | Pass **`--address`**, or create a wallet: `agcli wallet create` |
 | Invalid SS58 | Bad checksum or prefix | Fix address; local devnets often use prefix **42**. |
 
 ## E2E
 
-Log lines **`balance_preflight`** in Phase 20 [`test_balance_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`get_balance_ss58`** (Alice), then **`get_block_number`** → **`get_block_hash`** → **`get_balance_at_block`** at head — same RPC sequence as the CLI’s one-shot and **`--at-block`** branches (watch mode is long-running and is covered by `cli_test` parsers).
+Log lines **`balance_preflight`** in Phase 20 [`test_balance_preflight`](https://github.com/unarbos/agcli/blob/main/tests/e2e_test.rs): **`get_balance_ss58`** (Alice), then **`get_block_number`** → **`get_block_hash`** → **`get_balance_at_block`** at head — same RPC sequence as the CLI’s one-shot and **`--at-block`** branches (watch mode is long-running and is covered by `cli_test` parsers).
 
 ## Source code
 
-**Handler:** [`src/cli/commands.rs`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs) — `Commands::Balance`.
+**Handler:** [`src/cli/commands.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/commands.rs) — `Commands::Balance`.
 
-**Chain:** [`src/chain/mod.rs`](https://github.com/unconst/agcli/blob/main/src/chain/mod.rs) — `get_balance`, `get_balance_ss58`, `get_block_hash`, `get_balance_at_block`.
+**Chain:** [`src/chain/mod.rs`](https://github.com/unarbos/agcli/blob/main/src/chain/mod.rs) — `get_balance`, `get_balance_ss58`, `get_block_hash`, `get_balance_at_block`.
 
 ## Related commands
 

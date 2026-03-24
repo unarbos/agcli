@@ -8,7 +8,7 @@ Agents first, fast, safe Rust toolkit for the [Bittensor](https://bittensor.com)
 ## Install
 
 ```bash
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 ```
 
 ## Quick Examples
@@ -51,7 +51,7 @@ Every command supports `--output json|csv`, `--yes` (skip prompts), `--batch` (h
 
 ```toml
 [dependencies]
-agcli = { git = "https://github.com/unconst/agcli", default-features = false, features = ["sdk-only"] }
+agcli = { git = "https://github.com/unarbos/agcli", default-features = false, features = ["sdk-only"] }
 ```
 
 ```rust
@@ -121,7 +121,7 @@ agcli/
 Requires Rust 1.75+ and network access (fetches chain metadata at build time):
 
 ```bash
-git clone https://github.com/unconst/agcli && cd agcli && cargo build --release
+git clone https://github.com/unarbos/agcli && cd agcli && cargo build --release
 ```
 
 ## License

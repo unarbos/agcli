@@ -145,11 +145,11 @@ Neuron keypairs are deterministic: derived from `//{name}_sn{netuid}` URI, so sc
 | `Container not found` | Stop/status on non-existent container | Check `docker ps` or start first |
 
 ## Source Code
-**agcli handler**: [`src/cli/localnet_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/localnet_cmds.rs) — Start L11, Stop L71, Status L86, Reset L114, Logs L152, Scaffold L159
+**agcli handler**: [`src/cli/localnet_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/localnet_cmds.rs) — Start L11, Stop L71, Status L86, Reset L114, Logs L152, Scaffold L159
 
-**SDK**: [`src/localnet.rs`](https://github.com/unconst/agcli/blob/main/src/localnet.rs) — `start()` L114, `stop()` L180, `status()` L201, `reset()` L252, `logs()` L258
+**SDK**: [`src/localnet.rs`](https://github.com/unarbos/agcli/blob/main/src/localnet.rs) — `start()` L114, `stop()` L180, `status()` L201, `reset()` L252, `logs()` L258
 
-**Scaffold SDK**: [`src/scaffold.rs`](https://github.com/unconst/agcli/blob/main/src/scaffold.rs) — `ScaffoldConfig` L36, `run()` L209, `run_with_progress()` L214
+**Scaffold SDK**: [`src/scaffold.rs`](https://github.com/unarbos/agcli/blob/main/src/scaffold.rs) — `ScaffoldConfig` L36, `run()` L209, `run_with_progress()` L214
 
 ## Related Commands
 - `agcli admin set-tempo` — Set subnet hyperparameters via sudo

@@ -6,11 +6,11 @@ agcli is a Rust CLI + SDK for the Bittensor network. It covers wallet management
 
 ```bash
 # From source (requires Rust toolchain)
-git clone https://github.com/unconst/agcli && cd agcli
+git clone https://github.com/unarbos/agcli && cd agcli
 cargo install --path .
 
 # Or install directly from GitHub
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 
 # Self-update an existing installation
 agcli update

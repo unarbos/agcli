@@ -32,7 +32,7 @@ agcli swap coldkey --new-coldkey SS58 [--password PW] [--yes]
 - Check status: `agcli wallet check-swap`
 
 ## Source Code
-**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/network_cmds.rs) — `handle_swap()` at L231, Hotkey L238, Coldkey L264
+**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/network_cmds.rs) — `handle_swap()` at L231, Hotkey L238, Coldkey L264
 
 **Subtensor pallet**:
 - [`swap/swap_hotkey.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/swap/swap_hotkey.rs) — `swap_hotkey` extrinsic

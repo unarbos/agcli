@@ -35,7 +35,7 @@ agcli transfer-keep-alive --dest 5FHn... --amount 1.0 --password p --yes
 
 ## Read path (validation → RPC → submit)
 
-Order matches [`Commands::Transfer`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs), **`TransferAll`**, and **`TransferKeepAlive`** in `src/cli/commands.rs` (326–469):
+Order matches [`Commands::Transfer`](https://github.com/unarbos/agcli/blob/main/src/cli/commands.rs), **`TransferAll`**, and **`TransferKeepAlive`** in `src/cli/commands.rs` (326–469):
 
 1. **`validate_ss58(&dest, "destination")`** (`src/cli/helpers.rs`).
 2. **`validate_amount`** for **`transfer`** and **`transfer-keep-alive`** only (`"transfer amount"` label).
@@ -65,7 +65,7 @@ Success (normal submit): `print_tx_result` emits a single object on stderr:
 | **2** | Clap / invalid global flags. |
 | **10** | Network / WebSocket failure (e.g. failed **`connect`**). |
 | **11** | Auth: wrong password, missing wallet, unlock failure. |
-| **12** | Validation: bad **`--dest`** (SS58), invalid **`--amount`** (negative, zero, non-finite), etc. — see [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **12** | Validation: bad **`--dest`** (SS58), invalid **`--amount`** (negative, zero, non-finite), etc. — see [`classify`](https://github.com/unarbos/agcli/blob/main/src/error.rs). |
 | **13** | Chain: dispatch / extrinsic errors; **client-side** “Insufficient balance: you have … but trying to transfer …” (message contains **insufficient**). |
 | **15** | Timeout when applicable. |
 | **1** | Other uncategorized errors (e.g. encode failure in dry-run). |
@@ -79,14 +79,14 @@ Hints for validation **12** may mention **`docs/commands/transfer.md`** for **`t
 
 ## E2E
 
-Log lines **`transfer_preflight`** in Phase 20 [`test_transfer_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): local **`validate_ss58`** + **`validate_amount`**, then **`get_balance_ss58`** on Alice to mirror the pre-submit check for **`transfer`** / **`transfer-keep-alive`** (destination Bob on localnet). **`transfer-all`** is documented as **no** pre-balance RPC in the handler.
+Log lines **`transfer_preflight`** in Phase 20 [`test_transfer_preflight`](https://github.com/unarbos/agcli/blob/main/tests/e2e_test.rs): local **`validate_ss58`** + **`validate_amount`**, then **`get_balance_ss58`** on Alice to mirror the pre-submit check for **`transfer`** / **`transfer-keep-alive`** (destination Bob on localnet). **`transfer-all`** is documented as **no** pre-balance RPC in the handler.
 
 Full extrinsic coverage: Phase 2 **`test_transfer`** (Alice → Bob) and Phase 16 **`test_transfer_all`** in the same file.
 
 ## Source code
 
-- **CLI:** [`src/cli/commands.rs`](https://github.com/unconst/agcli/blob/main/src/cli/commands.rs) — `Commands::Transfer`, `TransferAll`, `TransferKeepAlive`.
-- **Extrinsics:** [`src/chain/extrinsics.rs`](https://github.com/unconst/agcli/blob/main/src/chain/extrinsics.rs) — `transfer`, `transfer_all`, `transfer_keep_alive`.
+- **CLI:** [`src/cli/commands.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/commands.rs) — `Commands::Transfer`, `TransferAll`, `TransferKeepAlive`.
+- **Extrinsics:** [`src/chain/extrinsics.rs`](https://github.com/unarbos/agcli/blob/main/src/chain/extrinsics.rs) — `transfer`, `transfer_all`, `transfer_keep_alive`.
 
 ## Related commands
 

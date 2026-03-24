@@ -7,7 +7,7 @@ Rust CLI + SDK for Bittensor. Manage wallets, stake TAO, transfer tokens, regist
 
 ### Install
 ```bash
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 ```
 
 ### Common Tasks (intent → command)

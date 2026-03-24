@@ -34,7 +34,7 @@ agcli identity set-subnet --netuid 1 --name "MySubnet" [--github "..."] [--url "
 - Errors: `NotSubnetOwner`
 
 ## Source Code
-**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/network_cmds.rs) — `handle_identity()` at L163, subcommands: Show L170, Set L188, SetSubnet L200
+**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/network_cmds.rs) — `handle_identity()` at L163, subcommands: Show L170, Set L188, SetSubnet L200
 
 **Subtensor pallet**:
 - [`utils/identity.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/utils/identity.rs) — `set_identity`, `set_subnet_identity` logic

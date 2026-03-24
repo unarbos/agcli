@@ -150,7 +150,7 @@ The `--mev` flag (or `AGCLI_MEV=1` env var) enables this globally. No additional
 
 ```bash
 # Install
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 
 # Or download a prebuilt binary — one file, done
 ```
@@ -191,7 +191,7 @@ agcli isn't just a CLI. Import it as a Rust library:
 
 ```toml
 [dependencies]
-agcli = { git = "https://github.com/unconst/agcli", default-features = false, features = ["sdk-only"] }
+agcli = { git = "https://github.com/unarbos/agcli", default-features = false, features = ["sdk-only"] }
 ```
 
 ```rust

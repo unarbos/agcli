@@ -27,7 +27,7 @@ agcli root weights --weights "1:500,2:300,3:200"
 - Errors: `NotEnoughStakeToSetWeights`, `SettingWeightsTooFast`
 
 ## Source Code
-**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/network_cmds.rs) — `handle_root()` at L11, subcommands: Register L19, Weights L32
+**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/network_cmds.rs) — `handle_root()` at L11, subcommands: Register L19, Weights L32
 
 **Subtensor pallet**:
 - [`macros/dispatches.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/macros/dispatches.rs) — `root_register`, `set_root_weights` dispatch entry points

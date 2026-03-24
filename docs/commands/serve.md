@@ -28,7 +28,7 @@ agcli serve prometheus --ip 1.2.3.4 --port 9090 [--version 0]
 - Events: `PrometheusServed(netuid, hotkey)`
 
 ## Source Code
-**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/network_cmds.rs) — `handle_serve()` at L430, subcommands: Axon L438, Reset L474
+**agcli handler**: [`src/cli/network_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/network_cmds.rs) — `handle_serve()` at L430, subcommands: Axon L438, Reset L474
 
 **Subtensor pallet**:
 - [`subnets/serving.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/subnets/serving.rs) — `serve_axon`, `serve_prometheus` logic

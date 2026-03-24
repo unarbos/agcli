@@ -6,7 +6,7 @@ How to use agcli from AI agents, scripts, and automation pipelines with zero int
 
 ```bash
 # Install
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 
 # Set persistent defaults (optional)
 agcli config set --key batch --value true          # Never prompt for missing args

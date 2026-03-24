@@ -43,7 +43,7 @@ agcli update
 **`agcli doctor`** is not a `utils` subcommand — it is a **top-level** command. See **[doctor.md](doctor.md)** for connectivity, chain pings, disk cache, wallet row semantics, JSON shape, and exit behaviour (always **0** with per-row OK/FAIL).
 
 ## Source Code
-**agcli handler**: [`src/cli/system_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/system_cmds.rs) — `handle_utils()` (convert, latency), `generate_completions()`, `handle_update()`; **`handle_doctor()`** is separate (~`handle_doctor` in the same file).
+**agcli handler**: [`src/cli/system_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/system_cmds.rs) — `handle_utils()` (convert, latency), `generate_completions()`, `handle_update()`; **`handle_doctor()`** is separate (~`handle_doctor` in the same file).
 
 **No on-chain interaction** for convert/completions/update. **`utils latency`** makes RPC test calls.
 

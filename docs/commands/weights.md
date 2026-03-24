@@ -130,7 +130,7 @@ Uses the default wallet / hotkey from global flags (same as `weights commit` / `
 
 **Errors:** No extrinsic is submitted; failures are wallet unlock / RPC / storage read issues (classified per `src/error.rs`), not on-chain dispatch codes from this command.
 
-**Source map:** `WeightCommands::Status` → `handle_weights` in [`src/cli/weights_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/weights_cmds.rs); storage query `get_weight_commits` in [`src/chain/extrinsics.rs`](https://github.com/unconst/agcli/blob/main/src/chain/extrinsics.rs).
+**Source map:** `WeightCommands::Status` → `handle_weights` in [`src/cli/weights_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/weights_cmds.rs); storage query `get_weight_commits` in [`src/chain/extrinsics.rs`](https://github.com/unarbos/agcli/blob/main/src/chain/extrinsics.rs).
 
 ### weights commit-timelocked
 Commit weights under **drand** timelock: the chain stores a hash tied to a **`--round`**; decryption/reveal is driven by drand when that round is available (see **Timelocked Weights** below for extrinsic/events). Same weight string and Blake2 commit hashing as **`weights commit`** (optional **`--salt`**, random salt printed if omitted — keep it for any follow-on reveal flow your network documents).
@@ -269,7 +269,7 @@ After submit, agcli waits for inclusion/finalization (default **30s**). If the c
 | Finalization timeout | No new finalized blocks within `--finalization-timeout` | Increase timeout / fix RPC; see **Extrinsic finalization timeouts** above |
 
 ## Source Code
-**agcli handler**: [`src/cli/weights_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/weights_cmds.rs) — `handle_weights()`; subcommands include `Show`, `Set`, `Commit`, `Reveal`, **`CommitReveal`** (`commit-reveal`), **`Status`** (`status`), **`CommitTimelocked`** (`commit-timelocked`), **`SetMechanism`** (`set-mechanism`), **`CommitMechanism`** (`commit-mechanism`), **`RevealMechanism`** (`reveal-mechanism`)
+**agcli handler**: [`src/cli/weights_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/weights_cmds.rs) — `handle_weights()`; subcommands include `Show`, `Set`, `Commit`, `Reveal`, **`CommitReveal`** (`commit-reveal`), **`Status`** (`status`), **`CommitTimelocked`** (`commit-timelocked`), **`SetMechanism`** (`set-mechanism`), **`CommitMechanism`** (`commit-mechanism`), **`RevealMechanism`** (`reveal-mechanism`)
 
 **Subtensor pallet**:
 - [`subnets/weights.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/subtensor/src/subnets/weights.rs) — `set_weights`, `commit_crv3_weights`, `reveal_crv3_weights`, mechanism weights, timelocked weights, batch weight operations

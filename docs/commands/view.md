@@ -11,7 +11,7 @@ Aggregates **free TAO**, **total staked** (TAO equivalent), and **per-subnet pos
 ### After `cargo install`
 
 ```bash
-cargo install --git https://github.com/unconst/agcli
+cargo install --git https://github.com/unarbos/agcli
 agcli view portfolio
 agcli view portfolio --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 agcli --output json view portfolio --address 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
@@ -23,7 +23,7 @@ agcli --live 30 view portfolio
 
 ### Read path (RPC / runtime API)
 
-Order matches [`ViewCommands::Portfolio`](https://github.com/unconst/agcli/blob/main/src/cli/view_cmds.rs) in `src/cli/view_cmds.rs` (`handle_view`, `Portfolio` branch):
+Order matches [`ViewCommands::Portfolio`](https://github.com/unarbos/agcli/blob/main/src/cli/view_cmds.rs) in `src/cli/view_cmds.rs` (`handle_view`, `Portfolio` branch):
 
 1. **`connect`** (global network / endpoint — same as other view commands).
 2. **`resolve_and_validate_coldkey_address`** — if **`--address`** is set, **`validate_ss58(..., "portfolio --address")`**; else coldkey from wallet (`src/cli/helpers.rs`). Unresolved / empty coldkey bails before RPC (same pattern as `agcli balance` / `agcli stake list`).
@@ -33,7 +33,7 @@ Order matches [`ViewCommands::Portfolio`](https://github.com/unconst/agcli/blob/
 
 ### JSON shapes
 
-**Latest** (`--output json`) — serialized [`Portfolio`](https://github.com/unconst/agcli/blob/main/src/queries/portfolio.rs): `coldkey_ss58`, `free_balance`, `total_staked`, `positions` (`netuid`, `subnet_name`, `hotkey_ss58`, `alpha_stake`, `tao_equivalent`, `price`). Field names/types follow `serde` on `Balance` and the struct definitions in the crate.
+**Latest** (`--output json`) — serialized [`Portfolio`](https://github.com/unarbos/agcli/blob/main/src/queries/portfolio.rs): `coldkey_ss58`, `free_balance`, `total_staked`, `positions` (`netuid`, `subnet_name`, `hotkey_ss58`, `alpha_stake`, `tao_equivalent`, `price`). Field names/types follow `serde` on `Balance` and the struct definitions in the crate.
 
 **`--at-block`** — object built in `handle_portfolio_at_block`: `address`, `block`, `free_balance_rao` / `free_balance_tao`, `total_staked_rao` / `total_staked_tao`, `stakes` (`hotkey`, `netuid`, `stake_rao`, `stake_tao`).
 
@@ -44,15 +44,15 @@ Order matches [`ViewCommands::Portfolio`](https://github.com/unconst/agcli/blob/
 | **0** | Successful query (including **empty** positions / stakes). |
 | **2** | Clap / invalid global flags. |
 | **10** | Network / WebSocket failure on `connect` or hard RPC errors. |
-| **12** | Validation: invalid **`--address`** (SS58) per [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs). |
+| **12** | Validation: invalid **`--address`** (SS58) per [`classify`](https://github.com/unarbos/agcli/blob/main/src/error.rs). |
 | **15** | Timeout when applicable. |
 | **1** | Generic: e.g. **`Block N not found`** for **`--at-block`**, could not resolve coldkey when no **`--address`**, pruned state at a historical height, or uncategorized errors. |
 
-Messages for bad **`--address`** include **`portfolio --address`** — [`hint`](https://github.com/unconst/agcli/blob/main/src/error.rs) points at **`docs/commands/view.md`**.
+Messages for bad **`--address`** include **`portfolio --address`** — [`hint`](https://github.com/unarbos/agcli/blob/main/src/error.rs) points at **`docs/commands/view.md`**.
 
 ### E2E
 
-Log lines **`view_portfolio_preflight`** in Phase 20 [`test_view_portfolio_preflight`](https://github.com/unconst/agcli/blob/main/tests/e2e_test.rs): **`validate_ss58`** with label **`portfolio --address`**, **`pin_latest_block`** → **`try_join!(get_balance_at_hash, get_stake_for_coldkey_at_block, get_all_dynamic_info_at_block)`**, then head **`get_block_hash`** + **`try_join!(get_balance_at_block, get_stake_for_coldkey_at_block)`** — mirrors latest **`fetch_portfolio`** and **`--at-block`**. Broader view RPC checks remain in Phase 21 **`test_view_queries`**.
+Log lines **`view_portfolio_preflight`** in Phase 20 [`test_view_portfolio_preflight`](https://github.com/unarbos/agcli/blob/main/tests/e2e_test.rs): **`validate_ss58`** with label **`portfolio --address`**, **`pin_latest_block`** → **`try_join!(get_balance_at_hash, get_stake_for_coldkey_at_block, get_all_dynamic_info_at_block)`**, then head **`get_block_hash`** + **`try_join!(get_balance_at_block, get_stake_for_coldkey_at_block)`** — mirrors latest **`fetch_portfolio`** and **`--at-block`**. Broader view RPC checks remain in Phase 21 **`test_view_queries`**.
 
 ### Related
 
@@ -167,7 +167,7 @@ agcli --network archive view dynamic --at-block 3500000
 Requires an archive node for blocks beyond ~256 block pruning window.
 
 ## Source Code
-**agcli handler**: [`src/cli/view_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/view_cmds.rs) — `handle_view()` at L9, subcommands: Portfolio L17, Network L27, Dynamic L28, Neuron L37, Validators L42, History L47, Account L51, SubnetAnalytics L55, StakingAnalytics L58, SwapSim L62, Nominations L65. Audit: `handle_audit()` at L1287.
+**agcli handler**: [`src/cli/view_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/view_cmds.rs) — `handle_view()` at L9, subcommands: Portfolio L17, Network L27, Dynamic L28, Neuron L37, Validators L42, History L47, Account L51, SubnetAnalytics L55, StakingAnalytics L58, SwapSim L62, Nominations L65. Audit: `handle_audit()` at L1287.
 
 **On-chain**: read-only queries against `System::Account`, `SubtensorModule` storage maps (Stake, Alpha, DynamicInfo, SubnetHyperparams, Metagraph, etc.). History uses [Subscan API](https://bittensor.api.subscan.io/api/v2/scan/extrinsics).
 

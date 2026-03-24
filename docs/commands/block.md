@@ -17,11 +17,11 @@ agcli block latest
 agcli block latest --output json
 ```
 
-**Read path** (matches [`handle_block`](https://github.com/unconst/agcli/blob/main/src/cli/block_cmds.rs) `BlockCommands::Latest`): `get_block_number` → `u32` conversion → `get_block_hash` → `try_join!`(`get_block_extrinsic_count`, `get_block_timestamp`).
+**Read path** (matches [`handle_block`](https://github.com/unarbos/agcli/blob/main/src/cli/block_cmds.rs) `BlockCommands::Latest`): `get_block_number` → `u32` conversion → `get_block_hash` → `try_join!`(`get_block_extrinsic_count`, `get_block_timestamp`).
 
 **JSON** (`--output json`): `block_number` (u64), `block_hash`, `extrinsic_count`, optional `timestamp_ms` and RFC3339 `timestamp` when the node returns a timestamp inherent.
 
-**Errors / exit codes:** RPC or transport failures classify as network (**10**), timeouts as **15**, and other failures per [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). If the chain head ever exceeded `u32::MAX`, the CLI would bail before hash lookup (exit **1** — not expected on normal networks).
+**Errors / exit codes:** RPC or transport failures classify as network (**10**), timeouts as **15**, and other failures per [`src/error.rs`](https://github.com/unarbos/agcli/blob/main/src/error.rs). If the chain head ever exceeded `u32::MAX`, the CLI would bail before hash lookup (exit **1** — not expected on normal networks).
 
 **E2E:** Log line **`block_latest_preflight`** in Phase 20 `test_block_queries` (`tests/e2e_test.rs`) mirrors the Latest branch RPC order above.
 
@@ -34,11 +34,11 @@ agcli block info --number 4000000
 agcli block info --number 4000000 --output json
 ```
 
-**Read path** (matches [`handle_block`](https://github.com/unconst/agcli/blob/main/src/cli/block_cmds.rs) `BlockCommands::Info`): `get_block_hash(number)` → `try_join!`(`get_block_header`, `get_block_extrinsic_count`, `get_block_timestamp`).
+**Read path** (matches [`handle_block`](https://github.com/unarbos/agcli/blob/main/src/cli/block_cmds.rs) `BlockCommands::Info`): `get_block_hash(number)` → `try_join!`(`get_block_header`, `get_block_extrinsic_count`, `get_block_timestamp`).
 
 **JSON** (`--output json`): `block_number`, `block_hash`, `parent_hash`, `state_root`, `extrinsic_count`, optional `timestamp_ms` and RFC3339 `timestamp`.
 
-**Errors / exit codes:** Same read-only RPC classification as **`block latest`** — network **10**, timeout **15**, other failures **1** per [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs). Invalid `--number` / missing flag surface as clap validation (exit **2**).
+**Errors / exit codes:** Same read-only RPC classification as **`block latest`** — network **10**, timeout **15**, other failures **1** per [`src/error.rs`](https://github.com/unarbos/agcli/blob/main/src/error.rs). Invalid `--number` / missing flag surface as clap validation (exit **2**).
 
 **E2E:** Log line **`block_info_preflight`** in Phase 20 `test_block_queries` (`tests/e2e_test.rs`) mirrors the Info branch RPC order above and cross-checks head against **`block_latest_preflight`**.
 
@@ -63,7 +63,7 @@ agcli block range --from 3999900 --to 4000000 --output json
 
 ## Source Code
 
-**agcli handler**: [`src/cli/block_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/block_cmds.rs) — `handle_block()`: `Info` ~L15, `Range` ~L54, `Latest` ~L127.
+**agcli handler**: [`src/cli/block_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/block_cmds.rs) — `handle_block()`: `Info` ~L15, `Range` ~L54, `Latest` ~L127.
 
 **On-chain**: read-only queries using subxt block APIs (`get_block`, `get_block_hash`).
 

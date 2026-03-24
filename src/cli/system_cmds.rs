@@ -583,7 +583,7 @@ pub(super) async fn handle_update() -> Result<()> {
         .args([
             "install",
             "--git",
-            "https://github.com/unconst/agcli",
+            "https://github.com/unarbos/agcli",
             "--force",
         ])
         .status();

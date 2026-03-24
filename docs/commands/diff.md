@@ -20,7 +20,7 @@ agcli diff portfolio --block1 100 --block2 200 --address 5GrwvaEF5zXb26Fz9rcQpDW
 agcli diff portfolio --block1 100 --block2 200 --output json
 ```
 
-**Read path** (matches [`handle_diff`](https://github.com/unconst/agcli/blob/main/src/cli/block_cmds.rs) `DiffCommands::Portfolio`): `try_join!`(`get_block_hash(block1)`, `get_block_hash(block2)`) → `try_join!`(`get_balance_at_block`, `get_stake_for_coldkey_at_block` for each hash).
+**Read path** (matches [`handle_diff`](https://github.com/unarbos/agcli/blob/main/src/cli/block_cmds.rs) `DiffCommands::Portfolio`): `try_join!`(`get_block_hash(block1)`, `get_block_hash(block2)`) → `try_join!`(`get_balance_at_block`, `get_stake_for_coldkey_at_block` for each hash).
 
 **JSON** (`--output json`): `address`, `block1`, `block2`, `balance_tao`, `balance_diff_tao`, `total_stake_tao`, `stake_diff_tao`, `total_tao`, `total_diff_tao`, stake position counts.
 
@@ -28,7 +28,7 @@ agcli diff portfolio --block1 100 --block2 200 --output json
 
 - Missing **`--address`** when no default wallet / empty resolved address → bail **1** (message suggests **`--address`**).
 - Invalid SS58 → **12** (validation).
-- Pruned / unknown block state → message may include archive hint; classified per [`src/error.rs`](https://github.com/unconst/agcli/blob/main/src/error.rs) (often **1** with context, or **10** / **15** for transport).
+- Pruned / unknown block state → message may include archive hint; classified per [`src/error.rs`](https://github.com/unarbos/agcli/blob/main/src/error.rs) (often **1** with context, or **10** / **15** for transport).
 - Otherwise same read-only RPC classification as other block-scoped queries: network **10**, timeout **15**, generic **1**.
 
 **E2E:** Log **`diff_portfolio_preflight`** in Phase 20 `test_diff_queries` (`tests/e2e_test.rs`).
@@ -48,7 +48,7 @@ agcli diff subnet --netuid 1 --block1 100 --block2 200 --output json
 
 **Errors / exit codes**
 
-- **`Subnet N not found at block B`** (no dynamic info at that height) → **12** (`subnet` + `not found` in [`classify`](https://github.com/unconst/agcli/blob/main/src/error.rs)); hint lists **`agcli diff subnet`** / **`agcli diff metagraph`** among other `--netuid` readers.
+- **`Subnet N not found at block B`** (no dynamic info at that height) → **12** (`subnet` + `not found` in [`classify`](https://github.com/unarbos/agcli/blob/main/src/error.rs)); hint lists **`agcli diff subnet`** / **`agcli diff metagraph`** among other `--netuid` readers.
 - Missing **`--netuid`** → clap **2**.
 - Pruned state / RPC → **1** / **10** / **15** like other historical reads.
 
@@ -90,7 +90,7 @@ agcli diff metagraph --netuid 1 --block1 100 --block2 200 --output json
 
 ## Source code
 
-**agcli handler:** [`src/cli/block_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/block_cmds.rs) — `handle_diff()`: `Portfolio` ~L176, `Subnet` ~L279, `Network` ~L382, `Metagraph` ~L465.
+**agcli handler:** [`src/cli/block_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/block_cmds.rs) — `handle_diff()`: `Portfolio` ~L176, `Subnet` ~L279, `Network` ~L382, `Metagraph` ~L465.
 
 **On-chain:** read-only storage / runtime APIs at pinned block hashes (no extrinsics).
 

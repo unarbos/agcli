@@ -154,9 +154,9 @@ If `--sudo-key` is omitted, the command falls back to the wallet coldkey. On mai
 | `Invalid JSON args` | Malformed `--args` in `raw` | Must be JSON array: `'[1, 100]'` |
 
 ## Source Code
-**agcli handler**: [`src/cli/admin_cmds.rs`](https://github.com/unconst/agcli/blob/main/src/cli/admin_cmds.rs) — `handle_admin()` L34, `resolve_sudo_key()` L12, `parse_raw_args()` L232
+**agcli handler**: [`src/cli/admin_cmds.rs`](https://github.com/unarbos/agcli/blob/main/src/cli/admin_cmds.rs) — `handle_admin()` L34, `resolve_sudo_key()` L12, `parse_raw_args()` L232
 
-**SDK**: [`src/admin.rs`](https://github.com/unconst/agcli/blob/main/src/admin.rs) — `set_tempo()` L25, `set_max_allowed_validators()` L42, `set_max_allowed_uids()` L59, `set_immunity_period()` L76, `set_min_allowed_weights()` L93, `set_max_weight_limit()` L110, `set_weights_set_rate_limit()` L127, `set_commit_reveal_weights_enabled()` L144, `set_difficulty()` L161, `set_activity_cutoff()` L212, `set_serving_rate_limit()` L229, `raw_admin_call()` L249, `known_params()` L262
+**SDK**: [`src/admin.rs`](https://github.com/unarbos/agcli/blob/main/src/admin.rs) — `set_tempo()` L25, `set_max_allowed_validators()` L42, `set_max_allowed_uids()` L59, `set_immunity_period()` L76, `set_min_allowed_weights()` L93, `set_max_weight_limit()` L110, `set_weights_set_rate_limit()` L127, `set_commit_reveal_weights_enabled()` L144, `set_difficulty()` L161, `set_activity_cutoff()` L212, `set_serving_rate_limit()` L229, `raw_admin_call()` L249, `known_params()` L262
 
 **Subtensor pallet**: [`pallets/admin-utils/src/lib.rs`](https://github.com/opentensor/subtensor/blob/main/pallets/admin-utils/src/lib.rs) — All `sudo_set_*` dispatch entry points
 

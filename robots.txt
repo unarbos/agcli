@@ -1,6 +1,6 @@
 # agcli — Bittensor Rust CLI+SDK
 # This is a developer tool, not a web service.
 # For agent/LLM integration, see docs/llm.txt
-# Repository: https://github.com/unconst/agcli
-# Install: cargo install --git https://github.com/unconst/agcli
+# Repository: https://github.com/unarbos/agcli
+# Install: cargo install --git https://github.com/unarbos/agcli
 # Docs: README.md, docs/llm.txt, docs/tutorials/
