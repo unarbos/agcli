@@ -259,10 +259,7 @@ pub async fn ensure_alice_on_subnet(client: &mut Client, netuid: NetUid) -> u16 
             .await
         {
             Ok(_hash) => {
-                println!(
-                    "  staked 1000 TAO on SN{} for validator permit",
-                    netuid.0
-                );
+                println!("  staked 1000 TAO on SN{} for validator permit", netuid.0);
                 break;
             }
             Err(e) => {
