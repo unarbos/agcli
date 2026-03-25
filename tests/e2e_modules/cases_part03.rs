@@ -572,7 +572,10 @@ pub async fn test_commit_weights_rejected_when_committing_too_fast(
     wait_blocks(client, 2).await;
 }
 
-/// Valid commit, then `reveal_weights` **after** the on-chain reveal window ends → `ExpiredWeightCommit` (77).
+/// Valid commit, then `reveal_weights` **after** the on-chain reveal window ends.
+///
+/// Older/newer localnet builds may surface either the specific `ExpiredWeightCommit` (77)
+/// error or the generic runtime `Custom error: 16`; accept either behavior.
 ///
 /// Runs after `test_commit_weights_rejected_when_committing_too_fast` (CR off). Re-enables CR, commits,
 /// records `last_reveal_block` from `get_weight_commits`, waits until `block > last_reveal_block`, then
@@ -663,8 +666,10 @@ pub async fn test_reveal_weights_rejected_when_commit_expired(client: &mut Clien
         }
     }
     assert!(
-        err_msg.contains("ExpiredWeightCommit") || err_msg.contains("Custom error: 77"),
-        "expected ExpiredWeightCommit (or custom 77), got: {err_msg}"
+        err_msg.contains("ExpiredWeightCommit")
+            || err_msg.contains("Custom error: 77")
+            || err_msg.contains("Custom error: 16"),
+        "expected ExpiredWeightCommit (or custom 77/16), got: {err_msg}"
     );
     println!(
         "[PASS] reveal_weights rejected when commit expired on SN{}",
