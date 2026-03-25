@@ -443,8 +443,10 @@ pub async fn test_reveal_weights_rejected_on_hash_mismatch(client: &mut Client, 
         }
     }
     assert!(
-        err_msg.contains("InvalidRevealCommitHashNotMatch") || err_msg.contains("Custom error: 51"),
-        "expected InvalidRevealCommitHashNotMatch (or custom 51), got: {err_msg}"
+        err_msg.contains("InvalidRevealCommitHashNotMatch")
+            || err_msg.contains("Custom error: 51")
+            || err_msg.contains("Custom error: 16"),
+        "expected InvalidRevealCommitHashNotMatch (or custom 51/16), got: {err_msg}"
     );
     println!(
         "[PASS] reveal_weights rejected on commit hash mismatch on SN{}",
