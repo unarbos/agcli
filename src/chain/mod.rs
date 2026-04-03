@@ -953,14 +953,57 @@ impl Client {
 /// Format submission errors (before tx reaches chain) with actionable hints.
 fn format_submit_error(e: subxt::Error) -> anyhow::Error {
     let msg = e.to_string();
-    if msg.contains("connection") || msg.contains("Connection") || msg.contains("Ws") {
-        anyhow::anyhow!("Connection lost while submitting transaction. Check your network and endpoint.\n  Error: {}", msg)
-    } else if msg.contains("Priority is too low") || msg.contains("priority") {
-        anyhow::anyhow!("Transaction rejected: a conflicting transaction is already pending. Wait for it to finalize or use a different nonce.\n  Error: {}", msg)
-    } else if msg.contains("Inability to pay") || msg.contains("InsufficientBalance") {
-        anyhow::anyhow!("Insufficient balance to pay transaction fees. Check your free TAO balance with `agcli balance`.\n  Error: {}", msg)
+    
+    // Log the raw error for debugging
+    tracing::debug!("Transaction submission error (raw): {}", msg);
+    
+    // Try to decode custom error codes first
+    let (decoded_msg, decoded_desc) = if let Some(decoded) = decode_custom_error(&msg) {
+        tracing::debug!("Decoded custom error: {} - {}", decoded.name, decoded.desc);
+        (
+            format!("{} [{}]", msg, decoded.name),
+            Some(decoded.desc),
+        )
     } else {
-        anyhow::anyhow!("Transaction submission failed: {}", msg)
+        // Check if this is an "Invalid Transaction" with a custom error code
+        // These often indicate transaction pool validation failures (e.g., insufficient stake)
+        if msg.contains("Invalid Transaction") && msg.contains("Custom error:") {
+            tracing::warn!("Invalid Transaction with unrecognized custom error code. This may indicate:
+  - Insufficient stake to set weights (need ~1000τ)
+  - Hotkey not registered on the subnet
+  - Transaction validation failure");
+        }
+        (msg.clone(), None)
+    };
+    
+    if msg.contains("connection") || msg.contains("Connection") || msg.contains("Ws") {
+        anyhow::anyhow!("Connection lost while submitting transaction. Check your network and endpoint.\n  Error: {}", decoded_msg)
+    } else if msg.contains("Priority is too low") || msg.contains("priority") {
+        anyhow::anyhow!("Transaction rejected: a conflicting transaction is already pending. Wait for it to finalize or use a different nonce.\n  Error: {}", decoded_msg)
+    } else if msg.contains("Inability to pay") || msg.contains("InsufficientBalance") {
+        anyhow::anyhow!("Insufficient balance to pay transaction fees. Check your free TAO balance with `agcli balance`.\n  Error: {}", decoded_msg)
+    } else if msg.contains("Invalid Transaction") {
+        // Provide more context for Invalid Transaction errors
+        let base_error = format!("Transaction validation failed: {}", decoded_msg);
+        let hint = if msg.contains("Custom error:") {
+            "\n  Common causes:
+    - Insufficient stake (need ~1000τ for setting weights)
+    - Hotkey not registered on subnet
+    - Missing validator permit
+    - Rate limit exceeded\n  Run with --verbose for more details, or check `agcli stake list` and `agcli subnet show --netuid <N>`"
+        } else if let Some(desc) = decoded_desc {
+            &format!("\n  Reason: {}", desc)
+        } else {
+            ""
+        };
+        anyhow::anyhow!("{}{}", base_error, hint)
+    } else {
+        let base_error = format!("Transaction submission failed: {}", decoded_msg);
+        if let Some(desc) = decoded_desc {
+            anyhow::anyhow!("{}\n  Reason: {}", base_error, desc)
+        } else {
+            anyhow::anyhow!("{}", base_error)
+        }
     }
 }
 
