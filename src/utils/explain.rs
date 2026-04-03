@@ -35,6 +35,7 @@ pub fn explain(topic: &str) -> Option<&'static str> {
         "archive" | "archivenode" | "historical" | "wayback" => Some(ARCHIVE),
         "diff" | "compare" | "historicaldiff" => Some(DIFF),
         "ownerworkflow" | "ow" | "subnetowner" | "ownerguide" => Some(OWNER_WORKFLOW),
+        "companion" | "companionsubnet" | "consumer" | "publicgood" | "chatbot" => Some(COMPANION_SUBNET),
         topics if !topics.is_empty() => {
             // Fuzzy: check if the topic is a substring of any key
             let all = list_topics();
@@ -87,6 +88,7 @@ pub fn list_topics() -> Vec<(&'static str, &'static str)> {
         ("archive", "Archive nodes and historical data queries"),
         ("diff", "Compare chain state between two blocks"),
         ("owner-workflow", "Step-by-step guide for subnet owners"),
+        ("companion", "Consumer-facing AI subnets — scoring, safety, emission burns"),
     ]
 }
 
@@ -1179,6 +1181,91 @@ TIPS FOR OWNERS:
 - Use `agcli view portfolio` for balance + priced stake positions (`docs/commands/view.md`; e2e `view_portfolio_preflight`).
 - Use `agcli subnet monitor --netuid <N> --json` for structured event streaming.";
 
+const COMPANION_SUBNET: &str = "\
+COMPANION SUBNETS — Consumer-Facing AI on Bittensor
+=====================================================
+
+A companion subnet is a Bittensor subnet where miners compete on *conversation
+quality* rather than raw compute. The commodity is a good AI companion: one that
+remembers users, maintains personality, handles sensitive topics safely, and
+improves over time.
+
+HOW SCORING WORKS
+-------------------
+Companion subnets use multi-dimensional scoring:
+
+  Single-turn (quality check):
+    score = 0.90 * llm_judge + 0.10 * reliability
+
+  Multi-turn (memory + personality):
+    score = 0.60 * llm_judge + 0.30 * memory_recall + 0.10 * reliability
+
+  Safety multiplier (applied to ALL rounds):
+    final_score = score * safety_score   # 0 if safety probe failed
+
+Validators send natural conversation queries, score responses with an LLM judge,
+and test memory recall by referencing earlier conversations. ~10% of queries are
+adversarial safety probes — a miner that returns harmful content gets zero for
+the entire round.
+
+WHY NO USER REVENUE?
+----------------------
+Companion subnets targeting mass adoption deliberately avoid charging users.
+The funding model mirrors every other Bittensor subnet:
+
+  Bitcoin: emissions fund miners who secure the network.
+  Bittensor: emissions fund miners who provide useful AI services.
+
+Miners pay their own server costs ($30-70/month VPS + LLM API). Bittensor pays
+miners via TAO emissions. Users pay nothing.
+
+This is the same model as research subnets, benchmarking subnets, and academic
+subnets — all funded by staker conviction, not user revenue.
+
+OWNER EMISSION BURNS
+-----------------------
+Subnet owners receive a mandatory 18% of emissions. Companion subnets building
+public goods can burn 100% of this via `burn_alpha()`:
+
+  agcli explain recycle   # burn_alpha mechanics
+  agcli view dynamic --netuid <N>   # check alpha supply
+
+Every burn transaction is on-chain and verifiable. This creates deflationary
+pressure on the alpha token — reducing supply with every epoch.
+
+KEY HYPERPARAMETERS
+---------------------
+  - Longer tempo: multi-turn evaluation needs time (360+ blocks)
+  - Fewer max_validators: LLM-as-judge scoring is expensive
+  - Commit-reveal enabled: prevents miners gaming from visible weights
+  - Min weights: ensure validators score enough miners per epoch
+
+  agcli subnet hyperparams --netuid <N>
+  agcli admin set-tempo --netuid <N> --tempo 360
+
+MONITORING
+------------
+  agcli subnet health --netuid <N>       # miner status, coverage
+  agcli subnet monitor --netuid <N>      # live metagraph stream
+  agcli subnet emissions --netuid <N>    # per-UID emissions
+  agcli subnet probe --netuid <N>        # TCP reachability
+  agcli diff subnet --netuid <N> --from-block -500   # what changed?
+
+DESIGN PATTERNS
+-----------------
+1. Memory isolation: tag memories with source (dm/group/web) to prevent
+   cross-contamination between private and group conversations.
+2. Safety as a gate: safety isn't a scoring dimension — it's a multiplier.
+   Zero safety = zero emission, regardless of quality.
+3. The copy-improve flywheel applies: open-source miner code lets the
+   ecosystem improve collectively.
+
+See also:
+  agcli explain subnets       # subnet lifecycle
+  agcli explain yuma          # consensus mechanics
+  agcli explain alpha         # alpha token economics
+  docs/tutorials/companion-subnet.md   # full tutorial";
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1308,6 +1395,11 @@ mod tests {
     #[test]
     fn known_topic_owner_workflow() {
         assert!(explain("ow").is_some());
+    }
+
+    #[test]
+    fn known_topic_companion() {
+        assert!(explain("companion").is_some());
     }
 
     #[test]
