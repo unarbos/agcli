@@ -1,0 +1,49 @@
+# Publish release binaries to GitHub Releases (see issue #2).
+# Tag a release: git tag v0.1.0 && git push origin v0.1.0
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  METADATA_CHAIN_ENDPOINT: wss://entrypoint-finney.opentensor.ai:443
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Prepare artifacts
+        run: |
+          cp target/release/agcli agcli-linux-amd64
+          chmod +x agcli-linux-amd64
+          sha256sum agcli-linux-amd64 > SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            agcli-linux-amd64
+            SHA256SUMS
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
