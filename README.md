@@ -11,6 +11,14 @@ Agents first, fast, safe Rust toolkit for the [Bittensor](https://bittensor.com)
 cargo install --git https://github.com/unarbos/agcli
 ```
 
+### Pre-built binaries
+
+Pre-built binaries are published on GitHub Releases for tagged versions (`v*`) and include:
+- Linux (`x86_64-unknown-linux-gnu`)
+- macOS Intel (`x86_64-apple-darwin`)
+- macOS Apple Silicon (`aarch64-apple-darwin`)
+- Windows (`x86_64-pc-windows-msvc`)
+
 ## Quick Examples
 
 ```bash
