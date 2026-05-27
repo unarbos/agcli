@@ -7,15 +7,15 @@
       "branch": "orch/agcli-audit/bootstrap-env",
       "startingRef": "cursor/agcli-subtensor-audit-e2e7",
       "dependsOn": [],
-      "agentId": null,
-      "runId": null,
+      "agentId": "bc-6016096d-46cc-48dd-baae-33641dfbc3ee",
+      "runId": "run-0f833086-c865-40db-982f-68b72c93517f",
       "parentAgentId": "bc-7a49ac6f-68f4-4bba-9ae1-d5414487e2e7",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-27T12:22:46.543Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-27T12:22:46.543Z",
+      "lastUpdate": "2026-05-27T12:23:00.301Z",
       "note": "respawned by self-planner (was error; attempts=4)",
       "attempts": 5,
       "slackTs": null,
@@ -32,14 +32,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-7a49ac6f-68f4-4bba-9ae1-d5414487e2e7",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-27T12:23:00.308Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-27T12:21:28.615Z",
+      "lastUpdate": "2026-05-27T12:23:00.308Z",
       "note": "respawned by self-planner (was error; attempts=3)",
-      "attempts": 3,
+      "attempts": 4,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -2426,6 +2426,10 @@
     {
       "at": "2026-05-27T12:22:46.540Z",
       "message": "bootstrap-env: model \"claude-sonnet-4-6\" not in MODEL_CATALOG (spawning anyway). Run `bun cli.ts models` to see known slugs."
+    },
+    {
+      "at": "2026-05-27T12:23:00.307Z",
+      "message": "audit-wallet: model \"claude-sonnet-4-6\" not in MODEL_CATALOG (spawning anyway). Run `bun cli.ts models` to see known slugs."
     }
   ]
 }
