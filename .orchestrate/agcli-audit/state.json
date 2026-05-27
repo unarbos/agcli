@@ -32,17 +32,17 @@
       "agentId": "bc-18e4d458-bba6-403b-a12d-569e05c9c9da",
       "runId": "run-6b8b5769-c8b4-4888-bb0c-65855e612827",
       "parentAgentId": "bc-7a49ac6f-68f4-4bba-9ae1-d5414487e2e7",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/audit-wallet.md",
       "startedAt": "2026-05-27T12:10:58.329Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-27T12:11:32.462Z",
+      "finishedAt": "2026-05-27T12:14:13.008Z",
+      "lastUpdate": "2026-05-27T12:14:13.008Z",
       "note": "respawned by self-planner (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -2262,6 +2262,10 @@
     {
       "at": "2026-05-27T12:10:58.323Z",
       "message": "audit-crowdloan: verification recorded (verifier-failed) by verifier verify-economy-batch"
+    },
+    {
+      "at": "2026-05-27T12:14:13.005Z",
+      "message": "audit-wallet: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
