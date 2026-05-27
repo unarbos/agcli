@@ -1,21 +1,21 @@
 <!-- orchestrate failure handoff
 task: bootstrap-env
 branch: orch/agcli-audit/bootstrap-env
-agentId: bc-ed7fca28-2515-4635-8cbd-ffea1c12fa85
-runId: run-c067ec55-8752-4ff4-aa56-ec3d37ac81f6
+agentId: bc-ad166916-bce6-4acc-9653-4be1c1579983
+runId: run-a6223dad-e15e-436a-8c05-2dc44a90590a
 failureMode: unknown
-terminatedAt: 2026-05-27T11:34:19.135Z
+terminatedAt: 2026-05-27T12:17:46.876Z
 -->
 
 # bootstrap-env failure handoff
 
 Status: error (cloud agent terminated without writing a handoff)
 Failure mode: unknown
-Cloud agent: bc-ed7fca28-2515-4635-8cbd-ffea1c12fa85
-Started: 2026-05-27T11:33:21.805Z
-Terminated: 2026-05-27T11:34:19.135Z
-Duration: 57330ms
-Last activity: 2026-05-27T11:34:18.097Z - respawned by self-planner (was error; attempts=2)
+Cloud agent: bc-ad166916-bce6-4acc-9653-4be1c1579983
+Started: 2026-05-27T12:09:49.037Z
+Terminated: 2026-05-27T12:17:46.876Z
+Duration: 477839ms
+Last activity: 2026-05-27T12:17:35.916Z - respawned by self-planner (was error; attempts=3)
 Last tool call: run_terminal_cmd
 Branch: orch/agcli-audit/bootstrap-env
 SDK error: (none recorded)
