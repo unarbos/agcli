@@ -2326,6 +2326,78 @@
     {
       "at": "2026-05-27T12:18:20.793Z",
       "message": "audit-config: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-27T12:18:29.712Z",
+      "message": "audit-config: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-config.md"
+    },
+    {
+      "at": "2026-05-27T12:18:29.713Z",
+      "message": "audit-config: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-config-failure.md"
+    },
+    {
+      "at": "2026-05-27T12:18:29.729Z",
+      "message": "audit-balance-transfer: unreachable — blocked on audit-wallet (error). Fix the upstream and rerun, or `kill audit-balance-transfer` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.730Z",
+      "message": "audit-view: unreachable — blocked on audit-delegate (error). Fix the upstream and rerun, or `kill audit-view` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.731Z",
+      "message": "audit-swap-keys: unreachable — blocked on audit-proxy (error). Fix the upstream and rerun, or `kill audit-swap-keys` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.731Z",
+      "message": "audit-safe-mode: unreachable — blocked on audit-contracts (error). Fix the upstream and rerun, or `kill audit-safe-mode` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.732Z",
+      "message": "audit-completions-update: unreachable — blocked on audit-config (error). Fix the upstream and rerun, or `kill audit-completions-update` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.732Z",
+      "message": "verify-write-batch: unreachable — blocked on audit-wallet (error), audit-delegate (error). Fix the upstream and rerun, or `kill verify-write-batch` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.733Z",
+      "message": "verify-network-batch: unreachable — blocked on audit-proxy (error). Fix the upstream and rerun, or `kill verify-network-batch` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.734Z",
+      "message": "verify-governance-batch: unreachable — blocked on audit-contracts (error). Fix the upstream and rerun, or `kill verify-governance-batch` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.735Z",
+      "message": "verify-readonly-batch: unreachable — blocked on audit-config (error). Fix the upstream and rerun, or `kill verify-readonly-batch` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.735Z",
+      "message": "fix-error-mapping: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-error-mapping` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.736Z",
+      "message": "fix-events-pretty: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-events-pretty` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.737Z",
+      "message": "fix-explain-topics: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-explain-topics` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.737Z",
+      "message": "fix-llm-txt: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-llm-txt` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.738Z",
+      "message": "fix-chain-queries: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-chain-queries` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.739Z",
+      "message": "fix-chain-extrinsics: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-chain-extrinsics` to abandon."
+    },
+    {
+      "at": "2026-05-27T12:18:29.740Z",
+      "message": "fix-scaffold-localnet: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-scaffold-localnet` to abandon."
     }
   ]
 }

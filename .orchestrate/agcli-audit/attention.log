@@ -246,3 +246,38 @@ T…
 [2026-05-27T12:09:11.312Z] audit-completions-update: respawned by self-planner (was error)
 [2026-05-27T12:09:15.157Z] audit-batch: respawned by self-planner (was error)
 [2026-05-27T12:09:20.880Z] audit-utils-cli: respawned by self-planner (was error)
+[2026-05-27T12:10:58.323Z] audit-crowdloan: verification recorded (verifier-failed) by verifier verify-economy-batch
+[2026-05-27T12:14:13.005Z] audit-wallet: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:15:24.700Z] audit-wallet: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-wallet.md
+[2026-05-27T12:15:24.703Z] audit-wallet: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-wallet-failure.md
+[2026-05-27T12:16:20.137Z] audit-proxy: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:17:15.473Z] audit-proxy: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-proxy.md
+[2026-05-27T12:17:15.475Z] audit-proxy: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-proxy-failure.md
+[2026-05-27T12:17:35.917Z] audit-delegate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:17:46.866Z] audit-delegate: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-delegate.md
+[2026-05-27T12:17:46.867Z] audit-delegate: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-delegate-failure.md
+[2026-05-27T12:17:46.875Z] bootstrap-env: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:17:53.810Z] bootstrap-env: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/bootstrap-env.md
+[2026-05-27T12:17:53.812Z] bootstrap-env: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/bootstrap-env-failure.md
+[2026-05-27T12:17:53.816Z] audit-contracts: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:18:06.727Z] audit-contracts: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-contracts.md
+[2026-05-27T12:18:06.730Z] audit-contracts: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-contracts-failure.md
+[2026-05-27T12:18:20.793Z] audit-config: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-27T12:18:29.712Z] audit-config: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-config.md
+[2026-05-27T12:18:29.713Z] audit-config: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-config-failure.md
+[2026-05-27T12:18:29.729Z] audit-balance-transfer: unreachable — blocked on audit-wallet (error). Fix the upstream and rerun, or `kill audit-balance-transfer` to abandon.
+[2026-05-27T12:18:29.730Z] audit-view: unreachable — blocked on audit-delegate (error). Fix the upstream and rerun, or `kill audit-view` to abandon.
+[2026-05-27T12:18:29.731Z] audit-swap-keys: unreachable — blocked on audit-proxy (error). Fix the upstream and rerun, or `kill audit-swap-keys` to abandon.
+[2026-05-27T12:18:29.731Z] audit-safe-mode: unreachable — blocked on audit-contracts (error). Fix the upstream and rerun, or `kill audit-safe-mode` to abandon.
+[2026-05-27T12:18:29.732Z] audit-completions-update: unreachable — blocked on audit-config (error). Fix the upstream and rerun, or `kill audit-completions-update` to abandon.
+[2026-05-27T12:18:29.732Z] verify-write-batch: unreachable — blocked on audit-wallet (error), audit-delegate (error). Fix the upstream and rerun, or `kill verify-write-batch` to abandon.
+[2026-05-27T12:18:29.733Z] verify-network-batch: unreachable — blocked on audit-proxy (error). Fix the upstream and rerun, or `kill verify-network-batch` to abandon.
+[2026-05-27T12:18:29.734Z] verify-governance-batch: unreachable — blocked on audit-contracts (error). Fix the upstream and rerun, or `kill verify-governance-batch` to abandon.
+[2026-05-27T12:18:29.735Z] verify-readonly-batch: unreachable — blocked on audit-config (error). Fix the upstream and rerun, or `kill verify-readonly-batch` to abandon.
+[2026-05-27T12:18:29.735Z] fix-error-mapping: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-error-mapping` to abandon.
+[2026-05-27T12:18:29.736Z] fix-events-pretty: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-events-pretty` to abandon.
+[2026-05-27T12:18:29.737Z] fix-explain-topics: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-explain-topics` to abandon.
+[2026-05-27T12:18:29.737Z] fix-llm-txt: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-llm-txt` to abandon.
+[2026-05-27T12:18:29.738Z] fix-chain-queries: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-chain-queries` to abandon.
+[2026-05-27T12:18:29.739Z] fix-chain-extrinsics: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-chain-extrinsics` to abandon.
+[2026-05-27T12:18:29.740Z] fix-scaffold-localnet: unreachable — blocked on audit-wallet (error), audit-delegate (error), audit-proxy (error), audit-contracts (error), audit-config (error). Fix the upstream and rerun, or `kill fix-scaffold-localnet` to abandon.
