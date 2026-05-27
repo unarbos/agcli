@@ -10,17 +10,17 @@
       "agentId": "bc-ad166916-bce6-4acc-9653-4be1c1579983",
       "runId": "run-a6223dad-e15e-436a-8c05-2dc44a90590a",
       "parentAgentId": "bc-7a49ac6f-68f4-4bba-9ae1-d5414487e2e7",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/bootstrap-env.md",
       "startedAt": "2026-05-27T12:09:49.037Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-27T12:10:58.326Z",
+      "finishedAt": "2026-05-27T12:17:46.876Z",
+      "lastUpdate": "2026-05-27T12:17:46.876Z",
       "note": "respawned by self-planner (was error; attempts=3)",
       "attempts": 4,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -2290,6 +2290,18 @@
     {
       "at": "2026-05-27T12:17:35.917Z",
       "message": "audit-delegate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-27T12:17:46.866Z",
+      "message": "audit-delegate: run ended with status=error; see /workspace/.orchestrate/agcli-audit/handoffs/audit-delegate.md"
+    },
+    {
+      "at": "2026-05-27T12:17:46.867Z",
+      "message": "audit-delegate: synthetic failure handoff written to /workspace/.orchestrate/agcli-audit/handoffs/audit-delegate-failure.md"
+    },
+    {
+      "at": "2026-05-27T12:17:46.875Z",
+      "message": "bootstrap-env: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
