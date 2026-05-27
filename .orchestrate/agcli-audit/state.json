@@ -10,14 +10,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-7a49ac6f-68f4-4bba-9ae1-d5414487e2e7",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-27T12:22:46.543Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-27T12:21:15.063Z",
+      "lastUpdate": "2026-05-27T12:22:46.543Z",
       "note": "respawned by self-planner (was error; attempts=4)",
-      "attempts": 4,
+      "attempts": 5,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -2418,6 +2418,14 @@
     {
       "at": "2026-05-27T12:22:18.393Z",
       "message": "audit-contracts: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-27T12:22:30.624Z",
+      "message": "audit-config: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-27T12:22:46.540Z",
+      "message": "bootstrap-env: model \"claude-sonnet-4-6\" not in MODEL_CATALOG (spawning anyway). Run `bun cli.ts models` to see known slugs."
     }
   ]
 }
