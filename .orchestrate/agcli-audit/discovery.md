@@ -141,3 +141,4 @@ SKIP_METADATA_FETCH=1 cargo check --bin agcli
 - `## Findings` — concrete drift, missing args, panicking paths, undocumented exit codes, bad output formatting (numbers as strings, missing fields, inconsistent JSON shapes), pallet dispatchables not surfaced in agcli, args mistyped vs the SCALE codec, etc. **This is the primary audit deliverable.**
 - `## Verification` — `unit-test-verified` if the new green-path test passes locally; `not-verified` if Docker / network / sudo were unavailable.
 - `## Suggested follow-ups` — things you noticed but were out of scope (e.g. cross-cutting changes to `src/error.rs` that should be a separate task).
+verified at 2026-05-27T12:16:19Z UTC on rust rustc 1.95.0 (59807616e 2026-04-14)
