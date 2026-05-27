@@ -1,21 +1,21 @@
 <!-- orchestrate failure handoff
 task: audit-wallet
 branch: orch/agcli-audit/audit-wallet
-agentId: bc-9b380bd6-7b10-456f-8921-d351f2c5522a
-runId: run-dbb80bce-4055-42a5-8acc-21b56decb98d
+agentId: bc-18e4d458-bba6-403b-a12d-569e05c9c9da
+runId: run-6b8b5769-c8b4-4888-bb0c-65855e612827
 failureMode: unknown
-terminatedAt: 2026-05-27T11:34:12.235Z
+terminatedAt: 2026-05-27T12:14:13.008Z
 -->
 
 # audit-wallet failure handoff
 
 Status: error (cloud agent terminated without writing a handoff)
 Failure mode: unknown
-Cloud agent: bc-9b380bd6-7b10-456f-8921-d351f2c5522a
-Started: 2026-05-27T11:33:25.383Z
-Terminated: 2026-05-27T11:34:12.235Z
-Duration: 46852ms
-Last activity: 2026-05-27T11:34:12.147Z - respawned by self-planner (was error; attempts=1)
+Cloud agent: bc-18e4d458-bba6-403b-a12d-569e05c9c9da
+Started: 2026-05-27T12:10:58.329Z
+Terminated: 2026-05-27T12:14:13.008Z
+Duration: 194679ms
+Last activity: 2026-05-27T12:14:12.935Z - respawned by self-planner (was error; attempts=2)
 Last tool call: grep_search
 Branch: orch/agcli-audit/audit-wallet
 SDK error: (none recorded)
