@@ -7,7 +7,7 @@
   "prBase": "main",
   "repoUrl": "https://github.com/unarbos/agcli",
   "selfAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
-  "syncStateToGit": true,
+  "syncStateToGit": false,
   "acceptanceCriteria": [
     "`tests/parity/` exists with one file per category (12 files) plus `tests/parity.rs` entry.",
     "Each category test runs against localnet on its worker branch (`cargo test --features e2e --test parity_<category> -- --nocapture`).",
@@ -47,7 +47,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_balance_transfer -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -82,7 +82,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_wallet -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -117,7 +117,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_stake_basic -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -152,7 +152,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_stake_advanced -- --nocapture",
-      "model": "gpt-5.5-high",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -187,7 +187,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_subnet_register -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -222,7 +222,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_subnet_hyperparams -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -257,7 +257,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_weights -- --nocapture",
-      "model": "gpt-5.5-high",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -292,7 +292,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_root -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -327,7 +327,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_identity_commitment -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -362,7 +362,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_governance -- --nocapture",
-      "model": "gpt-5.5-high",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -397,7 +397,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_network_readonly -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     },
@@ -432,7 +432,7 @@
         "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
       ],
       "verify": "cargo test --features e2e --test parity_misc -- --nocapture",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "openPR": false
     }
