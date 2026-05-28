@@ -58,12 +58,12 @@
       "agentId": "bc-9f4b6933-ab18-41c7-9e08-b7fabf2b4d0c",
       "runId": "run-23b1dba9-0bae-4bab-b262-b25793b72661",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/inventory-btcli.md",
       "startedAt": "2026-05-28T16:17:43.687Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:17:46.631Z",
+      "finishedAt": "2026-05-28T16:48:47.770Z",
+      "lastUpdate": "2026-05-28T16:48:47.770Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
@@ -87,13 +87,13 @@
       "handoffPath": "handoffs/inventory-sdk.md",
       "startedAt": "2026-05-28T16:17:46.632Z",
       "finishedAt": "2026-05-28T16:39:49.642Z",
-      "lastUpdate": "2026-05-28T16:39:49.642Z",
+      "lastUpdate": "2026-05-28T16:39:50.951Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "type-check-only"
     },
     {
       "name": "parity-matrix",
@@ -269,6 +269,14 @@
     {
       "at": "2026-05-28T16:31:45.059Z",
       "message": "scaffold-variants-a-to-e: tool_call idle 319493ms; last=2026-05-28T16:26:25.566Z"
+    },
+    {
+      "at": "2026-05-28T16:39:50.952Z",
+      "message": "inventory-sdk: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T16:45:46.745Z",
+      "message": "scaffold-variants-a-to-e: SSE idle 319046ms, polled status=running; watchdog still waiting"
     }
   ]
 }
