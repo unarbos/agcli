@@ -1,0 +1,26 @@
+{
+  "agcli": {
+    "git_sha": "dc6ac77a39e6a9236bdca45219433fb46b46adce",
+    "version": "agcli 0.1.0",
+    "build": "cargo --release"
+  },
+  "btcli": {
+    "pypi_version": "9.21.2",
+    "command": "pip install bittensor-cli==9.21.2",
+    "homepage": "https://github.com/opentensor/btcli"
+  },
+  "bittensor": {
+    "pypi_version": "10.3.2",
+    "command": "pip install bittensor==10.3.2",
+    "homepage": "https://github.com/opentensor/bittensor"
+  },
+  "subtensor_localnet_image": {
+    "tag": "ghcr.io/opentensor/subtensor-localnet:devnet-ready",
+    "digest": "sha256:10848ffc226f6156ef831463937299e1f4d34732c7ab1e97f348bca3f8e751c9"
+  },
+  "subtensor_submodule_sha": "6844ee37f0b8cb02baf9ff8d3ca4319cfb33f361",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "docker": "Docker version 29.1.3, build 29.1.3-0ubuntu3~24.04.2",
+  "python": "Python 3.12.3",
+  "recorded_at": "2026-05-28T16:13:46Z"
+}
