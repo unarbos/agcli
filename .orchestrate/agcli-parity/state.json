@@ -177,20 +177,20 @@
       "dependsOn": [
         "phase4-gap-triage"
       ],
-      "agentId": null,
-      "runId": null,
+      "agentId": "bc-0e67d4bd-8614-47df-b3f4-392d237c8f67",
+      "runId": "run-8374cfc0-23cd-4f38-a7d3-c21fd3b96d1f",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/phase5-ux-scorecard.md",
       "startedAt": "2026-05-28T20:42:43.567Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T20:42:43.567Z",
+      "finishedAt": "2026-05-28T20:43:12.811Z",
+      "lastUpdate": "2026-05-28T20:43:12.811Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -381,6 +381,10 @@
     {
       "at": "2026-05-28T20:42:27.650Z",
       "message": "phase5-ux-scorecard: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T20:43:12.810Z",
+      "message": "phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
