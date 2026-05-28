@@ -180,14 +180,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-28T20:59:16.614Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T20:59:04.845Z",
+      "lastUpdate": "2026-05-28T20:59:16.614Z",
       "note": "respawned by self-planner (was error; attempts=2)",
-      "attempts": 2,
+      "attempts": 3,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -393,6 +393,10 @@
     {
       "at": "2026-05-28T20:43:13.760Z",
       "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:59:05.816Z",
+      "message": "phase5-ux-scorecard: respawned by self-planner (was error)"
     }
   ]
 }
