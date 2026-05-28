@@ -336,6 +336,14 @@
     {
       "at": "2026-05-28T19:56:42.819Z",
       "message": "phase4-gap-closure: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T19:56:44.012Z",
+      "message": "phase4-gap-closure: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure.md"
+    },
+    {
+      "at": "2026-05-28T19:56:44.013Z",
+      "message": "phase4-gap-closure: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure-failure.md"
     }
   ]
 }
