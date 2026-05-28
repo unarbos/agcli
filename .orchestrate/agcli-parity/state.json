@@ -114,11 +114,11 @@
       "finishedAt": "2026-05-28T17:03:09.439Z",
       "lastUpdate": "2026-05-28T17:03:13.593Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": "type-check-only",
-      "attempts": 1
+      "verification": "type-check-only"
     },
     {
       "name": "phase3-parity-suite",
@@ -139,11 +139,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-28T17:03:16.108Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase4-gap-closure",
@@ -299,6 +299,14 @@
     {
       "at": "2026-05-28T17:09:16.573Z",
       "message": "phase3-parity-suite: tool_call idle 333520ms; last=2026-05-28T17:03:43.053Z"
+    },
+    {
+      "at": "2026-05-28T17:28:50.083Z",
+      "message": "phase3-parity-suite: SSE idle 303406ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:50.084Z",
+      "message": "phase3-parity-suite: tool_call idle 303407ms; last=2026-05-28T17:23:46.677Z"
     }
   ]
 }
