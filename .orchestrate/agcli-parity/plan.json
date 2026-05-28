@@ -1,0 +1,291 @@
+{
+  "$schema": "https://cursor/orchestrate/plan.schema.json",
+  "goal": "Orchestrator Prompt: agcli Parity & Superset vs btcli + Bittensor SDK\n\nMission: Achieve complete functional parity with btcli and the Bittensor Python SDK, then exceed them on coverage, agent-friendliness, and fault tolerance. Every capability must be validated against a real local subtensor chain (Docker), not mocked unit tests alone.\n\nNorth star: For every workflow an operator can do with btcli or bittensor Python, there is an agcli path that works on localnet, produces equivalent on-chain effects, and is easier to script (--batch, --yes, --output json, --dry-run, structured errors, spending limits).\n\nNon-negotiable constraints:\n- Localnet is mandatory for write-path validation. Unit/CLI-parse tests alone do not count as covered.\n- Chain effects are the source of truth. Compare storage/events/balances before and after — not just exit codes or stdout shape.\n- Use the existing agcli harness: image ghcr.io/opentensor/subtensor-localnet:devnet-ready, `agcli localnet scaffold --output json`, existing suites tests/e2e_test.rs, tests/user_flows_e2e.rs, tests/localnet_e2e_test.rs\n- Pin reference tool versions (btcli + bittensor from PyPI or git SHA) and record them in the parity matrix.\n- Do not skip btcli. Even where agcli claims superset, run the btcli command on the same chain state to confirm equivalence.\n- Out of scope (unless explicitly mapped): Miner/validator application runtime (Axon/Dendrite HTTP servers, Yuma math, subnet-specific scoring). Focus on chain operations the CLI/SDK expose.\n\nPhase 0 — Environment bootstrap (cargo build --release, docker pull localnet image, python venv with bittensor-cli and bittensor, agcli localnet scaffold; scaffold variants A-E).\nPhase 1 — Exhaustive inventory (btcli command tree + Bittensor SDK chain-relevant APIs).\nPhase 2 — agcli cross-reference (per-row status COVERED_E2E | COVERED_CLI_ONLY | COVERED_UNIQUE | GAP | N/A).\nPhase 3 — Localnet parity test suite (tests/parity/ with btcli/SDK + agcli runs and on-chain assertions).\nPhase 4 — Gap closure (implement GAPs, add localnet tests, update docs, re-run reference tools).\nPhase 5 — UX & fault-tolerance scorecard vs btcli.\nPhase 6 — CI parity-localnet job + parity-report.md.\n\nDefinition of done: 100% btcli mapped+localnet-verified, 100% SDK extrinsic helpers mapped, zero COVERED_CLI_ONLY for writes, agcli UX >= btcli, all e2e suites pass.\n\nReference repos: https://github.com/opentensor/bittensor and https://github.com/latent-to/btcli .\n\nAgent rules: one matrix row per PR for gap-closure, never mock chain for sign-off, use scaffold manifest for keys, document flag differences, use tests/e2e_modules/harness.rs patterns for flakiness.",
+  "summary": "achieve btcli + Bittensor SDK parity (and superset) for agcli on real localnet; 6 phases, scaffold variants A-E, matrix-driven gap closure",
+  "rootSlug": "agcli-parity",
+  "baseBranch": "main",
+  "repoUrl": "https://github.com/unarbos/agcli",
+  "selfAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+  "syncStateToGit": true,
+  "acceptanceCriteria": [
+    "docs/parity/versions.json pins agcli git SHA, btcli PyPI version + git SHA, bittensor PyPI version + git SHA, subtensor localnet image digest, rustc, docker.",
+    "examples/scaffold-variants/ contains scaffold configs A-E, each booting `agcli localnet scaffold --config <path> --output json` to a healthy state.",
+    "docs/parity/inventory-btcli.{md,json} enumerates every btcli subcommand with args + on-chain extrinsic.",
+    "docs/parity/inventory-sdk.{md,json} enumerates every chain-relevant bittensor SDK helper (extrinsic submitters + read helpers).",
+    "docs/parity/matrix.json contains one row per btcli command + per SDK extrinsic helper + per agcli-unique command, with `agcli_status` in {COVERED_E2E, COVERED_CLI_ONLY, COVERED_UNIQUE, GAP, N/A}.",
+    "tests/parity/ contains real-localnet tests for every COVERED_E2E and COVERED_UNIQUE row that touches chain state.",
+    "Every Phase 4 gap-fix worker opens its own draft PR (`openPR: true`, one matrix row per PR) and updates matrix.json from GAP to COVERED_E2E in that PR.",
+    "docs/parity/ux-scorecard.md compares agcli vs btcli on --batch, --dry-run, --yes, --output json, structured errors, spending limits, preflight errors, password handling, exit codes.",
+    "`.github/workflows/parity-localnet.yml` runs the parity suite against the pinned localnet image on every push to a parity-* branch.",
+    "docs/parity/parity-report.md states the final pass/fail against the mission-level definition of done."
+  ],
+  "tasks": [
+    {
+      "name": "bootstrap-parity-env",
+      "type": "worker",
+      "scopedGoal": "Phase 0 — Environment bootstrap for the agcli-parity orchestrate run.\n\nRead `.orchestrate/agcli-parity/discovery.md` FIRST (especially the `Cloud-agent VM environment recipe` and `Scaffold variants` sections).\n\nConcretely:\n\n1. Install Rust >= 1.89 via `rustup install stable && rustup default stable`. Confirm `rustc -V`.\n2. Initialize the `subtensor/` submodule shallowly: `git submodule update --init --depth=1 -- subtensor`.\n3. Install Docker (`docker.io` via apt) with the vfs storage driver (see recipe). Start `dockerd` in the background. Confirm with `sudo docker run --rm hello-world`.\n4. Pull the localnet image: `sudo docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready`. Record the image digest from `sudo docker inspect`.\n5. Create a Python venv at `.venv`, install pinned reference tools: `pip install bittensor bittensor-cli`. Record `pip show bittensor` and `pip show bittensor-cli` outputs (versions + locations + summary). Also record `btcli --version`.\n6. Build the agcli release binary: `SKIP_METADATA_FETCH=1 cargo build --release --bin agcli`. Confirm `target/release/agcli --version` and capture the git SHA of HEAD.\n7. Smoke-test `target/release/agcli localnet scaffold --output json` against the default `examples/scaffold.toml`. Confirm the JSON has `endpoint`, `block_height`, and at least one `subnets[].neurons[].ss58`. Tear down the container at end (`docker rm -f agcli_localnet`).\n8. Write 5 scaffold variant configs at `examples/scaffold-variants/scaffold-A-baseline.toml`, `scaffold-B-commit-reveal.toml`, `scaffold-C-multi-subnet.toml`, `scaffold-D-mechanisms.toml`, `scaffold-E-user-liquidity.toml`. Each must boot via `agcli localnet scaffold --config <path> --output json` to a healthy state. Use distinct container names (e.g. `agcli_parity_A`...) so they can coexist on different ports if needed. The five variants must exercise: A=default baseline (1 subnet, 3 neurons, commit-reveal off); B=1 subnet with commit-reveal on + short reveal interval; C=2 subnets with distinct tempos (cross-subnet ops); D=1 subnet with mechanism_count > 1 (look up the field name in `src/scaffold.rs`; if not exposed at scaffold level, emit a comment noting the gap and using sudo `admin set-mechanism-count` post-scaffold); E=1 subnet with `toggle_user_liquidity=true` and seeded LP positions (again, if scaffold doesn't expose it, document the post-scaffold step inside a comment header in the TOML file).\n9. Verify each variant by booting it sequentially (one at a time, tear down between), capturing the `subnets` summary, and recording the variant's expected on-chain shape (e.g. `subnet 1 has 3 neurons, alice has UID 0`). Stop after each.\n10. Write `docs/parity/versions.json` and `docs/parity/versions.md` capturing: agcli git SHA + version; btcli PyPI version + git SHA (look up via `pip show bittensor-cli` and the package's `Homepage` field); bittensor PyPI version + git SHA; localnet image fully-qualified digest; subtensor submodule SHA; rustc version; docker version; Python version. Mark the exact pip install command that reproduces the versions.\n11. Append a single line to `.orchestrate/agcli-parity/discovery.md` at the `## Verified at` tail with the format: `verified at <UTC iso> on rustc <ver>, docker <ver>, btcli <ver>, bittensor <ver>, agcli <git sha>, localnet image digest <sha256:...>`.\n12. Commit and push to the cloud-agent branch (whatever the spawn assigned). No PR.\n\nKnown gotchas:\n- The cloud-agent VM lacks `docker` out of the box. Install yourself.\n- `cargo build --release` is slow (multi-minute); be patient. Use `SKIP_METADATA_FETCH=1` so `build.rs` reuses the cached metadata instead of hitting finney.\n- The 5 scaffold variants must actually boot. Do not just write TOML and hope; run each one.\n- If a scaffold variant cannot be expressed in TOML (e.g. mechanism_count > 1), boot the base scaffold and apply the additional admin-utils sudo call from a shell snippet embedded as a comment block in the TOML file; document the discrepancy in your handoff `## Findings`.\n\nDo NOT modify src/ or tests/ in this task. If you find scaffold-level gaps (e.g. mechanism_count not exposed), log them as `## Suggested follow-ups`.",
+      "pathsAllowed": [
+        "docs/parity/versions.json",
+        "docs/parity/versions.md",
+        "examples/scaffold-variants/**",
+        ".orchestrate/agcli-parity/discovery.md",
+        ".orchestrate/agcli-parity/handoffs/**"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "docs/parity/inventory-*.md",
+        "docs/parity/inventory-*.json",
+        "docs/parity/matrix.json",
+        "docs/parity/matrix.md",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "Rust toolchain >= 1.89 installed and `subtensor/` submodule populated.",
+        "Docker installed and the localnet image pulled; image digest recorded.",
+        "`btcli --version` and `pip show bittensor` outputs captured in versions.json.",
+        "`SKIP_METADATA_FETCH=1 cargo build --release --bin agcli` succeeds.",
+        "`agcli localnet scaffold --output json` against the default config returns valid JSON with a non-empty `subnets[].neurons[].ss58`.",
+        "5 scaffold variant TOMLs exist at `examples/scaffold-variants/` and each one boots successfully.",
+        "`docs/parity/versions.{json,md}` pins agcli, btcli, bittensor, image digest, rustc, docker, Python.",
+        "`.orchestrate/agcli-parity/discovery.md` has the final `verified at ...` line appended."
+      ],
+      "verify": "## Setup\n- Run the bootstrap recipe in `.orchestrate/agcli-parity/discovery.md` end-to-end.\n\n## Automated\n- `target/release/agcli --version` prints a version.\n- For each variant TOML: `sudo docker rm -f agcli_parity_test || true; target/release/agcli localnet scaffold --config <path> --output json --port <unused-port> > /tmp/<variant>.json && jq -e '.subnets | length >= 1' /tmp/<variant>.json`.\n\n## Manual\n- N/A.\n\n## Gotchas\n- Use `--port` to avoid colliding with a previously-running scaffold container.",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 4
+    },
+    {
+      "name": "inventory-btcli",
+      "type": "worker",
+      "scopedGoal": "Phase 1 — Exhaustive enumeration of every btcli subcommand for the parity matrix.\n\nRead `.orchestrate/agcli-parity/discovery.md` and the upstream `bootstrap-parity-env` handoff FIRST. You should already have a `.venv/` with `bittensor-cli` installed; if not, recreate it per the discovery recipe.\n\nDeliverables:\n\n1. `docs/parity/inventory-btcli.json` — array of rows, one per btcli subcommand. Each row:\n   - `id`: e.g. `btcli.wallet.transfer`\n   - `invocation`: canonical example, e.g. `btcli wallet transfer --destination 5G... --amount 1.0 --no-prompt`\n   - `args`: array of {name, type, required, default, description}\n   - `read_or_write`: `read` | `write` | `mixed`\n   - `extrinsic`: pallet + dispatchable, e.g. `Balances.transfer_keep_alive`, or `null` for read-only.\n   - `storage_keys`: list of subtensor storage keys read/written, best effort.\n   - `events_expected`: list of events the extrinsic should emit (read from `subtensor/pallets/`).\n   - `source_file_ref`: path:line inside the locally-installed bittensor-cli package (`.venv/lib/python3.x/site-packages/bittensor_cli/...`) that handles this subcommand.\n   - `notes`: anything operator-relevant.\n2. `docs/parity/inventory-btcli.md` — human-readable view rendered from the JSON: grouped by top-level command (wallet / subnet / stake / sudo / root / weights / view / config / utils / liveness / etc.), each row a one-line summary + a link to the JSON entry.\n\nMethodology:\n- Activate venv: `source .venv/bin/activate`.\n- Walk the help tree non-interactively: `btcli --help`, then for each top-level group `btcli <group> --help`, then for each leaf `btcli <group> <cmd> --help`. Many help texts are paginated through `rich`; pipe through `cat` or set `--no-color` if needed.\n- For each leaf, open the corresponding source file in `.venv/lib/.../bittensor_cli/` and confirm the extrinsic call (search for `substrate.compose_call`, `subtensor.set_weights`, `add_stake`, etc.). Record the substrate pallet + dispatchable.\n- Cross-reference each extrinsic with `subtensor/pallets/<pallet>/src/lib.rs` (or `macros/dispatches.rs`) to record the canonical event names emitted.\n- For commands that wrap multiple extrinsics (e.g. `wallet create` issues `new_coldkey` + `new_hotkey`), record all of them in a single row's `extrinsic` field as an array.\n- Mark dry-run-only / preview commands as `read`.\n- For commands that have been split or renamed across btcli versions, record only the version pinned in `docs/parity/versions.json`.\n\nDo NOT touch agcli source, tests, or other parity-matrix files. Your output is exclusively the two `inventory-btcli` files.\n\nIf a btcli command appears completely undocumented in source, mark `extrinsic: \"UNKNOWN\"` and explain in `notes`.",
+      "pathsAllowed": [
+        "docs/parity/inventory-btcli.json",
+        "docs/parity/inventory-btcli.md"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "examples/scaffold-variants/**",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/matrix.*",
+        "docs/parity/versions.*",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "`docs/parity/inventory-btcli.json` is a syntactically valid JSON array (verify with `jq type`).",
+        "Every top-level btcli command group appears (`wallet`, `subnet`, `stake`, `sudo`, `root`, `weights`, `view`, `config`, `utils`, `liveness`, `info` — whichever groups exist in the pinned version).",
+        "Every leaf has `id`, `invocation`, `args`, `read_or_write`, and either `extrinsic` set or a `notes` justification for `null`.",
+        "Every `write` row has a non-null `extrinsic`.",
+        "`docs/parity/inventory-btcli.md` renders the same data grouped by top-level command, with each row linking to its `id` in the JSON."
+      ],
+      "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 20' docs/parity/inventory-btcli.json`.\n- `jq -e 'all(.[]; .id and .invocation and .read_or_write and (.read_or_write != \"write\" or .extrinsic != null))' docs/parity/inventory-btcli.json`.\n- Spot-check 5 random rows by running their `invocation` with `--help` to confirm the args exist.\n\n## Manual\n- Eyeball the .md file: every leaf reachable from `btcli --help` should appear.",
+      "model": "gpt-5.5-high-fast",
+      "maxAttempts": 4,
+      "dependsOn": [
+        "bootstrap-parity-env"
+      ]
+    },
+    {
+      "name": "inventory-sdk",
+      "type": "worker",
+      "scopedGoal": "Phase 1 — Exhaustive enumeration of chain-relevant Bittensor Python SDK helpers for the parity matrix.\n\nRead `.orchestrate/agcli-parity/discovery.md` and the upstream `bootstrap-parity-env` handoff FIRST. The `.venv/` already has `bittensor` installed.\n\nDeliverables:\n\n1. `docs/parity/inventory-sdk.json` — array of rows, one per chain-relevant SDK helper. Each row:\n   - `id`: e.g. `sdk.async_subtensor.transfer` or `sdk.async_subtensor.add_stake`.\n   - `module`: import path (e.g. `bittensor.core.async_subtensor`).\n   - `function`: function or method name.\n   - `signature`: canonical Python signature.\n   - `read_or_write`: `read` | `write`.\n   - `extrinsic`: pallet + dispatchable, or `null` for read-only.\n   - `storage_keys`: list of storage keys read/written.\n   - `events_expected`: list of events expected on write.\n   - `source_file_ref`: path:line inside the locally-installed bittensor package.\n   - `notes`.\n2. `docs/parity/inventory-sdk.md` — grouped human view (extrinsic-submitter group vs read-helper group vs subtensor-runtime-api group).\n\nMethodology:\n- Inspect `.venv/lib/python3.x/site-packages/bittensor/` (recursive).\n- Focus on **chain-relevant** helpers: things that issue an extrinsic via `substrate.compose_call` / `substrate.create_signed_extrinsic` (writes), things that call `substrate.query` / `substrate.query_map` / `query_runtime_api` (reads), and things that wrap multiple of those.\n- Out of scope: Axon/Dendrite HTTP servers, neuron classes, miner runtime helpers, Synapse classes, wallet keyfile handling unrelated to chain ops, logging utilities.\n- Include `subtensor.SubtensorInterface` / `async_subtensor.AsyncSubtensor` methods, the `bittensor.Subtensor` legacy class methods that wrap extrinsics, and the runtime-api wrappers in `bittensor.core.chain_data`/`runtime_api`.\n- Cross-reference each extrinsic with `subtensor/pallets/<pallet>/` for the dispatchable + event names.\n- For helpers that map to the same dispatchable (e.g. `subtensor.transfer` and `async_subtensor.transfer`), record both rows but cross-link them via `notes: \"async pair of sdk.subtensor.transfer\"`.\n\nDo NOT touch agcli source, tests, or other parity-matrix files. Your output is exclusively the two `inventory-sdk` files.",
+      "pathsAllowed": [
+        "docs/parity/inventory-sdk.json",
+        "docs/parity/inventory-sdk.md"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "examples/scaffold-variants/**",
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/matrix.*",
+        "docs/parity/versions.*",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "`docs/parity/inventory-sdk.json` is a syntactically valid JSON array (`jq type`).",
+        "Every extrinsic-submitting helper in `bittensor` (sync + async) appears.",
+        "Every `write` row has a non-null `extrinsic`.",
+        "Read-only helpers grouped distinctly in the .md file.",
+        "Out-of-scope helpers explicitly noted with a single short justification."
+      ],
+      "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 30' docs/parity/inventory-sdk.json`.\n- `jq -e 'all(.[]; .id and .module and .function and .read_or_write and (.read_or_write != \"write\" or .extrinsic != null))' docs/parity/inventory-sdk.json`.\n\n## Manual\n- Spot-check 5 entries against the live module: `python -c 'from bittensor.core.async_subtensor import AsyncSubtensor; print(dir(AsyncSubtensor))'` and confirm membership.",
+      "model": "gpt-5.5-high-fast",
+      "maxAttempts": 4,
+      "dependsOn": [
+        "bootstrap-parity-env"
+      ]
+    },
+    {
+      "name": "parity-matrix",
+      "type": "worker",
+      "scopedGoal": "Phase 2 — Build the agcli parity matrix joining `inventory-btcli`, `inventory-sdk`, and the current agcli command surface.\n\nRead `.orchestrate/agcli-parity/discovery.md` and the upstream `inventory-btcli` and `inventory-sdk` handoffs FIRST. Treat their JSON outputs as the canonical input.\n\nAlso read the agcli surface from:\n- `src/cli/mod.rs` (the 28 `*Commands` enums; ~3204 LOC).\n- `docs/llm.txt` (agent-facing reference card).\n- `docs/commands/*.md` (per-group reference; produced by the prior `agcli-audit` orchestrate run).\n- `docs/why-agcli.md` (claimed parity & superset).\n\nDeliverables:\n\n1. `docs/parity/matrix.json` — array of rows. Schema (also documented in `.orchestrate/agcli-parity/discovery.md` under `Matrix row schema`):\n   - `id`: stable id — `btcli.<group>.<cmd>` or `sdk.<module>.<fn>` or `agcli.<group>.<cmd>` (the last for agcli-unique rows).\n   - `source`: `btcli` | `sdk` | `agcli-unique`.\n   - `ref_invocation`: canonical btcli/SDK invocation (null for `agcli-unique`).\n   - `ref_extrinsic`: pallet.dispatchable (null for reads or agcli-unique).\n   - `agcli_invocation`: canonical agcli invocation (null for `GAP`).\n   - `agcli_status`: one of `COVERED_E2E` | `COVERED_CLI_ONLY` | `COVERED_UNIQUE` | `GAP` | `N/A`.\n   - `agcli_flag_diffs`: array of `\"btcli: <old> ↔ agcli: <new>\"` strings (empty for `agcli-unique` and `GAP`).\n   - `parity_test`: null at this phase (Phase 3 fills it in).\n   - `notes`: free text.\n2. `docs/parity/matrix.md` — grouped human view: by phase target (Phase 3 candidates = `COVERED_CLI_ONLY` + `COVERED_UNIQUE`; Phase 4 candidates = `GAP`; informational = `COVERED_E2E` + `N/A`).\n\nPolicy for assigning `agcli_status`:\n- `COVERED_CLI_ONLY` — agcli has the command surface but no `tests/parity/` test yet. Default for almost every row at this phase since Phase 3 hasn't run.\n- `COVERED_E2E` — set ONLY when an existing test under `tests/` (e.g. `tests/e2e_test.rs`, `tests/user_flows_e2e.rs`, `tests/audit_<group>.rs`) already exercises the operation end-to-end against localnet. Cite the test path:test_name in `notes`.\n- `COVERED_UNIQUE` — for rows where the matrix `source` is `agcli-unique` (agcli has something btcli/SDK does not — examples in `docs/why-agcli.md`).\n- `GAP` — agcli has no command and no obvious way to express the operation.\n- `N/A` — explicitly out of scope per the mission (Axon/Dendrite HTTP runtime, Yuma math internals, subnet-specific scoring). Record the justification in `notes`.\n\nMethodology:\n- Start from `docs/parity/inventory-btcli.json` and `docs/parity/inventory-sdk.json`. Iterate.\n- For each row, search `src/cli/mod.rs` and `docs/llm.txt` for the equivalent agcli surface. Use `rg` heavily.\n- For each agcli-unique command in `docs/why-agcli.md` under \"unique to agcli\" sections, add an `agcli-unique` row.\n- When btcli and SDK rows map to the same on-chain dispatchable, link them in `notes` but keep distinct rows (their UX criteria are tested separately in Phase 3).\n\nDo NOT modify the upstream inventories or any source file. Your output is exclusively `docs/parity/matrix.{json,md}`.",
+      "pathsAllowed": [
+        "docs/parity/matrix.json",
+        "docs/parity/matrix.md"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "examples/scaffold-variants/**",
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/versions.*",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "`docs/parity/matrix.json` valid JSON array with every row from `inventory-btcli.json` and `inventory-sdk.json` represented at least once (count check).",
+        "Every row has an `agcli_status` in {COVERED_E2E, COVERED_CLI_ONLY, COVERED_UNIQUE, GAP, N/A}.",
+        "Every `N/A` row has a non-empty `notes`.",
+        "Every `agcli-unique` row appears in `docs/why-agcli.md` (cite location).",
+        "`docs/parity/matrix.md` lists Phase 3 candidates and Phase 4 candidates separately."
+      ],
+      "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 50' docs/parity/matrix.json`.\n- `jq -e 'all(.[]; .id and .source and .agcli_status and ([\"COVERED_E2E\",\"COVERED_CLI_ONLY\",\"COVERED_UNIQUE\",\"GAP\",\"N/A\"] | index(.agcli_status) != null))' docs/parity/matrix.json`.\n- `jq -e '[.[] | select(.source == \"btcli\")] | length == ([inputs[] | select(.source == \"btcli\")] | length)' docs/parity/matrix.json docs/parity/inventory-btcli.json` (or equivalent count match).\n\n## Manual\n- Spot-check 5 `GAP` rows to confirm agcli really has no surface for them.",
+      "model": "claude-opus-4-7",
+      "maxAttempts": 3,
+      "dependsOn": [
+        "inventory-btcli",
+        "inventory-sdk"
+      ]
+    },
+    {
+      "name": "phase3-parity-suite",
+      "type": "subplanner",
+      "scopedGoal": "Phase 3 — Build a localnet parity test suite (`tests/parity/`) that, for every row in `docs/parity/matrix.json` with `agcli_status` in {COVERED_CLI_ONLY, COVERED_UNIQUE, COVERED_E2E}, runs the reference command (btcli or SDK) and the agcli equivalent against the same fresh localnet and asserts equivalent on-chain effects (storage / events / balances / stake / weights / hyperparams).\n\nRead `.orchestrate/agcli-parity/discovery.md`, the upstream `parity-matrix` handoff, and `tests/e2e_modules/harness.rs` BEFORE publishing any tasks.\n\nYour scope as a subplanner: decompose by command category (each category becomes one worker), spawn the workers, collect their handoffs, then aggregate into a single subplanner handoff for the root. Categories (one parity worker per category):\n\n1. `parity-balance-transfer` — `btcli wallet transfer` / `transfer_all` / `transfer_keep_alive` + sdk equivalents vs `agcli transfer*`, `agcli balance`.\n2. `parity-wallet` — wallet create/list/show/regen/derive/dev-key/associate-hotkey/check-swap/show-mnemonic + sdk equivalents vs `agcli wallet *`.\n3. `parity-stake-basic` — add_stake / remove_stake / add_stake_limit / remove_stake_limit / unstake_all + sdk vs `agcli stake *`.\n4. `parity-stake-advanced` — move/swap/transfer stake, children, childkey_take, recycle_alpha, burn_alpha, swap_limit, claim_root + sdk vs `agcli stake *` advanced.\n5. `parity-subnet-register` — register_network / register_network_with_identity / register / burned_register / register_limit / leased registration + sdk vs `agcli subnet register*`.\n6. `parity-subnet-hyperparams` — admin-utils sudo hyperparam setters + the btcli sudo set commands vs `agcli admin *`.\n7. `parity-weights` — set_weights / commit weights / reveal weights / batch_reveal + sdk vs `agcli weights *`.\n8. `parity-root` — root subnet weights, root subnet identity, root delegate registration + sdk vs `agcli root *`.\n9. `parity-identity-commitment` — set_identity / set_commitment / reveal_timelocked_commitments + sdk vs `agcli identity *`, `agcli commitment *`.\n10. `parity-governance` — multisig, proxy, scheduler, preimage, sudo wrappers + sdk vs `agcli multisig *`, `agcli proxy *`, `agcli scheduler *`, `agcli preimage *`.\n11. `parity-network-readonly` — neurons, metagraph, hyperparams (read), subnets, delegates, get_balance + sdk + btcli view/list vs `agcli view *`, `agcli subnet list/show`, `agcli block *`.\n12. `parity-misc` — utils, evm, contracts, drand, crowdloan, liquidity, swap, safe-mode + sdk vs corresponding agcli groups.\n\nFor each worker you publish:\n- `pathsAllowed`: `tests/parity/<category>.rs`, `tests/parity/mod.rs` (shared module if any), `docs/parity/matrix.json` (to flip `agcli_status` and set `parity_test`).\n- `pathsForbidden`: `src/**` (no source changes; that's Phase 4), other category's parity files.\n- `acceptance`: the parity test compiles and actually runs against localnet (verify by booting a scaffold variant and running the test); for every matrix row covered, flip `agcli_status` to `COVERED_E2E` (or document why not).\n- `verify`: `cargo test --features e2e --test parity_<category> -- --nocapture` runs and passes on the worker's branch.\n- `dependsOn`: `parity-matrix` (so the worker prompt includes the matrix handoff).\n- `model`: `gpt-5.5-high-fast` for most; `gpt-5.5-high` for the trickier ones (`parity-stake-advanced`, `parity-weights`, `parity-governance`).\n- `maxAttempts`: 3.\n- `openPR`: false (Phase 4 opens per-row PRs; Phase 3 stays on category branches, then a single merge happens at the end of the subplanner).\n\nTest scaffolding pattern each worker MUST follow (verbatim in your `scopedGoal`):\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nAfter all category workers hand off, aggregate findings into your subplanner handoff. Each category worker's handoff lists `## Findings` (UX drift, missing flags, broken JSON output, panicking paths, exit-code mismatches). Roll them up by severity (high/med/low) so Phase 4 can prioritize.\n\nDo NOT touch `src/`, `docs/llm.txt`, `docs/commands/`, or `docs/why-agcli.md` from this subplanner. Phase 4 owns source changes.\n\nMaintain `docs/parity/matrix.json` as the authoritative status: every test you add flips a row's `agcli_status` to `COVERED_E2E` and sets `parity_test`. Rows that fail (chain effect divergence) stay at `COVERED_CLI_ONLY` and Phase 4 picks them up.",
+      "pathsAllowed": [
+        "tests/parity/**",
+        "tests/parity.rs",
+        "Cargo.toml",
+        "docs/parity/matrix.json",
+        "docs/parity/matrix.md",
+        ".orchestrate/agcli-parity/**"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "docs/llm.txt",
+        "docs/commands/**",
+        "docs/why-agcli.md",
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/versions.*",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "`tests/parity/` exists with one file per category (12 files) plus `tests/parity.rs` entry.",
+        "Each category's test file actually runs against localnet on its worker's branch (verifier or worker handoff cites the run).",
+        "`docs/parity/matrix.json` is updated: rows covered by passing parity tests flipped to `COVERED_E2E` with `parity_test` populated; rows that diverged stay at `COVERED_CLI_ONLY` with a `notes` line citing the diverging assertion.",
+        "Aggregated subplanner handoff includes a ranked list of UX/parity findings by severity (Phase 4 input)."
+      ],
+      "verify": "## Setup\n- Boot a localnet via the appropriate scaffold variant.\n## Automated\n- For each category: `cargo test --features e2e --test parity_<category> -- --nocapture` on the category's worker branch.\n## Manual\n- Spot-check `docs/parity/matrix.json` after merge: most COVERED_CLI_ONLY rows should be COVERED_E2E.",
+      "model": "claude-opus-4-7-thinking-xhigh",
+      "maxAttempts": 2,
+      "dependsOn": [
+        "parity-matrix"
+      ]
+    },
+    {
+      "name": "phase4-gap-closure",
+      "type": "subplanner",
+      "scopedGoal": "Phase 4 — Close every `GAP` row in `docs/parity/matrix.json` (and every row that Phase 3 demoted to `COVERED_CLI_ONLY` because of behavior drift).\n\nRead `.orchestrate/agcli-parity/discovery.md`, the upstream `parity-matrix` handoff, and the upstream `phase3-parity-suite` handoff BEFORE publishing any tasks. Your input is the final `docs/parity/matrix.json` after Phase 3 wrote to it.\n\nYour scope as a subplanner: one **narrow** worker per matrix row, each owning its own draft PR (`openPR: true`). 'One matrix row per PR' is a non-negotiable agent rule from the orchestrator prompt. Group rows only when they share a single pallet dispatchable and a single source file (e.g. `move_stake` + `swap_stake` may share one worker if they live in the same handler).\n\nFor each worker you publish:\n- `pathsAllowed`: the specific `src/cli/<group>_cmds.rs` (and `src/chain/extrinsics.rs` if a new extrinsic submitter is needed), `docs/commands/<group>.md`, `tests/parity/<category>.rs`, `docs/parity/matrix.json`.\n- `pathsForbidden`: every other group's source file.\n- `acceptance`: the new command exists, accepts the documented flags, passes its parity test on localnet, and the matrix row's `agcli_status` is flipped to `COVERED_E2E`.\n- `verify`: the new parity test + `cargo check --all-targets` + `cargo clippy --all-targets -- -D warnings`.\n- `dependsOn`: `phase3-parity-suite` so each worker sees the matrix and the Phase 3 findings.\n- `openPR: true` so each gap-fix lands as its own reviewable PR. `prBase: \"main\"`.\n- `model`: default `gpt-5.5-high-fast`; bump to `gpt-5.5-high` or `gpt-xhigh` for rows requiring extrinsic-encoding work (children / commit-reveal / multisig / proxy / scheduler / preimage).\n- `maxAttempts`: 3. If a worker fails twice for the same row, document the gap as `wontfix-this-cycle` in the matrix and roll it into the subplanner handoff's `## Suggested follow-ups`.\n\nDo NOT batch unrelated gap fixes into a single worker. Each PR must be reviewable in isolation.\n\nAfter all workers hand off, aggregate into your subplanner handoff: list every matrix row that closed (now `COVERED_E2E`), every row that remains open (with the reason), and every gap that surfaced new gaps (cascading discoveries).",
+      "pathsAllowed": [
+        "src/cli/**",
+        "src/chain/**",
+        "docs/commands/**",
+        "docs/llm.txt",
+        "docs/why-agcli.md",
+        "tests/parity/**",
+        "docs/parity/matrix.json",
+        "docs/parity/matrix.md",
+        ".orchestrate/agcli-parity/**",
+        "Cargo.toml"
+      ],
+      "pathsForbidden": [
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/versions.*",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "Every `GAP` row in `docs/parity/matrix.json` is either closed (now `COVERED_E2E`) or annotated with a `wontfix-this-cycle` justification in `notes`.",
+        "Every Phase 3 `COVERED_CLI_ONLY` row caused by behavior drift is either fixed (now `COVERED_E2E`) or annotated similarly.",
+        "Each gap-fix landed as its own draft PR (one row, one PR, openPR: true).",
+        "Aggregated handoff lists closed vs remaining rows and cascading discoveries."
+      ],
+      "verify": "## Automated\n- `jq -e '[.[] | select(.agcli_status == \"GAP\")] | length == 0 or all(.notes | contains(\"wontfix-this-cycle\"))' docs/parity/matrix.json`.\n- `cargo check --all-targets` clean on each gap-fix branch.\n- Each PR shows the parity test going green in CI.\n\n## Manual\n- Eyeball the aggregated subplanner handoff for cascading discoveries that need a Phase 5/6 update.",
+      "model": "claude-opus-4-7-thinking-xhigh",
+      "maxAttempts": 2,
+      "dependsOn": [
+        "phase3-parity-suite"
+      ]
+    },
+    {
+      "name": "phase5-ux-scorecard",
+      "type": "worker",
+      "scopedGoal": "Phase 5 — UX & fault-tolerance scorecard comparing agcli vs btcli on every axis the mission cares about.\n\nRead `.orchestrate/agcli-parity/discovery.md`, the `phase3-parity-suite` and `phase4-gap-closure` handoffs FIRST. The Phase 3/4 findings sections are your primary source for UX claims; Phase 5 is the synthesis.\n\nDeliverable: `docs/parity/ux-scorecard.md` — a single Markdown file with:\n\n1. A top scorecard table: rows = UX axes, columns = btcli vs agcli vs verdict (`agcli wins`, `tie`, `btcli wins`). Axes (at minimum):\n   - Non-interactive default (`--yes` / `--no-prompt`)\n   - Hard-error / batch mode (`agcli --batch` vs btcli equivalent if any)\n   - Structured error output (JSON-on-stderr with codes)\n   - `--dry-run` previews on every write path\n   - Output formats (`--output json|csv|table`)\n   - Spending limits per subnet\n   - Password handling (env var vs tty vs keyring)\n   - Exit codes (consistency, granularity, documented per command)\n   - Shell completions (bash/zsh/fish/PowerShell)\n   - Speed (cold start; cite the measurements in `docs/why-agcli.md`)\n   - Reconnect / retry on transient WS failures\n   - At-block historical queries\n   - Live streaming / subscriptions\n   - Cache hit-rate / request coalescing\n   - Windows native support\n2. For every axis where agcli currently loses or ties, an explicit follow-up bullet with a candidate PR scope.\n3. A fault-tolerance section that catalogs how each tool behaves under: chain RPC drop mid-extrinsic, conflicting nonce, hotkey not registered, insufficient balance, wrong network endpoint, password mismatch, container not running. Cite Phase 3 test cases that proved each behavior.\n4. A short narrative conclusion mapping back to the mission's `Definition of done` line `agcli UX >= btcli`.\n\nValidation methodology:\n- Where possible, re-run a few representative btcli commands and agcli commands in `--batch` / `--no-prompt` mode and record stdout/stderr/exit code. Cite the captured fixtures verbatim in the doc.\n- Where Phase 3/4 already proved a fault behavior, cite the test by `tests/parity/<file>.rs::<fn>`.\n\nDo NOT modify src/ or tests/. Do NOT modify `docs/parity/matrix.json`. Your output is exclusively `docs/parity/ux-scorecard.md`.",
+      "pathsAllowed": [
+        "docs/parity/ux-scorecard.md",
+        ".orchestrate/agcli-parity/**"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/matrix.*",
+        "docs/parity/versions.*",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "`docs/parity/ux-scorecard.md` includes the top scorecard table covering at minimum the 15 axes above.",
+        "Every `agcli wins` cell cites either a Phase 3 test or a recorded stdout/stderr fixture.",
+        "Every `tie` or `btcli wins` cell has a follow-up bullet with a candidate PR scope.",
+        "Fault-tolerance section covers at minimum the 7 failure modes listed in the scope."
+      ],
+      "verify": "## Automated\n- `grep -c '^|' docs/parity/ux-scorecard.md` confirms the scorecard table is present.\n- `grep -c 'tests/parity/' docs/parity/ux-scorecard.md` shows citations to actual tests.\n\n## Manual\n- Read the conclusion paragraph; it must explicitly map to the mission's `agcli UX >= btcli` line.",
+      "model": "claude-opus-4-7",
+      "maxAttempts": 3,
+      "dependsOn": [
+        "phase4-gap-closure"
+      ]
+    },
+    {
+      "name": "phase6-ci-and-report",
+      "type": "worker",
+      "scopedGoal": "Phase 6 — CI parity-localnet job + final parity-report.md.\n\nRead `.orchestrate/agcli-parity/discovery.md` and the upstream `phase3-parity-suite`, `phase4-gap-closure`, and `phase5-ux-scorecard` handoffs FIRST.\n\nDeliverables:\n\n1. `.github/workflows/parity-localnet.yml` — a GitHub Actions workflow that:\n   - Runs on push to `main` and on pull_request to any `cursor/**` branch.\n   - Sets up Rust (stable; `actions-rust-lang/setup-rust-toolchain` or equivalent), Python 3.12, and Docker (the GH-hosted runner has it).\n   - Installs pinned `btcli` and `bittensor` (versions from `docs/parity/versions.json`).\n   - Pulls `ghcr.io/opentensor/subtensor-localnet:devnet-ready` (by digest from versions.json).\n   - Builds `cargo build --release --bin agcli`.\n   - Runs `cargo test --features e2e --test parity_balance_transfer parity_wallet parity_stake_basic parity_stake_advanced parity_subnet_register parity_subnet_hyperparams parity_weights parity_root parity_identity_commitment parity_governance parity_network_readonly parity_misc -- --nocapture --test-threads 1`.\n   - Uploads the per-test JUnit/JSON output as an artifact.\n   - Fails the workflow on any test failure.\n   - Caches the cargo target dir and the Docker image so reruns are fast.\n2. `docs/parity/parity-report.md` — the final mission report. Sections:\n   - Executive summary (≤ 10 lines): counts of COVERED_E2E / COVERED_CLI_ONLY / COVERED_UNIQUE / GAP / N/A rows; pass/fail vs the mission's `Definition of done`.\n   - Versions block (copy from `docs/parity/versions.json`).\n   - Phase-by-phase summary (Phase 0 through Phase 5), each ≤ 5 bullets.\n   - Gap closure table: every gap that closed in Phase 4, with PR link and matrix row id.\n   - Remaining gaps (if any), with the `wontfix-this-cycle` justification verbatim from `matrix.json`.\n   - UX scorecard summary table (single-row condensed view of `docs/parity/ux-scorecard.md`).\n   - Definition-of-done checklist: each criterion from the orchestrator prompt's `Definition of done` line, checked or unchecked with evidence.\n   - Reproduction recipe: how to rerun the parity suite locally (one shell block).\n3. Update `docs/parity/matrix.json` only to fill any `parity_test` cells still null where Phase 4 produced the test (no status changes).\n\nDo NOT modify src/, tests/, or other parity docs. Your output is exclusively the CI YAML and the final report (+ matrix.json fill-in).",
+      "pathsAllowed": [
+        ".github/workflows/parity-localnet.yml",
+        "docs/parity/parity-report.md",
+        "docs/parity/matrix.json",
+        ".orchestrate/agcli-parity/**"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "docs/parity/inventory-btcli.*",
+        "docs/parity/inventory-sdk.*",
+        "docs/parity/versions.*",
+        "docs/parity/matrix.md",
+        "docs/parity/ux-scorecard.md"
+      ],
+      "acceptance": [
+        "`.github/workflows/parity-localnet.yml` exists and `yamllint` (or `actionlint`) is clean.",
+        "The workflow pulls the localnet image by digest (`@sha256:...`), not just tag.",
+        "`docs/parity/parity-report.md` includes all 8 sections listed in the scope.",
+        "Definition-of-done checklist explicitly checks or unchecks every criterion, with evidence cited.",
+        "Reproduction recipe runs to completion when executed locally on a clean checkout (cite the run in the worker handoff)."
+      ],
+      "verify": "## Automated\n- `python -c 'import yaml; yaml.safe_load(open(\".github/workflows/parity-localnet.yml\"))'` clean.\n- `grep -c '\\[x\\]\\|\\[ \\]' docs/parity/parity-report.md` shows >= 8 checkbox lines for the DoD checklist.\n- `bash -c 'sed -n /^```bash/,/^```/p docs/parity/parity-report.md | grep -c cargo'` shows the repro recipe contains a `cargo` invocation.\n\n## Manual\n- Open the workflow file and confirm the cache keys include `docs/parity/versions.json` (so version pinning invalidates the cache).",
+      "model": "gpt-5.5-high-fast",
+      "maxAttempts": 3,
+      "dependsOn": [
+        "phase5-ux-scorecard"
+      ]
+    }
+  ]
+}
