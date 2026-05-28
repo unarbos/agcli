@@ -5,18 +5,18 @@
       "name": "bootstrap-parity-env",
       "type": "worker",
       "branch": "orch/agcli-parity/bootstrap-parity-env",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [],
-      "agentId": "bc-a48ac283-1921-48ee-a5c6-c9acf6106bd1",
-      "runId": "run-02f1a61d-d806-4871-b796-2c87a04f9405",
-      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "cancelled",
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": "2026-05-28T15:11:40.687Z",
+      "startedAt": null,
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T15:24:46.535Z",
-      "note": "cancelled by operator via cli",
+      "lastUpdate": null,
+      "note": "reset to pending after fixing startingRef to root planner branch",
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
@@ -27,7 +27,7 @@
       "name": "inventory-btcli",
       "type": "worker",
       "branch": "orch/agcli-parity/inventory-btcli",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "bootstrap-parity-env"
       ],
@@ -50,7 +50,7 @@
       "name": "inventory-sdk",
       "type": "worker",
       "branch": "orch/agcli-parity/inventory-sdk",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "bootstrap-parity-env"
       ],
@@ -73,7 +73,7 @@
       "name": "parity-matrix",
       "type": "worker",
       "branch": "orch/agcli-parity/parity-matrix",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "inventory-btcli",
         "inventory-sdk"
@@ -97,7 +97,7 @@
       "name": "phase3-parity-suite",
       "type": "subplanner",
       "branch": "orch/agcli-parity/phase3-parity-suite",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "parity-matrix"
       ],
@@ -120,7 +120,7 @@
       "name": "phase4-gap-closure",
       "type": "subplanner",
       "branch": "orch/agcli-parity/phase4-gap-closure",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "phase3-parity-suite"
       ],
@@ -143,7 +143,7 @@
       "name": "phase5-ux-scorecard",
       "type": "worker",
       "branch": "orch/agcli-parity/phase5-ux-scorecard",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "phase4-gap-closure"
       ],
@@ -166,7 +166,7 @@
       "name": "phase6-ci-and-report",
       "type": "worker",
       "branch": "orch/agcli-parity/phase6-ci-and-report",
-      "startingRef": "main",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "phase5-ux-scorecard"
       ],
@@ -194,6 +194,10 @@
     {
       "at": "2026-05-28T15:17:45.385Z",
       "message": "bootstrap-parity-env: tool_call idle 343973ms; last=2026-05-28T15:12:01.412Z"
+    },
+    {
+      "at": "2026-05-28T15:24:47.959Z",
+      "message": "bootstrap-parity-env: cancelled by operator"
     }
   ]
 }
