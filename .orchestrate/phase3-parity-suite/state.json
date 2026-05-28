@@ -10,16 +10,16 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "running",
+      "status": "error",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": "2026-05-28T17:19:35.101Z",
+      "startedAt": "2026-05-28T17:19:42.147Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T17:19:35.101Z",
-      "note": null,
+      "lastUpdate": "2026-05-28T17:19:42.326Z",
+      "note": "spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.",
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null,
       "attempts": 1
     },
@@ -255,5 +255,10 @@
       "verification": null
     }
   ],
-  "attention": []
+  "attention": [
+    {
+      "at": "2026-05-28T17:19:35.481Z",
+      "message": "git-sync failed (parity-balance-transfer pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    }
+  ]
 }
