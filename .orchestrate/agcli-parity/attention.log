@@ -44,3 +44,19 @@ To https://github.com/unarbos/agcli
 [2026-05-28T19:56:42.819Z] phase4-gap-closure: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
 [2026-05-28T19:56:44.012Z] phase4-gap-closure: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure.md
 [2026-05-28T19:56:44.013Z] phase4-gap-closure: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure-failure.md
+[2026-05-28T20:00:50.483Z] phase4-gap-triage: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T20:00:51.609Z] phase4-gap-triage: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage.md
+[2026-05-28T20:00:51.609Z] phase4-gap-triage: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage-failure.md
+[2026-05-28T20:26:09.863Z] phase4-gap-triage: respawned by self-planner (was error)
+[2026-05-28T20:36:36.637Z] phase4-gap-triage: verification self-reported (not-verified)
+[2026-05-28T20:37:54.488Z] phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T20:37:55.415Z] phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md
+[2026-05-28T20:37:55.416Z] phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md
+[2026-05-28T20:42:27.650Z] phase5-ux-scorecard: respawned by self-planner (was error)
+[2026-05-28T20:43:12.810Z] phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T20:43:13.759Z] phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md
+[2026-05-28T20:43:13.760Z] phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md
+[2026-05-28T20:59:05.816Z] phase5-ux-scorecard: respawned by self-planner (was error)
+[2026-05-28T21:01:35.180Z] phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T21:01:36.241Z] phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md
+[2026-05-28T21:01:36.242Z] phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md
