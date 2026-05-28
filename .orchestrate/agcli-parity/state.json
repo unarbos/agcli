@@ -153,20 +153,20 @@
       "dependsOn": [
         "phase3-parity-suite"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-cafc464d-2cce-4da5-b4a0-813633b54393",
+      "runId": "run-cb3f4f6f-4eb0-4668-8290-ccd5530ccf94",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/phase4-gap-triage.md",
       "startedAt": "2026-05-28T19:59:59.392Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T19:59:59.392Z",
+      "finishedAt": "2026-05-28T20:00:50.484Z",
+      "lastUpdate": "2026-05-28T20:00:50.484Z",
       "note": "renamed from phase4-gap-closure (subplanner cap-hit) to a single triage worker",
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -344,6 +344,10 @@
     {
       "at": "2026-05-28T19:56:44.013Z",
       "message": "phase4-gap-closure: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:00:50.483Z",
+      "message": "phase4-gap-triage: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
