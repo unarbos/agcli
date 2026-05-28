@@ -156,14 +156,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-28T20:26:21.526Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T20:26:08.769Z",
+      "lastUpdate": "2026-05-28T20:26:21.526Z",
       "note": "respawned by self-planner (was error; attempts=1)",
-      "attempts": 1,
+      "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -356,6 +356,10 @@
     {
       "at": "2026-05-28T20:00:51.609Z",
       "message": "phase4-gap-triage: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:26:09.863Z",
+      "message": "phase4-gap-triage: respawned by self-planner (was error)"
     }
   ]
 }
