@@ -15,3 +15,32 @@
 [2026-05-28T16:15:51.805Z] inventory-sdk: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
 [2026-05-28T16:17:25.015Z] inventory-btcli: respawned by self-planner (was error)
 [2026-05-28T16:17:26.477Z] inventory-sdk: respawned by self-planner (was error)
+[2026-05-28T16:23:47.176Z] inventory-btcli: SSE idle 341294ms, polled status=running; watchdog still waiting
+[2026-05-28T16:23:47.176Z] inventory-btcli: tool_call idle 344057ms; last=2026-05-28T16:18:03.119Z
+[2026-05-28T16:23:51.319Z] inventory-sdk: SSE idle 331633ms, polled status=running; watchdog still waiting
+[2026-05-28T16:23:51.319Z] inventory-sdk: tool_call idle 335234ms; last=2026-05-28T16:18:16.085Z
+[2026-05-28T16:31:45.059Z] scaffold-variants-a-to-e: tool_call idle 319493ms; last=2026-05-28T16:26:25.566Z
+[2026-05-28T16:39:50.952Z] inventory-sdk: verification self-reported (type-check-only)
+[2026-05-28T16:45:46.745Z] scaffold-variants-a-to-e: SSE idle 319046ms, polled status=running; watchdog still waiting
+[2026-05-28T16:48:50.807Z] inventory-btcli: verification self-reported (type-check-only)
+[2026-05-28T17:01:27.428Z] scaffold-variants-a-to-e: verification self-reported (not-verified)
+[2026-05-28T17:03:13.593Z] parity-matrix: verification self-reported (type-check-only)
+[2026-05-28T17:09:16.572Z] phase3-parity-suite: SSE idle 333519ms, polled status=running; watchdog still waiting
+[2026-05-28T17:09:16.573Z] phase3-parity-suite: tool_call idle 333520ms; last=2026-05-28T17:03:43.053Z
+[2026-05-28T17:28:50.083Z] phase3-parity-suite: SSE idle 303406ms, polled status=running; watchdog still waiting
+[2026-05-28T17:28:50.084Z] phase3-parity-suite: tool_call idle 303407ms; last=2026-05-28T17:23:46.677Z
+[2026-05-28T18:51:12.144Z] git-sync failed (phase3-parity-suite running -> handed-off): Command failed: git -C /workspace/.orchestrate/agcli-parity push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…
+[2026-05-28T18:51:12.152Z] phase3-parity-suite: verification self-reported (not-verified)
+[2026-05-28T18:51:21.395Z] git-sync failed (phase4-gap-closure pending -> running): Command failed: git -C /workspace/.orchestrate/agcli-parity push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…
+[2026-05-28T19:18:13.832Z] phase4-gap-closure: SSE idle 1594050ms, polled status=running; watchdog still waiting
+[2026-05-28T19:18:13.834Z] phase4-gap-closure: tool_call idle 1609907ms; last=none since wait start (2026-05-28T18:51:23.927Z)
+[2026-05-28T19:29:01.040Z] git-sync failed (planned checkpoint restart): Command failed: git -C /workspace/.orchestrate/agcli-parity push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…
+[2026-05-28T19:56:42.819Z] phase4-gap-closure: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T19:56:44.012Z] phase4-gap-closure: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure.md
+[2026-05-28T19:56:44.013Z] phase4-gap-closure: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure-failure.md

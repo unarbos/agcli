@@ -146,27 +146,27 @@
       "verification": "not-verified"
     },
     {
-      "name": "phase4-gap-closure",
-      "type": "subplanner",
-      "branch": "orch/agcli-parity/phase4-gap-closure",
+      "name": "phase4-gap-triage",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase4-gap-triage",
       "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "phase3-parity-suite"
       ],
-      "agentId": "bc-00b26b88-2119-4d88-9544-caded071456d",
-      "runId": "run-acddd763-2146-4ff4-b5e3-5542bc4e93ab",
-      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/phase4-gap-closure.md",
-      "startedAt": "2026-05-28T18:51:21.092Z",
-      "finishedAt": "2026-05-28T19:56:42.820Z",
-      "lastUpdate": "2026-05-28T19:56:42.820Z",
-      "note": null,
-      "attempts": 1,
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": "renamed from phase4-gap-closure (subplanner cap-hit) to a single triage worker",
+      "attempts": 0,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -175,7 +175,7 @@
       "branch": "orch/agcli-parity/phase5-ux-scorecard",
       "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
-        "phase4-gap-closure"
+        "phase4-gap-triage"
       ],
       "agentId": null,
       "runId": null,
