@@ -1,0 +1,148 @@
+[
+  {
+    "id": "btcli.wallet.associate-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet associate-hotkey --wallet-name alice --hotkey default --network local --no-prompt",
+    "ref_extrinsic": "SubtensorModule.associate_hotkey",
+    "agcli_invocation": "agcli --network local --wallet alice wallet associate-hotkey --hotkey-address <ss58> --batch --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli uses --hotkey name/ss58, agcli uses --hotkey-address",
+      "btcli no-prompt defaults to prompt, agcli uses global --batch"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Chain-effect divergence: btcli reports already-associated and does not spend fee on localnet baseline, agcli submits AssociateHotkey extrinsic and consumes fee."
+  },
+  {
+    "id": "btcli.wallet.create",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet create --wallet-name walletbt --wallet-path <dir> --hotkey hkb --uri Alice --no-use-password --overwrite --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --wallet-dir <dir> --wallet walletag wallet create --name walletag --hotkey-name hka --batch --output json --dry-run",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli supports --uri on create; agcli uses wallet dev-key for uri-based creation",
+      "agcli supports global --dry-run/--batch/--output json"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Both tools create wallet artifacts with no chain-state delta."
+  },
+  {
+    "id": "btcli.wallet.list",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet list --wallet-path <dir> --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --wallet-dir <dir> --wallet walletag wallet list --batch --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli uses --json-output, agcli uses --output json"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Filesystem-only command parity verified with no balance or swap storage changes."
+  },
+  {
+    "id": "btcli.wallet.new-coldkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet new-coldkey --wallet-name walletbt --wallet-path <dir> --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --wallet-dir <dir> wallet create --name walletag --batch --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "agcli coldkey creation is part of wallet create flow"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Covered by the create flow parity assertions."
+  },
+  {
+    "id": "btcli.wallet.regen-coldkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-coldkey --wallet-name walletbt --wallet-path <dir> --mnemonic <phrase> --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --wallet-dir <dir> --wallet walletag wallet regen-coldkey --mnemonic <phrase> --batch --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli supports --seed and --json backup recovery paths",
+      "agcli currently mnemonics-first for non-interactive regen"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Behavioral divergence observed: btcli returns JSON success=false (Keyfile is not writable) with exit code 0 in non-interactive local runs, while agcli returns explicit structured error/success exit semantics."
+  },
+  {
+    "id": "btcli.wallet.regen-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-hotkey --wallet-name walletbt --wallet-path <dir> --hotkey regenhkb --mnemonic <phrase> --no-use-password --overwrite --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --wallet-dir <dir> --wallet walletag wallet regen-hotkey --name regenhka --mnemonic <phrase> --batch --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli uses --hotkey for hotkey name, agcli uses --name"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Parity verified for wallet hotkey regeneration behavior and zero chain-state delta."
+  },
+  {
+    "id": "btcli.wallet.swap-check",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet swap-check --wallet-name alice --network local --json-output",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli --network local --wallet alice wallet check-swap --batch --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli supports --all and wallet-name filters, agcli supports --address filter"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Both tools report no scheduled coldkey swap announcement on fresh localnet."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_announcement(<ss58>)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet check-swap --address <ss58> --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "SDK call returns Python object; agcli returns CLI JSON payload"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "SDK and agcli both report null/false swap-announcement state on baseline localnet."
+  },
+  {
+    "id": "sdk.async_subtensor.get_owned_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_owned_hotkeys(<ss58>)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet show --all --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "SDK query is chain-owned hotkeys, agcli show reads local wallet artifacts"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Equivalent baseline response for Alice on localnet in parity scenario."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_announcement(<ss58>)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet check-swap --address <ss58> --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "SDK returns Python None/object, agcli returns serialized JSON result"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Parity verified on localnet for unscheduled coldkey swap state."
+  },
+  {
+    "id": "sdk.subtensor.get_owned_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_owned_hotkeys(<ss58>)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet show --all --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "SDK call is chain query, agcli command is wallet-dir introspection"
+    ],
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Localnet Alice owned-hotkeys parity validated in test scenario."
+  }
+]
