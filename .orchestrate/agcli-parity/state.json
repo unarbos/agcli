@@ -348,6 +348,14 @@
     {
       "at": "2026-05-28T20:00:50.483Z",
       "message": "phase4-gap-triage: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T20:00:51.609Z",
+      "message": "phase4-gap-triage: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage.md"
+    },
+    {
+      "at": "2026-05-28T20:00:51.609Z",
+      "message": "phase4-gap-triage: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage-failure.md"
     }
   ]
 }
