@@ -1,0 +1,29 @@
+# container=agcli_parity_E port=9975 expected_subnets=1 expected_neurons=3 post_scaffold_sudo="sudo target/release/agcli liquidity toggle --netuid 1 --enable true --wallet-dir ~/.bittensor/wallets --wallet cold --endpoint ws://127.0.0.1:9975 --yes --output json"
+[chain]
+image = "ghcr.io/opentensor/subtensor-localnet:devnet-ready"
+container = "agcli_parity_E"
+port = 9975
+start = true
+timeout = 120
+
+[[subnet]]
+tempo = 100
+max_allowed_validators = 8
+min_allowed_weights = 1
+weights_rate_limit = 0
+commit_reveal = false
+
+[[subnet.neuron]]
+name = "validator1"
+fund_tao = 1000.0
+register = true
+
+[[subnet.neuron]]
+name = "miner1"
+fund_tao = 100.0
+register = true
+
+[[subnet.neuron]]
+name = "miner2"
+fund_tao = 100.0
+register = true

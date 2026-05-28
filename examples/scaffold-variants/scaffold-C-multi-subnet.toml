@@ -1,0 +1,51 @@
+# container=agcli_parity_C port=9973 expected_subnets=2 expected_neurons=6 post_scaffold_sudo=none
+[chain]
+image = "ghcr.io/opentensor/subtensor-localnet:devnet-ready"
+container = "agcli_parity_C"
+port = 9973
+start = true
+timeout = 120
+
+[[subnet]]
+tempo = 100
+max_allowed_validators = 8
+min_allowed_weights = 1
+weights_rate_limit = 0
+commit_reveal = false
+
+[[subnet.neuron]]
+name = "validator1_sn1"
+fund_tao = 1000.0
+register = true
+
+[[subnet.neuron]]
+name = "miner1_sn1"
+fund_tao = 100.0
+register = true
+
+[[subnet.neuron]]
+name = "miner2_sn1"
+fund_tao = 100.0
+register = true
+
+[[subnet]]
+tempo = 50
+max_allowed_validators = 4
+min_allowed_weights = 1
+weights_rate_limit = 0
+commit_reveal = false
+
+[[subnet.neuron]]
+name = "validator1_sn2"
+fund_tao = 1000.0
+register = true
+
+[[subnet.neuron]]
+name = "miner1_sn2"
+fund_tao = 100.0
+register = true
+
+[[subnet.neuron]]
+name = "miner2_sn2"
+fund_tao = 100.0
+register = true
