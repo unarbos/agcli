@@ -1,0 +1,4525 @@
+[
+  {
+    "id": "agcli.audit.audit",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli audit --address <ss58> --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L123."
+  },
+  {
+    "id": "agcli.batch.file",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli batch --file ops.json --yes",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L130."
+  },
+  {
+    "id": "agcli.block.info",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli block info --number 12345 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L114."
+  },
+  {
+    "id": "agcli.block.latest",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli block latest --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L116."
+  },
+  {
+    "id": "agcli.block.range",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli block range --from 1000 --to 1100 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L115."
+  },
+  {
+    "id": "agcli.diff.network",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli diff network --block1 1000 --block2 2000 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L110."
+  },
+  {
+    "id": "agcli.diff.portfolio",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli diff portfolio --block1 1000 --block2 2000 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L109."
+  },
+  {
+    "id": "agcli.diff.subnet",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli diff subnet --netuid 1 --block1 1000 --block2 2000 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L110."
+  },
+  {
+    "id": "agcli.doctor.doctor",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli doctor --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L124."
+  },
+  {
+    "id": "agcli.explain.topic",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli explain --topic tempo",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L127."
+  },
+  {
+    "id": "agcli.global.at-block",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --at-block 3500000 --network archive --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L135."
+  },
+  {
+    "id": "agcli.subnet.cache-diff",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet cache-diff --netuid 1 --from a --to b",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L111."
+  },
+  {
+    "id": "agcli.subnet.emissions",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet emissions --netuid 1 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L105."
+  },
+  {
+    "id": "agcli.subnet.health",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet health --netuid 1 --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L105."
+  },
+  {
+    "id": "agcli.subnet.monitor",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet monitor --netuid 1 --json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L104."
+  },
+  {
+    "id": "agcli.subnet.probe",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet probe --netuid 1",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L106."
+  },
+  {
+    "id": "agcli.subscribe.blocks",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subscribe blocks",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L119."
+  },
+  {
+    "id": "agcli.subscribe.events",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subscribe events --filter staking --netuid 1",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L120."
+  },
+  {
+    "id": "agcli.utils.convert",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli utils convert --tao 10 --netuid 1",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L131."
+  },
+  {
+    "id": "agcli.utils.latency",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli utils latency",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L132."
+  },
+  {
+    "id": "agcli.view.dynamic",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view dynamic --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L103."
+  },
+  {
+    "id": "agcli.view.history",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view history --address <ss58> --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L102."
+  },
+  {
+    "id": "agcli.view.network",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view network --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L103."
+  },
+  {
+    "id": "agcli.view.portfolio",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view portfolio --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L99-L101, L388."
+  },
+  {
+    "id": "agcli.view.validators",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view validators --output json",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L101."
+  },
+  {
+    "id": "agcli.weights.commit-reveal",
+    "source": "agcli-unique",
+    "ref_invocation": null,
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli weights commit-reveal --netuid 1 --weights \"0:100\" --wait --yes",
+    "agcli_status": "COVERED_UNIQUE",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Unique to agcli in docs/why-agcli.md L133, L387."
+  },
+  {
+    "id": "btcli.axon.reset",
+    "source": "btcli",
+    "ref_invocation": "btcli axon reset --netuid 1 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.serve_axon",
+    "agcli_invocation": "agcli serve reset --netuid 1",
+    "agcli_status": "N/A",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: btcli.axon.set."
+  },
+  {
+    "id": "btcli.axon.set",
+    "source": "btcli",
+    "ref_invocation": "btcli axon set --netuid 1 --wallet-name mywallet --ip 127.0.0.1 --port 8091 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.serve_axon",
+    "agcli_invocation": "agcli serve axon --netuid 1 --ip 127.0.0.1 --port 8091",
+    "agcli_status": "N/A",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: btcli.axon.reset."
+  },
+  {
+    "id": "btcli.config.add-proxy",
+    "source": "btcli",
+    "ref_invocation": "btcli config add-proxy value 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "btcli proxy address-book config mutation has no agcli equivalent surface."
+  },
+  {
+    "id": "btcli.config.clear",
+    "source": "btcli",
+    "ref_invocation": "btcli config clear",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No agcli command resets the full config in one operation."
+  },
+  {
+    "id": "btcli.config.clear-proxies",
+    "source": "btcli",
+    "ref_invocation": "btcli config clear-proxies",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "btcli local proxy address-book clear has no agcli equivalent."
+  },
+  {
+    "id": "btcli.config.get",
+    "source": "btcli",
+    "ref_invocation": "btcli config get",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli config show",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Both tools expose persistent config inspection."
+  },
+  {
+    "id": "btcli.config.proxies",
+    "source": "btcli",
+    "ref_invocation": "btcli config proxies",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No agcli surface for btcli local proxy address-book listing."
+  },
+  {
+    "id": "btcli.config.remove-proxy",
+    "source": "btcli",
+    "ref_invocation": "btcli config remove-proxy value",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No agcli surface for btcli local proxy address-book removal."
+  },
+  {
+    "id": "btcli.config.set",
+    "source": "btcli",
+    "ref_invocation": "btcli config set",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli config set --key <key> --value <value>",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Both tools support config key updates."
+  },
+  {
+    "id": "btcli.config.update-proxy",
+    "source": "btcli",
+    "ref_invocation": "btcli config update-proxy value",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No agcli surface for btcli local proxy address-book update."
+  },
+  {
+    "id": "btcli.crowd.contribute",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd contribute --wallet-name mywallet --crowdloan-id 0 --amount 5 --no-prompt",
+    "ref_extrinsic": "Crowdloan.contribute",
+    "agcli_invocation": "agcli crowdloan contribute --id 0 --amount 5 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.contribute_crowdloan, sdk.subtensor.contribute_crowdloan."
+  },
+  {
+    "id": "btcli.crowd.contributors",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd contributors",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan contributors --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.crowd.create",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd create --wallet-name mywallet --deposit 10 --min-contribution 1 --cap 100 --end 1000 --no-prompt",
+    "ref_extrinsic": "Crowdloan.create | SubtensorModule.register_leased_network",
+    "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.crowd.dissolve",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd dissolve --wallet-name mywallet --crowdloan-id 0 --no-prompt",
+    "ref_extrinsic": "Crowdloan.dissolve",
+    "agcli_invocation": "agcli crowdloan dissolve --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.dissolve_crowdloan, sdk.subtensor.dissolve_crowdloan."
+  },
+  {
+    "id": "btcli.crowd.finalize",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd finalize --wallet-name mywallet --crowdloan-id 0 --no-prompt",
+    "ref_extrinsic": "Crowdloan.finalize",
+    "agcli_invocation": "agcli crowdloan finalize --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.finalize_crowdloan, sdk.subtensor.finalize_crowdloan."
+  },
+  {
+    "id": "btcli.crowd.info",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd info",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan info --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.crowd.list",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd list",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.crowd.refund",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd refund --wallet-name mywallet --crowdloan-id 0 --no-prompt",
+    "ref_extrinsic": "Crowdloan.refund",
+    "agcli_invocation": "agcli crowdloan refund --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.refund_crowdloan, sdk.subtensor.refund_crowdloan."
+  },
+  {
+    "id": "btcli.crowd.update",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd update --wallet-name mywallet --crowdloan-id 0 --update-type cap --value 200 --no-prompt",
+    "ref_extrinsic": "Crowdloan.update_cap | Crowdloan.update_end | Crowdloan.update_min_contribution",
+    "agcli_invocation": "agcli crowdloan update-cap --id 0 --cap 200 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.crowd.withdraw",
+    "source": "btcli",
+    "ref_invocation": "btcli crowd withdraw --wallet-name mywallet --crowdloan-id 0 --no-prompt",
+    "ref_extrinsic": "Crowdloan.withdraw",
+    "agcli_invocation": "agcli crowdloan withdraw --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.withdraw_crowdloan, sdk.subtensor.withdraw_crowdloan."
+  },
+  {
+    "id": "btcli.liquidity.add",
+    "source": "btcli",
+    "ref_invocation": "btcli liquidity add --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --tao 1 --alpha 1 --no-prompt",
+    "ref_extrinsic": "Swap.add_liquidity",
+    "agcli_invocation": "agcli liquidity add --netuid 1 --price-low 1 --price-high 2 --amount 1000000000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_liquidity, sdk.subtensor.add_liquidity."
+  },
+  {
+    "id": "btcli.liquidity.list",
+    "source": "btcli",
+    "ref_invocation": "btcli liquidity list",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet liquidity --netuid 1",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.liquidity.modify",
+    "source": "btcli",
+    "ref_invocation": "btcli liquidity modify --wallet-name mywallet --netuid 1 --position-id 1 --delta-liquidity 1 --no-prompt",
+    "ref_extrinsic": "Swap.modify_position",
+    "agcli_invocation": "agcli liquidity modify --netuid 1 --position-id 1 --delta 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.modify_liquidity, sdk.subtensor.modify_liquidity."
+  },
+  {
+    "id": "btcli.liquidity.remove",
+    "source": "btcli",
+    "ref_invocation": "btcli liquidity remove --wallet-name mywallet --netuid 1 --position-id 1 --liquidity 1 --no-prompt",
+    "ref_extrinsic": "Swap.remove_liquidity",
+    "agcli_invocation": "agcli liquidity remove --netuid 1 --position-id 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.remove_liquidity, sdk.subtensor.remove_liquidity."
+  },
+  {
+    "id": "btcli.proxy.add",
+    "source": "btcli",
+    "ref_invocation": "btcli proxy add --wallet-name mywallet --delegate 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --proxy-type Any --delay 0 --no-prompt",
+    "ref_extrinsic": "Proxy.add_proxy",
+    "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_proxy, sdk.subtensor.add_proxy."
+  },
+  {
+    "id": "btcli.proxy.create",
+    "source": "btcli",
+    "ref_invocation": "btcli proxy create --wallet-name mywallet --proxy-type Any --disambiguation-index 0 --no-prompt",
+    "ref_extrinsic": "Proxy.create_pure",
+    "agcli_invocation": "agcli proxy create-pure --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.create_pure_proxy, sdk.subtensor.create_pure_proxy."
+  },
+  {
+    "id": "btcli.proxy.execute",
+    "source": "btcli",
+    "ref_invocation": "btcli proxy execute --wallet-name mywallet --delegate 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --real 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --call-hex 0x00 --no-prompt",
+    "ref_extrinsic": "Proxy.proxy_announced",
+    "agcli_invocation": "agcli proxy proxy-announced --delegate <ss58> --real <ss58> --pallet SubtensorModule --call transfer_stake --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.proxy_announced, sdk.subtensor.proxy_announced."
+  },
+  {
+    "id": "btcli.proxy.kill",
+    "source": "btcli",
+    "ref_invocation": "btcli proxy kill --wallet-name mywallet --proxy-type Any --disambiguation-index 0 --height 0 --ext-index 0 --no-prompt",
+    "ref_extrinsic": "Proxy.kill_pure",
+    "agcli_invocation": "agcli proxy kill-pure --spawner <ss58> --proxy-type any --index 0 --height 0 --ext-index 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.kill_pure_proxy, sdk.subtensor.kill_pure_proxy."
+  },
+  {
+    "id": "btcli.proxy.remove",
+    "source": "btcli",
+    "ref_invocation": "btcli proxy remove --wallet-name mywallet --delegate 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --proxy-type Any --delay 0 --no-prompt",
+    "ref_extrinsic": "Proxy.remove_proxies | Proxy.remove_proxy",
+    "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.stake.add",
+    "source": "btcli",
+    "ref_invocation": "btcli stake add --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --amount 10 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
+    "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple. E2E parity also exercises btcli safe-staking path (limit-style semantics) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "btcli.stake.auto",
+    "source": "btcli",
+    "ref_invocation": "btcli stake auto",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake show-auto --address <ss58>",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.stake.child.get",
+    "source": "btcli",
+    "ref_invocation": "btcli stake child get",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "agcli can set/revoke children but does not expose a dedicated child-read command."
+  },
+  {
+    "id": "btcli.stake.child.revoke",
+    "source": "btcli",
+    "ref_invocation": "btcli stake child revoke --wallet-name mywallet --parent-hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_children",
+    "agcli_invocation": "agcli stake set-children --netuid 1 --children \"\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: btcli.stake.child.set, sdk.async_subtensor.set_children, sdk.subtensor.set_children."
+  },
+  {
+    "id": "btcli.stake.child.set",
+    "source": "btcli",
+    "ref_invocation": "btcli stake child set --wallet-name mywallet --parent-hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --child-hotkeys 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --proportions 1 --netuid 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_children",
+    "agcli_invocation": "agcli stake set-children --netuid 1 --children \"1:<hotkey>\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: btcli.stake.child.revoke, sdk.async_subtensor.set_children, sdk.subtensor.set_children."
+  },
+  {
+    "id": "btcli.stake.child.take",
+    "source": "btcli",
+    "ref_invocation": "btcli stake child take --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --take 0.1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_childkey_take",
+    "agcli_invocation": "agcli stake childkey-take --netuid 1 --take 0.1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.stake.list",
+    "source": "btcli",
+    "ref_invocation": "btcli stake list",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.stake.move",
+    "source": "btcli",
+    "ref_invocation": "btcli stake move --origin-netuid 1 --destination-netuid 2 --origin-hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --destination-hotkey 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --amount 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.move_stake",
+    "agcli_invocation": "agcli stake move --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.move_stake, sdk.subtensor.move_stake."
+  },
+  {
+    "id": "btcli.stake.process-claim",
+    "source": "btcli",
+    "ref_invocation": "btcli stake process-claim --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.claim_root",
+    "agcli_invocation": "agcli stake process-claim --netuid 1 --hotkey-address <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.claim_root, sdk.subtensor.claim_root."
+  },
+  {
+    "id": "btcli.stake.remove",
+    "source": "btcli",
+    "ref_invocation": "btcli stake remove --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --amount 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit | SubtensorModule.unstake_all_alpha",
+    "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. E2E parity also exercises btcli safe-staking path (limit-style semantics) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "btcli.stake.set-auto",
+    "source": "btcli",
+    "ref_invocation": "btcli stake set-auto --wallet-name mywallet --netuid 1 --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_coldkey_auto_stake_hotkey",
+    "agcli_invocation": "agcli stake set-auto --netuid 1 --hotkey-address <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_auto_stake, sdk.subtensor.set_auto_stake."
+  },
+  {
+    "id": "btcli.stake.set-claim",
+    "source": "btcli",
+    "ref_invocation": "btcli stake set-claim --wallet-name mywallet --claim-type Keep --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_root_claim_type",
+    "agcli_invocation": "agcli stake set-claim --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_root_claim_type, sdk.subtensor.set_root_claim_type."
+  },
+  {
+    "id": "btcli.stake.swap",
+    "source": "btcli",
+    "ref_invocation": "btcli stake swap --origin-netuid 1 --destination-netuid 2 --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --amount 1 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.swap_stake | SubtensorModule.swap_stake_limit",
+    "agcli_invocation": "agcli stake swap --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.swap_stake, sdk.subtensor.swap_stake."
+  },
+  {
+    "id": "btcli.stake.transfer",
+    "source": "btcli",
+    "ref_invocation": "btcli stake transfer --origin-netuid 1 --destination-netuid 2 --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --amount 1 --destination-ss58 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --no-prompt",
+    "ref_extrinsic": "SubtensorModule.transfer_stake",
+    "agcli_invocation": "agcli stake transfer-stake --netuid 1 --amount 1 --dest-hotkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --destination ↔ agcli: --dest"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.transfer_stake, sdk.subtensor.transfer_stake."
+  },
+  {
+    "id": "btcli.stake.wizard",
+    "source": "btcli",
+    "ref_invocation": "btcli stake wizard",
+    "ref_extrinsic": "SubtensorModule.move_stake | SubtensorModule.swap_stake | SubtensorModule.swap_stake_limit | SubtensorModule.transfer_stake",
+    "agcli_invocation": "agcli stake wizard --netuid 1 --amount 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.burn-cost",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets burn-cost",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet create-cost",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.check-start",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets check-start",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet check-start --netuid 1",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.create",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets create --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.register_network | SubtensorModule.register_network_with_identity",
+    "agcli_invocation": "agcli subnet register --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.get-identity",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets get-identity",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.hyperparameters",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets hyperparameters",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.list",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets list",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.mechanisms.count",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets mechanisms count",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet mechanism-count --netuid 1",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.mechanisms.emissions",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets mechanisms emissions",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet emission-split --netuid 1",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.mechanisms.set",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets mechanisms set --netuid 1 --count 2 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "AdminUtils.sudo_set_mechanism_count",
+    "agcli_invocation": "agcli subnet set-mechanism-count --netuid 1 --count 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.mechanisms.split-emissions",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets mechanisms split-emissions --netuid 1 --splits 0.5,0.5 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "AdminUtils.sudo_set_mechanism_emission_split",
+    "agcli_invocation": "agcli subnet set-emission-split --netuid 1 --weights \"50,50\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.price",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets price",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.register",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets register --wallet-name mywallet --netuid 1 --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --no-prompt",
+    "ref_extrinsic": "SubtensorModule.root_register",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.root_register, sdk.subtensor.root_register."
+  },
+  {
+    "id": "btcli.subnets.set-identity",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets set-identity --netuid 1 --subnet-name demo --github-repo https://github.com/example/repo --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_subnet_identity",
+    "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
+  },
+  {
+    "id": "btcli.subnets.set-symbol",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets set-symbol --netuid 1 --symbol TEST --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.update_symbol",
+    "agcli_invocation": "agcli subnet set-symbol --netuid 1 --symbol TEST --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.show",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets show",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.subnets.start",
+    "source": "btcli",
+    "ref_invocation": "btcli subnets start --netuid 1 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.start_call",
+    "agcli_invocation": "agcli subnet start --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet",
+      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.start_call, sdk.subtensor.start_call."
+  },
+  {
+    "id": "btcli.sudo.get",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo get",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli admin list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.sudo.get-take",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo get-take",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate show --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.sudo.proposals",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo proposals",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated senate proposal listing command in agcli."
+  },
+  {
+    "id": "btcli.sudo.senate",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo senate",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated senate member listing command in agcli."
+  },
+  {
+    "id": "btcli.sudo.senate-vote",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo senate-vote --proposal-hash 0x00 --vote yes --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.vote",
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated senate vote submission command in agcli."
+  },
+  {
+    "id": "btcli.sudo.set",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo set --netuid 1 --param tempo --value 12 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.*) | Sudo.sudo",
+    "agcli_invocation": "agcli admin raw --call <admin_call> --args \"[...]\" --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": "tests/parity/governance.rs::governance_sudo_set_tempo_parity_btcli_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.sudo.set-take",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo set-take --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --take 0.18 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.decrease_take | SubtensorModule.increase_take",
+    "agcli_invocation": "agcli delegate increase-take --take 0.18 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_delegate_take, sdk.subtensor.set_delegate_take."
+  },
+  {
+    "id": "btcli.sudo.stake-burn",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo stake-burn --netuid 1 --amount 1.0 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "SubtensorModule.add_stake_burn",
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No named agcli command for SubtensorModule.add_stake_burn. Related rows sharing dispatchable: sdk.async_subtensor.add_stake_burn, sdk.subtensor.add_stake_burn."
+  },
+  {
+    "id": "btcli.sudo.trim",
+    "source": "btcli",
+    "ref_invocation": "btcli sudo trim --netuid 1 --wallet-name mywallet --no-prompt",
+    "ref_extrinsic": "AdminUtils.sudo_trim_to_max_allowed_uids",
+    "agcli_invocation": "agcli subnet trim --netuid 1 --max-uids 64 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.utils.convert",
+    "source": "btcli",
+    "ref_invocation": "btcli utils convert",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli utils convert --amount 1.0",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.utils.latency",
+    "source": "btcli",
+    "ref_invocation": "btcli utils latency",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli utils latency",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.view.dashboard",
+    "source": "btcli",
+    "ref_invocation": "btcli view dashboard",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view network --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.associate-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet associate-hotkey",
+    "ref_extrinsic": "SubtensorModule.try_associate_hotkey",
+    "agcli_invocation": "agcli wallet associate-hotkey --hotkey-address <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.balance",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet balance",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli balance --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: wallet balance ↔ agcli: balance"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.create",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet create",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet create --name mywallet --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.get-identity",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet get-identity",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli identity show --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.list",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet list",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.new-coldkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet new-coldkey",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet create --name mywallet --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.new-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet new-hotkey",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet new-hotkey --name mywallet --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.overview",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet overview",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view portfolio --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.regen-coldkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-coldkey",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet regen-coldkey --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.regen-coldkeypub",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-coldkeypub",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "agcli has no regen-coldkeypub command."
+  },
+  {
+    "id": "btcli.wallet.regen-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-hotkey",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet regen-hotkey --name mywallet --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.regen-hotkeypub",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet regen-hotkeypub",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "agcli has no regen-hotkeypub command."
+  },
+  {
+    "id": "btcli.wallet.set-identity",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet set-identity --wallet-name mywallet --display operator --web-url https://example.org --no-prompt",
+    "ref_extrinsic": "SubtensorModule.set_identity",
+    "agcli_invocation": "agcli identity set --name operator --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.sign",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet sign",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet sign --message \"hello\"",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.swap-check",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet swap-check",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet check-swap --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.swap-coldkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet swap-coldkey announce --wallet-name mywallet --new-coldkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --no-prompt",
+    "ref_extrinsic": "SubtensorModule.announce_coldkey_swap | SubtensorModule.clear_coldkey_swap_announcement | SubtensorModule.dispute_coldkey_swap | SubtensorModule.swap_coldkey_announced",
+    "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.swap-hotkey",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet swap-hotkey --wallet-name mywallet --wallet-hotkey oldhk --new-hotkey newhk --no-prompt",
+    "ref_extrinsic": "SubtensorModule.swap_hotkey",
+    "agcli_invocation": "agcli swap hotkey --new-hotkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.transfer",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet transfer --destination 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --amount 1.0 --no-prompt",
+    "ref_extrinsic": "Balances.transfer_allow_death | Balances.transfer_keep_alive",
+    "agcli_invocation": "agcli transfer --dest <ss58> --amount 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --destination ↔ agcli: --dest"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.wallet.verify",
+    "source": "btcli",
+    "ref_invocation": "btcli wallet verify",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet verify --message \"hello\" --signature 0x...",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.weights.commit",
+    "source": "btcli",
+    "ref_invocation": "btcli weights commit --wallet-name mywallet --netuid 1 --weights 0:65535 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.commit_weights",
+    "agcli_invocation": "agcli weights commit --netuid 1 --weights \"0:100\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "btcli.weights.reveal",
+    "source": "btcli",
+    "ref_invocation": "btcli weights reveal --wallet-name mywallet --netuid 1 --weights 0:65535 --no-prompt",
+    "ref_extrinsic": "SubtensorModule.reveal_weights",
+    "agcli_invocation": "agcli weights reveal --netuid 1 --weights \"0:100\" --salt s --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+    ],
+    "parity_test": null,
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.add_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.add_liquidity(...)",
+    "ref_extrinsic": "Swap.add_liquidity",
+    "agcli_invocation": "agcli liquidity add --netuid 1 --price-low 1 --price-high 2 --amount 1000000000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.add_liquidity. Related rows sharing dispatchable: btcli.liquidity.add, sdk.subtensor.add_liquidity."
+  },
+  {
+    "id": "sdk.async_subtensor.add_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.add_proxy(...)",
+    "ref_extrinsic": "Proxy.add_proxy",
+    "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Proxy.add_proxy. Related rows sharing dispatchable: btcli.proxy.add, sdk.subtensor.add_proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.add_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.add_stake(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
+    "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple. E2E parity also exercises safe_staking=True (add_stake_limit behavior) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.add_stake_burn",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.add_stake_burn(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake_burn",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake_burn. Related rows sharing dispatchable: btcli.sudo.stake-burn, sdk.subtensor.add_stake_burn."
+  },
+  {
+    "id": "sdk.async_subtensor.add_stake_multiple",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.add_stake_multiple(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
+    "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple."
+  },
+  {
+    "id": "sdk.async_subtensor.announce_coldkey_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.announce_coldkey_swap(...)",
+    "ref_extrinsic": "SubtensorModule.announce_coldkey_swap",
+    "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.subtensor.announce_coldkey_swap."
+  },
+  {
+    "id": "sdk.async_subtensor.announce_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.announce_proxy(...)",
+    "ref_extrinsic": "Proxy.announce",
+    "agcli_invocation": "agcli proxy announce --real <ss58> --call-hex 0x00 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.announce. Related rows sharing dispatchable: sdk.subtensor.announce_proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.bonds",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.bonds(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --full --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.burned_register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.burned_register(...)",
+    "ref_extrinsic": "SubtensorModule.burned_register | SubtensorModule.root_register",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.burned_register. Related rows sharing dispatchable: sdk.subtensor.burned_register."
+  },
+  {
+    "id": "sdk.async_subtensor.claim_root",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.claim_root(...)",
+    "ref_extrinsic": "SubtensorModule.claim_root",
+    "agcli_invocation": "agcli stake claim-root --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.claim_root. Related rows sharing dispatchable: btcli.stake.process-claim, sdk.subtensor.claim_root."
+  },
+  {
+    "id": "sdk.async_subtensor.clear_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.clear_coldkey_swap_announcement(...)",
+    "ref_extrinsic": "SubtensorModule.clear_coldkey_swap_announcement",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.clear_coldkey_swap_announcement. Related rows sharing dispatchable: sdk.subtensor.clear_coldkey_swap_announcement."
+  },
+  {
+    "id": "sdk.async_subtensor.commit_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.commit_weights(...)",
+    "ref_extrinsic": "SubtensorModule.commit_mechanism_weights",
+    "agcli_invocation": "agcli weights commit-mechanism --netuid 1 --mechanism-id 0 --hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.commit_mechanism_weights. Related rows sharing dispatchable: sdk.subtensor.commit_weights."
+  },
+  {
+    "id": "sdk.async_subtensor.compose_call",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.compose_call(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No low-level compose-call CLI primitive in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.contribute_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.contribute_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.contribute",
+    "agcli_invocation": "agcli crowdloan contribute --id 0 --amount 5 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.contribute. Related rows sharing dispatchable: btcli.crowd.contribute, sdk.subtensor.contribute_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.create_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.create_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.create",
+    "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.subtensor.create_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.create_pure_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.create_pure_proxy(...)",
+    "ref_extrinsic": "Proxy.create_pure",
+    "agcli_invocation": "agcli proxy create-pure --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.create_pure. Related rows sharing dispatchable: btcli.proxy.create, sdk.subtensor.create_pure_proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.dispute_coldkey_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.dispute_coldkey_swap(...)",
+    "ref_extrinsic": "SubtensorModule.dispute_coldkey_swap",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.dispute_coldkey_swap. Related rows sharing dispatchable: sdk.subtensor.dispute_coldkey_swap."
+  },
+  {
+    "id": "sdk.async_subtensor.dissolve_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.dissolve_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.dissolve",
+    "agcli_invocation": "agcli crowdloan dissolve --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.dissolve. Related rows sharing dispatchable: btcli.crowd.dissolve, sdk.subtensor.dissolve_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.does_hotkey_exist",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.does_hotkey_exist(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.finalize_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.finalize_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.finalize",
+    "agcli_invocation": "agcli crowdloan finalize --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.finalize. Related rows sharing dispatchable: btcli.crowd.finalize, sdk.subtensor.finalize_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.get_admin_freeze_window",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_admin_freeze_window(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated admin-freeze-window query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_commitments",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_commitments(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli commitment list --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_ema_tao_inflow",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_ema_tao_inflow(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view dynamic --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_neuron_certificates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_neuron_certificates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated neuron certificate query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_revealed_commitments",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_revealed_commitments(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet commits --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_subnets_info",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_subnets_info(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_all_subnets_netuid",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_all_subnets_netuid(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_auto_stakes",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_auto_stakes(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake show-auto --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_balance",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_balance(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli balance --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_children",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_children(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_children_pending",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_children_pending(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated pending-children query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_announcement(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet check-swap --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_announcement_delay",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_announcement_delay(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface for coldkey swap announcement delay query."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_announcements",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_announcements(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to list all coldkey swap announcements."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_dispute",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_dispute(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to inspect coldkey swap disputes."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_disputes",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_disputes(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to list coldkey swap disputes."
+  },
+  {
+    "id": "sdk.async_subtensor.get_coldkey_swap_reannouncement_delay",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_reannouncement_delay(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface for coldkey swap reannouncement delay query."
+  },
+  {
+    "id": "sdk.async_subtensor.get_commitment_metadata",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_commitment_metadata(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli commitment get --netuid 1 --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_crowdloan_by_id",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_crowdloan_by_id(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan info --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_crowdloan_contributions",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_crowdloan_contributions(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan contributors --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_crowdloan_next_id",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_crowdloan_next_id(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_crowdloans",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_crowdloans(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_delegate_by_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_delegate_by_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate show --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_delegate_identities",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_delegate_identities(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_delegated",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_delegated(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate show --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_delegates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_delegates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_ema_tao_inflow",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_ema_tao_inflow(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view dynamic --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_extrinsic_fee",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_extrinsic_fee(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated fee-estimation command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_hotkey_owner",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_hotkey_owner(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view account --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_hyperparameter",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_hyperparameter(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_last_bonds_reset",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_last_bonds_reset(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated bonds-reset query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_liquidity_list",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_liquidity_list(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet liquidity --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_mev_shield_current_key",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_mev_shield_current_key(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI for direct MevShield key inspection."
+  },
+  {
+    "id": "sdk.async_subtensor.get_mev_shield_next_key",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_mev_shield_next_key(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI for direct MevShield key inspection."
+  },
+  {
+    "id": "sdk.async_subtensor.get_minimum_required_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_minimum_required_stake(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_netuids_for_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_netuids_for_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_neuron_for_pubkey_and_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_neuron_for_pubkey_and_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_owned_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_owned_hotkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet show --all --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_parents",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_parents(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_proxies",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_proxies(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_proxies_for_real_account",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_proxies_for_real_account(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_proxy_announcement(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list-announcements --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_proxy_announcements",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_proxy_announcements(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list-announcements --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_root_alpha_dividends_per_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_root_alpha_dividends_per_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated per-subnet root dividend read command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_root_claim_type",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_root_claim_type(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for root claim type in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_root_claimable_all_rates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_root_claimable_all_rates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for root claimable rates in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_root_claimed",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_root_claimed(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for claimed root dividends in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_stake(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_stake_for_coldkey_and_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_stake_for_coldkey_and_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_stake_info_for_coldkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_stake_info_for_coldkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_stake_info_for_coldkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_stake_info_for_coldkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_stake_weight",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_stake_weight(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_staking_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_staking_hotkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_subnet_burn_cost",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_subnet_burn_cost(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet create-cost",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_subnet_hyperparameters",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_subnet_hyperparameters(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_subnet_info",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_subnet_info(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_subnet_prices",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_subnet_prices(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet liquidity --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_timelocked_weight_commits",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_timelocked_weight_commits(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli weights status --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_total_subnets",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_total_subnets(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_transfer_fee",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_transfer_fee(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated transfer-fee query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.get_uid_for_hotkey_on_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_uid_for_hotkey_on_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.get_vote_data",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.get_vote_data(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated governance vote-data query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.kill_pure_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.kill_pure_proxy(...)",
+    "ref_extrinsic": "Proxy.kill_pure",
+    "agcli_invocation": "agcli proxy kill-pure --spawner <ss58> --proxy-type any --index 0 --height 0 --ext-index 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.kill_pure. Related rows sharing dispatchable: btcli.proxy.kill, sdk.subtensor.kill_pure_proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.last_drand_round",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.last_drand_round(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "agcli has drand write command but no drand round read command."
+  },
+  {
+    "id": "sdk.async_subtensor.mev_submit_encrypted",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.mev_submit_encrypted(...)",
+    "ref_extrinsic": "MevShield.submit_encrypted",
+    "agcli_invocation": "agcli --mev batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable MevShield.submit_encrypted. Related rows sharing dispatchable: sdk.subtensor.mev_submit_encrypted."
+  },
+  {
+    "id": "sdk.async_subtensor.modify_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.modify_liquidity(...)",
+    "ref_extrinsic": "Swap.modify_position",
+    "agcli_invocation": "agcli liquidity modify --netuid 1 --position-id 1 --delta 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.modify_position. Related rows sharing dispatchable: btcli.liquidity.modify, sdk.subtensor.modify_liquidity."
+  },
+  {
+    "id": "sdk.async_subtensor.move_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.move_stake(...)",
+    "ref_extrinsic": "SubtensorModule.move_stake",
+    "agcli_invocation": "agcli stake move --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.move_stake. Related rows sharing dispatchable: btcli.stake.move, sdk.subtensor.move_stake."
+  },
+  {
+    "id": "sdk.async_subtensor.neuron_for_uid",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.neuron_for_uid(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --uid 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.neurons",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.neurons(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.neurons_lite",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.neurons_lite(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.poke_deposit",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.poke_deposit(...)",
+    "ref_extrinsic": "Proxy.poke_deposit",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.poke_deposit. Related rows sharing dispatchable: sdk.subtensor.poke_deposit."
+  },
+  {
+    "id": "sdk.async_subtensor.proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.proxy(...)",
+    "ref_extrinsic": "Proxy.proxy",
+    "agcli_invocation": "agcli --proxy <delegate_ss58> transfer --dest <ss58> --amount 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.proxy. Related rows sharing dispatchable: sdk.subtensor.proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.proxy_announced",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.proxy_announced(...)",
+    "ref_extrinsic": "Proxy.proxy_announced",
+    "agcli_invocation": "agcli proxy proxy-announced --delegate <ss58> --real <ss58> --pallet SubtensorModule --call transfer_stake --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.proxy_announced. Related rows sharing dispatchable: btcli.proxy.execute, sdk.subtensor.proxy_announced."
+  },
+  {
+    "id": "sdk.async_subtensor.query_identity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_identity(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli identity show --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.query_map",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_map(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic storage map query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.query_map_subtensor",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_map_subtensor(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic subtensor map-query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.query_module",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_module(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic pallet query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.query_runtime_api",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_runtime_api(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic runtime-api query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.query_subtensor",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.query_subtensor(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic subtensor query command in agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.refund_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.refund_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.refund",
+    "agcli_invocation": "agcli crowdloan refund --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.refund. Related rows sharing dispatchable: btcli.crowd.refund, sdk.subtensor.refund_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.register(...)",
+    "ref_extrinsic": "SubtensorModule.register_limit | SubtensorModule.root_register",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.subtensor.register."
+  },
+  {
+    "id": "sdk.async_subtensor.register_limit",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.register_limit(...)",
+    "ref_extrinsic": "SubtensorModule.register_limit",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.subtensor.register_limit."
+  },
+  {
+    "id": "sdk.async_subtensor.register_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.register_subnet(...)",
+    "ref_extrinsic": "SubtensorModule.register_network",
+    "agcli_invocation": "agcli subnet register --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_network. Related rows sharing dispatchable: sdk.subtensor.register_subnet."
+  },
+  {
+    "id": "sdk.async_subtensor.reject_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.reject_proxy_announcement(...)",
+    "ref_extrinsic": "Proxy.reject_announcement",
+    "agcli_invocation": "agcli proxy reject-announcement --delegate <ss58> --call-hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.reject_announcement. Related rows sharing dispatchable: sdk.subtensor.reject_proxy_announcement."
+  },
+  {
+    "id": "sdk.async_subtensor.remove_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.remove_liquidity(...)",
+    "ref_extrinsic": "Swap.remove_liquidity",
+    "agcli_invocation": "agcli liquidity remove --netuid 1 --position-id 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.remove_liquidity. Related rows sharing dispatchable: btcli.liquidity.remove, sdk.subtensor.remove_liquidity."
+  },
+  {
+    "id": "sdk.async_subtensor.remove_proxies",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.remove_proxies(...)",
+    "ref_extrinsic": "Proxy.remove_proxies",
+    "agcli_invocation": "agcli proxy remove-all --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.remove_proxies. Related rows sharing dispatchable: sdk.subtensor.remove_proxies."
+  },
+  {
+    "id": "sdk.async_subtensor.remove_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.remove_proxy(...)",
+    "ref_extrinsic": "Proxy.remove_proxy",
+    "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Proxy.remove_proxy. Related rows sharing dispatchable: sdk.subtensor.remove_proxy."
+  },
+  {
+    "id": "sdk.async_subtensor.remove_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.remove_proxy_announcement(...)",
+    "ref_extrinsic": "Proxy.remove_announcement",
+    "agcli_invocation": "agcli proxy remove-announcement --real <ss58> --call-hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.remove_announcement. Related rows sharing dispatchable: sdk.subtensor.remove_proxy_announcement."
+  },
+  {
+    "id": "sdk.async_subtensor.reveal_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.reveal_weights(...)",
+    "ref_extrinsic": "SubtensorModule.reveal_mechanism_weights",
+    "agcli_invocation": "agcli weights reveal-mechanism --netuid 1 --mechanism-id 0 --weights \"0:100\" --salt s --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.reveal_mechanism_weights. Related rows sharing dispatchable: sdk.subtensor.reveal_weights."
+  },
+  {
+    "id": "sdk.async_subtensor.root_register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.root_register(...)",
+    "ref_extrinsic": "SubtensorModule.root_register",
+    "agcli_invocation": "agcli root register --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.subtensor.root_register."
+  },
+  {
+    "id": "sdk.async_subtensor.root_set_pending_childkey_cooldown",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.root_set_pending_childkey_cooldown(...)",
+    "ref_extrinsic": "SubtensorModule.set_pending_childkey_cooldown | Sudo.sudo",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_pending_childkey_cooldown. Related rows sharing dispatchable: sdk.subtensor.root_set_pending_childkey_cooldown."
+  },
+  {
+    "id": "sdk.async_subtensor.serve_axon",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.serve_axon(...)",
+    "ref_extrinsic": "SubtensorModule.serve_axon | SubtensorModule.serve_axon_tls",
+    "agcli_invocation": "agcli serve axon --netuid 1 --ip 127.0.0.1 --port 8091",
+    "agcli_status": "N/A",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: sdk.subtensor.serve_axon."
+  },
+  {
+    "id": "sdk.async_subtensor.set_auto_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_auto_stake(...)",
+    "ref_extrinsic": "SubtensorModule.set_coldkey_auto_stake_hotkey",
+    "agcli_invocation": "agcli stake set-auto --netuid 1 --hotkey-address <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_coldkey_auto_stake_hotkey. Related rows sharing dispatchable: btcli.stake.set-auto, sdk.subtensor.set_auto_stake."
+  },
+  {
+    "id": "sdk.async_subtensor.set_children",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_children(...)",
+    "ref_extrinsic": "SubtensorModule.set_children",
+    "agcli_invocation": "agcli stake set-children --netuid 1 --children \"1:<hotkey>\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_children. Related rows sharing dispatchable: btcli.stake.child.revoke, btcli.stake.child.set, sdk.subtensor.set_children."
+  },
+  {
+    "id": "sdk.async_subtensor.set_commitment",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_commitment(...)",
+    "ref_extrinsic": "Commitments.set_commitment",
+    "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_commitment, sdk.subtensor.set_reveal_commitment."
+  },
+  {
+    "id": "sdk.async_subtensor.set_delegate_take",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_delegate_take(...)",
+    "ref_extrinsic": "SubtensorModule.decrease_take | SubtensorModule.increase_take",
+    "agcli_invocation": "agcli delegate decrease-take --take 0.05 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.decrease_take. Related rows sharing dispatchable: btcli.sudo.set-take, sdk.subtensor.set_delegate_take."
+  },
+  {
+    "id": "sdk.async_subtensor.set_reveal_commitment",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_reveal_commitment(...)",
+    "ref_extrinsic": "Commitments.set_commitment",
+    "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.subtensor.set_commitment, sdk.subtensor.set_reveal_commitment."
+  },
+  {
+    "id": "sdk.async_subtensor.set_root_claim_type",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_root_claim_type(...)",
+    "ref_extrinsic": "SubtensorModule.set_root_claim_type",
+    "agcli_invocation": "agcli stake set-claim --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_root_claim_type. Related rows sharing dispatchable: btcli.stake.set-claim, sdk.subtensor.set_root_claim_type."
+  },
+  {
+    "id": "sdk.async_subtensor.set_subnet_identity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_subnet_identity(...)",
+    "ref_extrinsic": "SubtensorModule.set_subnet_identity",
+    "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.subtensor.set_subnet_identity."
+  },
+  {
+    "id": "sdk.async_subtensor.set_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.set_weights(...)",
+    "ref_extrinsic": "SubtensorModule.commit_timelocked_mechanism_weights | SubtensorModule.set_mechanism_weights",
+    "agcli_invocation": "agcli weights commit-timelocked --netuid 1 --weights \"0:100\" --round 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.commit_timelocked_mechanism_weights. Related rows sharing dispatchable: sdk.subtensor.set_weights."
+  },
+  {
+    "id": "sdk.async_subtensor.sign_and_send_extrinsic",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.sign_and_send_extrinsic(...)",
+    "ref_extrinsic": "generic::<runtime call supplied by caller>",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable generic::<runtime call supplied by caller>. Related rows sharing dispatchable: sdk.subtensor.sign_and_send_extrinsic."
+  },
+  {
+    "id": "sdk.async_subtensor.sim_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.sim_swap(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view swap-sim --netuid 1 --tao 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.start_call",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.start_call(...)",
+    "ref_extrinsic": "SubtensorModule.start_call",
+    "agcli_invocation": "agcli subnet start --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.start_call. Related rows sharing dispatchable: btcli.subnets.start, sdk.subtensor.start_call."
+  },
+  {
+    "id": "sdk.async_subtensor.subnet_exists",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.subnet_exists(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.swap_coldkey_announced",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.swap_coldkey_announced(...)",
+    "ref_extrinsic": "SubtensorModule.swap_coldkey_announced",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.swap_coldkey_announced. Related rows sharing dispatchable: sdk.subtensor.swap_coldkey_announced."
+  },
+  {
+    "id": "sdk.async_subtensor.swap_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.swap_stake(...)",
+    "ref_extrinsic": "SubtensorModule.swap_stake | SubtensorModule.swap_stake_limit",
+    "agcli_invocation": "agcli stake swap --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.swap_stake. Related rows sharing dispatchable: btcli.stake.swap, sdk.subtensor.swap_stake."
+  },
+  {
+    "id": "sdk.async_subtensor.toggle_user_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.toggle_user_liquidity(...)",
+    "ref_extrinsic": "Swap.toggle_user_liquidity",
+    "agcli_invocation": "agcli liquidity toggle --netuid 1 --enable --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.toggle_user_liquidity. Related rows sharing dispatchable: sdk.subtensor.toggle_user_liquidity."
+  },
+  {
+    "id": "sdk.async_subtensor.transfer",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.transfer(...)",
+    "ref_extrinsic": "Balances.transfer_all | Balances.transfer_allow_death | Balances.transfer_keep_alive",
+    "agcli_invocation": "agcli transfer-all --dest <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Balances.transfer_all. Related rows sharing dispatchable: sdk.subtensor.transfer."
+  },
+  {
+    "id": "sdk.async_subtensor.transfer_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.transfer_stake(...)",
+    "ref_extrinsic": "SubtensorModule.transfer_stake",
+    "agcli_invocation": "agcli stake transfer-stake --netuid 1 --amount 1 --dest-hotkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.transfer_stake. Related rows sharing dispatchable: btcli.stake.transfer, sdk.subtensor.transfer_stake."
+  },
+  {
+    "id": "sdk.async_subtensor.unstake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.unstake(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit",
+    "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.subtensor.unstake. E2E parity also exercises safe_unstaking=True (remove_stake_limit behavior) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "sdk.async_subtensor.unstake_all",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.unstake_all(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake_full_limit",
+    "agcli_invocation": "agcli stake unstake-all --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_unstake_all_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake_full_limit. Related rows sharing dispatchable: sdk.subtensor.unstake_all."
+  },
+  {
+    "id": "sdk.async_subtensor.unstake_multiple",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.unstake_multiple(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_full_limit | SubtensorModule.remove_stake_limit",
+    "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.subtensor.unstake_multiple."
+  },
+  {
+    "id": "sdk.async_subtensor.update_cap_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.update_cap_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_cap",
+    "agcli_invocation": "agcli crowdloan update-cap --id 0 --cap 200 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_cap. Related rows sharing dispatchable: sdk.subtensor.update_cap_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.update_end_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.update_end_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_end",
+    "agcli_invocation": "agcli crowdloan update-end --id 0 --end 2000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_end. Related rows sharing dispatchable: sdk.subtensor.update_end_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.update_min_contribution_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.update_min_contribution_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_min_contribution",
+    "agcli_invocation": "agcli crowdloan update-min-contribution --id 0 --min 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_min_contribution. Related rows sharing dispatchable: sdk.subtensor.update_min_contribution_crowdloan."
+  },
+  {
+    "id": "sdk.async_subtensor.validate_extrinsic_params",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.validate_extrinsic_params(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI equivalent for SDK parameter validation helper."
+  },
+  {
+    "id": "sdk.async_subtensor.weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.weights(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli weights show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.async_subtensor.withdraw_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.async_subtensor.withdraw_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.withdraw",
+    "agcli_invocation": "agcli crowdloan withdraw --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.withdraw. Related rows sharing dispatchable: btcli.crowd.withdraw, sdk.subtensor.withdraw_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.add_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.add_liquidity(...)",
+    "ref_extrinsic": "Swap.add_liquidity",
+    "agcli_invocation": "agcli liquidity add --netuid 1 --price-low 1 --price-high 2 --amount 1000000000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.add_liquidity. Related rows sharing dispatchable: btcli.liquidity.add, sdk.async_subtensor.add_liquidity."
+  },
+  {
+    "id": "sdk.subtensor.add_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.add_proxy(...)",
+    "ref_extrinsic": "Proxy.add_proxy",
+    "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Proxy.add_proxy. Related rows sharing dispatchable: btcli.proxy.add, sdk.async_subtensor.add_proxy."
+  },
+  {
+    "id": "sdk.subtensor.add_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.add_stake(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
+    "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake_multiple. E2E parity also exercises safe_staking=True (add_stake_limit behavior) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "sdk.subtensor.add_stake_burn",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.add_stake_burn(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake_burn",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake_burn. Related rows sharing dispatchable: btcli.sudo.stake-burn, sdk.async_subtensor.add_stake_burn."
+  },
+  {
+    "id": "sdk.subtensor.add_stake_multiple",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.add_stake_multiple(...)",
+    "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
+    "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake."
+  },
+  {
+    "id": "sdk.subtensor.announce_coldkey_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.announce_coldkey_swap(...)",
+    "ref_extrinsic": "SubtensorModule.announce_coldkey_swap",
+    "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.async_subtensor.announce_coldkey_swap."
+  },
+  {
+    "id": "sdk.subtensor.announce_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.announce_proxy(...)",
+    "ref_extrinsic": "Proxy.announce",
+    "agcli_invocation": "agcli proxy announce --real <ss58> --call-hex 0x00 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.announce. Related rows sharing dispatchable: sdk.async_subtensor.announce_proxy."
+  },
+  {
+    "id": "sdk.subtensor.bonds",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.bonds(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --full --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.burned_register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.burned_register(...)",
+    "ref_extrinsic": "SubtensorModule.burned_register | SubtensorModule.root_register",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.burned_register. Related rows sharing dispatchable: sdk.async_subtensor.burned_register."
+  },
+  {
+    "id": "sdk.subtensor.claim_root",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.claim_root(...)",
+    "ref_extrinsic": "SubtensorModule.claim_root",
+    "agcli_invocation": "agcli stake claim-root --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.claim_root. Related rows sharing dispatchable: btcli.stake.process-claim, sdk.async_subtensor.claim_root."
+  },
+  {
+    "id": "sdk.subtensor.clear_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.clear_coldkey_swap_announcement(...)",
+    "ref_extrinsic": "SubtensorModule.clear_coldkey_swap_announcement",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.clear_coldkey_swap_announcement. Related rows sharing dispatchable: sdk.async_subtensor.clear_coldkey_swap_announcement."
+  },
+  {
+    "id": "sdk.subtensor.commit_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.commit_weights(...)",
+    "ref_extrinsic": "SubtensorModule.commit_mechanism_weights",
+    "agcli_invocation": "agcli weights commit-mechanism --netuid 1 --mechanism-id 0 --hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.commit_mechanism_weights. Related rows sharing dispatchable: sdk.async_subtensor.commit_weights."
+  },
+  {
+    "id": "sdk.subtensor.compose_call",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.compose_call(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No low-level compose-call CLI primitive in agcli."
+  },
+  {
+    "id": "sdk.subtensor.contribute_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.contribute_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.contribute",
+    "agcli_invocation": "agcli crowdloan contribute --id 0 --amount 5 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.contribute. Related rows sharing dispatchable: btcli.crowd.contribute, sdk.async_subtensor.contribute_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.create_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.create_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.create",
+    "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.async_subtensor.create_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.create_pure_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.create_pure_proxy(...)",
+    "ref_extrinsic": "Proxy.create_pure",
+    "agcli_invocation": "agcli proxy create-pure --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.create_pure. Related rows sharing dispatchable: btcli.proxy.create, sdk.async_subtensor.create_pure_proxy."
+  },
+  {
+    "id": "sdk.subtensor.dispute_coldkey_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.dispute_coldkey_swap(...)",
+    "ref_extrinsic": "SubtensorModule.dispute_coldkey_swap",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.dispute_coldkey_swap. Related rows sharing dispatchable: sdk.async_subtensor.dispute_coldkey_swap."
+  },
+  {
+    "id": "sdk.subtensor.dissolve_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.dissolve_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.dissolve",
+    "agcli_invocation": "agcli crowdloan dissolve --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.dissolve. Related rows sharing dispatchable: btcli.crowd.dissolve, sdk.async_subtensor.dissolve_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.does_hotkey_exist",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.does_hotkey_exist(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.finalize_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.finalize_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.finalize",
+    "agcli_invocation": "agcli crowdloan finalize --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.finalize. Related rows sharing dispatchable: btcli.crowd.finalize, sdk.async_subtensor.finalize_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.get_admin_freeze_window",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_admin_freeze_window(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated admin-freeze-window query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_all_commitments",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_commitments(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli commitment list --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_all_ema_tao_inflow",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_ema_tao_inflow(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view dynamic --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_all_neuron_certificates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_neuron_certificates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated neuron certificate query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_all_revealed_commitments",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_revealed_commitments(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet commits --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_all_subnets_info",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_subnets_info(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_all_subnets_netuid",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_all_subnets_netuid(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_auto_stakes",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_auto_stakes(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake show-auto --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_balance",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_balance(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli balance --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_children",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_children(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_children_pending",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_children_pending(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated pending-children query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_announcement(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet check-swap --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_announcement_delay",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_announcement_delay(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface for coldkey swap announcement delay query."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_announcements",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_announcements(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to list all coldkey swap announcements."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_dispute",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_dispute(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to inspect coldkey swap disputes."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_disputes",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_disputes(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface to list coldkey swap disputes."
+  },
+  {
+    "id": "sdk.subtensor.get_coldkey_swap_reannouncement_delay",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_reannouncement_delay(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI surface for coldkey swap reannouncement delay query."
+  },
+  {
+    "id": "sdk.subtensor.get_commitment_metadata",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_commitment_metadata(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli commitment get --netuid 1 --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_crowdloan_by_id",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_crowdloan_by_id(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan info --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_crowdloan_contributions",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_crowdloan_contributions(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan contributors --id 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_crowdloan_next_id",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_crowdloan_next_id(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_crowdloans",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_crowdloans(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli crowdloan list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_delegate_by_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_delegate_by_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate show --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_delegate_identities",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_delegate_identities(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_delegated",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_delegated(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate show --hotkey-address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_delegates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_delegates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli delegate list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_ema_tao_inflow",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_ema_tao_inflow(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view dynamic --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_extrinsic_fee",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_extrinsic_fee(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated fee-estimation command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_hotkey_owner",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_hotkey_owner(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view account --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_hyperparameter",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_hyperparameter(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_last_bonds_reset",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_last_bonds_reset(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated bonds-reset query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_liquidity_list",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_liquidity_list(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet liquidity --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_mechanism_count",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_mechanism_count(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet mechanism-count --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_mechanism_emission_split",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_mechanism_emission_split(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet emission-split --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_mev_shield_current_key",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_mev_shield_current_key(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI for direct MevShield key inspection."
+  },
+  {
+    "id": "sdk.subtensor.get_mev_shield_next_key",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_mev_shield_next_key(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI for direct MevShield key inspection."
+  },
+  {
+    "id": "sdk.subtensor.get_minimum_required_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_minimum_required_stake(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_netuids_for_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_netuids_for_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_neuron_for_pubkey_and_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_neuron_for_pubkey_and_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_owned_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_owned_hotkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli wallet show --all --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_parents",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_parents(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_proxies",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_proxies(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_proxies_for_real_account",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_proxies_for_real_account(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_proxy_announcement(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list-announcements --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_proxy_announcements",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_proxy_announcements(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli proxy list-announcements --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_root_alpha_dividends_per_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_root_alpha_dividends_per_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated per-subnet root dividend read command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_root_claim_type",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_root_claim_type(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for root claim type in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_root_claimable_all_rates",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_root_claimable_all_rates(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for root claimable rates in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_root_claimed",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_root_claimed(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No direct read command for claimed root dividends in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_stake(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_stake_for_coldkey_and_hotkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_stake_for_coldkey_and_hotkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_stake_info_for_coldkey",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_stake_info_for_coldkey(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_stake_info_for_coldkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_stake_info_for_coldkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_stake_weight",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_stake_weight(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_staking_hotkeys",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_staking_hotkeys(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli stake list --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_subnet_burn_cost",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_subnet_burn_cost(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet create-cost",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_subnet_hyperparameters",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_subnet_hyperparameters(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_subnet_info",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_subnet_info(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_subnet_prices",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_subnet_prices(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet liquidity --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_timelocked_weight_commits",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_timelocked_weight_commits(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli weights status --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_total_subnets",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_total_subnets(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet list --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_transfer_fee",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_transfer_fee(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated transfer-fee query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.get_uid_for_hotkey_on_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_uid_for_hotkey_on_subnet(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.get_vote_data",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.get_vote_data(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No dedicated governance vote-data query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.kill_pure_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.kill_pure_proxy(...)",
+    "ref_extrinsic": "Proxy.kill_pure",
+    "agcli_invocation": "agcli proxy kill-pure --spawner <ss58> --proxy-type any --index 0 --height 0 --ext-index 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.kill_pure. Related rows sharing dispatchable: btcli.proxy.kill, sdk.async_subtensor.kill_pure_proxy."
+  },
+  {
+    "id": "sdk.subtensor.last_drand_round",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.last_drand_round(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "agcli has drand write command but no drand round read command."
+  },
+  {
+    "id": "sdk.subtensor.mev_submit_encrypted",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.mev_submit_encrypted(...)",
+    "ref_extrinsic": "MevShield.submit_encrypted",
+    "agcli_invocation": "agcli --mev batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable MevShield.submit_encrypted. Related rows sharing dispatchable: sdk.async_subtensor.mev_submit_encrypted."
+  },
+  {
+    "id": "sdk.subtensor.modify_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.modify_liquidity(...)",
+    "ref_extrinsic": "Swap.modify_position",
+    "agcli_invocation": "agcli liquidity modify --netuid 1 --position-id 1 --delta 1000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.modify_position. Related rows sharing dispatchable: btcli.liquidity.modify, sdk.async_subtensor.modify_liquidity."
+  },
+  {
+    "id": "sdk.subtensor.move_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.move_stake(...)",
+    "ref_extrinsic": "SubtensorModule.move_stake",
+    "agcli_invocation": "agcli stake move --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.move_stake. Related rows sharing dispatchable: btcli.stake.move, sdk.async_subtensor.move_stake."
+  },
+  {
+    "id": "sdk.subtensor.neuron_for_uid",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.neuron_for_uid(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --uid 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.neurons",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.neurons(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.neurons_lite",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.neurons_lite(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet metagraph --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.poke_deposit",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.poke_deposit(...)",
+    "ref_extrinsic": "Proxy.poke_deposit",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.poke_deposit. Related rows sharing dispatchable: sdk.async_subtensor.poke_deposit."
+  },
+  {
+    "id": "sdk.subtensor.proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.proxy(...)",
+    "ref_extrinsic": "Proxy.proxy",
+    "agcli_invocation": "agcli --proxy <delegate_ss58> transfer --dest <ss58> --amount 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.proxy. Related rows sharing dispatchable: sdk.async_subtensor.proxy."
+  },
+  {
+    "id": "sdk.subtensor.proxy_announced",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.proxy_announced(...)",
+    "ref_extrinsic": "Proxy.proxy_announced",
+    "agcli_invocation": "agcli proxy proxy-announced --delegate <ss58> --real <ss58> --pallet SubtensorModule --call transfer_stake --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.proxy_announced. Related rows sharing dispatchable: btcli.proxy.execute, sdk.async_subtensor.proxy_announced."
+  },
+  {
+    "id": "sdk.subtensor.query_identity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_identity(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli identity show --address <ss58> --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.query_map",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_map(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic storage map query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.query_map_subtensor",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_map_subtensor(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic subtensor map-query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.query_module",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_module(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic pallet query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.query_runtime_api",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_runtime_api(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic runtime-api query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.query_subtensor",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.query_subtensor(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No generic subtensor query command in agcli."
+  },
+  {
+    "id": "sdk.subtensor.refund_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.refund_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.refund",
+    "agcli_invocation": "agcli crowdloan refund --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.refund. Related rows sharing dispatchable: btcli.crowd.refund, sdk.async_subtensor.refund_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.register(...)",
+    "ref_extrinsic": "SubtensorModule.register_limit | SubtensorModule.root_register",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.async_subtensor.register."
+  },
+  {
+    "id": "sdk.subtensor.register_limit",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.register_limit(...)",
+    "ref_extrinsic": "SubtensorModule.register_limit",
+    "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.async_subtensor.register_limit."
+  },
+  {
+    "id": "sdk.subtensor.register_subnet",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.register_subnet(...)",
+    "ref_extrinsic": "SubtensorModule.register_network",
+    "agcli_invocation": "agcli subnet register --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.register_network. Related rows sharing dispatchable: sdk.async_subtensor.register_subnet."
+  },
+  {
+    "id": "sdk.subtensor.reject_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.reject_proxy_announcement(...)",
+    "ref_extrinsic": "Proxy.reject_announcement",
+    "agcli_invocation": "agcli proxy reject-announcement --delegate <ss58> --call-hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.reject_announcement. Related rows sharing dispatchable: sdk.async_subtensor.reject_proxy_announcement."
+  },
+  {
+    "id": "sdk.subtensor.remove_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.remove_liquidity(...)",
+    "ref_extrinsic": "Swap.remove_liquidity",
+    "agcli_invocation": "agcli liquidity remove --netuid 1 --position-id 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.remove_liquidity. Related rows sharing dispatchable: btcli.liquidity.remove, sdk.async_subtensor.remove_liquidity."
+  },
+  {
+    "id": "sdk.subtensor.remove_proxies",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.remove_proxies(...)",
+    "ref_extrinsic": "Proxy.remove_proxies",
+    "agcli_invocation": "agcli proxy remove-all --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.remove_proxies. Related rows sharing dispatchable: sdk.async_subtensor.remove_proxies."
+  },
+  {
+    "id": "sdk.subtensor.remove_proxy",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.remove_proxy(...)",
+    "ref_extrinsic": "Proxy.remove_proxy",
+    "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Proxy.remove_proxy. Related rows sharing dispatchable: sdk.async_subtensor.remove_proxy."
+  },
+  {
+    "id": "sdk.subtensor.remove_proxy_announcement",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.remove_proxy_announcement(...)",
+    "ref_extrinsic": "Proxy.remove_announcement",
+    "agcli_invocation": "agcli proxy remove-announcement --real <ss58> --call-hash 0x... --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Proxy.remove_announcement. Related rows sharing dispatchable: sdk.async_subtensor.remove_proxy_announcement."
+  },
+  {
+    "id": "sdk.subtensor.reveal_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.reveal_weights(...)",
+    "ref_extrinsic": "SubtensorModule.reveal_mechanism_weights",
+    "agcli_invocation": "agcli weights reveal-mechanism --netuid 1 --mechanism-id 0 --weights \"0:100\" --salt s --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.reveal_mechanism_weights. Related rows sharing dispatchable: sdk.async_subtensor.reveal_weights."
+  },
+  {
+    "id": "sdk.subtensor.root_register",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.root_register(...)",
+    "ref_extrinsic": "SubtensorModule.root_register",
+    "agcli_invocation": "agcli root register --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.async_subtensor.root_register."
+  },
+  {
+    "id": "sdk.subtensor.root_set_pending_childkey_cooldown",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.root_set_pending_childkey_cooldown(...)",
+    "ref_extrinsic": "SubtensorModule.set_pending_childkey_cooldown | Sudo.sudo",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_pending_childkey_cooldown. Related rows sharing dispatchable: sdk.async_subtensor.root_set_pending_childkey_cooldown."
+  },
+  {
+    "id": "sdk.subtensor.serve_axon",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.serve_axon(...)",
+    "ref_extrinsic": "SubtensorModule.serve_axon | SubtensorModule.serve_axon_tls",
+    "agcli_invocation": "agcli serve axon --netuid 1 --ip 127.0.0.1 --port 8091",
+    "agcli_status": "N/A",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: sdk.async_subtensor.serve_axon."
+  },
+  {
+    "id": "sdk.subtensor.set_auto_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_auto_stake(...)",
+    "ref_extrinsic": "SubtensorModule.set_coldkey_auto_stake_hotkey",
+    "agcli_invocation": "agcli stake set-auto --netuid 1 --hotkey-address <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_coldkey_auto_stake_hotkey. Related rows sharing dispatchable: btcli.stake.set-auto, sdk.async_subtensor.set_auto_stake."
+  },
+  {
+    "id": "sdk.subtensor.set_children",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_children(...)",
+    "ref_extrinsic": "SubtensorModule.set_children",
+    "agcli_invocation": "agcli stake set-children --netuid 1 --children \"1:<hotkey>\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_children. Related rows sharing dispatchable: btcli.stake.child.revoke, btcli.stake.child.set, sdk.async_subtensor.set_children."
+  },
+  {
+    "id": "sdk.subtensor.set_commitment",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_commitment(...)",
+    "ref_extrinsic": "Commitments.set_commitment",
+    "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_reveal_commitment."
+  },
+  {
+    "id": "sdk.subtensor.set_delegate_take",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_delegate_take(...)",
+    "ref_extrinsic": "SubtensorModule.decrease_take | SubtensorModule.increase_take",
+    "agcli_invocation": "agcli delegate decrease-take --take 0.05 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.decrease_take. Related rows sharing dispatchable: btcli.sudo.set-take, sdk.async_subtensor.set_delegate_take."
+  },
+  {
+    "id": "sdk.subtensor.set_reveal_commitment",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_reveal_commitment(...)",
+    "ref_extrinsic": "Commitments.set_commitment",
+    "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_commitment."
+  },
+  {
+    "id": "sdk.subtensor.set_root_claim_type",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_root_claim_type(...)",
+    "ref_extrinsic": "SubtensorModule.set_root_claim_type",
+    "agcli_invocation": "agcli stake set-claim --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_root_claim_type. Related rows sharing dispatchable: btcli.stake.set-claim, sdk.async_subtensor.set_root_claim_type."
+  },
+  {
+    "id": "sdk.subtensor.set_subnet_identity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_subnet_identity(...)",
+    "ref_extrinsic": "SubtensorModule.set_subnet_identity",
+    "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.async_subtensor.set_subnet_identity."
+  },
+  {
+    "id": "sdk.subtensor.set_weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.set_weights(...)",
+    "ref_extrinsic": "SubtensorModule.commit_timelocked_mechanism_weights | SubtensorModule.set_mechanism_weights",
+    "agcli_invocation": "agcli weights commit-timelocked --netuid 1 --weights \"0:100\" --round 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.commit_timelocked_mechanism_weights. Related rows sharing dispatchable: sdk.async_subtensor.set_weights."
+  },
+  {
+    "id": "sdk.subtensor.sign_and_send_extrinsic",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.sign_and_send_extrinsic(...)",
+    "ref_extrinsic": "generic::<runtime call supplied by caller>",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable generic::<runtime call supplied by caller>. Related rows sharing dispatchable: sdk.async_subtensor.sign_and_send_extrinsic."
+  },
+  {
+    "id": "sdk.subtensor.sim_swap",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.sim_swap(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli view swap-sim --netuid 1 --tao 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.start_call",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.start_call(...)",
+    "ref_extrinsic": "SubtensorModule.start_call",
+    "agcli_invocation": "agcli subnet start --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.start_call. Related rows sharing dispatchable: btcli.subnets.start, sdk.async_subtensor.start_call."
+  },
+  {
+    "id": "sdk.subtensor.subnet_exists",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.subnet_exists(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli subnet show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.swap_coldkey_announced",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.swap_coldkey_announced(...)",
+    "ref_extrinsic": "SubtensorModule.swap_coldkey_announced",
+    "agcli_invocation": "agcli batch --file calls.json --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.swap_coldkey_announced. Related rows sharing dispatchable: sdk.async_subtensor.swap_coldkey_announced."
+  },
+  {
+    "id": "sdk.subtensor.swap_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.swap_stake(...)",
+    "ref_extrinsic": "SubtensorModule.swap_stake | SubtensorModule.swap_stake_limit",
+    "agcli_invocation": "agcli stake swap --amount 1 --from 1 --to 2 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.swap_stake. Related rows sharing dispatchable: btcli.stake.swap, sdk.async_subtensor.swap_stake."
+  },
+  {
+    "id": "sdk.subtensor.toggle_user_liquidity",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.toggle_user_liquidity(...)",
+    "ref_extrinsic": "Swap.toggle_user_liquidity",
+    "agcli_invocation": "agcli liquidity toggle --netuid 1 --enable --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Swap.toggle_user_liquidity. Related rows sharing dispatchable: sdk.async_subtensor.toggle_user_liquidity."
+  },
+  {
+    "id": "sdk.subtensor.transfer",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.transfer(...)",
+    "ref_extrinsic": "Balances.transfer_all | Balances.transfer_allow_death | Balances.transfer_keep_alive",
+    "agcli_invocation": "agcli transfer-all --dest <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Balances.transfer_all. Related rows sharing dispatchable: sdk.async_subtensor.transfer."
+  },
+  {
+    "id": "sdk.subtensor.transfer_stake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.transfer_stake(...)",
+    "ref_extrinsic": "SubtensorModule.transfer_stake",
+    "agcli_invocation": "agcli stake transfer-stake --netuid 1 --amount 1 --dest-hotkey <ss58> --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.transfer_stake. Related rows sharing dispatchable: btcli.stake.transfer, sdk.async_subtensor.transfer_stake."
+  },
+  {
+    "id": "sdk.subtensor.unstake",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.unstake(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit",
+    "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.async_subtensor.unstake. E2E parity also exercises safe_unstaking=True (remove_stake_limit behavior) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
+  },
+  {
+    "id": "sdk.subtensor.unstake_all",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.unstake_all(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake_full_limit",
+    "agcli_invocation": "agcli stake unstake-all --yes",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [],
+    "parity_test": "tests/parity/stake_basic.rs::stake_unstake_all_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake_full_limit. Related rows sharing dispatchable: sdk.async_subtensor.unstake_all."
+  },
+  {
+    "id": "sdk.subtensor.unstake_multiple",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.unstake_multiple(...)",
+    "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_full_limit | SubtensorModule.remove_stake_limit",
+    "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.async_subtensor.unstake_multiple."
+  },
+  {
+    "id": "sdk.subtensor.update_cap_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.update_cap_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_cap",
+    "agcli_invocation": "agcli crowdloan update-cap --id 0 --cap 200 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_cap. Related rows sharing dispatchable: sdk.async_subtensor.update_cap_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.update_end_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.update_end_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_end",
+    "agcli_invocation": "agcli crowdloan update-end --id 0 --end 2000 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_end. Related rows sharing dispatchable: sdk.async_subtensor.update_end_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.update_min_contribution_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.update_min_contribution_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.update_min_contribution",
+    "agcli_invocation": "agcli crowdloan update-min-contribution --id 0 --min 1 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.update_min_contribution. Related rows sharing dispatchable: sdk.async_subtensor.update_min_contribution_crowdloan."
+  },
+  {
+    "id": "sdk.subtensor.validate_extrinsic_params",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.validate_extrinsic_params(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": null,
+    "agcli_status": "GAP",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "No CLI equivalent for SDK parameter validation helper."
+  },
+  {
+    "id": "sdk.subtensor.weights",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.weights(...)",
+    "ref_extrinsic": null,
+    "agcli_invocation": "agcli weights show --netuid 1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+  },
+  {
+    "id": "sdk.subtensor.withdraw_crowdloan",
+    "source": "sdk",
+    "ref_invocation": "bittensor.core.subtensor.withdraw_crowdloan(...)",
+    "ref_extrinsic": "Crowdloan.withdraw",
+    "agcli_invocation": "agcli crowdloan withdraw --id 0 --yes",
+    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_flag_diffs": [],
+    "parity_test": null,
+    "notes": "Mapped by shared dispatchable Crowdloan.withdraw. Related rows sharing dispatchable: btcli.crowd.withdraw, sdk.async_subtensor.withdraw_crowdloan."
+  }
+]
