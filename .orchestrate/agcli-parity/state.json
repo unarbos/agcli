@@ -7,21 +7,21 @@
       "branch": "orch/agcli-parity/bootstrap-parity-env",
       "startingRef": "main",
       "dependsOn": [],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
+      "agentId": "bc-a48ac283-1921-48ee-a5c6-c9acf6106bd1",
+      "runId": "run-02f1a61d-d806-4871-b796-2c87a04f9405",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "cancelled",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-28T15:11:40.687Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T15:11:40.687Z",
-      "note": null,
+      "lastUpdate": "2026-05-28T15:24:46.535Z",
+      "note": "cancelled by operator via cli",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "inventory-btcli",
@@ -186,5 +186,14 @@
       "verification": null
     }
   ],
-  "attention": []
+  "attention": [
+    {
+      "at": "2026-05-28T15:17:45.384Z",
+      "message": "bootstrap-parity-env: SSE idle 340583ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T15:17:45.385Z",
+      "message": "bootstrap-parity-env: tool_call idle 343973ms; last=2026-05-28T15:12:01.412Z"
+    }
+  ]
 }
