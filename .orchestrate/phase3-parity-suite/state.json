@@ -402,6 +402,14 @@
     {
       "at": "2026-05-28T17:20:54.662Z",
       "message": "git-sync failed (parity-misc pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:21:01.412Z",
+      "message": "git-sync failed (parity-misc running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:21:01.412Z",
+      "message": "parity-misc: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
     }
   ]
 }
