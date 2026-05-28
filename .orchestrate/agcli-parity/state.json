@@ -10,14 +10,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-28T15:55:35.207Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T15:55:19.102Z",
+      "lastUpdate": "2026-05-28T15:55:35.207Z",
       "note": "respawned by self-planner (was error; attempts=1)",
-      "attempts": 1,
+      "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -214,6 +214,10 @@
     {
       "at": "2026-05-28T15:53:50.889Z",
       "message": "bootstrap-toolchain: spawn failed after 3 transient sub-attempts: Error: template \"worker\" has unrendered placeholders: index .RepoDigests 0"
+    },
+    {
+      "at": "2026-05-28T15:55:20.374Z",
+      "message": "bootstrap-toolchain: respawned by self-planner (was error)"
     }
   ]
 }
