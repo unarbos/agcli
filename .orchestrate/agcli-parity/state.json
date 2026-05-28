@@ -41,11 +41,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-28T16:15:34.219Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "inventory-btcli",
@@ -58,18 +58,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "error",
+      "status": "pending",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": "2026-05-28T16:15:41.873Z",
+      "startedAt": null,
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:15:42.013Z",
-      "note": "spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.",
+      "lastUpdate": "2026-05-28T16:17:23.976Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "failureMode": null,
+      "verification": null
     },
     {
       "name": "inventory-sdk",
@@ -89,11 +89,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-28T16:15:50.832Z",
       "note": "spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "parity-matrix",

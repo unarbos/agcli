@@ -116,7 +116,7 @@
         "`docs/parity/inventory-btcli.md` renders the same data grouped by top-level command, with each row linking to its `id` in the JSON."
       ],
       "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 20' docs/parity/inventory-btcli.json`.\n- `jq -e 'all(.[]; .id and .invocation and .read_or_write and (.read_or_write != \"write\" or .extrinsic != null))' docs/parity/inventory-btcli.json`.\n- Spot-check 5 random rows by running their `invocation` with `--help` to confirm the args exist.\n\n## Manual\n- Eyeball the .md file: every leaf reachable from `btcli --help` should appear.",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 4,
       "dependsOn": [
         "bootstrap-toolchain"
@@ -148,7 +148,7 @@
         "Out-of-scope helpers explicitly noted with a single short justification."
       ],
       "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 30' docs/parity/inventory-sdk.json`.\n- `jq -e 'all(.[]; .id and .module and .function and .read_or_write and (.read_or_write != \"write\" or .extrinsic != null))' docs/parity/inventory-sdk.json`.\n\n## Manual\n- Spot-check 5 entries against the live module: `python -c 'from bittensor.core.async_subtensor import AsyncSubtensor; print(dir(AsyncSubtensor))'` and confirm membership.",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 4,
       "dependsOn": [
         "bootstrap-toolchain"
@@ -180,7 +180,7 @@
         "`docs/parity/matrix.md` lists Phase 3 candidates and Phase 4 candidates separately."
       ],
       "verify": "## Automated\n- `jq -e 'type == \"array\" and length > 50' docs/parity/matrix.json`.\n- `jq -e 'all(.[]; .id and .source and .agcli_status and ([\"COVERED_E2E\",\"COVERED_CLI_ONLY\",\"COVERED_UNIQUE\",\"GAP\",\"N/A\"] | index(.agcli_status) != null))' docs/parity/matrix.json`.\n- `jq -e '[.[] | select(.source == \"btcli\")] | length == ([inputs[] | select(.source == \"btcli\")] | length)' docs/parity/matrix.json docs/parity/inventory-btcli.json` (or equivalent count match).\n\n## Manual\n- Spot-check 5 `GAP` rows to confirm agcli really has no surface for them.",
-      "model": "claude-opus-4-7",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "dependsOn": [
         "inventory-btcli",
@@ -217,7 +217,7 @@
         "Aggregated subplanner handoff includes a ranked list of UX/parity findings by severity (Phase 4 input)."
       ],
       "verify": "## Setup\n- Boot a localnet via the appropriate scaffold variant.\n## Automated\n- For each category: `cargo test --features e2e --test parity_<category> -- --nocapture` on the category's worker branch.\n## Manual\n- Spot-check `docs/parity/matrix.json` after merge: most COVERED_CLI_ONLY rows should be COVERED_E2E.",
-      "model": "claude-opus-4-7-thinking-xhigh",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 2,
       "dependsOn": [
         "parity-matrix",
@@ -254,7 +254,7 @@
         "Aggregated handoff lists closed vs remaining rows and cascading discoveries."
       ],
       "verify": "## Automated\n- `jq -e '[.[] | select(.agcli_status == \"GAP\")] | length == 0 or all(.notes | contains(\"wontfix-this-cycle\"))' docs/parity/matrix.json`.\n- `cargo check --all-targets` clean on each gap-fix branch.\n- Each PR shows the parity test going green in CI.\n\n## Manual\n- Eyeball the aggregated subplanner handoff for cascading discoveries that need a Phase 5/6 update.",
-      "model": "claude-opus-4-7-thinking-xhigh",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 2,
       "dependsOn": [
         "phase3-parity-suite"
@@ -284,7 +284,7 @@
         "Fault-tolerance section covers at minimum the 7 failure modes listed in the scope."
       ],
       "verify": "## Automated\n- `grep -c '^|' docs/parity/ux-scorecard.md` confirms the scorecard table is present.\n- `grep -c 'tests/parity/' docs/parity/ux-scorecard.md` shows citations to actual tests.\n\n## Manual\n- Read the conclusion paragraph; it must explicitly map to the mission's `agcli UX >= btcli` line.",
-      "model": "claude-opus-4-7",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "dependsOn": [
         "phase4-gap-closure"
@@ -317,7 +317,7 @@
         "Reproduction recipe runs to completion when executed locally on a clean checkout (cite the run in the worker handoff)."
       ],
       "verify": "## Automated\n- `python -c 'import yaml; yaml.safe_load(open(\".github/workflows/parity-localnet.yml\"))'` clean.\n- `grep -c '\\[x\\]\\|\\[ \\]' docs/parity/parity-report.md` shows >= 8 checkbox lines for the DoD checklist.\n- `bash -c 'sed -n /^```bash/,/^```/p docs/parity/parity-report.md | grep -c cargo'` shows the repro recipe contains a `cargo` invocation.\n\n## Manual\n- Open the workflow file and confirm the cache keys include `docs/parity/versions.json` (so version pinning invalidates the cache).",
-      "model": "gpt-5.5-high-fast",
+      "model": "gpt-5.3-codex-high-fast",
       "maxAttempts": 3,
       "dependsOn": [
         "phase5-ux-scorecard"
