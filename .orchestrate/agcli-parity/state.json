@@ -34,12 +34,12 @@
       "agentId": "bc-1e305c08-9cec-4203-947a-fd41e3dec5b5",
       "runId": "run-df55502e-463e-4d98-92bf-4232d8d633dc",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/scaffold-variants-a-to-e.md",
       "startedAt": "2026-05-28T16:15:30.427Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:15:34.219Z",
+      "finishedAt": "2026-05-28T17:01:26.387Z",
+      "lastUpdate": "2026-05-28T17:01:26.387Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
@@ -63,13 +63,13 @@
       "handoffPath": "handoffs/inventory-btcli.md",
       "startedAt": "2026-05-28T16:17:43.687Z",
       "finishedAt": "2026-05-28T16:48:47.770Z",
-      "lastUpdate": "2026-05-28T16:48:47.770Z",
+      "lastUpdate": "2026-05-28T16:48:50.807Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "type-check-only"
     },
     {
       "name": "inventory-sdk",
@@ -104,15 +104,15 @@
         "inventory-btcli",
         "inventory-sdk"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
+      "agentId": "bc-31285050-3318-4760-b826-51840cd5e50e",
+      "runId": "run-3dc4083d-4fe9-4f40-ab9e-2e0c9eeed2c8",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-28T16:48:48.810Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:48:48.810Z",
+      "lastUpdate": "2026-05-28T16:48:52.343Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -278,6 +278,10 @@
     {
       "at": "2026-05-28T16:45:46.745Z",
       "message": "scaffold-variants-a-to-e: SSE idle 319046ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:48:50.807Z",
+      "message": "inventory-btcli: verification self-reported (type-check-only)"
     }
   ]
 }
