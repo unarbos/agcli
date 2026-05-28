@@ -7,15 +7,15 @@
       "branch": "orch/agcli-parity/bootstrap-toolchain",
       "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-6de2c6a8-6510-44c9-b3cd-fe2676c58f49",
+      "runId": "run-9432f8a8-d04d-41cc-95ee-146ad0eba9de",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/bootstrap-toolchain.md",
       "startedAt": "2026-05-28T15:55:35.207Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T15:55:35.207Z",
+      "finishedAt": "2026-05-28T16:15:20.930Z",
+      "lastUpdate": "2026-05-28T16:15:20.930Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
@@ -218,6 +218,14 @@
     {
       "at": "2026-05-28T15:55:20.374Z",
       "message": "bootstrap-toolchain: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:00:41.056Z",
+      "message": "bootstrap-toolchain: tool_call idle 300767ms; last=none since wait start (2026-05-28T15:55:40.289Z)"
+    },
+    {
+      "at": "2026-05-28T16:01:41.125Z",
+      "message": "bootstrap-toolchain: SSE idle 344368ms, polled status=running; watchdog still waiting"
     }
   ]
 }
