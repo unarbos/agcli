@@ -137,13 +137,13 @@
       "handoffPath": "handoffs/phase3-parity-suite.md",
       "startedAt": "2026-05-28T17:03:12.438Z",
       "finishedAt": "2026-05-28T18:51:11.813Z",
-      "lastUpdate": "2026-05-28T18:51:11.813Z",
+      "lastUpdate": "2026-05-28T18:51:12.152Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "not-verified"
     },
     {
       "name": "phase4-gap-closure",
@@ -156,17 +156,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-28T18:51:21.092Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-28T18:51:21.092Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "phase5-ux-scorecard",
@@ -307,6 +308,14 @@
     {
       "at": "2026-05-28T17:28:50.084Z",
       "message": "phase3-parity-suite: tool_call idle 303407ms; last=2026-05-28T17:23:46.677Z"
+    },
+    {
+      "at": "2026-05-28T18:51:12.144Z",
+      "message": "git-sync failed (phase3-parity-suite running -> handed-off): Command failed: git -C /workspace/.orchestrate/agcli-parity push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…"
+    },
+    {
+      "at": "2026-05-28T18:51:12.152Z",
+      "message": "phase3-parity-suite: verification self-reported (not-verified)"
     }
   ]
 }
