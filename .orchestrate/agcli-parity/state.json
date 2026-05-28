@@ -210,6 +210,14 @@
     {
       "at": "2026-05-28T15:40:05.481Z",
       "message": "bootstrap-parity-env: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T15:40:06.571Z",
+      "message": "bootstrap-parity-env: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env.md"
+    },
+    {
+      "at": "2026-05-28T15:40:06.572Z",
+      "message": "bootstrap-parity-env: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env-failure.md"
     }
   ]
 }
