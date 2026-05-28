@@ -156,18 +156,18 @@
       "agentId": "bc-00b26b88-2119-4d88-9544-caded071456d",
       "runId": "run-acddd763-2146-4ff4-b5e3-5542bc4e93ab",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/phase4-gap-closure.md",
       "startedAt": "2026-05-28T18:51:21.092Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T18:51:23.927Z",
+      "finishedAt": "2026-05-28T19:56:42.820Z",
+      "lastUpdate": "2026-05-28T19:56:42.820Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "failureMode": "unknown",
+      "verification": null
     },
     {
       "name": "phase5-ux-scorecard",
@@ -328,6 +328,14 @@
     {
       "at": "2026-05-28T19:18:13.834Z",
       "message": "phase4-gap-closure: tool_call idle 1609907ms; last=none since wait start (2026-05-28T18:51:23.927Z)"
+    },
+    {
+      "at": "2026-05-28T19:29:01.040Z",
+      "message": "git-sync failed (planned checkpoint restart): Command failed: git -C /workspace/.orchestrate/agcli-parity push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…"
+    },
+    {
+      "at": "2026-05-28T19:56:42.819Z",
+      "message": "phase4-gap-closure: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
