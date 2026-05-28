@@ -1,0 +1,218 @@
+name: parity-localnet
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - 'cursor/**'
+
+permissions:
+  contents: read
+
+jobs:
+  parity-localnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SKIP_METADATA_FETCH: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Parse parity version pins
+        id: versions
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          versions = json.loads(Path('docs/parity/versions.json').read_text())
+          btcli = versions['btcli']['pypi_version']
+          bittensor = versions['bittensor']['pypi_version']
+          image_tag = versions['subtensor_localnet_image']['tag']
+          digest = versions['subtensor_localnet_image']['digest']
+
+          with open(Path.cwd() / '.github' / 'versions-output.txt', 'w', encoding='utf-8') as out:
+              out.write(f"btcli_version={btcli}\n")
+              out.write(f"bittensor_version={bittensor}\n")
+              out.write(f"image_ref={image_tag}@{digest}\n")
+          PY
+          cat .github/versions-output.txt >> "$GITHUB_OUTPUT"
+
+      - name: Cache cargo target and registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-parity-${{ hashFiles('Cargo.lock', 'docs/parity/versions.json') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-parity-
+
+      - name: Cache localnet Docker image tar
+        id: docker-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/parity-localnet-image.tar
+          key: ${{ runner.os }}-localnet-image-${{ hashFiles('docs/parity/versions.json') }}
+
+      - name: Install pinned btcli and bittensor
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install "bittensor-cli==${{ steps.versions.outputs.btcli_version }}" "bittensor==${{ steps.versions.outputs.bittensor_version }}"
+          btcli --version
+          python - <<'PY'
+          import bittensor
+          print(f"bittensor={bittensor.__version__}")
+          PY
+
+      - name: Load or pull localnet Docker image by digest
+        shell: bash
+        run: |
+          IMAGE_REF="${{ steps.versions.outputs.image_ref }}"
+          if [ -f /tmp/parity-localnet-image.tar ]; then
+            docker load -i /tmp/parity-localnet-image.tar || true
+          fi
+
+          if ! docker image inspect "$IMAGE_REF" > /dev/null 2>&1; then
+            docker pull "$IMAGE_REF"
+          fi
+
+          docker save "$IMAGE_REF" -o /tmp/parity-localnet-image.tar
+
+      - name: Build agcli release binary
+        shell: bash
+        run: cargo build --release --bin agcli
+
+      - name: Run existing parity test targets
+        shell: bash
+        run: |
+          mkdir -p artifacts/parity-logs
+          python - <<'PY'
+          import glob
+          import json
+          import os
+          import subprocess
+          import sys
+          import time
+          import xml.etree.ElementTree as ET
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          parity_files = sorted(
+              path for path in glob.glob('tests/parity/*.rs')
+              if Path(path).stem != 'mod'
+          )
+
+          results = []
+          failures = 0
+
+          if not parity_files:
+              results.append(
+                  {
+                      'target': 'parity_none',
+                      'file': None,
+                      'status': 'skipped',
+                      'duration_seconds': 0.0,
+                      'reason': 'No tests/parity/*.rs files found',
+                  }
+              )
+          else:
+              for file_path in parity_files:
+                  stem = Path(file_path).stem
+                  target = f'parity_{stem}'
+                  cmd = ['cargo', 'test', '--features', 'e2e', '--test', target, '--', '--nocapture']
+                  started = time.time()
+                  proc = subprocess.run(cmd, capture_output=True, text=True)
+                  duration = time.time() - started
+
+                  log_path = Path('artifacts/parity-logs') / f'{target}.log'
+                  log_path.write_text(proc.stdout + '\n' + proc.stderr, encoding='utf-8')
+
+                  status = 'passed' if proc.returncode == 0 else 'failed'
+                  if status == 'failed':
+                      failures += 1
+
+                  results.append(
+                      {
+                          'target': target,
+                          'file': file_path,
+                          'status': status,
+                          'exit_code': proc.returncode,
+                          'duration_seconds': round(duration, 3),
+                          'command': ' '.join(cmd),
+                          'log': str(log_path),
+                      }
+                  )
+
+          artifact_dir = Path('artifacts')
+          artifact_dir.mkdir(parents=True, exist_ok=True)
+          json_path = artifact_dir / 'parity-results.json'
+          json_path.write_text(
+              json.dumps(
+                  {
+                      'generated_at_utc': datetime.now(timezone.utc).isoformat(),
+                      'results': results,
+                  },
+                  indent=2,
+              ) + '\n',
+              encoding='utf-8',
+          )
+
+          suite = ET.Element(
+              'testsuite',
+              name='parity-localnet',
+              tests=str(len(results)),
+              failures=str(failures),
+              skipped=str(sum(1 for r in results if r['status'] == 'skipped')),
+          )
+          for result in results:
+              testcase = ET.SubElement(
+                  suite,
+                  'testcase',
+                  classname='parity',
+                  name=result['target'],
+                  time=str(result.get('duration_seconds', 0.0)),
+              )
+              if result['status'] == 'failed':
+                  failure = ET.SubElement(
+                      testcase,
+                      'failure',
+                      message=f"exit_code={result.get('exit_code')}"
+                  )
+                  failure.text = f"See {result.get('log')}"
+              elif result['status'] == 'skipped':
+                  skipped = ET.SubElement(testcase, 'skipped')
+                  skipped.text = result.get('reason', 'skipped')
+
+          xml_path = artifact_dir / 'parity-results.xml'
+          ET.ElementTree(suite).write(xml_path, encoding='utf-8', xml_declaration=True)
+
+          if failures:
+              sys.exit(1)
+          PY
+
+      - name: Upload parity test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-localnet-artifacts
+          path: |
+            artifacts/parity-results.json
+            artifacts/parity-results.xml
+            artifacts/parity-logs/*.log
+          if-no-files-found: error
