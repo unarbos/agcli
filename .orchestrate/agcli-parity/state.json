@@ -185,12 +185,12 @@
       "handoffPath": "handoffs/phase6-ci-and-report.md",
       "startedAt": "2026-05-28T21:19:41.134Z",
       "finishedAt": "2026-05-28T21:44:38.335Z",
-      "lastUpdate": "2026-05-28T21:44:38.336Z",
+      "lastUpdate": "2026-05-28T21:44:39.259Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
+      "verification": "type-check-only",
       "attempts": 1
     }
   ],
@@ -386,6 +386,10 @@
     {
       "at": "2026-05-28T21:01:36.242Z",
       "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
+    },
+    {
+      "at": "2026-05-28T21:44:39.260Z",
+      "message": "phase6-ci-and-report: verification self-reported (type-check-only)"
     }
   ]
 }
