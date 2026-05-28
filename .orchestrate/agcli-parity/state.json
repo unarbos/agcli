@@ -112,13 +112,13 @@
       "handoffPath": "handoffs/parity-matrix.md",
       "startedAt": "2026-05-28T16:48:48.810Z",
       "finishedAt": "2026-05-28T17:03:09.439Z",
-      "lastUpdate": "2026-05-28T17:03:09.439Z",
+      "lastUpdate": "2026-05-28T17:03:13.593Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": "type-check-only"
     },
     {
       "name": "phase3-parity-suite",
@@ -129,21 +129,21 @@
         "parity-matrix",
         "scaffold-variants-a-to-e"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
+      "agentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "runId": "run-00c7f948-3d48-485b-8bff-276884cfbf86",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-28T17:03:12.438Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-28T17:03:12.438Z",
+      "lastUpdate": "2026-05-28T17:03:16.108Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase4-gap-closure",
@@ -287,6 +287,26 @@
     {
       "at": "2026-05-28T17:01:27.428Z",
       "message": "scaffold-variants-a-to-e: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T17:03:13.593Z",
+      "message": "parity-matrix: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T17:09:16.572Z",
+      "message": "phase3-parity-suite: SSE idle 333519ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:09:16.573Z",
+      "message": "phase3-parity-suite: tool_call idle 333520ms; last=2026-05-28T17:03:43.053Z"
+    },
+    {
+      "at": "2026-05-28T17:28:50.083Z",
+      "message": "phase3-parity-suite: SSE idle 303406ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:50.084Z",
+      "message": "phase3-parity-suite: tool_call idle 303407ms; last=2026-05-28T17:23:46.677Z"
     }
   ]
 }
