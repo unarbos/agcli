@@ -401,6 +401,14 @@
     {
       "at": "2026-05-28T21:01:35.180Z",
       "message": "phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T21:01:36.241Z",
+      "message": "phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md"
+    },
+    {
+      "at": "2026-05-28T21:01:36.242Z",
+      "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
     }
   ]
 }
