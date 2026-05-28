@@ -98,17 +98,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-28T17:20:04.251Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-28T17:20:04.251Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "parity-subnet-hyperparams",
@@ -298,6 +299,14 @@
     {
       "at": "2026-05-28T17:19:57.289Z",
       "message": "git-sync failed (parity-stake-advanced pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:04.250Z",
+      "message": "git-sync failed (parity-stake-advanced running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:04.250Z",
+      "message": "parity-stake-advanced: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
     }
   ]
 }
