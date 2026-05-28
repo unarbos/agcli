@@ -6,3 +6,12 @@
 [2026-05-28T15:40:05.481Z] bootstrap-parity-env: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
 [2026-05-28T15:40:06.571Z] bootstrap-parity-env: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env.md
 [2026-05-28T15:40:06.572Z] bootstrap-parity-env: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env-failure.md
+[2026-05-28T15:53:50.889Z] bootstrap-toolchain: spawn failed after 3 transient sub-attempts: Error: template "worker" has unrendered placeholders: index .RepoDigests 0
+[2026-05-28T15:55:20.374Z] bootstrap-toolchain: respawned by self-planner (was error)
+[2026-05-28T16:00:41.056Z] bootstrap-toolchain: tool_call idle 300767ms; last=none since wait start (2026-05-28T15:55:40.289Z)
+[2026-05-28T16:01:41.125Z] bootstrap-toolchain: SSE idle 344368ms, polled status=running; watchdog still waiting
+[2026-05-28T16:15:22.130Z] bootstrap-toolchain: verification self-reported (type-check-only)
+[2026-05-28T16:15:43.012Z] inventory-btcli: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T16:15:51.805Z] inventory-sdk: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T16:17:25.015Z] inventory-btcli: respawned by self-planner (was error)
+[2026-05-28T16:17:26.477Z] inventory-sdk: respawned by self-planner (was error)

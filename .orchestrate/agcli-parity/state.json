@@ -245,6 +245,10 @@
     {
       "at": "2026-05-28T16:17:25.015Z",
       "message": "inventory-btcli: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:17:26.477Z",
+      "message": "inventory-sdk: respawned by self-planner (was error)"
     }
   ]
 }
