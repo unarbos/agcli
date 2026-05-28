@@ -39,13 +39,13 @@
       "handoffPath": "handoffs/scaffold-variants-a-to-e.md",
       "startedAt": "2026-05-28T16:15:30.427Z",
       "finishedAt": "2026-05-28T17:01:26.387Z",
-      "lastUpdate": "2026-05-28T17:01:26.387Z",
+      "lastUpdate": "2026-05-28T17:01:27.427Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "not-verified"
     },
     {
       "name": "inventory-btcli",
@@ -107,12 +107,12 @@
       "agentId": "bc-31285050-3318-4760-b826-51840cd5e50e",
       "runId": "run-3dc4083d-4fe9-4f40-ab9e-2e0c9eeed2c8",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-matrix.md",
       "startedAt": "2026-05-28T16:48:48.810Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:48:52.343Z",
+      "finishedAt": "2026-05-28T17:03:09.439Z",
+      "lastUpdate": "2026-05-28T17:03:09.439Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -282,6 +282,10 @@
     {
       "at": "2026-05-28T16:48:50.807Z",
       "message": "inventory-btcli: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T17:01:27.428Z",
+      "message": "scaffold-variants-a-to-e: verification self-reported (not-verified)"
     }
   ]
 }
