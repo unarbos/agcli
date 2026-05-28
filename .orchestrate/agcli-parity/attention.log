@@ -1,0 +1,8 @@
+[2026-05-28T15:17:45.384Z] bootstrap-parity-env: SSE idle 340583ms, polled status=running; watchdog still waiting
+[2026-05-28T15:17:45.385Z] bootstrap-parity-env: tool_call idle 343973ms; last=2026-05-28T15:12:01.412Z
+[2026-05-28T15:24:47.959Z] bootstrap-parity-env: cancelled by operator
+[2026-05-28T15:32:02.888Z] bootstrap-parity-env: SSE idle 339055ms, polled status=running; watchdog still waiting
+[2026-05-28T15:32:02.888Z] bootstrap-parity-env: tool_call idle 346601ms; last=2026-05-28T15:26:16.287Z
+[2026-05-28T15:40:05.481Z] bootstrap-parity-env: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T15:40:06.571Z] bootstrap-parity-env: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env.md
+[2026-05-28T15:40:06.572Z] bootstrap-parity-env: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/bootstrap-parity-env-failure.md

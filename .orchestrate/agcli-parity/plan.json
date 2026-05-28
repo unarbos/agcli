@@ -22,12 +22,46 @@
   ],
   "tasks": [
     {
-      "name": "bootstrap-parity-env",
+      "name": "bootstrap-toolchain",
       "type": "worker",
-      "scopedGoal": "Phase 0 — Environment bootstrap for the agcli-parity orchestrate run.\n\nRead `.orchestrate/agcli-parity/discovery.md` FIRST (especially the `Cloud-agent VM environment recipe` and `Scaffold variants` sections).\n\nConcretely:\n\n1. Install Rust >= 1.89 via `rustup install stable && rustup default stable`. Confirm `rustc -V`.\n2. Initialize the `subtensor/` submodule shallowly: `git submodule update --init --depth=1 -- subtensor`.\n3. Install Docker (`docker.io` via apt) with the vfs storage driver (see recipe). Start `dockerd` in the background. Confirm with `sudo docker run --rm hello-world`.\n4. Pull the localnet image: `sudo docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready`. Record the image digest from `sudo docker inspect`.\n5. Create a Python venv at `.venv`, install pinned reference tools: `pip install bittensor bittensor-cli`. Record `pip show bittensor` and `pip show bittensor-cli` outputs (versions + locations + summary). Also record `btcli --version`.\n6. Build the agcli release binary: `SKIP_METADATA_FETCH=1 cargo build --release --bin agcli`. Confirm `target/release/agcli --version` and capture the git SHA of HEAD.\n7. Smoke-test `target/release/agcli localnet scaffold --output json` against the default `examples/scaffold.toml`. Confirm the JSON has `endpoint`, `block_height`, and at least one `subnets[].neurons[].ss58`. Tear down the container at end (`docker rm -f agcli_localnet`).\n8. Write 5 scaffold variant configs at `examples/scaffold-variants/scaffold-A-baseline.toml`, `scaffold-B-commit-reveal.toml`, `scaffold-C-multi-subnet.toml`, `scaffold-D-mechanisms.toml`, `scaffold-E-user-liquidity.toml`. Each must boot via `agcli localnet scaffold --config <path> --output json` to a healthy state. Use distinct container names (e.g. `agcli_parity_A`...) so they can coexist on different ports if needed. The five variants must exercise: A=default baseline (1 subnet, 3 neurons, commit-reveal off); B=1 subnet with commit-reveal on + short reveal interval; C=2 subnets with distinct tempos (cross-subnet ops); D=1 subnet with mechanism_count > 1 (look up the field name in `src/scaffold.rs`; if not exposed at scaffold level, emit a comment noting the gap and using sudo `admin set-mechanism-count` post-scaffold); E=1 subnet with `toggle_user_liquidity=true` and seeded LP positions (again, if scaffold doesn't expose it, document the post-scaffold step inside a comment header in the TOML file).\n9. Verify each variant by booting it sequentially (one at a time, tear down between), capturing the `subnets` summary, and recording the variant's expected on-chain shape (e.g. `subnet 1 has 3 neurons, alice has UID 0`). Stop after each.\n10. Write `docs/parity/versions.json` and `docs/parity/versions.md` capturing: agcli git SHA + version; btcli PyPI version + git SHA (look up via `pip show bittensor-cli` and the package's `Homepage` field); bittensor PyPI version + git SHA; localnet image fully-qualified digest; subtensor submodule SHA; rustc version; docker version; Python version. Mark the exact pip install command that reproduces the versions.\n11. Append a single line to `.orchestrate/agcli-parity/discovery.md` at the `## Verified at` tail with the format: `verified at <UTC iso> on rustc <ver>, docker <ver>, btcli <ver>, bittensor <ver>, agcli <git sha>, localnet image digest <sha256:...>`.\n12. Commit and push to the cloud-agent branch (whatever the spawn assigned). No PR.\n\nKnown gotchas:\n- The cloud-agent VM lacks `docker` out of the box. Install yourself.\n- `cargo build --release` is slow (multi-minute); be patient. Use `SKIP_METADATA_FETCH=1` so `build.rs` reuses the cached metadata instead of hitting finney.\n- The 5 scaffold variants must actually boot. Do not just write TOML and hope; run each one.\n- If a scaffold variant cannot be expressed in TOML (e.g. mechanism_count > 1), boot the base scaffold and apply the additional admin-utils sudo call from a shell snippet embedded as a comment block in the TOML file; document the discrepancy in your handoff `## Findings`.\n\nDo NOT modify src/ or tests/ in this task. If you find scaffold-level gaps (e.g. mechanism_count not exposed), log them as `## Suggested follow-ups`.",
+      "scopedGoal": "Phase 0a — Install toolchain, build agcli release, capture version manifest. (Narrow slice of Phase 0; the scaffold variants are a separate task.)\n\nRead `.orchestrate/agcli-parity/discovery.md` FIRST (especially the `Cloud-agent VM environment recipe` section).\n\nDo ONLY these things and write a handoff as soon as the deliverables exist. Do NOT try to also write scaffold variants or run the full Phase 0; that is `scaffold-variants-a-to-e`'s job.\n\n1. `rustup install stable && rustup default stable` → verify `rustc -V` shows >= 1.89.\n2. `git submodule update --init --depth=1 -- subtensor` → verify `subtensor/Cargo.toml` exists.\n3. Install Docker (`sudo apt-get install -y docker.io`) with the vfs storage driver (see recipe). Start dockerd in the background (write `/tmp/dockerd.log`). Verify `sudo docker run --rm hello-world` succeeds.\n4. `sudo docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready` → capture the image digest (`sudo docker inspect ghcr.io/opentensor/subtensor-localnet:devnet-ready --format '{{index .RepoDigests 0}}'`).\n5. `python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip && pip install bittensor bittensor-cli` → capture `pip show bittensor` and `pip show bittensor-cli` outputs (versions). Also capture `btcli --version`. **Do NOT** keep the venv alive between shells; just record the install ran clean.\n6. `SKIP_METADATA_FETCH=1 cargo build --release --bin agcli` → verify `target/release/agcli --version` prints. Capture `git rev-parse HEAD` for the agcli git SHA.\n7. Smoke-test the default scaffold: pick an unused port (e.g. 9970), run `sudo target/release/agcli localnet scaffold --output json --port 9970` (you may need `sudo` so Docker is reachable; alternatively add the agent user to the docker group). Capture the JSON; assert it contains `endpoint`, `block_height`, and at least one `subnets[0].neurons[0].ss58`. Tear down the container (`sudo docker rm -f agcli_localnet`).\n8. Write `docs/parity/versions.json` and `docs/parity/versions.md` capturing:\n   - `agcli`: `{ git_sha, version, build: \"cargo --release\" }`\n   - `btcli`: `{ pypi_version, command: \"pip install bittensor-cli==<version>\" }` (best-effort git SHA via `pip show bittensor-cli` Homepage)\n   - `bittensor`: same shape\n   - `subtensor_localnet_image`: `{ tag: \"ghcr.io/opentensor/subtensor-localnet:devnet-ready\", digest: \"sha256:...\" }`\n   - `subtensor_submodule_sha`: from `git -C subtensor rev-parse HEAD`\n   - `rustc`, `docker`, `python` versions\n   - `recorded_at`: UTC ISO timestamp\n9. Append ONE line to `.orchestrate/agcli-parity/discovery.md` (at the `## Verified at` tail): `verified at <UTC iso> on rustc <ver>, docker <ver>, btcli <ver>, bittensor <ver>, agcli <git sha>, localnet image digest <sha256:...>`.\n10. Commit and push to the cloud-agent branch (whatever the spawn assigned, which will be `orch/agcli-parity/bootstrap-toolchain`). No PR.\n\nKnown gotchas:\n- The cloud-agent VM has no Docker preinstalled. Install yourself.\n- `cargo build --release` is slow (4–10 minutes); be patient. Always set `SKIP_METADATA_FETCH=1`.\n- If a step has been done before by a previous attempt on this branch (idempotent: `cargo build` is a no-op on warm cache), still record the artifact and continue.\n- If you need >1 hour total, stop and produce a `partial` handoff with the deliverables you DID complete and a clear `## Notes` line about what remains. The planner will follow up. DO NOT silently quit.\n- DO NOT also write the 5 scaffold variant TOMLs in this task. That is `scaffold-variants-a-to-e`'s scope and the planner will only schedule it after this handoff lands.\n\nDo NOT touch src/, tests/, examples/scaffold-variants/, or any inventory/matrix/report file.",
       "pathsAllowed": [
         "docs/parity/versions.json",
         "docs/parity/versions.md",
+        ".orchestrate/agcli-parity/discovery.md",
+        ".orchestrate/agcli-parity/handoffs/**"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/**",
+        "examples/scaffold-variants/**",
+        "docs/parity/inventory-*.md",
+        "docs/parity/inventory-*.json",
+        "docs/parity/matrix.json",
+        "docs/parity/matrix.md",
+        "docs/parity/ux-scorecard.md",
+        "docs/parity/parity-report.md"
+      ],
+      "acceptance": [
+        "rustc >= 1.89 installed.",
+        "subtensor submodule populated.",
+        "Docker installed and running; `sudo docker run --rm hello-world` succeeded.",
+        "`ghcr.io/opentensor/subtensor-localnet:devnet-ready` image pulled and digest recorded.",
+        "`bittensor` and `bittensor-cli` installed in `.venv/`; versions captured.",
+        "`SKIP_METADATA_FETCH=1 cargo build --release --bin agcli` succeeded.",
+        "`target/release/agcli localnet scaffold --output json --port <unused>` produced valid JSON with a non-empty `subnets[0].neurons[0].ss58`.",
+        "`docs/parity/versions.{json,md}` exists and pins agcli git SHA, btcli + bittensor versions, image digest, rustc/docker/python versions.",
+        "`.orchestrate/agcli-parity/discovery.md` has the final `verified at ...` line appended."
+      ],
+      "verify": "## Automated\n- `[ -f docs/parity/versions.json ] && jq -e '.agcli.git_sha and .subtensor_localnet_image.digest and .btcli.pypi_version' docs/parity/versions.json`.\n- `target/release/agcli --version` prints.\n\n## Manual\n- N/A.\n\n## Gotchas\n- Use a free port (e.g. 9970) for the smoke-test scaffold to avoid collisions.",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3
+    },
+    {
+      "name": "scaffold-variants-a-to-e",
+      "type": "worker",
+      "scopedGoal": "Phase 0b — Write 5 scaffold variant TOMLs at `examples/scaffold-variants/` and verify each boots cleanly via `agcli localnet scaffold --config <path> --output json --port <unused>`.\n\nRead `.orchestrate/agcli-parity/discovery.md` FIRST. The `bootstrap-toolchain` handoff (pasted into your prompt automatically) confirms Rust/Docker/agcli/bittensor are already installed on this VM, so reuse them; do NOT reinstall.\n\nDeliverables:\n\n1. `examples/scaffold-variants/scaffold-A-baseline.toml` — 1 subnet, 3 neurons (1 validator + 2 miners), `commit_reveal = false`, `tempo = 100`, default-ish hyperparams. Container name `agcli_parity_A`. Port 9971.\n2. `examples/scaffold-variants/scaffold-B-commit-reveal.toml` — 1 subnet, 3 neurons, `commit_reveal = true`, short reveal interval (set `reveal_period_epochs` to the lowest valid value the chain accepts; check `src/scaffold.rs` and `subtensor/pallets/admin-utils/src/lib.rs` for the canonical field). Container name `agcli_parity_B`. Port 9972.\n3. `examples/scaffold-variants/scaffold-C-multi-subnet.toml` — 2 subnets with distinct tempos (e.g. 100 and 50), distinct `max_allowed_validators`. Each subnet has its own neuron set (validator + 2 miners). Container name `agcli_parity_C`. Port 9973.\n4. `examples/scaffold-variants/scaffold-D-mechanisms.toml` — 1 subnet with `mechanism_count > 1`. Look up the field name in `src/scaffold.rs` (search for `mechanism`). If the scaffold TOML schema does NOT expose it directly, write the TOML as a baseline plus a top-of-file comment block giving the exact `agcli admin set-mechanism-count` or `sudo_set_mechanism_count` invocation to apply post-scaffold; document this in your handoff `## Findings`. Container name `agcli_parity_D`. Port 9974.\n5. `examples/scaffold-variants/scaffold-E-user-liquidity.toml` — 1 subnet with user liquidity enabled (`toggle_user_liquidity` true). Same approach as Variant D if the field isn't in the TOML schema: comment block with the post-scaffold invocation. Container name `agcli_parity_E`. Port 9975.\n\nFor each variant:\n- Boot via `sudo target/release/agcli localnet scaffold --config examples/scaffold-variants/scaffold-<X>-*.toml --output json --port <variant_port>` (one variant at a time; tear down between with `sudo docker rm -f <container_name>`).\n- Validate JSON shape: `jq -e '.endpoint and .block_height and (.subnets | length >= 1) and (.subnets[0].neurons | length >= 1) and .subnets[0].neurons[0].ss58'`.\n- Capture the JSON output to `examples/scaffold-variants/scaffold-<X>-expected.json` so downstream parity tests have a stable reference.\n- Tear down before booting the next variant.\n\nAlso write a single-line comment header at the top of each TOML stating: container name, port, expected subnet count, expected neuron count, any required post-scaffold sudo call.\n\nCommit and push to the cloud-agent branch (`orch/agcli-parity/scaffold-variants-a-to-e`). No PR.\n\nKnown gotchas:\n- Docker is reachable via `sudo`; either prefix commands or add the agent user to the `docker` group at the start.\n- Variants D and E may require post-scaffold sudo calls if the TOML schema doesn't expose those fields. That is acceptable; document the call in the TOML comment and your handoff. Do NOT modify `src/scaffold.rs` to add the field — that's a downstream gap-closure task, log it as a follow-up.\n- Use distinct ports per variant so a future parallel CI job can run them concurrently if needed.\n\nDo NOT touch src/, tests/, docs/parity/inventory-*, docs/parity/matrix.*, docs/parity/ux-scorecard.md, or docs/parity/parity-report.md.",
+      "pathsAllowed": [
         "examples/scaffold-variants/**",
         ".orchestrate/agcli-parity/discovery.md",
         ".orchestrate/agcli-parity/handoffs/**"
@@ -39,22 +73,22 @@
         "docs/parity/inventory-*.json",
         "docs/parity/matrix.json",
         "docs/parity/matrix.md",
+        "docs/parity/versions.*",
         "docs/parity/ux-scorecard.md",
         "docs/parity/parity-report.md"
       ],
       "acceptance": [
-        "Rust toolchain >= 1.89 installed and `subtensor/` submodule populated.",
-        "Docker installed and the localnet image pulled; image digest recorded.",
-        "`btcli --version` and `pip show bittensor` outputs captured in versions.json.",
-        "`SKIP_METADATA_FETCH=1 cargo build --release --bin agcli` succeeds.",
-        "`agcli localnet scaffold --output json` against the default config returns valid JSON with a non-empty `subnets[].neurons[].ss58`.",
-        "5 scaffold variant TOMLs exist at `examples/scaffold-variants/` and each one boots successfully.",
-        "`docs/parity/versions.{json,md}` pins agcli, btcli, bittensor, image digest, rustc, docker, Python.",
-        "`.orchestrate/agcli-parity/discovery.md` has the final `verified at ...` line appended."
+        "5 scaffold variant TOMLs exist under `examples/scaffold-variants/` (A through E).",
+        "Each variant boots successfully (handoff cites the captured JSON path).",
+        "`examples/scaffold-variants/scaffold-<X>-expected.json` exists for each variant.",
+        "Variants D and E document any post-scaffold sudo calls needed (TOML comment + handoff Findings)."
       ],
-      "verify": "## Setup\n- Run the bootstrap recipe in `.orchestrate/agcli-parity/discovery.md` end-to-end.\n\n## Automated\n- `target/release/agcli --version` prints a version.\n- For each variant TOML: `sudo docker rm -f agcli_parity_test || true; target/release/agcli localnet scaffold --config <path> --output json --port <unused-port> > /tmp/<variant>.json && jq -e '.subnets | length >= 1' /tmp/<variant>.json`.\n\n## Manual\n- N/A.\n\n## Gotchas\n- Use `--port` to avoid colliding with a previously-running scaffold container.",
+      "verify": "## Automated\n- For each X in A..E: `[ -f examples/scaffold-variants/scaffold-${X}-expected.json ] && jq -e '.endpoint and .block_height and (.subnets | length >= 1)' examples/scaffold-variants/scaffold-${X}-expected.json`.\n\n## Manual\n- N/A.",
       "model": "gpt-5.3-codex-high-fast",
-      "maxAttempts": 4
+      "maxAttempts": 3,
+      "dependsOn": [
+        "bootstrap-toolchain"
+      ]
     },
     {
       "name": "inventory-btcli",
@@ -85,7 +119,7 @@
       "model": "gpt-5.5-high-fast",
       "maxAttempts": 4,
       "dependsOn": [
-        "bootstrap-parity-env"
+        "bootstrap-toolchain"
       ]
     },
     {
@@ -117,7 +151,7 @@
       "model": "gpt-5.5-high-fast",
       "maxAttempts": 4,
       "dependsOn": [
-        "bootstrap-parity-env"
+        "bootstrap-toolchain"
       ]
     },
     {
@@ -186,7 +220,8 @@
       "model": "claude-opus-4-7-thinking-xhigh",
       "maxAttempts": 2,
       "dependsOn": [
-        "parity-matrix"
+        "parity-matrix",
+        "scaffold-variants-a-to-e"
       ]
     },
     {
