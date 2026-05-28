@@ -177,21 +177,21 @@
       "dependsOn": [
         "phase4-gap-triage"
       ],
-      "agentId": "bc-f25526d9-e99d-4d11-ad8d-bd643055b09d",
-      "runId": "run-c03547e0-087b-4336-b23e-c2c270ca841b",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/phase5-ux-scorecard.md",
-      "startedAt": "2026-05-28T20:36:34.745Z",
-      "finishedAt": "2026-05-28T20:37:54.489Z",
-      "lastUpdate": "2026-05-28T20:37:54.489Z",
-      "note": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-28T20:42:26.697Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "failureMode": null,
+      "verification": null
     },
     {
       "name": "phase6-ci-and-report",
