@@ -79,15 +79,15 @@
       "dependsOn": [
         "bootstrap-toolchain"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-fc17e35f-aa4f-4d38-bf09-695cf4632743",
+      "runId": "run-77022913-52c0-43b2-aae4-1671024e1760",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/inventory-sdk.md",
       "startedAt": "2026-05-28T16:17:46.632Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-28T16:17:46.632Z",
+      "finishedAt": "2026-05-28T16:39:49.642Z",
+      "lastUpdate": "2026-05-28T16:39:49.642Z",
       "note": "respawned by self-planner (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
@@ -249,6 +249,26 @@
     {
       "at": "2026-05-28T16:17:26.477Z",
       "message": "inventory-sdk: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:23:47.176Z",
+      "message": "inventory-btcli: SSE idle 341294ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:23:47.176Z",
+      "message": "inventory-btcli: tool_call idle 344057ms; last=2026-05-28T16:18:03.119Z"
+    },
+    {
+      "at": "2026-05-28T16:23:51.319Z",
+      "message": "inventory-sdk: SSE idle 331633ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:23:51.319Z",
+      "message": "inventory-sdk: tool_call idle 335234ms; last=2026-05-28T16:18:16.085Z"
+    },
+    {
+      "at": "2026-05-28T16:31:45.059Z",
+      "message": "scaffold-variants-a-to-e: tool_call idle 319493ms; last=2026-05-28T16:26:25.566Z"
     }
   ]
 }
