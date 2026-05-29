@@ -324,17 +324,17 @@
       "agentId": "bc-198ebaad-f599-4ad6-a2e7-f87d188880d8",
       "runId": "run-75fa80ce-013e-44d6-a80b-67f2706e998f",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
+      "status": "error",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-29T07:21:58.221Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:22:01.396Z",
-      "note": null,
+      "lastUpdate": "2026-05-29T09:59:01.632Z",
+      "note": "recover failed: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()",
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "network-drop",
       "verification": null
     },
     {
@@ -548,11 +548,11 @@
       "finishedAt": "2026-05-29T08:45:46.165Z",
       "lastUpdate": "2026-05-29T08:45:47.733Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": "type-check-only",
-      "attempts": 1
+      "verification": "type-check-only"
     }
   ],
   "attention": [
