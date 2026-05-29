@@ -458,20 +458,20 @@
       "dependsOn": [
         "fix-p0-btcli-sudo-stake-burn"
       ],
-      "agentId": "bc-4d5b1c46-9825-4021-92bc-0ad5641a4308",
-      "runId": "run-3ac46119-b2ce-43e7-92ce-0cff5452824e",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/fix-p1-senate.md",
-      "startedAt": "2026-05-29T06:41:24.207Z",
-      "finishedAt": "2026-05-29T06:41:50.949Z",
-      "lastUpdate": "2026-05-29T06:41:50.950Z",
-      "note": "respawned by local-cli (was error; attempts=1)",
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T07:09:31.053Z",
+      "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -966,6 +966,10 @@
     {
       "at": "2026-05-29T07:09:04.364Z",
       "message": "fix-p1-sdk-power-surface: unreachable — blocked on fix-p1-senate-vote (error). Fix the upstream and rerun, or `kill fix-p1-sdk-power-surface` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:30.816Z",
+      "message": "merge-phase3-tests: respawned by local-cli (was error)"
     }
   ]
 }
