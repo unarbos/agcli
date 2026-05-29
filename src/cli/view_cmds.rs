@@ -143,6 +143,24 @@ pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> R
             }
             handle_emissions(client, NetUid(netuid), limit, output).await
         }
+        ViewCommands::RuntimeApi { command } => match command {
+            crate::cli::RuntimeApiCommands::Call {
+                api,
+                method,
+                params_json,
+                at_block,
+            } => {
+                crate::cli::sdk_cmds::handle_runtime_api_call(
+                    client,
+                    output,
+                    &api,
+                    &method,
+                    &params_json,
+                    at_block,
+                )
+                .await
+            }
+        },
     }
 }
 

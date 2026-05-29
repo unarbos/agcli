@@ -1,0 +1,186 @@
+[2026-05-28T17:19:35.481Z] git-sync failed (parity-balance-transfer pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:42.654Z] git-sync failed (parity-balance-transfer running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:42.654Z] parity-balance-transfer: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:19:42.969Z] git-sync failed (parity-wallet pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:49.814Z] git-sync failed (parity-wallet running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:49.814Z] parity-wallet: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:19:50.083Z] git-sync failed (parity-stake-basic pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:56.992Z] git-sync failed (parity-stake-basic running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:19:56.992Z] parity-stake-basic: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:19:57.289Z] git-sync failed (parity-stake-advanced pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:04.250Z] git-sync failed (parity-stake-advanced running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:04.250Z] parity-stake-advanced: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:04.590Z] git-sync failed (parity-subnet-register pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:11.474Z] git-sync failed (parity-subnet-register running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:11.474Z] parity-subnet-register: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:11.799Z] git-sync failed (parity-subnet-hyperparams pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:18.629Z] git-sync failed (parity-subnet-hyperparams running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:18.629Z] parity-subnet-hyperparams: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:18.947Z] git-sync failed (parity-weights pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:25.751Z] git-sync failed (parity-weights running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:25.751Z] parity-weights: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:26.037Z] git-sync failed (parity-root pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:32.910Z] git-sync failed (parity-root running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:32.910Z] parity-root: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:33.199Z] git-sync failed (parity-identity-commitment pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:39.973Z] git-sync failed (parity-identity-commitment running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:39.973Z] parity-identity-commitment: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:40.354Z] git-sync failed (parity-governance pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:47.201Z] git-sync failed (parity-governance running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:47.201Z] parity-governance: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:47.539Z] git-sync failed (parity-network-readonly pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:54.349Z] git-sync failed (parity-network-readonly running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:20:54.349Z] parity-network-readonly: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:20:54.662Z] git-sync failed (parity-misc pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:21:01.412Z] git-sync failed (parity-misc running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:21:01.412Z] parity-misc: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-28T17:21:01.799Z] git-sync failed (exit-on-error: parity-balance-transfer, parity-wallet, parity-stake-basic, parity-stake-advanced, parity-subnet-register, parity-subnet-hyperparams, parity-weights, parity-root, parity-identity-commitment, parity-governance, parity-network-readonly, parity-misc): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push
+To https://github.com/unarbos/agcli
+ ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…
+[2026-05-28T17:22:22.655Z] parity-balance-transfer: respawned by self-planner (was error)
+[2026-05-28T17:22:22.998Z] parity-wallet: respawned by self-planner (was error)
+[2026-05-28T17:22:23.337Z] parity-stake-basic: respawned by self-planner (was error)
+[2026-05-28T17:22:23.676Z] parity-stake-advanced: respawned by self-planner (was error)
+[2026-05-28T17:22:24.009Z] parity-subnet-register: respawned by self-planner (was error)
+[2026-05-28T17:22:24.343Z] parity-subnet-hyperparams: respawned by self-planner (was error)
+[2026-05-28T17:22:24.675Z] parity-weights: respawned by self-planner (was error)
+[2026-05-28T17:22:25.026Z] parity-root: respawned by self-planner (was error)
+[2026-05-28T17:22:25.361Z] parity-identity-commitment: respawned by self-planner (was error)
+[2026-05-28T17:22:25.708Z] parity-governance: respawned by self-planner (was error)
+[2026-05-28T17:22:26.049Z] parity-network-readonly: respawned by self-planner (was error)
+[2026-05-28T17:22:26.406Z] parity-misc: respawned by self-planner (was error)
+[2026-05-28T17:23:10.410Z] parity-network-readonly: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:23:10.411Z] parity-network-readonly: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly.md
+[2026-05-28T17:23:10.412Z] parity-network-readonly: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly-failure.md
+[2026-05-28T17:23:42.563Z] parity-network-readonly: respawned by self-planner (was error)
+[2026-05-28T17:28:47.999Z] parity-balance-transfer: tool_call idle 300436ms; last=none since wait start (2026-05-28T17:23:47.563Z)
+[2026-05-28T17:28:48.178Z] parity-stake-basic: tool_call idle 300036ms; last=2026-05-28T17:23:48.142Z
+[2026-05-28T17:28:48.329Z] parity-stake-advanced: tool_call idle 300089ms; last=2026-05-28T17:23:48.240Z
+[2026-05-28T17:28:48.469Z] parity-subnet-hyperparams: tool_call idle 300427ms; last=none since wait start (2026-05-28T17:23:48.042Z)
+[2026-05-28T17:28:48.490Z] parity-subnet-register: SSE idle 300112ms, polled status=running; watchdog still waiting
+[2026-05-28T17:28:48.490Z] parity-subnet-register: tool_call idle 300553ms; last=none since wait start (2026-05-28T17:23:47.937Z)
+[2026-05-28T17:28:48.766Z] parity-identity-commitment: tool_call idle 300079ms; last=2026-05-28T17:23:48.687Z
+[2026-05-28T17:28:48.813Z] parity-root: tool_call idle 300175ms; last=2026-05-28T17:23:48.638Z
+[2026-05-28T17:28:48.840Z] parity-governance: SSE idle 300001ms, polled status=running; watchdog still waiting
+[2026-05-28T17:28:48.840Z] parity-governance: tool_call idle 300001ms; last=2026-05-28T17:23:48.839Z
+[2026-05-28T17:28:48.883Z] parity-weights: SSE idle 300340ms, polled status=running; watchdog still waiting
+[2026-05-28T17:28:48.884Z] parity-weights: tool_call idle 300341ms; last=2026-05-28T17:23:48.543Z
+[2026-05-28T17:28:49.163Z] parity-misc: tool_call idle 300197ms; last=2026-05-28T17:23:48.966Z
+[2026-05-28T17:29:29.758Z] parity-subnet-register: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:29:29.760Z] parity-subnet-register: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register.md
+[2026-05-28T17:29:29.760Z] parity-subnet-register: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register-failure.md
+[2026-05-28T17:29:46.757Z] parity-subnet-register: respawned by self-planner (was error)
+[2026-05-28T17:30:09.373Z] parity-subnet-register: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:30:09.374Z] parity-subnet-register: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register.md
+[2026-05-28T17:30:09.375Z] parity-subnet-register: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register-failure.md
+[2026-05-28T17:34:01.142Z] parity-governance: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:34:01.143Z] parity-governance: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-governance.md
+[2026-05-28T17:34:01.144Z] parity-governance: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-governance-failure.md
+[2026-05-28T17:34:18.455Z] parity-governance: respawned by self-planner (was error)
+[2026-05-28T17:36:12.250Z] parity-subnet-hyperparams: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:36:12.251Z] parity-subnet-hyperparams: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams.md
+[2026-05-28T17:36:12.252Z] parity-subnet-hyperparams: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams-failure.md
+[2026-05-28T17:36:29.274Z] parity-subnet-hyperparams: respawned by self-planner (was error)
+[2026-05-28T17:38:35.136Z] parity-misc: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:38:35.137Z] parity-misc: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-misc.md
+[2026-05-28T17:38:35.138Z] parity-misc: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-misc-failure.md
+[2026-05-28T17:38:49.092Z] parity-misc: respawned by self-planner (was error)
+[2026-05-28T17:39:19.391Z] parity-identity-commitment: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:39:19.393Z] parity-identity-commitment: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-identity-commitment.md
+[2026-05-28T17:39:19.394Z] parity-identity-commitment: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-identity-commitment-failure.md
+[2026-05-28T17:39:38.715Z] parity-identity-commitment: respawned by self-planner (was error)
+[2026-05-28T17:39:45.913Z] parity-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:39:45.914Z] parity-weights: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights.md
+[2026-05-28T17:39:45.915Z] parity-weights: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights-failure.md
+[2026-05-28T17:39:56.356Z] parity-weights: respawned by self-planner (was error)
+[2026-05-28T17:41:23.175Z] parity-stake-advanced: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:41:23.176Z] parity-stake-advanced: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced.md
+[2026-05-28T17:41:23.177Z] parity-stake-advanced: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced-failure.md
+[2026-05-28T17:41:33.713Z] parity-stake-advanced: respawned by self-planner (was error)
+[2026-05-28T17:42:16.315Z] parity-subnet-hyperparams: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:42:16.317Z] parity-subnet-hyperparams: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams.md
+[2026-05-28T17:42:16.318Z] parity-subnet-hyperparams: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams-failure.md
+[2026-05-28T17:43:16.083Z] parity-network-readonly: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:43:16.085Z] parity-network-readonly: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly.md
+[2026-05-28T17:43:16.086Z] parity-network-readonly: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly-failure.md
+[2026-05-28T17:48:36.186Z] parity-weights: SSE idle 300105ms, polled status=running; watchdog still waiting
+[2026-05-28T17:48:36.187Z] parity-weights: tool_call idle 300106ms; last=2026-05-28T17:43:36.081Z
+[2026-05-28T17:48:36.376Z] parity-identity-commitment: tool_call idle 300478ms; last=none since wait start (2026-05-28T17:43:35.898Z)
+[2026-05-28T17:48:36.483Z] parity-stake-advanced: SSE idle 300433ms, polled status=running; watchdog still waiting
+[2026-05-28T17:48:36.483Z] parity-stake-advanced: tool_call idle 300839ms; last=none since wait start (2026-05-28T17:43:35.644Z)
+[2026-05-28T17:48:36.530Z] parity-misc: SSE idle 300112ms, polled status=running; watchdog still waiting
+[2026-05-28T17:48:36.530Z] parity-misc: tool_call idle 300458ms; last=none since wait start (2026-05-28T17:43:36.072Z)
+[2026-05-28T17:49:36.469Z] parity-governance: tool_call idle 360079ms; last=2026-05-28T17:43:36.390Z
+[2026-05-28T17:50:31.515Z] parity-stake-basic: verification self-reported (not-verified)
+[2026-05-28T17:50:36.604Z] parity-governance: SSE idle 310227ms, polled status=running; watchdog still waiting
+[2026-05-28T17:50:59.548Z] parity-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:50:59.550Z] parity-weights: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights.md
+[2026-05-28T17:50:59.552Z] parity-weights: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights-failure.md
+[2026-05-28T17:56:19.055Z] parity-stake-advanced: SSE idle 300302ms, polled status=running; watchdog still waiting
+[2026-05-28T17:56:19.057Z] parity-stake-advanced: tool_call idle 300612ms; last=none since wait start (2026-05-28T17:51:18.445Z)
+[2026-05-28T17:58:57.808Z] parity-stake-advanced: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status
+[2026-05-28T17:58:57.811Z] parity-stake-advanced: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced.md
+[2026-05-28T17:58:57.812Z] parity-stake-advanced: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced-failure.md
+[2026-05-28T18:03:56.806Z] parity-governance: verification self-reported (not-verified)
+[2026-05-28T18:07:22.970Z] parity-wallet: verification self-reported (unit-test-verified)
+[2026-05-28T18:10:17.126Z] parity-balance-transfer: SSE idle 322216ms, polled status=running; watchdog still waiting
+[2026-05-28T18:10:17.128Z] parity-balance-transfer: tool_call idle 322218ms; last=2026-05-28T18:04:54.910Z
+[2026-05-28T18:11:49.343Z] parity-balance-transfer: verification self-reported (unit-test-verified)
+[2026-05-28T18:17:09.729Z] parity-misc: verification self-reported (not-verified)
+[2026-05-28T18:18:17.928Z] parity-root: tool_call idle 334066ms; last=2026-05-28T18:12:43.861Z
+[2026-05-28T18:19:17.932Z] parity-identity-commitment: tool_call idle 358226ms; last=2026-05-28T18:13:19.706Z
+[2026-05-28T18:22:18.263Z] parity-identity-commitment: SSE idle 304107ms, polled status=running; watchdog still waiting
+[2026-05-28T18:23:18.548Z] parity-root: SSE idle 354470ms, polled status=running; watchdog still waiting
+[2026-05-28T18:45:11.483Z] parity-root: cancelled by operator
+[2026-05-28T18:45:12.292Z] parity-identity-commitment: cancelled by operator
+[2026-05-28T18:46:03.386Z] parity-root: run ended with status=cancelled; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-root.md
+[2026-05-28T18:46:03.388Z] parity-root: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-root-failure.md
+[2026-05-28T18:47:04.958Z] parity-identity-commitment: cancelled by operator
