@@ -1121,11 +1121,16 @@
     "source": "btcli",
     "ref_invocation": "btcli sudo senate-vote --proposal-hash 0x00 --vote yes --wallet-name mywallet --no-prompt",
     "ref_extrinsic": "SubtensorModule.vote",
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
-    "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "triage_tier: P1; No dedicated senate vote submission command in agcli."
+    "agcli_invocation": "agcli admin raw --call senate-vote --args '[\"0x<proposal_hash>\",\"yes\"]' --sudo-key //Alice --yes --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --proposal-hash ↔ agcli: --args[0]",
+      "btcli: --vote yes|no ↔ agcli: --args[1] (yes/no, aye/nay, true/false, 1/0)",
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: --sudo-key (dev URI or wallet fallback signer)"
+    ],
+    "parity_test": "tests/parity/senate_vote.rs::parity_senate_vote",
+    "notes": "Closed via admin raw governance alias that resolves proposal index from Triumvirate.Voting and submits SubtensorModule.vote."
   },
   {
     "id": "btcli.sudo.set",

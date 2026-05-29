@@ -1425,6 +1425,117 @@ impl Client {
         }
     }
 
+    /// Get vote data for a governance proposal from Triumvirate storage.
+    pub async fn get_triumvirate_vote_data(
+        &self,
+        proposal_hash: [u8; 32],
+    ) -> Result<Option<TriumvirateVoteData>> {
+        let inner = &self.inner;
+        let result = retry_on_transient("get_triumvirate_vote_data", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage(
+                "Triumvirate",
+                "Voting",
+                vec![subxt::dynamic::Value::from_bytes(proposal_hash)],
+            );
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch Triumvirate voting data")?;
+            Ok(r)
+        })
+        .await?;
+
+        match result {
+            Some(val) => {
+                if let Ok(dynamic) = val.to_value() {
+                    if let Some(decoded) = decode_triumvirate_vote_data_value(&dynamic) {
+                        return Ok(Some(decoded));
+                    }
+                }
+
+                if let Ok((index, threshold, ayes, nays, end)) =
+                    val.as_type::<(u32, u32, Vec<[u8; 32]>, Vec<[u8; 32]>, u64)>()
+                {
+                    return Ok(Some(TriumvirateVoteData {
+                        index,
+                        threshold,
+                        ayes: ayes
+                            .into_iter()
+                            .map(|account| crate::AccountId::from(account).to_string())
+                            .collect(),
+                        nays: nays
+                            .into_iter()
+                            .map(|account| crate::AccountId::from(account).to_string())
+                            .collect(),
+                        end,
+                    }));
+                }
+
+                if let Ok((index, threshold, ayes, nays, end)) =
+                    val.as_type::<(u32, u32, Vec<[u8; 32]>, Vec<[u8; 32]>, u32)>()
+                {
+                    return Ok(Some(TriumvirateVoteData {
+                        index,
+                        threshold,
+                        ayes: ayes
+                            .into_iter()
+                            .map(|account| crate::AccountId::from(account).to_string())
+                            .collect(),
+                        nays: nays
+                            .into_iter()
+                            .map(|account| crate::AccountId::from(account).to_string())
+                            .collect(),
+                        end: end as u64,
+                    }));
+                }
+
+                Ok(None)
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Get active Triumvirate proposal hashes.
+    pub async fn get_triumvirate_proposals(&self) -> Result<Vec<[u8; 32]>> {
+        let inner = &self.inner;
+        let result = retry_on_transient("get_triumvirate_proposals", RPC_RETRIES, || async {
+            let addr = subxt::dynamic::storage("Triumvirate", "Proposals", ());
+            let r = inner
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&addr)
+                .await
+                .context("Failed to fetch Triumvirate proposals")?;
+            Ok(r)
+        })
+        .await?;
+
+        match result {
+            Some(val) => {
+                if let Ok(proposals) = val.as_type::<Vec<[u8; 32]>>() {
+                    return Ok(proposals);
+                }
+
+                if let Ok(proposals) = val.as_type::<Vec<([u8; 32],)>>() {
+                    return Ok(proposals.into_iter().map(|(hash,)| hash).collect());
+                }
+
+                if let Ok(dynamic) = val.to_value() {
+                    if let Some(proposals) = decode_hashes_value(&dynamic) {
+                        return Ok(proposals);
+                    }
+                }
+
+                Ok(Vec::new())
+            }
+            None => Ok(Vec::new()),
+        }
+    }
+
     // ──────── Crowdloan Queries ────────
 
     /// List all crowdloans by iterating Crowdloan storage.
@@ -2105,6 +2216,15 @@ fn decode_commitment_data(data: &api::runtime_types::pallet_commitments::types::
     )
 }
 
+#[derive(Debug, Clone)]
+pub struct TriumvirateVoteData {
+    pub index: u32,
+    pub threshold: u32,
+    pub ayes: Vec<String>,
+    pub nays: Vec<String>,
+    pub end: u64,
+}
+
 #[derive(Debug)]
 struct DecodedCrowdloanInfo {
     creator: String,
@@ -2115,6 +2235,122 @@ struct DecodedCrowdloanInfo {
     min_contribution: u64,
     finalized: bool,
     target: Option<String>,
+}
+
+fn decode_triumvirate_vote_data_value<T>(
+    value: &subxt::dynamic::Value<T>,
+) -> Option<TriumvirateVoteData>
+where
+    subxt::dynamic::Value<T>: serde::Serialize,
+{
+    let json = serde_json::to_value(value).ok()?;
+    decode_triumvirate_vote_data_json(&json)
+}
+
+fn decode_triumvirate_vote_data_json(json: &serde_json::Value) -> Option<TriumvirateVoteData> {
+    if let Some(obj) = json.as_object() {
+        let index = obj
+            .get("index")
+            .or_else(|| obj.get("proposal_index"))
+            .and_then(json_to_u64)
+            .and_then(|n| u32::try_from(n).ok())?;
+        let threshold = obj
+            .get("threshold")
+            .or_else(|| obj.get("member_count"))
+            .and_then(json_to_u64)
+            .and_then(|n| u32::try_from(n).ok())?;
+        let ayes = obj.get("ayes").and_then(json_to_ss58_accounts)?;
+        let nays = obj.get("nays").and_then(json_to_ss58_accounts)?;
+        let end = obj
+            .get("end")
+            .or_else(|| obj.get("end_block"))
+            .and_then(json_to_u64)?;
+        return Some(TriumvirateVoteData {
+            index,
+            threshold,
+            ayes,
+            nays,
+            end,
+        });
+    }
+
+    let arr = json.as_array()?;
+    let index = arr
+        .first()
+        .and_then(json_to_u64)
+        .and_then(|n| u32::try_from(n).ok())?;
+    let threshold = arr
+        .get(1)
+        .and_then(json_to_u64)
+        .and_then(|n| u32::try_from(n).ok())?;
+    let ayes = arr.get(2).and_then(json_to_ss58_accounts)?;
+    let nays = arr.get(3).and_then(json_to_ss58_accounts)?;
+    let end = arr.get(4).and_then(json_to_u64)?;
+
+    Some(TriumvirateVoteData {
+        index,
+        threshold,
+        ayes,
+        nays,
+        end,
+    })
+}
+
+fn decode_hashes_value<T>(value: &subxt::dynamic::Value<T>) -> Option<Vec<[u8; 32]>>
+where
+    subxt::dynamic::Value<T>: serde::Serialize,
+{
+    let json = serde_json::to_value(value).ok()?;
+    let mut out = Vec::new();
+    collect_hashes_json(&json, &mut out);
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+fn collect_hashes_json(json: &serde_json::Value, out: &mut Vec<[u8; 32]>) {
+    match json {
+        serde_json::Value::Array(items) => {
+            if items.len() == 32 {
+                let mut hash = [0u8; 32];
+                let mut valid = true;
+                for (idx, item) in items.iter().enumerate() {
+                    match item.as_u64().and_then(|n| u8::try_from(n).ok()) {
+                        Some(byte) => hash[idx] = byte,
+                        None => {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+                if valid {
+                    out.push(hash);
+                    return;
+                }
+            }
+            for item in items {
+                collect_hashes_json(item, out);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for value in map.values() {
+                collect_hashes_json(value, out);
+            }
+        }
+        serde_json::Value::String(value) => {
+            let hex_str = value.strip_prefix("0x").unwrap_or(value);
+            if hex_str.len() == 64 {
+                if let Ok(bytes) = hex::decode(hex_str) {
+                    if let Ok(hash) = <[u8; 32]>::try_from(bytes.as_slice()) {
+                        out.push(hash);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
 }
 
 fn decode_crowdloan_info_value<T>(value: &subxt::dynamic::Value<T>) -> Option<DecodedCrowdloanInfo>
@@ -2306,6 +2542,25 @@ fn json_to_ss58_account(value: &serde_json::Value) -> Option<String> {
             }
             if map.len() == 1 {
                 return map.values().next().and_then(json_to_ss58_account);
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn json_to_ss58_accounts(value: &serde_json::Value) -> Option<Vec<String>> {
+    match value {
+        serde_json::Value::Array(items) => {
+            let mut out = Vec::with_capacity(items.len());
+            for item in items {
+                out.push(json_to_ss58_account(item)?);
+            }
+            Some(out)
+        }
+        serde_json::Value::Object(map) => {
+            if map.len() == 1 {
+                return map.values().next().and_then(json_to_ss58_accounts);
             }
             None
         }

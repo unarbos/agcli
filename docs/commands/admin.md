@@ -88,7 +88,7 @@ Notes:
 | `set-mechanism-count` | `--netuid <u16>` `--count <u16>` `--sudo-key <String?>` | `AdminUtils::sudo_set_mechanism_count(netuid, mechanism_count)` | `(u128(netuid), u128(count))` | `SubtensorModule::MechanismCountCurrent[netuid]` and possible reset of `MechanismEmissionSplit[netuid]` when count changes | `Sudo::Sudid(Ok)` (no dedicated admin-utils event) |
 | `set-mechanism-emission-split` | `--netuid <u16>` `--weights <String>` `--sudo-key <String?>` | `AdminUtils::sudo_set_mechanism_emission_split(netuid, maybe_split: Option<Vec<u16>>)` | agcli parses CSV into `Vec<u64>` and sends unnamed composite vector, not explicit `Option<Vec<u16>>` | Intended target is `SubtensorModule::MechanismEmissionSplit[netuid]` | Can fail at dispatch/encoding if runtime rejects arg shape |
 | `set-nominator-min-stake` | `--stake <u64>` `--sudo-key <String?>` | `AdminUtils::sudo_set_nominator_min_required_stake(min_stake)` | `(u128(stake))` | `SubtensorModule::NominatorMinRequiredStake` | `Sudo::Sudid(Ok)` |
-| `raw` | `--call <String>` `--args <JSON array>` `--sudo-key <String?>` | `AdminUtils::<dynamic call name>` | JSON numbers become `u128`, bools become bool, strings become string | Depends on call | `Sudo::Sudid(...)` for runtime dispatch result |
+| `raw` | `--call <String>` `--args <JSON array>` `--sudo-key <String?>` | `AdminUtils::<dynamic call name>` plus special alias `senate-vote` → `SubtensorModule::vote` | JSON numbers become `u128`, bools become bool, strings become string | Depends on call | `Sudo::Sudid(...)` for AdminUtils calls; direct `SubtensorModule::Voted` path for `senate-vote` |
 | `list` | no args | local only, does not submit to chain | n/a | n/a | n/a |
 
 ## `admin raw` accepted call names
@@ -97,11 +97,14 @@ Notes:
 
 `sudo_set_tempo`, `sudo_set_max_allowed_validators`, `sudo_set_max_allowed_uids`, `sudo_set_immunity_period`, `sudo_set_min_allowed_weights`, `sudo_set_max_weight_limit`, `sudo_set_weights_set_rate_limit`, `sudo_set_commit_reveal_weights_enabled`, `sudo_set_difficulty`, `sudo_set_bonds_moving_average`, `sudo_set_target_registrations_per_interval`, `sudo_set_activity_cutoff`, `sudo_set_serving_rate_limit`, `sudo_set_default_take`, `sudo_set_tx_rate_limit`, `sudo_set_min_difficulty`, `sudo_set_max_difficulty`, `sudo_set_adjustment_interval`, `sudo_set_adjustment_alpha`, `sudo_set_kappa`, `sudo_set_rho`, `sudo_set_min_burn`, `sudo_set_max_burn`, `sudo_set_liquid_alpha_enabled`, `sudo_set_alpha_values`, `sudo_set_yuma3_enabled`, `sudo_set_bonds_penalty`, `sudo_set_subnet_moving_alpha`, `sudo_set_mechanism_count`, `sudo_set_mechanism_emission_split`, `sudo_set_stake_threshold`, `sudo_set_nominator_min_required_stake`, `sudo_set_network_registration_allowed`, `sudo_set_network_pow_registration_allowed`.
 
+`admin raw --call senate-vote` is also supported as a governance parity alias. It expects `--args '[\"0x<proposal_hash>\", <vote>]'`, where `<vote>` can be `true/false`, `yes/no`, `aye/nay`, or `1/0`.
+
 ## Practical examples
 
 ```bash
 agcli --network local admin set-tempo --netuid 1 --tempo 120 --sudo-key //Alice
 agcli --network local --output json admin set-default-take --take 32767 --sudo-key //Alice
 agcli --network local admin raw --call sudo_set_target_registrations_per_interval --args '[1, 3]' --sudo-key //Alice
+agcli --network local --yes --output json admin raw --call senate-vote --args '["0x<proposal_hash>", "yes"]' --sudo-key //Alice
 agcli --output json admin list
 ```

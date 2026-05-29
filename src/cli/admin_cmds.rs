@@ -2,10 +2,10 @@
 
 use crate::admin;
 use crate::chain::Client;
-use crate::cli::helpers::*;
 use crate::cli::AdminCommands;
+use crate::cli::helpers::*;
 use anyhow::Result;
-use sp_core::{sr25519, Pair as _};
+use sp_core::{Pair as _, sr25519};
 use subxt::dynamic::Value;
 
 /// Resolve a sudo keypair from a URI string (e.g. "//Alice") or from the wallet.
@@ -527,6 +527,39 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             args,
             sudo_key,
         } => {
+            if is_senate_vote_alias(&call) {
+                let pair = resolve_sudo_key(&sudo_key, ctx)?;
+                let (proposal_hash, approve) = parse_senate_vote_args(&args)?;
+                let vote_data = client
+                    .get_triumvirate_vote_data(proposal_hash)
+                    .await?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Proposal 0x{} not found in Triumvirate voting storage.",
+                            hex::encode(proposal_hash)
+                        )
+                    })?;
+                confirm_action(&format!(
+                    "Cast senate vote ({}) on proposal 0x{} (index {})?",
+                    if approve { "aye" } else { "nay" },
+                    hex::encode(proposal_hash),
+                    vote_data.index
+                ))?;
+                let hash = client
+                    .senate_vote(&pair, proposal_hash, vote_data.index, approve)
+                    .await?;
+                print_tx_result(
+                    ctx.output,
+                    &hash,
+                    &format!(
+                        "Senate vote cast ({}) on proposal 0x{}",
+                        if approve { "aye" } else { "nay" },
+                        hex::encode(proposal_hash)
+                    ),
+                );
+                return Ok(());
+            }
+
             validate_admin_call_name(&call)?;
             // Validate netuid in raw args — all known admin calls take netuid as
             // first arg; reject netuid 0 to prevent accidental root network
@@ -566,7 +599,9 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
                     println!("    args: {}", args.join(", "));
                     println!();
                 }
-                println!("Use `agcli admin raw --call <name> --args '[...]' --sudo-key //Alice` for any call.");
+                println!(
+                    "Use `agcli admin raw --call <name> --args '[...]' --sudo-key //Alice` for any call."
+                );
             }
             Ok(())
         }
@@ -598,6 +633,71 @@ fn validate_raw_admin_netuid(call: &str, args: &str) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn is_senate_vote_alias(call: &str) -> bool {
+    matches!(
+        call.trim().to_ascii_lowercase().as_str(),
+        "senate-vote" | "senate_vote"
+    )
+}
+
+fn parse_senate_vote_args(args: &str) -> Result<([u8; 32], bool)> {
+    let parsed: serde_json::Value = serde_json::from_str(args)
+        .map_err(|e| anyhow::anyhow!("Invalid senate-vote args '{}': {}", args, e))?;
+    let arr = parsed
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("senate-vote args must be a JSON array"))?;
+    if arr.len() != 2 {
+        anyhow::bail!(
+            "senate-vote args must be [proposal_hash, vote], got {} items",
+            arr.len()
+        );
+    }
+
+    let proposal_hash = arr[0]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("senate-vote proposal_hash must be a string"))?;
+    validate_call_hash(proposal_hash, "proposal-hash")?;
+    let proposal_hash = proposal_hash
+        .strip_prefix("0x")
+        .or_else(|| proposal_hash.strip_prefix("0X"))
+        .unwrap_or(proposal_hash);
+    let proposal_hash = hex::decode(proposal_hash)
+        .map_err(|e| anyhow::anyhow!("Invalid senate-vote proposal hash: {}", e))?;
+    let proposal_hash: [u8; 32] = proposal_hash
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("senate-vote proposal hash must decode to 32 bytes"))?;
+
+    let approve = parse_vote_arg(&arr[1])?;
+    Ok((proposal_hash, approve))
+}
+
+fn parse_vote_arg(value: &serde_json::Value) -> Result<bool> {
+    match value {
+        serde_json::Value::Bool(v) => Ok(*v),
+        serde_json::Value::String(v) => match v.trim().to_ascii_lowercase().as_str() {
+            "yes" | "aye" | "true" => Ok(true),
+            "no" | "nay" | "false" => Ok(false),
+            _ => anyhow::bail!(
+                "Invalid senate-vote choice '{}'. Use yes/no, aye/nay, or true/false.",
+                v
+            ),
+        },
+        serde_json::Value::Number(v) => {
+            if v.as_u64() == Some(1) {
+                Ok(true)
+            } else if v.as_u64() == Some(0) {
+                Ok(false)
+            } else {
+                anyhow::bail!("Invalid senate-vote numeric choice '{}'. Use 0 or 1.", v)
+            }
+        }
+        _ => anyhow::bail!(
+            "Invalid senate-vote choice type '{}'. Use bool, string, or 0/1.",
+            value
+        ),
+    }
 }
 
 /// Parse a JSON array string into dynamic Values.
@@ -692,6 +792,46 @@ mod tests {
     #[test]
     fn parse_raw_args_rejects_nested_arrays() {
         assert!(parse_raw_args("[[1, 2]]").is_err());
+    }
+
+    #[test]
+    fn parse_senate_vote_args_accepts_yes_no_aliases() {
+        let (proposal, approve) = parse_senate_vote_args(
+            "[\"0x0000000000000000000000000000000000000000000000000000000000000001\", \"yes\"]",
+        )
+        .unwrap();
+        assert_eq!(proposal[31], 1);
+        assert!(approve);
+
+        let (_, deny) = parse_senate_vote_args(
+            "[\"0x0000000000000000000000000000000000000000000000000000000000000001\", \"nay\"]",
+        )
+        .unwrap();
+        assert!(!deny);
+    }
+
+    #[test]
+    fn parse_senate_vote_args_accepts_bool_and_numeric_votes() {
+        let (_, approve) = parse_senate_vote_args(
+            "[\"0x0000000000000000000000000000000000000000000000000000000000000001\", true]",
+        )
+        .unwrap();
+        assert!(approve);
+        let (_, deny) = parse_senate_vote_args(
+            "[\"0x0000000000000000000000000000000000000000000000000000000000000001\", 0]",
+        )
+        .unwrap();
+        assert!(!deny);
+    }
+
+    #[test]
+    fn parse_senate_vote_args_rejects_bad_payloads() {
+        assert!(parse_senate_vote_args("[]").is_err());
+        assert!(parse_senate_vote_args("[\"0xabc\", true]").is_err());
+        assert!(parse_senate_vote_args(
+            "[\"0x0000000000000000000000000000000000000000000000000000000000000001\", \"maybe\"]"
+        )
+        .is_err());
     }
 
     // ========== confirm_action tests ==========
