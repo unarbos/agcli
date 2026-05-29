@@ -437,16 +437,16 @@
       "agentId": "bc-62dee864-6b93-490d-b643-df5837c893f4",
       "runId": "run-55d1205e-1449-4813-a876-dfcb3a862852",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/fix-p1-proposals.md",
       "startedAt": "2026-05-29T06:39:10.214Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:39:13.487Z",
+      "finishedAt": "2026-05-29T06:39:43.685Z",
+      "lastUpdate": "2026-05-29T06:39:43.685Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null,
       "attempts": 1
     },
@@ -814,6 +814,18 @@
     {
       "at": "2026-05-29T06:39:42.225Z",
       "message": "fix-p1-senate-vote: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:39:43.534Z",
+      "message": "fix-p1-senate-vote: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote.md"
+    },
+    {
+      "at": "2026-05-29T06:39:43.534Z",
+      "message": "fix-p1-senate-vote: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:39:43.684Z",
+      "message": "fix-p1-proposals: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
