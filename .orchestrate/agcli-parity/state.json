@@ -259,11 +259,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-29T07:21:51.390Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase3-rerun-subnet-register",
@@ -283,11 +283,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-29T07:21:54.912Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase3-rerun-subnet-hyperparams",
@@ -307,11 +307,11 @@
       "finishedAt": "2026-05-29T07:59:06.871Z",
       "lastUpdate": "2026-05-29T07:59:08.457Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": "unit-test-verified",
-      "attempts": 1
+      "verification": "unit-test-verified"
     },
     {
       "name": "phase3-rerun-weights",
@@ -331,11 +331,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-29T07:22:01.396Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase3-rerun-network-readonly",
@@ -355,11 +355,11 @@
       "finishedAt": "2026-05-29T07:49:48.211Z",
       "lastUpdate": "2026-05-29T07:49:49.761Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": "unit-test-verified",
-      "attempts": 1
+      "verification": "unit-test-verified"
     },
     {
       "name": "phase3-rerun-root",
@@ -379,11 +379,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-29T07:22:08.154Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "phase3-rerun-identity-commitment",
@@ -396,18 +396,18 @@
       "agentId": "bc-f76bfdec-9452-4065-bdd7-a2434cdbb596",
       "runId": "run-6bf1e19a-0f8d-4621-b091-798db66828bd",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-rerun-identity-commitment.md",
       "startedAt": "2026-05-29T07:22:08.159Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:22:11.924Z",
+      "finishedAt": "2026-05-29T08:40:19.693Z",
+      "lastUpdate": "2026-05-29T08:40:19.695Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "fix-p0-btcli-sudo-stake-burn",
@@ -523,11 +523,11 @@
       "finishedAt": "2026-05-29T08:17:02.028Z",
       "lastUpdate": "2026-05-29T08:17:03.734Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": 13,
       "failureMode": null,
-      "verification": "unit-test-verified",
-      "attempts": 1
+      "verification": "unit-test-verified"
     },
     {
       "name": "phase5-6-refresh",
@@ -1078,6 +1078,38 @@
     {
       "at": "2026-05-29T08:17:03.735Z",
       "message": "fix-p1-sdk-power-surface: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T08:28:05.182Z",
+      "message": "phase3-rerun-stake-advanced: SSE idle 344017ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:28:05.187Z",
+      "message": "phase3-rerun-stake-advanced: tool_call idle 344023ms; last=2026-05-29T08:22:21.164Z"
+    },
+    {
+      "at": "2026-05-29T08:28:06.563Z",
+      "message": "phase3-rerun-identity-commitment: SSE idle 320537ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:28:06.565Z",
+      "message": "phase3-rerun-identity-commitment: tool_call idle 320539ms; last=2026-05-29T08:22:46.026Z"
+    },
+    {
+      "at": "2026-05-29T08:33:07.105Z",
+      "message": "phase3-rerun-subnet-register: SSE idle 322055ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:33:07.109Z",
+      "message": "phase3-rerun-subnet-register: tool_call idle 322059ms; last=2026-05-29T08:27:45.050Z"
+    },
+    {
+      "at": "2026-05-29T08:34:07.537Z",
+      "message": "phase3-rerun-root: SSE idle 317915ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:34:07.540Z",
+      "message": "phase3-rerun-root: tool_call idle 317918ms; last=2026-05-29T08:28:49.622Z"
     }
   ]
 }
