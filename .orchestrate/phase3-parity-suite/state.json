@@ -1,0 +1,807 @@
+{
+  "rootSlug": "phase3-parity-suite",
+  "tasks": [
+    {
+      "name": "parity-balance-transfer",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-balance-transfer",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-2827650e-3aaf-462d-a7ce-718f8039c6c5",
+      "runId": "run-3a32847e-ec0d-457a-aff9-76a0798e0b4b",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-balance-transfer.md",
+      "startedAt": "2026-05-28T17:22:31.084Z",
+      "finishedAt": "2026-05-28T18:11:49.339Z",
+      "lastUpdate": "2026-05-28T18:11:49.342Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "unit-test-verified"
+    },
+    {
+      "name": "parity-wallet",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-wallet",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-7d54098f-c996-410f-95ba-2ad873bd6e42",
+      "runId": "run-c64b0c54-8286-498c-84d2-6a3ca337f2e1",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-wallet.md",
+      "startedAt": "2026-05-28T17:22:33.765Z",
+      "finishedAt": "2026-05-28T18:07:22.966Z",
+      "lastUpdate": "2026-05-28T18:07:22.969Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "unit-test-verified"
+    },
+    {
+      "name": "parity-stake-basic",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-stake-basic",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-4166df3a-d0c2-43b5-a193-83630e199bca",
+      "runId": "run-5df6ffeb-c4e5-475a-a456-0e248fca62f0",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-stake-basic.md",
+      "startedAt": "2026-05-28T17:22:35.645Z",
+      "finishedAt": "2026-05-28T17:50:31.509Z",
+      "lastUpdate": "2026-05-28T17:50:31.514Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    },
+    {
+      "name": "parity-stake-advanced",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-stake-advanced",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-a97c2187-c4f1-4075-b5f8-2e7a5d66b9b3",
+      "runId": "run-8286166e-3d49-45e4-9476-fe65f22a4db8",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/parity-stake-advanced.md",
+      "startedAt": "2026-05-28T17:41:39.667Z",
+      "finishedAt": "2026-05-28T17:58:57.809Z",
+      "lastUpdate": "2026-05-28T17:58:57.810Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-subnet-register",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-subnet-register",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-2abd733a-840b-4f41-be64-891275667ef6",
+      "runId": "run-7a1272be-13cc-4690-b593-6061a6bc632d",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/parity-subnet-register.md",
+      "startedAt": "2026-05-28T17:29:59.408Z",
+      "finishedAt": "2026-05-28T17:30:09.374Z",
+      "lastUpdate": "2026-05-28T17:30:09.374Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-subnet-hyperparams",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-subnet-hyperparams",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-0f8294d1-36cb-4e68-a39e-572b7adbcd1e",
+      "runId": "run-162b3f15-dba6-46c6-a7a0-a9903170ef57",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/parity-subnet-hyperparams.md",
+      "startedAt": "2026-05-28T17:36:34.500Z",
+      "finishedAt": "2026-05-28T17:42:16.316Z",
+      "lastUpdate": "2026-05-28T17:42:16.316Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-weights",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-weights",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-a573c2ce-3e15-4327-ba0d-7c69b0f05913",
+      "runId": "run-c7dd0e63-cfe8-4732-886b-e1a730fd9077",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/parity-weights.md",
+      "startedAt": "2026-05-28T17:40:02.044Z",
+      "finishedAt": "2026-05-28T17:50:59.549Z",
+      "lastUpdate": "2026-05-28T17:50:59.550Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-root",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-root",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-89dda57a-ea86-47be-8b03-f2bc06337037",
+      "runId": "run-7b9e2ac3-7134-4b73-a983-48094f2d52c6",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "cancelled",
+      "handoffPath": "handoffs/parity-root.md",
+      "startedAt": "2026-05-28T17:22:44.966Z",
+      "finishedAt": "2026-05-28T18:46:03.385Z",
+      "lastUpdate": "2026-05-28T18:46:03.385Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-identity-commitment",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-identity-commitment",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-33c24d5e-e3b8-4e51-a04e-5e3fc5fa541b",
+      "runId": "run-93add0fa-7446-45d8-a71c-70ddb0f40d33",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "cancelled",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-28T17:39:45.082Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-28T18:47:04.957Z",
+      "note": "cancelled by operator via cli",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "parity-governance",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-governance",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-3dde5eb9-f71a-4e9e-9dfb-a4d9bff43deb",
+      "runId": "run-b942054e-0e15-4e0d-b495-b528956f431f",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-governance.md",
+      "startedAt": "2026-05-28T17:34:25.736Z",
+      "finishedAt": "2026-05-28T18:03:56.800Z",
+      "lastUpdate": "2026-05-28T18:03:56.805Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    },
+    {
+      "name": "parity-network-readonly",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-network-readonly",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-35a60aa1-9203-45b2-8f1f-1365133a3286",
+      "runId": "run-927052ca-c23f-4731-a3ec-b7b81d1b0558",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/parity-network-readonly.md",
+      "startedAt": "2026-05-28T17:23:48.440Z",
+      "finishedAt": "2026-05-28T17:43:16.084Z",
+      "lastUpdate": "2026-05-28T17:43:16.084Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": "unknown",
+      "verification": null
+    },
+    {
+      "name": "parity-misc",
+      "type": "worker",
+      "branch": "orch/phase3-parity-suite/parity-misc",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-e2595969-6753-43b8-8b66-cd3de72fb78b",
+      "runId": "run-a9cc69d3-1239-424b-ad04-67ba8e05b1c3",
+      "parentAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-misc.md",
+      "startedAt": "2026-05-28T17:38:55.703Z",
+      "finishedAt": "2026-05-28T18:17:09.726Z",
+      "lastUpdate": "2026-05-28T18:17:09.729Z",
+      "note": "respawned by self-planner (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    }
+  ],
+  "attention": [
+    {
+      "at": "2026-05-28T17:19:35.481Z",
+      "message": "git-sync failed (parity-balance-transfer pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:42.654Z",
+      "message": "git-sync failed (parity-balance-transfer running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:42.654Z",
+      "message": "parity-balance-transfer: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:19:42.969Z",
+      "message": "git-sync failed (parity-wallet pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:49.814Z",
+      "message": "git-sync failed (parity-wallet running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:49.814Z",
+      "message": "parity-wallet: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:19:50.083Z",
+      "message": "git-sync failed (parity-stake-basic pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:56.992Z",
+      "message": "git-sync failed (parity-stake-basic running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:19:56.992Z",
+      "message": "parity-stake-basic: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:19:57.289Z",
+      "message": "git-sync failed (parity-stake-advanced pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:04.250Z",
+      "message": "git-sync failed (parity-stake-advanced running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:04.250Z",
+      "message": "parity-stake-advanced: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:04.590Z",
+      "message": "git-sync failed (parity-subnet-register pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:11.474Z",
+      "message": "git-sync failed (parity-subnet-register running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:11.474Z",
+      "message": "parity-subnet-register: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:11.799Z",
+      "message": "git-sync failed (parity-subnet-hyperparams pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:18.629Z",
+      "message": "git-sync failed (parity-subnet-hyperparams running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:18.629Z",
+      "message": "parity-subnet-hyperparams: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:18.947Z",
+      "message": "git-sync failed (parity-weights pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:25.751Z",
+      "message": "git-sync failed (parity-weights running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:25.751Z",
+      "message": "parity-weights: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:26.037Z",
+      "message": "git-sync failed (parity-root pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:32.910Z",
+      "message": "git-sync failed (parity-root running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:32.910Z",
+      "message": "parity-root: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:33.199Z",
+      "message": "git-sync failed (parity-identity-commitment pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:39.973Z",
+      "message": "git-sync failed (parity-identity-commitment running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:39.973Z",
+      "message": "parity-identity-commitment: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:40.354Z",
+      "message": "git-sync failed (parity-governance pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:47.201Z",
+      "message": "git-sync failed (parity-governance running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:47.201Z",
+      "message": "parity-governance: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:47.539Z",
+      "message": "git-sync failed (parity-network-readonly pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:54.349Z",
+      "message": "git-sync failed (parity-network-readonly running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:20:54.349Z",
+      "message": "parity-network-readonly: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:20:54.662Z",
+      "message": "git-sync failed (parity-misc pending -> running): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:21:01.412Z",
+      "message": "git-sync failed (parity-misc running -> error): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:21:01.412Z",
+      "message": "parity-misc: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T17:21:01.799Z",
+      "message": "git-sync failed (exit-on-error: parity-balance-transfer, parity-wallet, parity-stake-basic, parity-stake-advanced, parity-subnet-register, parity-subnet-hyperparams, parity-weights, parity-root, parity-identity-commitment, parity-governance, parity-network-readonly, parity-misc): Command failed: git -C /workspace/.orchestrate/phase3-parity-suite push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate…"
+    },
+    {
+      "at": "2026-05-28T17:22:22.655Z",
+      "message": "parity-balance-transfer: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:22.998Z",
+      "message": "parity-wallet: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:23.337Z",
+      "message": "parity-stake-basic: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:23.676Z",
+      "message": "parity-stake-advanced: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:24.009Z",
+      "message": "parity-subnet-register: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:24.343Z",
+      "message": "parity-subnet-hyperparams: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:24.675Z",
+      "message": "parity-weights: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:25.026Z",
+      "message": "parity-root: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:25.361Z",
+      "message": "parity-identity-commitment: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:25.708Z",
+      "message": "parity-governance: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:26.049Z",
+      "message": "parity-network-readonly: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:22:26.406Z",
+      "message": "parity-misc: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:23:10.410Z",
+      "message": "parity-network-readonly: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:23:10.411Z",
+      "message": "parity-network-readonly: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly.md"
+    },
+    {
+      "at": "2026-05-28T17:23:10.412Z",
+      "message": "parity-network-readonly: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:23:42.563Z",
+      "message": "parity-network-readonly: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:28:47.999Z",
+      "message": "parity-balance-transfer: tool_call idle 300436ms; last=none since wait start (2026-05-28T17:23:47.563Z)"
+    },
+    {
+      "at": "2026-05-28T17:28:48.178Z",
+      "message": "parity-stake-basic: tool_call idle 300036ms; last=2026-05-28T17:23:48.142Z"
+    },
+    {
+      "at": "2026-05-28T17:28:48.329Z",
+      "message": "parity-stake-advanced: tool_call idle 300089ms; last=2026-05-28T17:23:48.240Z"
+    },
+    {
+      "at": "2026-05-28T17:28:48.469Z",
+      "message": "parity-subnet-hyperparams: tool_call idle 300427ms; last=none since wait start (2026-05-28T17:23:48.042Z)"
+    },
+    {
+      "at": "2026-05-28T17:28:48.490Z",
+      "message": "parity-subnet-register: SSE idle 300112ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:48.490Z",
+      "message": "parity-subnet-register: tool_call idle 300553ms; last=none since wait start (2026-05-28T17:23:47.937Z)"
+    },
+    {
+      "at": "2026-05-28T17:28:48.766Z",
+      "message": "parity-identity-commitment: tool_call idle 300079ms; last=2026-05-28T17:23:48.687Z"
+    },
+    {
+      "at": "2026-05-28T17:28:48.813Z",
+      "message": "parity-root: tool_call idle 300175ms; last=2026-05-28T17:23:48.638Z"
+    },
+    {
+      "at": "2026-05-28T17:28:48.840Z",
+      "message": "parity-governance: SSE idle 300001ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:48.840Z",
+      "message": "parity-governance: tool_call idle 300001ms; last=2026-05-28T17:23:48.839Z"
+    },
+    {
+      "at": "2026-05-28T17:28:48.883Z",
+      "message": "parity-weights: SSE idle 300340ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:48.884Z",
+      "message": "parity-weights: tool_call idle 300341ms; last=2026-05-28T17:23:48.543Z"
+    },
+    {
+      "at": "2026-05-28T17:28:49.163Z",
+      "message": "parity-misc: tool_call idle 300197ms; last=2026-05-28T17:23:48.966Z"
+    },
+    {
+      "at": "2026-05-28T17:29:29.758Z",
+      "message": "parity-subnet-register: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:29:29.760Z",
+      "message": "parity-subnet-register: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register.md"
+    },
+    {
+      "at": "2026-05-28T17:29:29.760Z",
+      "message": "parity-subnet-register: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:29:46.757Z",
+      "message": "parity-subnet-register: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:30:09.373Z",
+      "message": "parity-subnet-register: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:30:09.374Z",
+      "message": "parity-subnet-register: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register.md"
+    },
+    {
+      "at": "2026-05-28T17:30:09.375Z",
+      "message": "parity-subnet-register: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-register-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:34:01.142Z",
+      "message": "parity-governance: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:34:01.143Z",
+      "message": "parity-governance: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-governance.md"
+    },
+    {
+      "at": "2026-05-28T17:34:01.144Z",
+      "message": "parity-governance: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-governance-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:34:18.455Z",
+      "message": "parity-governance: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:36:12.250Z",
+      "message": "parity-subnet-hyperparams: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:36:12.251Z",
+      "message": "parity-subnet-hyperparams: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams.md"
+    },
+    {
+      "at": "2026-05-28T17:36:12.252Z",
+      "message": "parity-subnet-hyperparams: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:36:29.274Z",
+      "message": "parity-subnet-hyperparams: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:38:35.136Z",
+      "message": "parity-misc: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:38:35.137Z",
+      "message": "parity-misc: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-misc.md"
+    },
+    {
+      "at": "2026-05-28T17:38:35.138Z",
+      "message": "parity-misc: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-misc-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:38:49.092Z",
+      "message": "parity-misc: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:39:19.391Z",
+      "message": "parity-identity-commitment: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:39:19.393Z",
+      "message": "parity-identity-commitment: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-identity-commitment.md"
+    },
+    {
+      "at": "2026-05-28T17:39:19.394Z",
+      "message": "parity-identity-commitment: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-identity-commitment-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:39:38.715Z",
+      "message": "parity-identity-commitment: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:39:45.913Z",
+      "message": "parity-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:39:45.914Z",
+      "message": "parity-weights: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights.md"
+    },
+    {
+      "at": "2026-05-28T17:39:45.915Z",
+      "message": "parity-weights: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:39:56.356Z",
+      "message": "parity-weights: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:41:23.175Z",
+      "message": "parity-stake-advanced: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:41:23.176Z",
+      "message": "parity-stake-advanced: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced.md"
+    },
+    {
+      "at": "2026-05-28T17:41:23.177Z",
+      "message": "parity-stake-advanced: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:41:33.713Z",
+      "message": "parity-stake-advanced: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T17:42:16.315Z",
+      "message": "parity-subnet-hyperparams: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:42:16.317Z",
+      "message": "parity-subnet-hyperparams: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams.md"
+    },
+    {
+      "at": "2026-05-28T17:42:16.318Z",
+      "message": "parity-subnet-hyperparams: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-subnet-hyperparams-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:43:16.083Z",
+      "message": "parity-network-readonly: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:43:16.085Z",
+      "message": "parity-network-readonly: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly.md"
+    },
+    {
+      "at": "2026-05-28T17:43:16.086Z",
+      "message": "parity-network-readonly: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-network-readonly-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:48:36.186Z",
+      "message": "parity-weights: SSE idle 300105ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:48:36.187Z",
+      "message": "parity-weights: tool_call idle 300106ms; last=2026-05-28T17:43:36.081Z"
+    },
+    {
+      "at": "2026-05-28T17:48:36.376Z",
+      "message": "parity-identity-commitment: tool_call idle 300478ms; last=none since wait start (2026-05-28T17:43:35.898Z)"
+    },
+    {
+      "at": "2026-05-28T17:48:36.483Z",
+      "message": "parity-stake-advanced: SSE idle 300433ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:48:36.483Z",
+      "message": "parity-stake-advanced: tool_call idle 300839ms; last=none since wait start (2026-05-28T17:43:35.644Z)"
+    },
+    {
+      "at": "2026-05-28T17:48:36.530Z",
+      "message": "parity-misc: SSE idle 300112ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:48:36.530Z",
+      "message": "parity-misc: tool_call idle 300458ms; last=none since wait start (2026-05-28T17:43:36.072Z)"
+    },
+    {
+      "at": "2026-05-28T17:49:36.469Z",
+      "message": "parity-governance: tool_call idle 360079ms; last=2026-05-28T17:43:36.390Z"
+    },
+    {
+      "at": "2026-05-28T17:50:31.515Z",
+      "message": "parity-stake-basic: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T17:50:36.604Z",
+      "message": "parity-governance: SSE idle 310227ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:50:59.548Z",
+      "message": "parity-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:50:59.550Z",
+      "message": "parity-weights: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights.md"
+    },
+    {
+      "at": "2026-05-28T17:50:59.552Z",
+      "message": "parity-weights: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-weights-failure.md"
+    },
+    {
+      "at": "2026-05-28T17:56:19.055Z",
+      "message": "parity-stake-advanced: SSE idle 300302ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:56:19.057Z",
+      "message": "parity-stake-advanced: tool_call idle 300612ms; last=none since wait start (2026-05-28T17:51:18.445Z)"
+    },
+    {
+      "at": "2026-05-28T17:58:57.808Z",
+      "message": "parity-stake-advanced: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T17:58:57.811Z",
+      "message": "parity-stake-advanced: run ended with status=error; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced.md"
+    },
+    {
+      "at": "2026-05-28T17:58:57.812Z",
+      "message": "parity-stake-advanced: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-stake-advanced-failure.md"
+    },
+    {
+      "at": "2026-05-28T18:03:56.806Z",
+      "message": "parity-governance: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T18:07:22.970Z",
+      "message": "parity-wallet: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-28T18:10:17.126Z",
+      "message": "parity-balance-transfer: SSE idle 322216ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T18:10:17.128Z",
+      "message": "parity-balance-transfer: tool_call idle 322218ms; last=2026-05-28T18:04:54.910Z"
+    },
+    {
+      "at": "2026-05-28T18:11:49.343Z",
+      "message": "parity-balance-transfer: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-28T18:17:09.729Z",
+      "message": "parity-misc: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T18:18:17.928Z",
+      "message": "parity-root: tool_call idle 334066ms; last=2026-05-28T18:12:43.861Z"
+    },
+    {
+      "at": "2026-05-28T18:19:17.932Z",
+      "message": "parity-identity-commitment: tool_call idle 358226ms; last=2026-05-28T18:13:19.706Z"
+    },
+    {
+      "at": "2026-05-28T18:22:18.263Z",
+      "message": "parity-identity-commitment: SSE idle 304107ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T18:23:18.548Z",
+      "message": "parity-root: SSE idle 354470ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T18:46:03.386Z",
+      "message": "parity-root: run ended with status=cancelled; see /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-root.md"
+    },
+    {
+      "at": "2026-05-28T18:46:03.388Z",
+      "message": "parity-root: synthetic failure handoff written to /workspace/.orchestrate/phase3-parity-suite/handoffs/parity-root-failure.md"
+    },
+    {
+      "at": "2026-05-28T18:47:04.958Z",
+      "message": "parity-identity-commitment: cancelled by operator"
+    }
+  ]
+}

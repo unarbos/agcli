@@ -851,6 +851,32 @@ impl Client {
             .await
     }
 
+    /// Cast a senate vote on a governance proposal.
+    ///
+    /// The runtime call is `SubtensorModule.vote(hotkey, proposal, index, approve)`.
+    pub async fn senate_vote(
+        &self,
+        pair: &sr25519::Pair,
+        proposal_hash: [u8; 32],
+        proposal_index: u32,
+        approve: bool,
+    ) -> Result<String> {
+        use subxt::dynamic::Value;
+        let hotkey = AccountId::from(pair.public().0);
+        self.submit_raw_call(
+            pair,
+            "SubtensorModule",
+            "vote",
+            vec![
+                Value::from_bytes(hotkey.0),
+                Value::from_bytes(proposal_hash),
+                Value::u128(proposal_index as u128),
+                Value::bool(approve),
+            ],
+        )
+        .await
+    }
+
     /// Dissolve a subnet.
     pub async fn dissolve_network(&self, pair: &sr25519::Pair, netuid: NetUid) -> Result<String> {
         let coldkey_id = AccountId::from(pair.public().0);

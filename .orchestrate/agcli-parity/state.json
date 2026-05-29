@@ -1,0 +1,983 @@
+{
+  "rootSlug": "agcli-parity",
+  "tasks": [
+    {
+      "name": "bootstrap-toolchain",
+      "type": "worker",
+      "branch": "orch/agcli-parity/bootstrap-toolchain",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [],
+      "agentId": "bc-6de2c6a8-6510-44c9-b3cd-fe2676c58f49",
+      "runId": "run-9432f8a8-d04d-41cc-95ee-146ad0eba9de",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/bootstrap-toolchain.md",
+      "startedAt": "2026-05-28T15:55:35.207Z",
+      "finishedAt": "2026-05-28T16:15:20.930Z",
+      "lastUpdate": "2026-05-28T16:15:22.130Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "scaffold-variants-a-to-e",
+      "type": "worker",
+      "branch": "orch/agcli-parity/scaffold-variants-a-to-e",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "bootstrap-toolchain"
+      ],
+      "agentId": "bc-1e305c08-9cec-4203-947a-fd41e3dec5b5",
+      "runId": "run-df55502e-463e-4d98-92bf-4232d8d633dc",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/scaffold-variants-a-to-e.md",
+      "startedAt": "2026-05-28T16:15:30.427Z",
+      "finishedAt": "2026-05-28T17:01:26.387Z",
+      "lastUpdate": "2026-05-28T17:01:27.427Z",
+      "note": null,
+      "attempts": 1,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    },
+    {
+      "name": "inventory-btcli",
+      "type": "worker",
+      "branch": "orch/agcli-parity/inventory-btcli",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "bootstrap-toolchain"
+      ],
+      "agentId": "bc-9f4b6933-ab18-41c7-9e08-b7fabf2b4d0c",
+      "runId": "run-23b1dba9-0bae-4bab-b262-b25793b72661",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/inventory-btcli.md",
+      "startedAt": "2026-05-28T16:17:43.687Z",
+      "finishedAt": "2026-05-28T16:48:47.770Z",
+      "lastUpdate": "2026-05-28T16:48:50.807Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "inventory-sdk",
+      "type": "worker",
+      "branch": "orch/agcli-parity/inventory-sdk",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "bootstrap-toolchain"
+      ],
+      "agentId": "bc-fc17e35f-aa4f-4d38-bf09-695cf4632743",
+      "runId": "run-77022913-52c0-43b2-aae4-1671024e1760",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/inventory-sdk.md",
+      "startedAt": "2026-05-28T16:17:46.632Z",
+      "finishedAt": "2026-05-28T16:39:49.642Z",
+      "lastUpdate": "2026-05-28T16:39:50.951Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "parity-matrix",
+      "type": "worker",
+      "branch": "orch/agcli-parity/parity-matrix",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "inventory-btcli",
+        "inventory-sdk"
+      ],
+      "agentId": "bc-31285050-3318-4760-b826-51840cd5e50e",
+      "runId": "run-3dc4083d-4fe9-4f40-ab9e-2e0c9eeed2c8",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/parity-matrix.md",
+      "startedAt": "2026-05-28T16:48:48.810Z",
+      "finishedAt": "2026-05-28T17:03:09.439Z",
+      "lastUpdate": "2026-05-28T17:03:13.593Z",
+      "note": null,
+      "attempts": 1,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "phase3-parity-suite",
+      "type": "subplanner",
+      "branch": "cursor/agcli-parity-orchestrate-88b1",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "parity-matrix",
+        "scaffold-variants-a-to-e"
+      ],
+      "agentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+      "runId": "run-00c7f948-3d48-485b-8bff-276884cfbf86",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-parity-suite.md",
+      "startedAt": "2026-05-28T17:03:12.438Z",
+      "finishedAt": "2026-05-28T18:51:11.813Z",
+      "lastUpdate": "2026-05-28T18:51:12.152Z",
+      "note": null,
+      "attempts": 1,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    },
+    {
+      "name": "phase4-gap-triage",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase4-gap-triage",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "phase3-parity-suite"
+      ],
+      "agentId": "bc-ce3415f4-5422-437d-ad8b-1afc03c2e349",
+      "runId": "run-fc6be5bb-cf35-4ea2-93ed-6e1698b3e432",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase4-gap-triage.md",
+      "startedAt": "2026-05-28T20:26:21.526Z",
+      "finishedAt": "2026-05-28T20:36:33.487Z",
+      "lastUpdate": "2026-05-28T20:36:36.636Z",
+      "note": "respawned by self-planner (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "not-verified"
+    },
+    {
+      "name": "phase6-ci-and-report",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase6-ci-and-report",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "phase4-gap-triage"
+      ],
+      "agentId": "bc-5c7e5f77-7154-405b-9f3a-c0ca244c4176",
+      "runId": "run-0a932548-b5c1-479b-b29c-5b11c4728a23",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase6-ci-and-report.md",
+      "startedAt": "2026-05-28T21:19:41.134Z",
+      "finishedAt": "2026-05-28T21:44:38.335Z",
+      "lastUpdate": "2026-05-28T21:44:39.259Z",
+      "note": null,
+      "attempts": 1,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "env-setup-followup",
+      "type": "worker",
+      "branch": "orch/agcli-parity/env-setup-followup",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "phase6-ci-and-report"
+      ],
+      "agentId": "bc-05080370-3025-46a0-ac7d-3e8f9c29ddc6",
+      "runId": "run-7a3a816a-880a-4925-a856-28162e6eea66",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/env-setup-followup.md",
+      "startedAt": "2026-05-29T05:59:09.817Z",
+      "finishedAt": "2026-05-29T06:15:38.560Z",
+      "lastUpdate": "2026-05-29T06:15:40.134Z",
+      "note": "respawned by local-cli (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "type-check-only"
+    },
+    {
+      "name": "merge-phase3-tests",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-tests",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "env-setup-followup"
+      ],
+      "agentId": "bc-51a801ca-84bc-43fd-b90b-808306004d90",
+      "runId": "run-44eb2c08-99c5-4644-87de-52a4235046b8",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "running",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-29T07:09:36.889Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T07:09:41.408Z",
+      "note": "respawned by local-cli (was error; attempts=4)",
+      "attempts": 5,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-stake-advanced",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-stake-advanced",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-subnet-register",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-subnet-register",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-subnet-hyperparams",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-subnet-hyperparams",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-weights",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-weights",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-network-readonly",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-network-readonly",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-root",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-root",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase3-rerun-identity-commitment",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase3-rerun-identity-commitment",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "merge-phase3-tests"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "fix-p0-btcli-sudo-stake-burn",
+      "type": "worker",
+      "branch": "orch/agcli-parity/fix-p0-btcli-sudo-stake-burn",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "env-setup-followup"
+      ],
+      "agentId": "bc-5d04a096-252a-4f2d-8913-0b5e194bae7c",
+      "runId": "run-601efab3-cd3e-4985-9778-07ebc0f55c21",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p0-btcli-sudo-stake-burn.md",
+      "startedAt": "2026-05-29T06:15:48.285Z",
+      "finishedAt": "2026-05-29T06:39:08.034Z",
+      "lastUpdate": "2026-05-29T06:39:09.365Z",
+      "note": null,
+      "attempts": 1,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "unit-test-verified"
+    },
+    {
+      "name": "fix-p1-proposals",
+      "type": "worker",
+      "branch": "orch/agcli-parity/fix-p1-proposals",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "fix-p0-btcli-sudo-stake-burn"
+      ],
+      "agentId": "bc-1d2a6248-4c4d-47c3-82aa-b745ae18bc27",
+      "runId": "run-e5e8872f-906b-40c6-a71e-ce517b0c9b8a",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p1-proposals.md",
+      "startedAt": "2026-05-29T06:41:21.062Z",
+      "finishedAt": "2026-05-29T07:09:02.694Z",
+      "lastUpdate": "2026-05-29T07:09:04.360Z",
+      "note": "respawned by local-cli (was error; attempts=1)",
+      "attempts": 2,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": "unit-test-verified"
+    },
+    {
+      "name": "fix-p1-senate",
+      "type": "worker",
+      "branch": "orch/agcli-parity/fix-p1-senate",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "fix-p0-btcli-sudo-stake-burn"
+      ],
+      "agentId": "bc-93bf7d89-8a7f-41fd-be01-2b20e7db995f",
+      "runId": "run-14ce55f4-98b3-4ac3-b785-00523243b7f7",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "running",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-29T07:09:41.411Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T07:09:45.205Z",
+      "note": "respawned by local-cli (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "fix-p1-senate-vote",
+      "type": "worker",
+      "branch": "orch/agcli-parity/fix-p1-senate-vote",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "fix-p0-btcli-sudo-stake-burn"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "running",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-29T07:09:45.209Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T07:09:45.209Z",
+      "note": "respawned by local-cli (was error; attempts=2)",
+      "attempts": 3,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "fix-p1-sdk-power-surface",
+      "type": "worker",
+      "branch": "orch/agcli-parity/fix-p1-sdk-power-surface",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "fix-p1-senate-vote"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "phase5-6-refresh",
+      "type": "worker",
+      "branch": "orch/agcli-parity/phase5-6-refresh",
+      "startingRef": "cursor/agcli-parity-orchestrate-88b1",
+      "dependsOn": [
+        "phase3-rerun-identity-commitment",
+        "fix-p1-sdk-power-surface"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    }
+  ],
+  "attention": [
+    {
+      "at": "2026-05-28T15:53:50.889Z",
+      "message": "bootstrap-toolchain: spawn failed after 3 transient sub-attempts: Error: template \"worker\" has unrendered placeholders: index .RepoDigests 0"
+    },
+    {
+      "at": "2026-05-28T15:55:20.374Z",
+      "message": "bootstrap-toolchain: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:00:41.056Z",
+      "message": "bootstrap-toolchain: tool_call idle 300767ms; last=none since wait start (2026-05-28T15:55:40.289Z)"
+    },
+    {
+      "at": "2026-05-28T16:01:41.125Z",
+      "message": "bootstrap-toolchain: SSE idle 344368ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:15:22.130Z",
+      "message": "bootstrap-toolchain: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T16:15:43.012Z",
+      "message": "inventory-btcli: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T16:15:51.805Z",
+      "message": "inventory-sdk: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-28T16:17:25.015Z",
+      "message": "inventory-btcli: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:17:26.477Z",
+      "message": "inventory-sdk: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T16:23:47.176Z",
+      "message": "inventory-btcli: SSE idle 341294ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:23:47.176Z",
+      "message": "inventory-btcli: tool_call idle 344057ms; last=2026-05-28T16:18:03.119Z"
+    },
+    {
+      "at": "2026-05-28T16:23:51.319Z",
+      "message": "inventory-sdk: SSE idle 331633ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:23:51.319Z",
+      "message": "inventory-sdk: tool_call idle 335234ms; last=2026-05-28T16:18:16.085Z"
+    },
+    {
+      "at": "2026-05-28T16:31:45.059Z",
+      "message": "scaffold-variants-a-to-e: tool_call idle 319493ms; last=2026-05-28T16:26:25.566Z"
+    },
+    {
+      "at": "2026-05-28T16:39:50.952Z",
+      "message": "inventory-sdk: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T16:45:46.745Z",
+      "message": "scaffold-variants-a-to-e: SSE idle 319046ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T16:48:50.807Z",
+      "message": "inventory-btcli: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T17:01:27.428Z",
+      "message": "scaffold-variants-a-to-e: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T17:03:13.593Z",
+      "message": "parity-matrix: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-28T17:09:16.572Z",
+      "message": "phase3-parity-suite: SSE idle 333519ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:09:16.573Z",
+      "message": "phase3-parity-suite: tool_call idle 333520ms; last=2026-05-28T17:03:43.053Z"
+    },
+    {
+      "at": "2026-05-28T17:28:50.083Z",
+      "message": "phase3-parity-suite: SSE idle 303406ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T17:28:50.084Z",
+      "message": "phase3-parity-suite: tool_call idle 303407ms; last=2026-05-28T17:23:46.677Z"
+    },
+    {
+      "at": "2026-05-28T18:51:12.144Z",
+      "message": "git-sync failed (phase3-parity-suite running -> handed-off): Command failed: git -C /workspace/.orchestrate/agcli-parity push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…"
+    },
+    {
+      "at": "2026-05-28T18:51:12.152Z",
+      "message": "phase3-parity-suite: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T18:51:21.395Z",
+      "message": "git-sync failed (phase4-gap-closure pending -> running): Command failed: git -C /workspace/.orchestrate/agcli-parity push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…"
+    },
+    {
+      "at": "2026-05-28T19:18:13.832Z",
+      "message": "phase4-gap-closure: SSE idle 1594050ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-28T19:18:13.834Z",
+      "message": "phase4-gap-closure: tool_call idle 1609907ms; last=none since wait start (2026-05-28T18:51:23.927Z)"
+    },
+    {
+      "at": "2026-05-28T19:29:01.040Z",
+      "message": "git-sync failed (planned checkpoint restart): Command failed: git -C /workspace/.orchestrate/agcli-parity push\nTo https://github.com/unarbos/agcli\n ! [rejected]        cursor/agcli-parity-orchestrate-88b1 -> cursor/agcli-parity-orchestrate-88b1 (…"
+    },
+    {
+      "at": "2026-05-28T19:56:42.819Z",
+      "message": "phase4-gap-closure: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T19:56:44.012Z",
+      "message": "phase4-gap-closure: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure.md"
+    },
+    {
+      "at": "2026-05-28T19:56:44.013Z",
+      "message": "phase4-gap-closure: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-closure-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:00:50.483Z",
+      "message": "phase4-gap-triage: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T20:00:51.609Z",
+      "message": "phase4-gap-triage: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage.md"
+    },
+    {
+      "at": "2026-05-28T20:00:51.609Z",
+      "message": "phase4-gap-triage: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase4-gap-triage-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:26:09.863Z",
+      "message": "phase4-gap-triage: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T20:36:36.637Z",
+      "message": "phase4-gap-triage: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-28T20:37:54.488Z",
+      "message": "phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T20:37:55.415Z",
+      "message": "phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md"
+    },
+    {
+      "at": "2026-05-28T20:37:55.416Z",
+      "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:42:27.650Z",
+      "message": "phase5-ux-scorecard: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T20:43:12.810Z",
+      "message": "phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T20:43:13.759Z",
+      "message": "phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md"
+    },
+    {
+      "at": "2026-05-28T20:43:13.760Z",
+      "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
+    },
+    {
+      "at": "2026-05-28T20:59:05.816Z",
+      "message": "phase5-ux-scorecard: respawned by self-planner (was error)"
+    },
+    {
+      "at": "2026-05-28T21:01:35.180Z",
+      "message": "phase5-ux-scorecard: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-28T21:01:36.241Z",
+      "message": "phase5-ux-scorecard: run ended with status=error; see /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard.md"
+    },
+    {
+      "at": "2026-05-28T21:01:36.242Z",
+      "message": "phase5-ux-scorecard: synthetic failure handoff written to /workspace/.orchestrate/agcli-parity/handoffs/phase5-ux-scorecard-failure.md"
+    },
+    {
+      "at": "2026-05-28T21:44:39.260Z",
+      "message": "phase6-ci-and-report: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-29T05:58:51.030Z",
+      "message": "env-setup-followup: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T05:58:52.171Z",
+      "message": "env-setup-followup: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/env-setup-followup.md"
+    },
+    {
+      "at": "2026-05-29T05:58:52.173Z",
+      "message": "env-setup-followup: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/env-setup-followup-failure.md"
+    },
+    {
+      "at": "2026-05-29T05:59:07.503Z",
+      "message": "env-setup-followup: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:15:40.135Z",
+      "message": "env-setup-followup: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-29T06:16:28.155Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:16:29.427Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:16:29.429Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:16:44.072Z",
+      "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:17:46.414Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:17:47.696Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:17:47.697Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:18:08.437Z",
+      "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:19:08.409Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:19:09.724Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:19:09.725Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:39:09.365Z",
+      "message": "fix-p0-btcli-sudo-stake-burn: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T06:39:42.225Z",
+      "message": "fix-p1-senate-vote: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:39:43.534Z",
+      "message": "fix-p1-senate-vote: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote.md"
+    },
+    {
+      "at": "2026-05-29T06:39:43.534Z",
+      "message": "fix-p1-senate-vote: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:39:43.684Z",
+      "message": "fix-p1-proposals: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:39:45.061Z",
+      "message": "fix-p1-proposals: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-proposals.md"
+    },
+    {
+      "at": "2026-05-29T06:39:45.062Z",
+      "message": "fix-p1-proposals: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-proposals-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:40:46.785Z",
+      "message": "fix-p1-senate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:40:48.027Z",
+      "message": "fix-p1-senate: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate.md"
+    },
+    {
+      "at": "2026-05-29T06:40:48.028Z",
+      "message": "fix-p1-senate: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:40:49.669Z",
+      "message": "phase3-rerun-stake-advanced: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-stake-advanced` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.671Z",
+      "message": "phase3-rerun-subnet-register: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-register` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.672Z",
+      "message": "phase3-rerun-subnet-hyperparams: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-hyperparams` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.673Z",
+      "message": "phase3-rerun-weights: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-weights` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.674Z",
+      "message": "phase3-rerun-network-readonly: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-network-readonly` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.675Z",
+      "message": "phase3-rerun-root: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-root` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.675Z",
+      "message": "phase3-rerun-identity-commitment: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-identity-commitment` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.676Z",
+      "message": "fix-p1-sdk-power-surface: unreachable — blocked on fix-p1-senate-vote (error). Fix the upstream and rerun, or `kill fix-p1-sdk-power-surface` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:41:09.244Z",
+      "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:41:10.673Z",
+      "message": "fix-p1-proposals: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:41:12.224Z",
+      "message": "fix-p1-senate: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:41:13.661Z",
+      "message": "fix-p1-senate-vote: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:41:50.944Z",
+      "message": "fix-p1-senate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:41:52.197Z",
+      "message": "fix-p1-senate: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate.md"
+    },
+    {
+      "at": "2026-05-29T06:41:52.199Z",
+      "message": "fix-p1-senate: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:42:01.436Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:42:02.737Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:42:02.738Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:42:08.870Z",
+      "message": "fix-p1-senate-vote: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:42:10.450Z",
+      "message": "fix-p1-senate-vote: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote.md"
+    },
+    {
+      "at": "2026-05-29T06:42:10.451Z",
+      "message": "fix-p1-senate-vote: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-vote-failure.md"
+    },
+    {
+      "at": "2026-05-29T07:09:04.360Z",
+      "message": "fix-p1-proposals: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T07:09:04.361Z",
+      "message": "phase3-rerun-stake-advanced: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-stake-advanced` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.362Z",
+      "message": "phase3-rerun-subnet-register: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-register` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.362Z",
+      "message": "phase3-rerun-subnet-hyperparams: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-hyperparams` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.362Z",
+      "message": "phase3-rerun-weights: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-weights` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.363Z",
+      "message": "phase3-rerun-network-readonly: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-network-readonly` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.363Z",
+      "message": "phase3-rerun-root: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-root` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.364Z",
+      "message": "phase3-rerun-identity-commitment: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-identity-commitment` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:04.364Z",
+      "message": "fix-p1-sdk-power-surface: unreachable — blocked on fix-p1-senate-vote (error). Fix the upstream and rerun, or `kill fix-p1-sdk-power-surface` to abandon."
+    },
+    {
+      "at": "2026-05-29T07:09:30.816Z",
+      "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T07:09:32.379Z",
+      "message": "fix-p1-senate: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T07:09:33.931Z",
+      "message": "fix-p1-senate-vote: respawned by local-cli (was error)"
+    }
+  ]
+}
