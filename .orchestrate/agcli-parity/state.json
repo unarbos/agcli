@@ -321,20 +321,20 @@
       "dependsOn": [
         "merge-phase3-tests"
       ],
-      "agentId": "bc-385fcbc5-448e-40a7-8c8d-d6cc23436f78",
-      "runId": "run-73f14aa8-c121-4afa-8310-155b0bc37646",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/phase3-rerun-weights.md",
-      "startedAt": "2026-05-29T11:21:07.982Z",
-      "finishedAt": "2026-05-29T11:21:52.539Z",
-      "lastUpdate": "2026-05-29T11:21:52.539Z",
-      "note": "respawned by local-cli (was error; attempts=3)",
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T11:22:37.047Z",
+      "note": "respawned by local-cli (was error; attempts=4)",
       "attempts": 4,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -1195,6 +1195,14 @@
     {
       "at": "2026-05-29T11:21:52.538Z",
       "message": "phase3-rerun-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T11:21:53.813Z",
+      "message": "phase3-rerun-weights: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/phase3-rerun-weights.md"
+    },
+    {
+      "at": "2026-05-29T11:21:53.814Z",
+      "message": "phase3-rerun-weights: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/phase3-rerun-weights-failure.md"
     }
   ]
 }
