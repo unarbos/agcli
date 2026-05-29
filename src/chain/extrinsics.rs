@@ -389,6 +389,20 @@ impl Client {
         self.sign_submit_or_mev(&tx, pair, mev).await
     }
 
+    /// Add stake burn amount to a subnet via sudo.
+    pub async fn add_stake_burn(
+        &self,
+        pair: &sr25519::Pair,
+        netuid: NetUid,
+        amount: Balance,
+    ) -> Result<String> {
+        let hotkey = AccountId::from(pair.public().0);
+        let tx = api::tx()
+            .subtensor_module()
+            .add_stake_burn(hotkey, netuid.0, amount.rao(), None);
+        self.sign_submit(&tx, pair).await
+    }
+
     /// Swap stake between subnets with a limit price.
     #[allow(clippy::too_many_arguments)]
     pub async fn swap_stake_limit(

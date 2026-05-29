@@ -1160,11 +1160,15 @@
     "source": "btcli",
     "ref_invocation": "btcli sudo stake-burn --netuid 1 --amount 1.0 --wallet-name mywallet --no-prompt",
     "ref_extrinsic": "SubtensorModule.add_stake_burn",
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
-    "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "triage_tier: P0; No named agcli command for SubtensorModule.add_stake_burn. Related rows sharing dispatchable: sdk.async_subtensor.add_stake_burn, sdk.subtensor.add_stake_burn."
+    "agcli_invocation": "agcli admin raw --call stake-burn --args '[1,1.0]' --sudo-key //Alice --yes --output json",
+    "agcli_status": "COVERED_E2E",
+    "agcli_flag_diffs": [
+      "btcli: --amount (TAO) ↔ agcli: --args '[netuid,amount_tao]'",
+      "btcli: --no-prompt ↔ agcli: --yes",
+      "btcli: --wallet-name ↔ agcli: -w/--wallet (or --sudo-key //Alice)"
+    ],
+    "parity_test": "tests/parity_admin.rs::parity_stake_burn",
+    "notes": "triage_tier: P0; closed via admin raw stake-burn alias that routes to SubtensorModule.add_stake_burn and verifies localnet chain-state deltas. Related rows sharing dispatchable: sdk.async_subtensor.add_stake_burn, sdk.subtensor.add_stake_burn."
   },
   {
     "id": "btcli.sudo.trim",

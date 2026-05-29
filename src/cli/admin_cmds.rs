@@ -4,6 +4,8 @@ use crate::admin;
 use crate::chain::Client;
 use crate::cli::helpers::*;
 use crate::cli::AdminCommands;
+use crate::types::balance::Balance;
+use crate::types::network::NetUid;
 use anyhow::Result;
 use sp_core::{sr25519, Pair as _};
 use subxt::dynamic::Value;
@@ -527,6 +529,27 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             args,
             sudo_key,
         } => {
+            if matches!(call.trim(), "stake-burn" | "add_stake_burn") {
+                let (netuid, amount) = parse_stake_burn_args(&args)?;
+                validate_netuid(netuid)?;
+                let pair = resolve_sudo_key(&sudo_key, ctx)?;
+                confirm_action(&format!(
+                    "Execute SubtensorModule.add_stake_burn on SN{} for {} TAO?",
+                    netuid,
+                    amount.tao()
+                ))?;
+                let hash = client.add_stake_burn(&pair, NetUid(netuid), amount).await?;
+                print_tx_result(
+                    ctx.output,
+                    &hash,
+                    &format!(
+                        "Stake burn increased by {} TAO on SN{}",
+                        amount.tao(),
+                        netuid
+                    ),
+                );
+                return Ok(());
+            }
             validate_admin_call_name(&call)?;
             // Validate netuid in raw args — all known admin calls take netuid as
             // first arg; reject netuid 0 to prevent accidental root network
@@ -602,6 +625,47 @@ fn validate_raw_admin_netuid(call: &str, args: &str) -> Result<()> {
 
 /// Parse a JSON array string into dynamic Values.
 /// Accepts: '[1, 2, true]' or '[]' or individual values.
+fn parse_stake_burn_args(args: &str) -> Result<(u16, Balance)> {
+    let parsed: serde_json::Value = serde_json::from_str(args)
+        .map_err(|e| anyhow::anyhow!("Invalid JSON args '{}': {}", args, e))?;
+    let arr = parsed.as_array().ok_or_else(|| {
+        anyhow::anyhow!("Stake-burn args must be a JSON array: [netuid, amount_tao]")
+    })?;
+    if arr.len() != 2 {
+        anyhow::bail!(
+            "Stake-burn args must contain exactly 2 values: [netuid, amount_tao], got {} values",
+            arr.len()
+        );
+    }
+
+    let netuid_u64 = arr[0]
+        .as_u64()
+        .ok_or_else(|| anyhow::anyhow!("stake-burn arg[0] netuid must be an unsigned integer"))?;
+    let netuid = u16::try_from(netuid_u64)
+        .map_err(|_| anyhow::anyhow!("stake-burn netuid out of range for u16: {}", netuid_u64))?;
+
+    let amount_tao = arr[1].as_f64().ok_or_else(|| {
+        anyhow::anyhow!(
+            "stake-burn arg[1] amount_tao must be a number, got {}",
+            arr[1]
+        )
+    })?;
+    if !amount_tao.is_finite() || amount_tao <= 0.0 {
+        anyhow::bail!(
+            "stake-burn amount_tao must be a finite positive number, got {}",
+            amount_tao
+        );
+    }
+    let amount = Balance::from_tao(amount_tao);
+    if amount.rao() == 0 {
+        anyhow::bail!(
+            "stake-burn amount_tao '{}' is too small (rounds to zero RAO)",
+            amount_tao
+        );
+    }
+    Ok((netuid, amount))
+}
+
 fn parse_raw_args(args: &str) -> Result<Vec<Value>> {
     let parsed: serde_json::Value = serde_json::from_str(args)
         .map_err(|e| anyhow::anyhow!("Invalid JSON args '{}': {}", args, e))?;
