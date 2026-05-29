@@ -225,21 +225,21 @@
       "dependsOn": [
         "env-setup-followup"
       ],
-      "agentId": "bc-466a20e5-9edb-46ac-8bae-9bec4f80e6d1",
-      "runId": "run-b21cea2b-5fc1-4a7a-911c-a00f4af3d4ff",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/merge-phase3-tests.md",
-      "startedAt": "2026-05-29T06:15:44.484Z",
-      "finishedAt": "2026-05-29T06:16:28.161Z",
-      "lastUpdate": "2026-05-29T06:16:28.162Z",
-      "note": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T06:16:42.760Z",
+      "note": "respawned by local-cli (was error; attempts=1)",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "failureMode": null,
+      "verification": null
     },
     {
       "name": "phase3-rerun-stake-advanced",
@@ -420,11 +420,11 @@
       "finishedAt": null,
       "lastUpdate": "2026-05-29T06:15:51.426Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "fix-p1-proposals",
