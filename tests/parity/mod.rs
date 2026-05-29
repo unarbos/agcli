@@ -13,6 +13,10 @@ pub mod governance;
 pub mod misc;
 
 #[cfg(feature = "e2e")]
+#[path = "network-readonly.rs"]
+pub mod network_readonly;
+
+#[cfg(feature = "e2e")]
 pub mod stake_basic;
 
 #[cfg(feature = "e2e")]

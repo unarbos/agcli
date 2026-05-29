@@ -898,11 +898,11 @@
     "ref_invocation": "btcli subnets get-identity",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -924,11 +924,11 @@
     "ref_invocation": "btcli subnets list",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -993,11 +993,11 @@
     "ref_invocation": "btcli subnets price",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1050,11 +1050,11 @@
     "ref_invocation": "btcli subnets show",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1208,9 +1208,9 @@
     "ref_invocation": "btcli view dashboard",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli view network --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1745,9 +1745,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_all_subnets_info(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -1756,9 +1756,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_all_subnets_netuid(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -2295,9 +2295,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_subnet_info(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -2328,9 +2328,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_total_subnets(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -2823,9 +2823,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.subnet_exists(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -3263,9 +3263,9 @@
     "ref_invocation": "bittensor.core.subtensor.get_all_subnets_info(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -3274,9 +3274,9 @@
     "ref_invocation": "bittensor.core.subtensor.get_all_subnets_netuid(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -3835,9 +3835,9 @@
     "ref_invocation": "bittensor.core.subtensor.get_subnet_info(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -3868,9 +3868,9 @@
     "ref_invocation": "bittensor.core.subtensor.get_total_subnets(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -4363,9 +4363,9 @@
     "ref_invocation": "bittensor.core.subtensor.subnet_exists(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/network-readonly.rs::network_readonly_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
