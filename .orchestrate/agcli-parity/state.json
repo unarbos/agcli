@@ -201,19 +201,19 @@
       "dependsOn": [
         "phase6-ci-and-report"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-1b6e9353-a0d7-4286-ac5e-625f9058da2f",
+      "runId": "run-49670d7a-de2c-40f1-8a46-ff6826a508cb",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/env-setup-followup.md",
       "startedAt": "2026-05-29T05:58:05.692Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T05:58:05.692Z",
+      "finishedAt": "2026-05-29T05:58:51.034Z",
+      "lastUpdate": "2026-05-29T05:58:51.035Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null,
       "attempts": 1
     },
@@ -737,6 +737,10 @@
     {
       "at": "2026-05-28T21:44:39.260Z",
       "message": "phase6-ci-and-report: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-29T05:58:51.030Z",
+      "message": "env-setup-followup: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
