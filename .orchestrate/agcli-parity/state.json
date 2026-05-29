@@ -228,16 +228,16 @@
       "agentId": "bc-466a20e5-9edb-46ac-8bae-9bec4f80e6d1",
       "runId": "run-b21cea2b-5fc1-4a7a-911c-a00f4af3d4ff",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/merge-phase3-tests.md",
       "startedAt": "2026-05-29T06:15:44.484Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:15:48.280Z",
+      "finishedAt": "2026-05-29T06:16:28.161Z",
+      "lastUpdate": "2026-05-29T06:16:28.162Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null,
       "attempts": 1
     },
@@ -410,15 +410,15 @@
       "dependsOn": [
         "env-setup-followup"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
+      "agentId": "bc-5d04a096-252a-4f2d-8913-0b5e194bae7c",
+      "runId": "run-601efab3-cd3e-4985-9778-07ebc0f55c21",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-29T06:15:48.285Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:15:48.285Z",
+      "lastUpdate": "2026-05-29T06:15:51.426Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -759,6 +759,10 @@
     {
       "at": "2026-05-29T06:15:40.135Z",
       "message": "env-setup-followup: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-29T06:16:28.155Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
