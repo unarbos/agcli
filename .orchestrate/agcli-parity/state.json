@@ -321,20 +321,20 @@
       "dependsOn": [
         "merge-phase3-tests"
       ],
-      "agentId": null,
-      "runId": null,
+      "agentId": "bc-299fe1d0-95d4-46b5-ab3f-0bd62eaebae7",
+      "runId": "run-aa48316a-44ea-4c1b-9237-49dbb360ea93",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/phase3-rerun-weights.md",
       "startedAt": "2026-05-29T11:19:13.828Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T11:19:13.828Z",
+      "finishedAt": "2026-05-29T11:20:45.685Z",
+      "lastUpdate": "2026-05-29T11:20:45.686Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -1175,6 +1175,10 @@
     {
       "at": "2026-05-29T11:19:13.561Z",
       "message": "phase3-rerun-weights: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T11:20:45.679Z",
+      "message": "phase3-rerun-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
