@@ -324,14 +324,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T11:21:07.982Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T11:20:58.007Z",
+      "lastUpdate": "2026-05-29T11:21:07.982Z",
       "note": "respawned by local-cli (was error; attempts=3)",
-      "attempts": 3,
+      "attempts": 4,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -1187,6 +1187,10 @@
     {
       "at": "2026-05-29T11:20:47.051Z",
       "message": "phase3-rerun-weights: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/phase3-rerun-weights-failure.md"
+    },
+    {
+      "at": "2026-05-29T11:20:59.325Z",
+      "message": "phase3-rerun-weights: respawned by local-cli (was error)"
     }
   ]
 }

@@ -447,7 +447,7 @@
       ],
       "verify": "cargo test --features e2e --test parity_weights -- --nocapture",
       "model": "gpt-5.3-codex-high-fast",
-      "maxAttempts": 3,
+      "maxAttempts": 6,
       "dependsOn": [
         "merge-phase3-tests"
       ]
