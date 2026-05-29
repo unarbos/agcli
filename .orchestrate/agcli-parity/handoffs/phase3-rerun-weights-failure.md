@@ -1,21 +1,21 @@
 <!-- orchestrate failure handoff
 task: phase3-rerun-weights
 branch: orch/agcli-parity/phase3-rerun-weights
-agentId: bc-b4df8f38-36f1-471e-b914-1d4d8ed3bd70
-runId: run-d4cf0670-8e76-485f-a981-587c5d55b471
+agentId: bc-299fe1d0-95d4-46b5-ab3f-0bd62eaebae7
+runId: run-aa48316a-44ea-4c1b-9237-49dbb360ea93
 failureMode: unknown
-terminatedAt: 2026-05-29T11:18:59.537Z
+terminatedAt: 2026-05-29T11:20:45.685Z
 -->
 
 # phase3-rerun-weights failure handoff
 
 Status: error (cloud agent terminated without writing a handoff)
 Failure mode: unknown
-Cloud agent: bc-b4df8f38-36f1-471e-b914-1d4d8ed3bd70
-Started: 2026-05-29T11:16:18.649Z
-Terminated: 2026-05-29T11:18:59.537Z
-Duration: 160888ms
-Last activity: 2026-05-29T11:18:59.312Z - respawned by local-cli (was error; attempts=1)
+Cloud agent: bc-299fe1d0-95d4-46b5-ab3f-0bd62eaebae7
+Started: 2026-05-29T11:19:13.828Z
+Terminated: 2026-05-29T11:20:45.685Z
+Duration: 91857ms
+Last activity: 2026-05-29T11:20:45.519Z - respawned by local-cli (was error; attempts=2)
 Last tool call: read_file
 Branch: orch/agcli-parity/phase3-rerun-weights
 SDK error: (none recorded)
