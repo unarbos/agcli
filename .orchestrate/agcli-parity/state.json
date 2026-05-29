@@ -401,13 +401,13 @@
       "handoffPath": "handoffs/phase3-rerun-identity-commitment.md",
       "startedAt": "2026-05-29T07:22:08.159Z",
       "finishedAt": "2026-05-29T08:40:19.693Z",
-      "lastUpdate": "2026-05-29T08:40:19.695Z",
+      "lastUpdate": "2026-05-29T08:40:21.046Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "fix-p0-btcli-sudo-stake-burn",
@@ -541,17 +541,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T08:40:25.568Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-29T08:40:25.568Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     }
   ],
   "attention": [
@@ -1110,6 +1111,10 @@
     {
       "at": "2026-05-29T08:34:07.540Z",
       "message": "phase3-rerun-root: tool_call idle 317918ms; last=2026-05-29T08:28:49.622Z"
+    },
+    {
+      "at": "2026-05-29T08:40:21.047Z",
+      "message": "phase3-rerun-identity-commitment: verification self-reported (unit-test-verified)"
     }
   ]
 }
