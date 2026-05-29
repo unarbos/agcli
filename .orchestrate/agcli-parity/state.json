@@ -225,20 +225,20 @@
       "dependsOn": [
         "env-setup-followup"
       ],
-      "agentId": null,
-      "runId": null,
+      "agentId": "bc-c163fbe3-f5bf-4635-ae51-d497ab89b648",
+      "runId": "run-e13f91f8-cfec-42c6-a8f9-49d0c8c314bd",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/merge-phase3-tests.md",
       "startedAt": "2026-05-29T06:18:16.096Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:18:16.096Z",
+      "finishedAt": "2026-05-29T06:19:08.414Z",
+      "lastUpdate": "2026-05-29T06:19:08.415Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -791,6 +791,10 @@
     {
       "at": "2026-05-29T06:18:08.437Z",
       "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:19:08.409Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
