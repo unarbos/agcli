@@ -372,12 +372,12 @@
       "agentId": "bc-0fda8fc2-dff1-4c7e-a4ea-62b51bb3d82d",
       "runId": "run-5f9aabaa-1fa4-44a3-8525-032aaec015b1",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-rerun-root.md",
       "startedAt": "2026-05-29T07:22:04.924Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:22:08.154Z",
+      "finishedAt": "2026-05-29T09:09:55.188Z",
+      "lastUpdate": "2026-05-29T09:09:55.189Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
@@ -546,12 +546,12 @@
       "handoffPath": "handoffs/phase5-6-refresh.md",
       "startedAt": "2026-05-29T08:40:25.568Z",
       "finishedAt": "2026-05-29T08:45:46.165Z",
-      "lastUpdate": "2026-05-29T08:45:46.167Z",
+      "lastUpdate": "2026-05-29T08:45:47.733Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
+      "verification": "type-check-only",
       "attempts": 1
     }
   ],
@@ -1123,6 +1123,10 @@
     {
       "at": "2026-05-29T08:44:08.511Z",
       "message": "phase3-rerun-weights: tool_call idle 309217ms; last=2026-05-29T08:38:59.294Z"
+    },
+    {
+      "at": "2026-05-29T08:45:47.734Z",
+      "message": "phase5-6-refresh: verification self-reported (type-check-only)"
     }
   ]
 }
