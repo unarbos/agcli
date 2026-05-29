@@ -348,12 +348,12 @@
       "agentId": "bc-addad812-c19e-4dce-b99f-cd2a4e87c789",
       "runId": "run-f75fac97-bc50-45ef-878b-66914a9a5297",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-rerun-network-readonly.md",
       "startedAt": "2026-05-29T07:22:01.401Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:22:04.921Z",
+      "finishedAt": "2026-05-29T07:49:48.211Z",
+      "lastUpdate": "2026-05-29T07:49:48.213Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -473,13 +473,13 @@
       "handoffPath": "handoffs/fix-p1-senate.md",
       "startedAt": "2026-05-29T07:09:41.411Z",
       "finishedAt": "2026-05-29T07:29:31.347Z",
-      "lastUpdate": "2026-05-29T07:29:31.348Z",
+      "lastUpdate": "2026-05-29T07:29:32.645Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "fix-p1-senate-vote",
@@ -1009,6 +1009,42 @@
     {
       "at": "2026-05-29T07:27:48.972Z",
       "message": "fix-p1-senate-vote: tool_call idle 307067ms; last=2026-05-29T07:22:41.905Z"
+    },
+    {
+      "at": "2026-05-29T07:29:32.646Z",
+      "message": "fix-p1-senate: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T07:32:06.933Z",
+      "message": "phase3-rerun-network-readonly: SSE idle 300767ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:32:06.937Z",
+      "message": "phase3-rerun-network-readonly: tool_call idle 300771ms; last=2026-05-29T07:27:06.166Z"
+    },
+    {
+      "at": "2026-05-29T07:45:06.192Z",
+      "message": "phase3-rerun-weights: SSE idle 344009ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:45:06.195Z",
+      "message": "phase3-rerun-weights: tool_call idle 344013ms; last=2026-05-29T07:39:22.182Z"
+    },
+    {
+      "at": "2026-05-29T07:45:56.982Z",
+      "message": "phase3-rerun-stake-advanced: SSE idle 302977ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:45:56.985Z",
+      "message": "phase3-rerun-stake-advanced: tool_call idle 302980ms; last=2026-05-29T07:40:54.005Z"
+    },
+    {
+      "at": "2026-05-29T07:48:01.296Z",
+      "message": "phase3-rerun-subnet-register: SSE idle 314785ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:48:01.298Z",
+      "message": "phase3-rerun-subnet-register: tool_call idle 314787ms; last=2026-05-29T07:42:46.511Z"
     }
   ]
 }
