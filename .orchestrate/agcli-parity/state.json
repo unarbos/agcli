@@ -220,7 +220,7 @@
     {
       "name": "merge-phase3-tests",
       "type": "worker",
-      "branch": "orch/agcli-parity/phase3-tests",
+      "branch": "orch/agcli-parity/merge-phase3-tests",
       "startingRef": "cursor/agcli-parity-orchestrate-88b1",
       "dependsOn": [
         "env-setup-followup"
@@ -228,17 +228,17 @@
       "agentId": "bc-51a801ca-84bc-43fd-b90b-808306004d90",
       "runId": "run-44eb2c08-99c5-4644-87de-52a4235046b8",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
+      "status": "handed-off",
+      "resultStatus": "finished",
       "handoffPath": "handoffs/merge-phase3-tests.md",
       "startedAt": "2026-05-29T07:09:36.889Z",
-      "finishedAt": "2026-05-29T07:10:47.868Z",
-      "lastUpdate": "2026-05-29T07:10:47.870Z",
-      "note": "respawned by local-cli (was error; attempts=4)",
+      "finishedAt": "2026-05-29T07:21:43.000Z",
+      "lastUpdate": "2026-05-29T07:21:43.000Z",
+      "note": "completed locally by dispatcher (cloud attempts exhausted)",
       "attempts": 5,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -252,17 +252,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T07:21:47.772Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-29T07:21:47.772Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "phase3-rerun-subnet-register",
@@ -982,6 +983,18 @@
     {
       "at": "2026-05-29T07:10:47.864Z",
       "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T07:10:49.167Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T07:10:49.168Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T07:21:43.000Z",
+      "message": "merge-phase3-tests: marked handed-off after local merge on orch/agcli-parity/merge-phase3-tests"
     }
   ]
 }
