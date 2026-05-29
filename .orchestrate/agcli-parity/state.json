@@ -393,15 +393,15 @@
       "dependsOn": [
         "merge-phase3-tests"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
+      "agentId": "bc-f76bfdec-9452-4065-bdd7-a2434cdbb596",
+      "runId": "run-6bf1e19a-0f8d-4621-b091-798db66828bd",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-29T07:22:08.159Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:22:08.159Z",
+      "lastUpdate": "2026-05-29T07:22:11.924Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -468,12 +468,12 @@
       "agentId": "bc-93bf7d89-8a7f-41fd-be01-2b20e7db995f",
       "runId": "run-14ce55f4-98b3-4ac3-b785-00523243b7f7",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p1-senate.md",
       "startedAt": "2026-05-29T07:09:41.411Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:09:45.205Z",
+      "finishedAt": "2026-05-29T07:29:31.347Z",
+      "lastUpdate": "2026-05-29T07:29:31.348Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
@@ -1001,6 +1001,14 @@
     {
       "at": "2026-05-29T07:21:43.000Z",
       "message": "merge-phase3-tests: marked handed-off after local merge on orch/agcli-parity/merge-phase3-tests"
+    },
+    {
+      "at": "2026-05-29T07:27:48.968Z",
+      "message": "fix-p1-senate-vote: SSE idle 307063ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:27:48.972Z",
+      "message": "fix-p1-senate-vote: tool_call idle 307067ms; last=2026-05-29T07:22:41.905Z"
     }
   ]
 }
