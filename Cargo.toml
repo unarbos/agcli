@@ -103,6 +103,11 @@ name = "chain_integration_test"
 path = "tests/chain_integration_test.rs"
 required-features = ["e2e"]
 
+[[test]]
+name = "parity_stake_advanced"
+path = "tests/parity.rs"
+required-features = ["e2e"]
+
 [dev-dependencies]
 tempfile = "3.27.0"
 proptest = "1.6"
