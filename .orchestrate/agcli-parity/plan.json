@@ -343,7 +343,7 @@
       ],
       "verify": "cargo test --features e2e --test parity_balance_transfer --no-run 2>/dev/null || cargo check --tests",
       "model": "gpt-5.3-codex-high-fast",
-      "maxAttempts": 2,
+      "maxAttempts": 5,
       "dependsOn": [
         "env-setup-followup"
       ]
