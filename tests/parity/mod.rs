@@ -17,3 +17,6 @@ pub mod stake_basic;
 
 #[cfg(feature = "e2e")]
 pub mod wallet;
+
+#[cfg(feature = "e2e")]
+pub mod root;

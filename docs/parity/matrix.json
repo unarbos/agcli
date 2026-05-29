@@ -1006,14 +1006,14 @@
     "ref_invocation": "btcli subnets register --wallet-name mywallet --netuid 1 --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --no-prompt",
     "ref_extrinsic": "SubtensorModule.root_register",
     "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
       "btcli: --no-prompt \u2194 agcli: --yes",
       "btcli: --wallet-name \u2194 agcli: -w/--wallet",
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.root_register, sdk.subtensor.root_register."
+    "parity_test": "tests/parity/root.rs::root_register_parity_btcli_agcli",
+    "notes": "Variant-A localnet parity validated for root-register path (netuid 0): btcli and agcli produced matching root neuron/hotkey deltas. Related rows sharing dispatchable: sdk.async_subtensor.root_register, sdk.subtensor.root_register."
   },
   {
     "id": "btcli.subnets.set-identity",
@@ -1027,7 +1027,7 @@
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
+    "notes": "Variant-A root identity rerun in tests/parity/root.rs::root_identity_parity_btcli_agcli showed divergence on netuid 0: btcli set-identity path remained no-op while agcli identity set-subnet mutated on-chain identity. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
   },
   {
     "id": "btcli.subnets.set-symbol",
@@ -2669,10 +2669,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.root_register(...)",
     "ref_extrinsic": "SubtensorModule.root_register",
     "agcli_invocation": "agcli root register --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.subtensor.root_register."
+    "parity_test": "tests/parity/root.rs::root_register_parity_btcli_agcli",
+    "notes": "Variant-A localnet parity validated for shared SubtensorModule.root_register via btcli/agcli root-register delta match (tests/parity/root.rs::root_register_parity_btcli_agcli). Related rows sharing dispatchable: btcli.subnets.register, sdk.subtensor.root_register."
   },
   {
     "id": "sdk.async_subtensor.root_set_pending_childkey_cooldown",
@@ -2771,7 +2771,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.subtensor.set_subnet_identity."
+    "notes": "Variant-A root identity rerun in tests/parity/root.rs::root_identity_parity_btcli_agcli showed divergence on SubtensorModule.set_subnet_identity at netuid 0: btcli path remained no-op while agcli mutated identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.subtensor.set_subnet_identity."
   },
   {
     "id": "sdk.async_subtensor.set_weights",
@@ -4209,10 +4209,10 @@
     "ref_invocation": "bittensor.core.subtensor.root_register(...)",
     "ref_extrinsic": "SubtensorModule.root_register",
     "agcli_invocation": "agcli root register --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.async_subtensor.root_register."
+    "parity_test": "tests/parity/root.rs::root_register_parity_btcli_agcli",
+    "notes": "Variant-A localnet parity validated for shared SubtensorModule.root_register via btcli/agcli root-register delta match (tests/parity/root.rs::root_register_parity_btcli_agcli). Related rows sharing dispatchable: btcli.subnets.register, sdk.async_subtensor.root_register."
   },
   {
     "id": "sdk.subtensor.root_set_pending_childkey_cooldown",
@@ -4311,7 +4311,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.async_subtensor.set_subnet_identity."
+    "notes": "Variant-A root identity rerun in tests/parity/root.rs::root_identity_parity_btcli_agcli showed divergence on SubtensorModule.set_subnet_identity at netuid 0: btcli path remained no-op while agcli mutated identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.async_subtensor.set_subnet_identity."
   },
   {
     "id": "sdk.subtensor.set_weights",
