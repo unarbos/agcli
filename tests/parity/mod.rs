@@ -16,4 +16,8 @@ pub mod misc;
 pub mod stake_basic;
 
 #[cfg(feature = "e2e")]
+#[path = "subnet-register.rs"]
+pub mod subnet_register;
+
+#[cfg(feature = "e2e")]
 pub mod wallet;

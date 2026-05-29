@@ -1013,7 +1013,7 @@
       "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.root_register, sdk.subtensor.root_register."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_btcli_subnets_register_observed_vs_agcli observed agcli failure code 11 (coldkey decrypt) on btcli-style wallet artifacts in batch mode. btcli execution produced no registration delta and no fee spend in this baseline. Kept COVERED_CLI_ONLY pending wallet-format/unlock parity fix."
   },
   {
     "id": "btcli.subnets.set-identity",
@@ -2573,7 +2573,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.subtensor.register."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_register_parity_btcli_sdk_agcli observed sdk register submitting with fee spend while agcli register-neuron failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.async_subtensor.register_limit",
@@ -2584,7 +2584,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.subtensor.register_limit."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_register_limit_parity_btcli_sdk_agcli observed sdk register_limit submitting with fee spend while agcli register-neuron failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.async_subtensor.register_subnet",
@@ -2672,7 +2672,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.subtensor.root_register."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_root_register_parity_btcli_sdk_agcli observed sdk root_register submitting with fee spend while agcli counterpart failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.async_subtensor.root_set_pending_childkey_cooldown",
@@ -4113,7 +4113,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.async_subtensor.register."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_register_parity_btcli_sdk_agcli observed sdk register submitting with fee spend while agcli register-neuron failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.subtensor.register_limit",
@@ -4124,7 +4124,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.register_limit. Related rows sharing dispatchable: sdk.async_subtensor.register_limit."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_register_limit_parity_btcli_sdk_agcli observed sdk register_limit submitting with fee spend while agcli register-neuron failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.subtensor.register_subnet",
@@ -4212,7 +4212,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.root_register. Related rows sharing dispatchable: btcli.subnets.register, sdk.async_subtensor.root_register."
+    "notes": "Phase 3 rerun in tests/parity/subnet-register.rs::subnet_register_sdk_root_register_parity_btcli_sdk_agcli observed sdk root_register submitting with fee spend while agcli counterpart failed with code 11 (coldkey decrypt) on the same wallet flow. Kept COVERED_CLI_ONLY pending agcli wallet unlock parity."
   },
   {
     "id": "sdk.subtensor.root_set_pending_childkey_cooldown",
