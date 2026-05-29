@@ -418,13 +418,13 @@
       "handoffPath": "handoffs/fix-p0-btcli-sudo-stake-burn.md",
       "startedAt": "2026-05-29T06:15:48.285Z",
       "finishedAt": "2026-05-29T06:39:08.034Z",
-      "lastUpdate": "2026-05-29T06:39:08.036Z",
+      "lastUpdate": "2026-05-29T06:39:09.365Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "fix-p1-proposals",
@@ -437,17 +437,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T06:39:10.214Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-29T06:39:10.214Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "fix-p1-senate",
@@ -803,6 +804,10 @@
     {
       "at": "2026-05-29T06:19:09.725Z",
       "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:39:09.365Z",
+      "message": "fix-p0-btcli-sudo-stake-burn: verification self-reported (unit-test-verified)"
     }
   ]
 }
