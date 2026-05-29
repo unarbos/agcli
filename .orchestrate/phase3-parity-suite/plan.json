@@ -1,0 +1,440 @@
+{
+  "$schema": "https://cursor/orchestrate/plan.schema.json",
+  "goal": "Phase 3 parity subplanner for agcli localnet parity suite by category.",
+  "summary": "publish 12 category parity workers, run, collect handoffs, and aggregate findings",
+  "rootSlug": "phase3-parity-suite",
+  "baseBranch": "cursor/agcli-parity-orchestrate-88b1",
+  "prBase": "main",
+  "repoUrl": "https://github.com/unarbos/agcli",
+  "selfAgentId": "bc-c24eb220-8a00-413e-8807-35c30e25dd80",
+  "syncStateToGit": false,
+  "acceptanceCriteria": [
+    "`tests/parity/` exists with one file per category (12 files) plus `tests/parity.rs` entry.",
+    "Each category test runs against localnet on its worker branch (`cargo test --features e2e --test parity_<category> -- --nocapture`).",
+    "`docs/parity/matrix.json` rows covered by passing parity tests are flipped to `COVERED_E2E` and `parity_test` is populated.",
+    "Rows that diverge remain `COVERED_CLI_ONLY` with notes citing the divergence assertion.",
+    "Aggregated handoff includes ranked high/med/low UX and parity findings from all category workers."
+  ],
+  "tasks": [
+    {
+      "name": "parity-balance-transfer",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for transfer and balance operations. Cover `btcli wallet transfer`, `transfer_all`, `transfer_keep_alive` and SDK equivalents versus `agcli transfer*` plus `agcli balance` assertions.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_balance_transfer -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_balance_transfer -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_balance_transfer -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-wallet",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for wallet workflows. Cover wallet create, list, show, regen, derive, dev-key, associate-hotkey, check-swap, and show-mnemonic with btcli and SDK equivalents versus `agcli wallet *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_wallet -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/wallet.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_wallet -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_wallet -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-stake-basic",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for basic staking. Cover add_stake, remove_stake, add_stake_limit, remove_stake_limit, and unstake_all with btcli and SDK equivalents versus `agcli stake *` basic commands.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_stake_basic -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/stake_basic.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_stake_basic -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_stake_basic -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-stake-advanced",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for advanced staking. Cover move stake, swap stake, transfer stake, children operations, childkey_take, recycle_alpha, burn_alpha, swap_limit, and claim_root with btcli and SDK equivalents versus advanced `agcli stake *` flows.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_stake_advanced -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_stake_advanced -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_stake_advanced -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-subnet-register",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for subnet registration operations. Cover register_network, register_network_with_identity, register, burned_register, register_limit, and leased registration with btcli and SDK equivalents versus `agcli subnet register*`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_subnet_register -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/subnet_register.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_subnet_register -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_subnet_register -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-subnet-hyperparams",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for subnet hyperparameter administration. Cover admin-utils sudo hyperparameter setters and btcli sudo set commands with SDK equivalents versus `agcli admin *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_subnet_hyperparams -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_subnet_hyperparams -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_subnet_hyperparams -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-weights",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for weights operations. Cover set_weights, commit weights, reveal weights, and batch_reveal with btcli and SDK equivalents versus `agcli weights *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_weights -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/weights.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_weights -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_weights -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-root",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for root subnet flows. Cover root subnet weights, root subnet identity, and root delegate registration with btcli and SDK equivalents versus `agcli root *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_root -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/root.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_root -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_root -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-identity-commitment",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for identity and commitment workflows. Cover set_identity, set_commitment, and reveal_timelocked_commitments with btcli and SDK equivalents versus `agcli identity *` and `agcli commitment *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_identity_commitment -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_identity_commitment -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_identity_commitment -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-governance",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for governance workflows. Cover multisig, proxy, scheduler, preimage, and sudo wrappers with btcli and SDK equivalents versus `agcli multisig *`, `agcli proxy *`, `agcli scheduler *`, and `agcli preimage *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_governance -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/governance.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_governance -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_governance -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-network-readonly",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for read-only network workflows. Cover neurons, metagraph, hyperparams reads, subnets, delegates, and get_balance with btcli and SDK view/list calls versus `agcli view *`, `agcli subnet list/show`, and `agcli block *`.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_network_readonly -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/network_readonly.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/misc.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_network_readonly -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_network_readonly -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    },
+    {
+      "name": "parity-misc",
+      "type": "worker",
+      "scopedGoal": "Build category parity tests for miscellaneous command groups. Cover utils, evm, contracts, drand, crowdloan, liquidity, swap, and safe-mode with SDK equivalents versus the corresponding agcli groups.\n\nUse only files allowed by this task and do not modify source files.\n\nTest scaffolding pattern each worker MUST follow:\n- Test file pattern: `tests/parity/<category>.rs` declared at the top of `tests/parity.rs` (a thin entry file that `mod`s the category files). Use `#[cfg(feature = \"e2e\")]` per existing convention.\n- For each test:\n  1. Pick a scaffold variant (A-E) from `examples/scaffold-variants/`.\n  2. Boot it via `harness::ensure_local_chain()` style invocation (extend the harness if needed; document the extension in your handoff).\n  3. Snapshot pre-state using `Client` queries (balances, stake, weights, hyperparams as relevant).\n  4. Run the btcli command via `std::process::Command::new(\"btcli\")...` activating the venv inline (use `bash -lc \"source .venv/bin/activate && btcli ...\"`).\n  5. Snapshot post-btcli on-chain state. Tear down to a fresh chain.\n  6. Boot the same scaffold variant fresh. Run the agcli equivalent. Snapshot post-agcli on-chain state.\n  7. Assert the post-btcli and post-agcli storage deltas are equivalent (modulo nonce / extrinsic-index / event-index noise).\n  8. Also assert the UX claims: agcli accepts `--batch --output json --dry-run` (where applicable), produces structured JSON errors on bad input, returns the expected exit code on success.\n- Reuse `harness::dev_pair`, `harness::ensure_alive`, `harness::wait_blocks` rather than reinventing.\n- Tear down containers between scenarios (`docker rm -f <name>`); use distinct container names per category to allow parallel CI later.\n\nMatrix rules: for every covered row in this category, set `agcli_status` to `COVERED_E2E` and populate `parity_test`. If effects diverge, keep `COVERED_CLI_ONLY` and document exact divergence in `notes`.\n\nVerification command: `cargo test --features e2e --test parity_misc -- --nocapture`.",
+      "pathsAllowed": [
+        "tests/parity/misc.rs",
+        "tests/parity/mod.rs",
+        "docs/parity/matrix.json"
+      ],
+      "pathsForbidden": [
+        "src/**",
+        "tests/parity/balance_transfer.rs",
+        "tests/parity/wallet.rs",
+        "tests/parity/stake_basic.rs",
+        "tests/parity/stake_advanced.rs",
+        "tests/parity/subnet_register.rs",
+        "tests/parity/subnet_hyperparams.rs",
+        "tests/parity/weights.rs",
+        "tests/parity/root.rs",
+        "tests/parity/identity_commitment.rs",
+        "tests/parity/governance.rs",
+        "tests/parity/network_readonly.rs",
+        "tests/parity.rs"
+      ],
+      "acceptance": [
+        "Parity test compiles and runs against localnet for this category.",
+        "Worker verifies by booting scaffold variant and running `cargo test --features e2e --test parity_misc -- --nocapture`.",
+        "Covered matrix rows are flipped to `COVERED_E2E` and `parity_test` is set.",
+        "Rows with chain-effect divergence remain `COVERED_CLI_ONLY` and include notes with diverging assertion details."
+      ],
+      "verify": "cargo test --features e2e --test parity_misc -- --nocapture",
+      "model": "gpt-5.3-codex-high-fast",
+      "maxAttempts": 3,
+      "openPR": false
+    }
+  ]
+}
