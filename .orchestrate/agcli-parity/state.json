@@ -300,12 +300,12 @@
       "agentId": "bc-8335b09b-1c87-4b52-b4b9-409fc5f7fbb1",
       "runId": "run-eb35a2f1-920a-409f-b345-a93608285381",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-rerun-subnet-hyperparams.md",
       "startedAt": "2026-05-29T07:21:54.917Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:21:58.215Z",
+      "finishedAt": "2026-05-29T07:59:06.871Z",
+      "lastUpdate": "2026-05-29T07:59:06.873Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -513,15 +513,15 @@
       "dependsOn": [
         "fix-p1-senate-vote"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
+      "agentId": "bc-570b476d-89a1-4393-b2f2-040ff116a141",
+      "runId": "run-26f359c0-81f1-4b25-8150-3756e3f10ad1",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-29T07:52:43.044Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:52:43.044Z",
+      "lastUpdate": "2026-05-29T07:52:46.886Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -1054,6 +1054,14 @@
     {
       "at": "2026-05-29T07:52:37.467Z",
       "message": "fix-p1-senate-vote: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T07:53:30.380Z",
+      "message": "phase3-rerun-identity-commitment: SSE idle 327300ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T07:53:30.383Z",
+      "message": "phase3-rerun-identity-commitment: tool_call idle 327303ms; last=2026-05-29T07:48:03.080Z"
     }
   ]
 }
