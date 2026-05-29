@@ -1,12 +1,32 @@
 <!-- orchestrate handoff
 task: merge-phase3-tests
-branch: orch/agcli-parity/phase3-tests
-agentId: bc-51a801ca-84bc-43fd-b90b-808306004d90
-runId: run-44eb2c08-99c5-4644-87de-52a4235046b8
-resultStatus: error
-finishedAt: 2026-05-29T07:10:47.868Z
+branch: orch/agcli-parity/merge-phase3-tests
+agentId: local-cli
+runId: local-merge
+resultStatus: finished
+finishedAt: 2026-05-29T07:20:00.000Z
 -->
 
-> ⚠️ Run ended with `status=error`. No structured handoff produced — the content below is the worker's raw output up to the point of failure.
+## Status
+success
 
-I’m going to set up the requested working branch, read the two required context files first, then merge the specified Phase 3 branches one-by-one and resolve conflicts while preserving both test paths. After merges, I’ll compile the parity tests and reconcile `docs/parity/matrix.json` parity coverage fields before pushing.I’ve read both required context files and next I’m checking branch topology to create `orch/agcli-parity/phase3-tests`, then I’ll merge the dependency and all five Phase 3 category branches sequentially with conflict resolution.Branch `orch/agcli-parity/phase3-tests` is created; I’m now merging `env-setup-followup` first, then the five Phase 3 branches in the exact listed order and resolving any conflicts manually.I hit merge conflicts in `docs/parity/matrix.json` and `tests/parity/mod.rs`; I’m resolving by preserving all test modules and then reconciling matrix values so coverage/statuses only move forward.
+## Branch
+`orch/agcli-parity/merge-phase3-tests`
+
+## What I did
+- Merged all five Phase 3 category branches locally (cloud workers exhausted 5 attempts on `matrix.json` conflicts):
+  - `origin/orch/phase3-parity-suite/parity-balance-transfer`
+  - `origin/orch/phase3-parity-suite/parity-governance`
+  - `origin/orch/phase3-parity-suite/parity-misc`
+  - `origin/orch/phase3-parity-suite/parity-stake-basic`
+  - `origin/orch/phase3-parity-suite/parity-wallet`
+- Combined `tests/parity/{balance_transfer,governance,misc,stake_basic,wallet}.rs` + unified `tests/parity/mod.rs`
+- Added integration test entrypoints: `tests/parity_*.rs` + `Cargo.toml` `[[test]]` targets
+- Reconciled `docs/parity/matrix.json`: applied **36** `COVERED_E2E` flips from category branches onto the triage base matrix (no status downgrades)
+
+## Verification
+not-verified
+
+## Notes
+- Completed by local dispatcher after repeated cloud-agent early termination (~44–59s, no handoff).
+- Downstream Phase 3 reruns can proceed from this branch.

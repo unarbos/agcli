@@ -103,6 +103,31 @@ name = "chain_integration_test"
 path = "tests/chain_integration_test.rs"
 required-features = ["e2e"]
 
+[[test]]
+name = "parity_balance_transfer"
+path = "tests/parity_balance_transfer.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "parity_governance"
+path = "tests/parity_governance.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "parity_misc"
+path = "tests/parity_misc.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "parity_stake_basic"
+path = "tests/parity_stake_basic.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "parity_wallet"
+path = "tests/parity_wallet.rs"
+required-features = ["e2e"]
+
 [dev-dependencies]
 tempfile = "3.27.0"
 proptest = "1.6"

@@ -293,8 +293,8 @@
     "agcli_invocation": "agcli serve reset --netuid 1",
     "agcli_status": "N/A",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: btcli.axon.set."
@@ -307,8 +307,8 @@
     "agcli_invocation": "agcli serve axon --netuid 1 --ip 127.0.0.1 --port 8091",
     "agcli_status": "N/A",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Out of scope: miner/validator Axon runtime operations per mission constraints. Related rows sharing dispatchable: btcli.axon.reset."
@@ -409,8 +409,8 @@
     "agcli_invocation": "agcli crowdloan contribute --id 0 --amount 5 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.contribute_crowdloan, sdk.subtensor.contribute_crowdloan."
@@ -432,13 +432,13 @@
     "ref_invocation": "btcli crowd create --wallet-name mywallet --deposit 10 --min-contribution 1 --cap 100 --end 1000 --no-prompt",
     "ref_extrinsic": "Crowdloan.create | SubtensorModule.register_leased_network",
     "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. | Parity validated by tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli."
   },
   {
     "id": "btcli.crowd.dissolve",
@@ -448,8 +448,8 @@
     "agcli_invocation": "agcli crowdloan dissolve --id 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.dissolve_crowdloan, sdk.subtensor.dissolve_crowdloan."
@@ -462,8 +462,8 @@
     "agcli_invocation": "agcli crowdloan finalize --id 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.finalize_crowdloan, sdk.subtensor.finalize_crowdloan."
@@ -498,8 +498,8 @@
     "agcli_invocation": "agcli crowdloan refund --id 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.refund_crowdloan, sdk.subtensor.refund_crowdloan."
@@ -512,8 +512,8 @@
     "agcli_invocation": "agcli crowdloan update-cap --id 0 --cap 200 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -526,8 +526,8 @@
     "agcli_invocation": "agcli crowdloan withdraw --id 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.withdraw_crowdloan, sdk.subtensor.withdraw_crowdloan."
@@ -540,8 +540,8 @@
     "agcli_invocation": "agcli liquidity add --netuid 1 --price-low 1 --price-high 2 --amount 1000000000 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_liquidity, sdk.subtensor.add_liquidity."
@@ -565,8 +565,8 @@
     "agcli_invocation": "agcli liquidity modify --netuid 1 --position-id 1 --delta 1000 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.modify_liquidity, sdk.subtensor.modify_liquidity."
@@ -579,8 +579,8 @@
     "agcli_invocation": "agcli liquidity remove --netuid 1 --position-id 1 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.remove_liquidity, sdk.subtensor.remove_liquidity."
@@ -591,12 +591,12 @@
     "ref_invocation": "btcli proxy add --wallet-name mywallet --delegate 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --proxy-type Any --delay 0 --no-prompt",
     "ref_extrinsic": "Proxy.add_proxy",
     "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_proxy, sdk.subtensor.add_proxy."
   },
   {
@@ -607,8 +607,8 @@
     "agcli_invocation": "agcli proxy create-pure --proxy-type any --delay 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.create_pure_proxy, sdk.subtensor.create_pure_proxy."
@@ -621,8 +621,8 @@
     "agcli_invocation": "agcli proxy proxy-announced --delegate <ss58> --real <ss58> --pallet SubtensorModule --call transfer_stake --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.proxy_announced, sdk.subtensor.proxy_announced."
@@ -635,8 +635,8 @@
     "agcli_invocation": "agcli proxy kill-pure --spawner <ss58> --proxy-type any --index 0 --height 0 --ext-index 0 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.kill_pure_proxy, sdk.subtensor.kill_pure_proxy."
@@ -647,12 +647,12 @@
     "ref_invocation": "btcli proxy remove --wallet-name mywallet --delegate 5DAAnrj7VHTzN8ovw8xH8vTzR6kRwVi6zkRgLpmjQe7YQDdy --proxy-type Any --delay 0 --no-prompt",
     "ref_extrinsic": "Proxy.remove_proxies | Proxy.remove_proxy",
     "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -661,13 +661,13 @@
     "ref_invocation": "btcli stake add --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --amount 10 --no-prompt",
     "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
     "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple."
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple. E2E parity also exercises btcli safe-staking path (limit-style semantics) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "btcli.stake.auto",
@@ -699,8 +699,8 @@
     "agcli_invocation": "agcli stake set-children --netuid 1 --children \"\" --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: btcli.stake.child.set, sdk.async_subtensor.set_children, sdk.subtensor.set_children."
@@ -713,8 +713,8 @@
     "agcli_invocation": "agcli stake set-children --netuid 1 --children \"1:<hotkey>\" --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: btcli.stake.child.revoke, sdk.async_subtensor.set_children, sdk.subtensor.set_children."
@@ -727,8 +727,8 @@
     "agcli_invocation": "agcli stake childkey-take --netuid 1 --take 0.1 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -752,7 +752,7 @@
     "agcli_invocation": "agcli stake move --amount 1 --from 1 --to 2 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes"
+      "btcli: --no-prompt \u2194 agcli: --yes"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.move_stake, sdk.subtensor.move_stake."
@@ -765,8 +765,8 @@
     "agcli_invocation": "agcli stake process-claim --netuid 1 --hotkey-address <ss58> --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.claim_root, sdk.subtensor.claim_root."
@@ -777,13 +777,13 @@
     "ref_invocation": "btcli stake remove --wallet-name mywallet --hotkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --netuid 1 --amount 1 --no-prompt",
     "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit | SubtensorModule.unstake_all_alpha",
     "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. E2E parity also exercises btcli safe-staking path (limit-style semantics) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "btcli.stake.set-auto",
@@ -793,8 +793,8 @@
     "agcli_invocation": "agcli stake set-auto --netuid 1 --hotkey-address <ss58> --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_auto_stake, sdk.subtensor.set_auto_stake."
@@ -807,8 +807,8 @@
     "agcli_invocation": "agcli stake set-claim --netuid 1 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_root_claim_type, sdk.subtensor.set_root_claim_type."
@@ -821,7 +821,7 @@
     "agcli_invocation": "agcli stake swap --amount 1 --from 1 --to 2 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes"
+      "btcli: --no-prompt \u2194 agcli: --yes"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.swap_stake, sdk.subtensor.swap_stake."
@@ -834,8 +834,8 @@
     "agcli_invocation": "agcli stake transfer-stake --netuid 1 --amount 1 --dest-hotkey <ss58> --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --destination ↔ agcli: --dest"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --destination \u2194 agcli: --dest"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.transfer_stake, sdk.subtensor.transfer_stake."
@@ -859,7 +859,7 @@
     "agcli_invocation": "agcli subnet create-cost",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -872,7 +872,7 @@
     "agcli_invocation": "agcli subnet check-start --netuid 1",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -885,9 +885,9 @@
     "agcli_invocation": "agcli subnet register --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -900,7 +900,7 @@
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -913,7 +913,7 @@
     "agcli_invocation": "agcli subnet hyperparams --netuid 1 --output json",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -926,7 +926,7 @@
     "agcli_invocation": "agcli subnet list --output json",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -939,7 +939,7 @@
     "agcli_invocation": "agcli subnet mechanism-count --netuid 1",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -952,7 +952,7 @@
     "agcli_invocation": "agcli subnet emission-split --netuid 1",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -965,9 +965,9 @@
     "agcli_invocation": "agcli subnet set-mechanism-count --netuid 1 --count 2 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -980,9 +980,9 @@
     "agcli_invocation": "agcli subnet set-emission-split --netuid 1 --weights \"50,50\" --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -995,7 +995,7 @@
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1008,9 +1008,9 @@
     "agcli_invocation": "agcli subnet register-neuron --netuid 1 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.root_register, sdk.subtensor.root_register."
@@ -1023,8 +1023,8 @@
     "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
@@ -1037,9 +1037,9 @@
     "agcli_invocation": "agcli subnet set-symbol --netuid 1 --symbol TEST --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1052,7 +1052,7 @@
     "agcli_invocation": "agcli subnet show --netuid 1 --output json",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1065,9 +1065,9 @@
     "agcli_invocation": "agcli subnet start --netuid 1 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet",
-      "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet",
+      "btcli: subnets <cmd> \u2194 agcli: subnet <cmd>"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.start_call, sdk.subtensor.start_call."
@@ -1133,12 +1133,12 @@
     "ref_invocation": "btcli sudo set --netuid 1 --param tempo --value 12 --wallet-name mywallet --no-prompt",
     "ref_extrinsic": "SubtensorModule.*) | Sudo.sudo",
     "agcli_invocation": "agcli admin raw --call <admin_call> --args \"[...]\" --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_sudo_set_tempo_parity_btcli_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1149,8 +1149,8 @@
     "agcli_invocation": "agcli delegate increase-take --take 0.18 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_delegate_take, sdk.subtensor.set_delegate_take."
@@ -1174,8 +1174,8 @@
     "agcli_invocation": "agcli subnet trim --netuid 1 --max-uids 64 --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1230,11 +1230,11 @@
     "ref_invocation": "btcli wallet balance",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli balance --address <ss58> --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: wallet balance ↔ agcli: balance"
+      "btcli: wallet balance \u2194 agcli: balance"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1243,10 +1243,10 @@
     "ref_invocation": "btcli wallet create",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet create --name mywallet --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Both tools create wallet artifacts with no chain-state delta."
   },
   {
     "id": "btcli.wallet.get-identity",
@@ -1265,10 +1265,10 @@
     "ref_invocation": "btcli wallet list",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet list --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Filesystem-only command parity verified with no balance or swap storage changes."
   },
   {
     "id": "btcli.wallet.new-coldkey",
@@ -1276,10 +1276,10 @@
     "ref_invocation": "btcli wallet new-coldkey",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet create --name mywallet --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Covered by the create flow parity assertions."
   },
   {
     "id": "btcli.wallet.new-hotkey",
@@ -1331,10 +1331,10 @@
     "ref_invocation": "btcli wallet regen-hotkey",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet regen-hotkey --name mywallet --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_filesystem_and_sdk_workflows_parity",
+    "notes": "Parity verified for wallet hotkey regeneration behavior and zero chain-state delta."
   },
   {
     "id": "btcli.wallet.regen-hotkeypub",
@@ -1355,8 +1355,8 @@
     "agcli_invocation": "agcli identity set --name operator --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1378,10 +1378,10 @@
     "ref_invocation": "btcli wallet swap-check",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet check-swap --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Both tools report no scheduled coldkey swap announcement on fresh localnet."
   },
   {
     "id": "btcli.wallet.swap-coldkey",
@@ -1389,13 +1389,13 @@
     "ref_invocation": "btcli wallet swap-coldkey announce --wallet-name mywallet --new-coldkey 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --no-prompt",
     "ref_extrinsic": "SubtensorModule.announce_coldkey_swap | SubtensorModule.clear_coldkey_swap_announcement | SubtensorModule.dispute_coldkey_swap | SubtensorModule.swap_coldkey_announced",
     "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli",
+    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. | Parity validated by tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli."
   },
   {
     "id": "btcli.wallet.swap-hotkey",
@@ -1405,8 +1405,8 @@
     "agcli_invocation": "agcli swap hotkey --new-hotkey <ss58> --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1417,12 +1417,12 @@
     "ref_invocation": "btcli wallet transfer --destination 5F3sa2TJAWMqDhXG6jhV4N8ko9Yx3h3fJp5fP9Yj4i4f6R7k --amount 1.0 --no-prompt",
     "ref_extrinsic": "Balances.transfer_allow_death | Balances.transfer_keep_alive",
     "agcli_invocation": "agcli transfer --dest <ss58> --amount 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --destination ↔ agcli: --dest"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --destination \u2194 agcli: --dest"
     ],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
   },
   {
@@ -1444,8 +1444,8 @@
     "agcli_invocation": "agcli weights commit --netuid 1 --weights \"0:100\" --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1458,8 +1458,8 @@
     "agcli_invocation": "agcli weights reveal --netuid 1 --weights \"0:100\" --salt s --yes",
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [
-      "btcli: --no-prompt ↔ agcli: --yes",
-      "btcli: --wallet-name ↔ agcli: -w/--wallet"
+      "btcli: --no-prompt \u2194 agcli: --yes",
+      "btcli: --wallet-name \u2194 agcli: -w/--wallet"
     ],
     "parity_test": null,
     "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
@@ -1481,9 +1481,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.add_proxy(...)",
     "ref_extrinsic": "Proxy.add_proxy",
     "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable Proxy.add_proxy. Related rows sharing dispatchable: btcli.proxy.add, sdk.subtensor.add_proxy."
   },
   {
@@ -1492,10 +1492,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.add_stake(...)",
     "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
     "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple."
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake, sdk.subtensor.add_stake_multiple. E2E parity also exercises safe_staking=True (add_stake_limit behavior) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.async_subtensor.add_stake_burn",
@@ -1525,10 +1525,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.announce_coldkey_swap(...)",
     "ref_extrinsic": "SubtensorModule.announce_coldkey_swap",
     "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.subtensor.announce_coldkey_swap."
+    "parity_test": "tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.subtensor.announce_coldkey_swap. | Parity validated by tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.async_subtensor.announce_proxy",
@@ -1624,10 +1624,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.create_crowdloan(...)",
     "ref_extrinsic": "Crowdloan.create",
     "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.subtensor.create_crowdloan."
+    "parity_test": "tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.subtensor.create_crowdloan. | Parity validated by tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.async_subtensor.create_pure_proxy",
@@ -1778,9 +1778,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_balance(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli balance --address <ss58> --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -1811,10 +1811,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_coldkey_swap_announcement(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet check-swap --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "SDK and agcli both report null/false swap-announcement state on baseline localnet."
   },
   {
     "id": "sdk.async_subtensor.get_coldkey_swap_announcement_delay",
@@ -2097,10 +2097,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.get_owned_hotkeys(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet show --all --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Equivalent baseline response for Alice on localnet in parity scenario."
   },
   {
     "id": "sdk.async_subtensor.get_parents",
@@ -2636,9 +2636,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.remove_proxy(...)",
     "ref_extrinsic": "Proxy.remove_proxy",
     "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable Proxy.remove_proxy. Related rows sharing dispatchable: sdk.subtensor.remove_proxy."
   },
   {
@@ -2867,9 +2867,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.transfer(...)",
     "ref_extrinsic": "Balances.transfer_all | Balances.transfer_allow_death | Balances.transfer_keep_alive",
     "agcli_invocation": "agcli transfer-all --dest <ss58> --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by shared dispatchable Balances.transfer_all. Related rows sharing dispatchable: sdk.subtensor.transfer."
   },
   {
@@ -2889,10 +2889,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.unstake(...)",
     "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit",
     "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.subtensor.unstake."
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.subtensor.unstake. E2E parity also exercises safe_unstaking=True (remove_stake_limit behavior) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.async_subtensor.unstake_all",
@@ -2900,9 +2900,9 @@
     "ref_invocation": "bittensor.core.async_subtensor.unstake_all(...)",
     "ref_extrinsic": "SubtensorModule.remove_stake_full_limit",
     "agcli_invocation": "agcli stake unstake-all --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/stake_basic.rs::stake_unstake_all_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake_full_limit. Related rows sharing dispatchable: sdk.subtensor.unstake_all."
   },
   {
@@ -2999,9 +2999,9 @@
     "ref_invocation": "bittensor.core.subtensor.add_proxy(...)",
     "ref_extrinsic": "Proxy.add_proxy",
     "agcli_invocation": "agcli proxy add --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_add_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable Proxy.add_proxy. Related rows sharing dispatchable: btcli.proxy.add, sdk.async_subtensor.add_proxy."
   },
   {
@@ -3010,10 +3010,10 @@
     "ref_invocation": "bittensor.core.subtensor.add_stake(...)",
     "ref_extrinsic": "SubtensorModule.add_stake | SubtensorModule.add_stake_limit",
     "agcli_invocation": "agcli stake add --amount 10 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake_multiple."
+    "parity_test": "tests/parity/stake_basic.rs::stake_add_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.add_stake. Related rows sharing dispatchable: btcli.stake.add, sdk.async_subtensor.add_stake, sdk.async_subtensor.add_stake_multiple, sdk.subtensor.add_stake_multiple. E2E parity also exercises safe_staking=True (add_stake_limit behavior) via tests/parity/stake_basic.rs::stake_add_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.subtensor.add_stake_burn",
@@ -3043,10 +3043,10 @@
     "ref_invocation": "bittensor.core.subtensor.announce_coldkey_swap(...)",
     "ref_extrinsic": "SubtensorModule.announce_coldkey_swap",
     "agcli_invocation": "agcli swap coldkey --new-coldkey <ss58> --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.async_subtensor.announce_coldkey_swap."
+    "parity_test": "tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.announce_coldkey_swap. Related rows sharing dispatchable: sdk.async_subtensor.announce_coldkey_swap. | Parity validated by tests/parity/misc.rs::misc_swap_coldkey_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.subtensor.announce_proxy",
@@ -3142,10 +3142,10 @@
     "ref_invocation": "bittensor.core.subtensor.create_crowdloan(...)",
     "ref_extrinsic": "Crowdloan.create",
     "agcli_invocation": "agcli crowdloan create --deposit 10 --min-contribution 1 --cap 100 --end 1000 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.async_subtensor.create_crowdloan."
+    "parity_test": "tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable Crowdloan.create. Related rows sharing dispatchable: sdk.async_subtensor.create_crowdloan. | Parity validated by tests/parity/misc.rs::misc_crowdloan_create_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.subtensor.create_pure_proxy",
@@ -3296,9 +3296,9 @@
     "ref_invocation": "bittensor.core.subtensor.get_balance(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli balance --address <ss58> --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped to closest agcli read surface in docs/llm.txt."
   },
   {
@@ -3329,10 +3329,10 @@
     "ref_invocation": "bittensor.core.subtensor.get_coldkey_swap_announcement(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet check-swap --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Parity verified on localnet for unscheduled coldkey swap state."
   },
   {
     "id": "sdk.subtensor.get_coldkey_swap_announcement_delay",
@@ -3637,10 +3637,10 @@
     "ref_invocation": "bittensor.core.subtensor.get_owned_hotkeys(...)",
     "ref_extrinsic": null,
     "agcli_invocation": "agcli wallet show --all --output json",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped to closest agcli read surface in docs/llm.txt."
+    "parity_test": "tests/parity/wallet.rs::wallet_associate_hotkey_and_check_swap_equivalence",
+    "notes": "Localnet Alice owned-hotkeys parity validated in test scenario."
   },
   {
     "id": "sdk.subtensor.get_parents",
@@ -4176,9 +4176,9 @@
     "ref_invocation": "bittensor.core.subtensor.remove_proxy(...)",
     "ref_extrinsic": "Proxy.remove_proxy",
     "agcli_invocation": "agcli proxy remove --delegate <ss58> --proxy-type any --delay 0 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/governance.rs::governance_proxy_remove_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable Proxy.remove_proxy. Related rows sharing dispatchable: sdk.async_subtensor.remove_proxy."
   },
   {
@@ -4407,9 +4407,9 @@
     "ref_invocation": "bittensor.core.subtensor.transfer(...)",
     "ref_extrinsic": "Balances.transfer_all | Balances.transfer_allow_death | Balances.transfer_keep_alive",
     "agcli_invocation": "agcli transfer-all --dest <ss58> --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/balance_transfer.rs::transfer_and_balance_parity_btcli_sdk_vs_agcli",
     "notes": "Mapped by shared dispatchable Balances.transfer_all. Related rows sharing dispatchable: sdk.async_subtensor.transfer."
   },
   {
@@ -4429,10 +4429,10 @@
     "ref_invocation": "bittensor.core.subtensor.unstake(...)",
     "ref_extrinsic": "SubtensorModule.remove_stake | SubtensorModule.remove_stake_limit",
     "agcli_invocation": "agcli stake remove --amount 1 --netuid 1 --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.async_subtensor.unstake."
+    "parity_test": "tests/parity/stake_basic.rs::stake_remove_parity_btcli_sdk_agcli",
+    "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake. Related rows sharing dispatchable: sdk.async_subtensor.unstake. E2E parity also exercises safe_unstaking=True (remove_stake_limit behavior) via tests/parity/stake_basic.rs::stake_remove_limit_parity_btcli_sdk_agcli."
   },
   {
     "id": "sdk.subtensor.unstake_all",
@@ -4440,9 +4440,9 @@
     "ref_invocation": "bittensor.core.subtensor.unstake_all(...)",
     "ref_extrinsic": "SubtensorModule.remove_stake_full_limit",
     "agcli_invocation": "agcli stake unstake-all --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
+    "parity_test": "tests/parity/stake_basic.rs::stake_unstake_all_parity_btcli_sdk_agcli",
     "notes": "Mapped by shared dispatchable SubtensorModule.remove_stake_full_limit. Related rows sharing dispatchable: sdk.async_subtensor.unstake_all."
   },
   {
