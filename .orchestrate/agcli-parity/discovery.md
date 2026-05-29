@@ -178,3 +178,4 @@ Definition of done (mission-level): every btcli command is `COVERED_E2E`, every 
 ## Verified at
 
 (Phase 0 appends a one-line `verified at <UTC iso> on rustc <version>, docker <version>, btcli <version>, bittensor <version>, agcli <git sha>` line below.)
+verified at 2026-05-29T06:14:27Z on rustc 1.96.0, docker 29.1.3 (driver vfs), btcli 9.22.0, bittensor 10.4.0, agcli ef5bb8238d5e960723dde779601e45c9086dbe96
