@@ -741,6 +741,14 @@
     {
       "at": "2026-05-29T05:58:51.030Z",
       "message": "env-setup-followup: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T05:58:52.171Z",
+      "message": "env-setup-followup: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/env-setup-followup.md"
+    },
+    {
+      "at": "2026-05-29T05:58:52.173Z",
+      "message": "env-setup-followup: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/env-setup-followup-failure.md"
     }
   ]
 }
