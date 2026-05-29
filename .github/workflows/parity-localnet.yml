@@ -1,0 +1,87 @@
+name: parity-localnet
+
+on:
+  push:
+    branches:
+      - main
+      - "orch/**"
+      - "cursor/**"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  SKIP_METADATA_FETCH: "1"
+
+jobs:
+  parity-localnet:
+    name: Parity (localnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Verify Docker daemon
+        run: docker version && docker info
+
+      - name: Pull subtensor localnet image
+        run: docker pull ghcr.io/opentensor/subtensor-localnet:devnet-ready
+
+      - name: Build agcli release binary
+        run: cargo build --release --bin agcli
+
+      - name: Discover parity test targets
+        id: discover
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+
+          root = pathlib.Path(".")
+          tests_dir = root / "tests"
+          targets = set()
+
+          for path in tests_dir.glob("parity*.rs"):
+            targets.add(path.stem)
+
+          cargo_doc = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+          for entry in cargo_doc.get("test", []):
+            name = entry.get("name")
+            path = entry.get("path", "")
+            if name and (path.startswith("tests/parity") or pathlib.Path(path).name.startswith("parity")):
+              targets.add(name)
+
+          parity_dir = tests_dir / "parity"
+          if parity_dir.exists():
+            for path in parity_dir.glob("*.rs"):
+              if path.name == "mod.rs":
+                continue
+              candidate = f"parity_{path.stem}"
+              if (tests_dir / f"{candidate}.rs").exists():
+                targets.add(candidate)
+
+          ordered = sorted(targets)
+          if not ordered:
+            raise SystemExit("No tests/parity targets discovered; parity-localnet cannot run.")
+
+          output_path = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"targets={','.join(ordered)}\n")
+          print("Discovered parity targets:", ", ".join(ordered))
+          PY
+
+      - name: Run parity targets
+        run: |
+          IFS=',' read -r -a TARGETS <<< "${{ steps.discover.outputs.targets }}"
+          for target in "${TARGETS[@]}"; do
+            echo "::group::cargo test --features e2e --test ${target} -- --nocapture"
+            cargo test --features e2e --test "${target}" -- --nocapture
+            echo "::endgroup::"
+          done

@@ -1359,7 +1359,7 @@
       "btcli: --wallet-name ↔ agcli: -w/--wallet"
     ],
     "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "notes": "Follow-up cycle rerun kept CLI-only: btcli and agcli identity writes did not converge to a deterministic localnet parity assertion in this runtime."
   },
   {
     "id": "btcli.wallet.sign",
@@ -1601,11 +1601,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.compose_call(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils compose-call --pallet SubtensorModule --call set_weights --args-json \"{\"netuid\":1,\"uids\":[0],\"weights\":[65535],\"version_key\":0}\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No low-level compose-call CLI primitive in agcli."
+    "notes": "Follow-up cycle: CLI surface added via agcli utils compose-call (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for this SDK helper."
   },
   {
     "id": "sdk.async_subtensor.contribute_crowdloan",
@@ -2536,11 +2536,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.query_runtime_api(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli view runtime-api call --api Metadata --method metadata --params-json \"[]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No generic runtime-api query command in agcli."
+    "notes": "Follow-up cycle: CLI surface added via agcli view runtime-api call (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for runtime API parity."
   },
   {
     "id": "sdk.async_subtensor.query_subtensor",
@@ -2724,10 +2724,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.set_commitment(...)",
     "ref_extrinsic": "Commitments.set_commitment",
     "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_commitment, sdk.subtensor.set_reveal_commitment."
+    "parity_test": "tests/parity/identity_commitment.rs",
+    "notes": "Follow-up cycle rerun marked this row COVERED_E2E via localnet parity target parity_identity_commitment (upstream: orch/agcli-parity/phase3-rerun-identity-commitment)."
   },
   {
     "id": "sdk.async_subtensor.set_delegate_take",
@@ -2749,7 +2749,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.subtensor.set_commitment, sdk.subtensor.set_reveal_commitment."
+    "notes": "Follow-up cycle rerun kept CLI-only: invocation succeeded but no observable commitment storage delta was detected on this localnet runtime."
   },
   {
     "id": "sdk.async_subtensor.set_root_claim_type",
@@ -2954,11 +2954,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.validate_extrinsic_params(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils validate-extrinsic-params --nonce 1 --era mortal --mortality-blocks 64 --tip 0.1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No CLI equivalent for SDK parameter validation helper."
+    "notes": "Follow-up cycle: CLI preflight validator added (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for SDK-equivalence checks."
   },
   {
     "id": "sdk.async_subtensor.weights",
@@ -3119,11 +3119,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.compose_call(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils compose-call --pallet SubtensorModule --call set_weights --args-json \"{\"netuid\":1,\"uids\":[0],\"weights\":[65535],\"version_key\":0}\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No low-level compose-call CLI primitive in agcli."
+    "notes": "Follow-up cycle: CLI surface added via agcli utils compose-call (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for this SDK helper."
   },
   {
     "id": "sdk.subtensor.contribute_crowdloan",
@@ -4076,11 +4076,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.query_runtime_api(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli view runtime-api call --api Metadata --method metadata --params-json \"[]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No generic runtime-api query command in agcli."
+    "notes": "Follow-up cycle: CLI surface added via agcli view runtime-api call (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for runtime API parity."
   },
   {
     "id": "sdk.subtensor.query_subtensor",
@@ -4264,10 +4264,10 @@
     "ref_invocation": "bittensor.core.subtensor.set_commitment(...)",
     "ref_extrinsic": "Commitments.set_commitment",
     "agcli_invocation": "agcli commitment set --netuid 1 --data \"endpoint:https://example\" --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_reveal_commitment."
+    "parity_test": "tests/parity/identity_commitment.rs",
+    "notes": "Follow-up cycle rerun marked this row COVERED_E2E via localnet parity target parity_identity_commitment (upstream: orch/agcli-parity/phase3-rerun-identity-commitment)."
   },
   {
     "id": "sdk.subtensor.set_delegate_take",
@@ -4289,7 +4289,7 @@
     "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "Mapped by shared dispatchable Commitments.set_commitment. Related rows sharing dispatchable: sdk.async_subtensor.set_commitment, sdk.async_subtensor.set_reveal_commitment, sdk.subtensor.set_commitment."
+    "notes": "Follow-up cycle rerun kept CLI-only: invocation succeeded but no observable commitment storage delta was detected on this localnet runtime."
   },
   {
     "id": "sdk.subtensor.set_root_claim_type",
@@ -4494,11 +4494,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.validate_extrinsic_params(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils validate-extrinsic-params --nonce 1 --era mortal --mortality-blocks 64 --tip 0.1 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No CLI equivalent for SDK parameter validation helper."
+    "notes": "Follow-up cycle: CLI preflight validator added (upstream: orch/agcli-parity/fix-p1-sdk-power-surface). Localnet parity coverage still pending for SDK-equivalence checks."
   },
   {
     "id": "sdk.subtensor.weights",
