@@ -1601,11 +1601,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.compose_call(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils compose-call --pallet SubtensorModule --call add_stake --args-json \"[\\\"0x...\\\", 1, 1000000000]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No low-level compose-call CLI primitive in agcli."
+    "notes": "triage_tier: P1; Covered by `agcli utils compose-call` dynamic SCALE encoder."
   },
   {
     "id": "sdk.async_subtensor.contribute_crowdloan",
@@ -2536,11 +2536,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.query_runtime_api(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli view runtime-api call --api AccountNonceApi --method account_nonce --params-json \"[\\\"0x...\\\"]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No generic runtime-api query command in agcli."
+    "notes": "triage_tier: P1; Covered by `agcli view runtime-api call` for dynamic runtime API queries."
   },
   {
     "id": "sdk.async_subtensor.query_subtensor",
@@ -2954,11 +2954,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.async_subtensor.validate_extrinsic_params(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils validate-extrinsic-params --nonce 0 --era immortal --tip 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No CLI equivalent for SDK parameter validation helper."
+    "notes": "triage_tier: P1; Covered by `agcli utils validate-extrinsic-params` preflight validator."
   },
   {
     "id": "sdk.async_subtensor.weights",
@@ -3119,11 +3119,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.compose_call(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils compose-call --pallet SubtensorModule --call add_stake --args-json \"[\\\"0x...\\\", 1, 1000000000]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No low-level compose-call CLI primitive in agcli."
+    "notes": "triage_tier: P1; Covered by `agcli utils compose-call` dynamic SCALE encoder."
   },
   {
     "id": "sdk.subtensor.contribute_crowdloan",
@@ -4076,11 +4076,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.query_runtime_api(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli view runtime-api call --api AccountNonceApi --method account_nonce --params-json \"[\\\"0x...\\\"]\" --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No generic runtime-api query command in agcli."
+    "notes": "triage_tier: P1; Covered by `agcli view runtime-api call` for dynamic runtime API queries."
   },
   {
     "id": "sdk.subtensor.query_subtensor",
@@ -4494,11 +4494,11 @@
     "source": "sdk",
     "ref_invocation": "bittensor.core.subtensor.validate_extrinsic_params(...)",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli utils validate-extrinsic-params --nonce 0 --era immortal --tip 0 --output json",
+    "agcli_status": "COVERED_CLI_ONLY",
     "agcli_flag_diffs": [],
     "parity_test": null,
-    "notes": "triage_tier: P1; No CLI equivalent for SDK parameter validation helper."
+    "notes": "triage_tier: P1; Covered by `agcli utils validate-extrinsic-params` preflight validator."
   },
   {
     "id": "sdk.subtensor.weights",

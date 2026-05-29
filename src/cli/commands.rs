@@ -632,6 +632,7 @@ pub async fn execute(cli: Cli) -> Result<()> {
                 &cmd,
                 UtilsCommands::Convert { tao: Some(_), .. }
                     | UtilsCommands::Convert { alpha: Some(_), .. }
+                    | UtilsCommands::ComposeCall { .. }
             );
             if needs_chain {
                 let client = connect(

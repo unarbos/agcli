@@ -10,6 +10,7 @@ mod admin_cmds;
 mod block_cmds;
 mod localnet_cmds;
 mod network_cmds;
+mod sdk_cmds;
 mod subnet_cmds;
 mod system_cmds;
 mod weights_cmds;
@@ -1486,6 +1487,36 @@ pub enum ViewCommands {
         #[arg(long)]
         limit: Option<usize>,
     },
+    /// Dynamic runtime API calls (SDK parity surface)
+    RuntimeApi {
+        #[command(subcommand)]
+        command: RuntimeApiCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum RuntimeApiCommands {
+    /// Call a runtime API by name with dynamic JSON arguments
+    Call {
+        /// Runtime API trait name (e.g. AccountNonceApi)
+        #[arg(long)]
+        api: String,
+        /// Runtime API method name (e.g. account_nonce)
+        #[arg(long)]
+        method: String,
+        /// Runtime API args as a JSON array (e.g. ["0x..."] or [1, true])
+        #[arg(long = "params-json")]
+        params_json: Option<String>,
+        /// Query at a specific block number (historical wayback)
+        #[arg(long)]
+        at_block: Option<u32>,
+    },
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExtrinsicEraKind {
+    Immortal,
+    Mortal,
 }
 
 #[derive(Subcommand, Debug)]
@@ -2321,6 +2352,33 @@ pub enum UtilsCommands {
         /// Number of pings per endpoint (default 5)
         #[arg(long, default_value = "5")]
         pings: usize,
+    },
+    /// Compose a pallet call and return SCALE-encoded call data
+    ComposeCall {
+        /// Pallet name (e.g. SubtensorModule)
+        #[arg(long)]
+        pallet: String,
+        /// Call name (e.g. add_stake)
+        #[arg(long)]
+        call: String,
+        /// Call args as a JSON array
+        #[arg(long = "args-json")]
+        args_json: Option<String>,
+    },
+    /// Validate nonce/era/tip combinations before extrinsic submission
+    ValidateExtrinsicParams {
+        /// Optional explicit account nonce
+        #[arg(long)]
+        nonce: Option<u64>,
+        /// Extrinsic era kind
+        #[arg(long, value_enum, default_value = "immortal")]
+        era: ExtrinsicEraKind,
+        /// Optional tip amount in TAO
+        #[arg(long)]
+        tip: Option<f64>,
+        /// Mortality period in blocks (required when --era mortal)
+        #[arg(long)]
+        mortality_blocks: Option<u64>,
     },
 }
 

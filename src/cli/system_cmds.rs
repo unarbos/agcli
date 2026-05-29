@@ -574,6 +574,28 @@ pub(super) async fn handle_utils(
 
             Ok(())
         }
+        UtilsCommands::ComposeCall {
+            pallet,
+            call,
+            args_json,
+        } => {
+            let c = client.ok_or_else(|| {
+                anyhow::anyhow!("Chain connection required for utils compose-call")
+            })?;
+            crate::cli::sdk_cmds::handle_compose_call(c, output, &pallet, &call, &args_json).await
+        }
+        UtilsCommands::ValidateExtrinsicParams {
+            nonce,
+            era,
+            tip,
+            mortality_blocks,
+        } => crate::cli::sdk_cmds::handle_validate_extrinsic_params(
+            output,
+            nonce,
+            era,
+            tip,
+            mortality_blocks,
+        ),
     }
 }
 
