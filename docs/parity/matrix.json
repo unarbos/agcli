@@ -1110,11 +1110,11 @@
     "source": "btcli",
     "ref_invocation": "btcli sudo senate",
     "ref_extrinsic": null,
-    "agcli_invocation": null,
-    "agcli_status": "GAP",
+    "agcli_invocation": "agcli admin raw --call senate --args '[]' --output json",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "triage_tier: P1; No dedicated senate member listing command in agcli."
+    "parity_test": "src/chain/queries.rs::tests::senate_members_query_localnet_smoke",
+    "notes": "Read-only alias implemented in admin raw path with governance pallet fallback (SenateMembers, Triumvirate, Senate)."
   },
   {
     "id": "btcli.sudo.senate-vote",

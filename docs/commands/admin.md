@@ -37,6 +37,17 @@ For `admin list`, `--output json` prints:
 ]
 ```
 
+For `admin raw --call senate --args '[]'`, `--output json` prints:
+
+```json
+{
+  "count": 1,
+  "members": [
+    "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+  ]
+}
+```
+
 ### Exit codes (from `src/error.rs`)
 
 - `0` success
@@ -97,11 +108,19 @@ Notes:
 
 `sudo_set_tempo`, `sudo_set_max_allowed_validators`, `sudo_set_max_allowed_uids`, `sudo_set_immunity_period`, `sudo_set_min_allowed_weights`, `sudo_set_max_weight_limit`, `sudo_set_weights_set_rate_limit`, `sudo_set_commit_reveal_weights_enabled`, `sudo_set_difficulty`, `sudo_set_bonds_moving_average`, `sudo_set_target_registrations_per_interval`, `sudo_set_activity_cutoff`, `sudo_set_serving_rate_limit`, `sudo_set_default_take`, `sudo_set_tx_rate_limit`, `sudo_set_min_difficulty`, `sudo_set_max_difficulty`, `sudo_set_adjustment_interval`, `sudo_set_adjustment_alpha`, `sudo_set_kappa`, `sudo_set_rho`, `sudo_set_min_burn`, `sudo_set_max_burn`, `sudo_set_liquid_alpha_enabled`, `sudo_set_alpha_values`, `sudo_set_yuma3_enabled`, `sudo_set_bonds_penalty`, `sudo_set_subnet_moving_alpha`, `sudo_set_mechanism_count`, `sudo_set_mechanism_emission_split`, `sudo_set_stake_threshold`, `sudo_set_nominator_min_required_stake`, `sudo_set_network_registration_allowed`, `sudo_set_network_pow_registration_allowed`.
 
+Read-only aliases bypass `AdminUtils` dispatch and query governance storage directly:
+
+- `senate`
+- `senate_members`
+- `senate-members`
+- `triumvirate`
+
 ## Practical examples
 
 ```bash
 agcli --network local admin set-tempo --netuid 1 --tempo 120 --sudo-key //Alice
 agcli --network local --output json admin set-default-take --take 32767 --sudo-key //Alice
 agcli --network local admin raw --call sudo_set_target_registrations_per_interval --args '[1, 3]' --sudo-key //Alice
+agcli --network local --output json admin raw --call senate --args '[]'
 agcli --output json admin list
 ```

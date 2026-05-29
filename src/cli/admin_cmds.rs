@@ -527,6 +527,20 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             args,
             sudo_key,
         } => {
+            if is_senate_list_alias(&call) {
+                validate_empty_json_array(&args, "admin raw --call senate")?;
+                let members = client.list_senate_members().await?;
+                if ctx.output.is_json() {
+                    print_json(&serde_json::json!({
+                        "count": members.len(),
+                        "members": members,
+                    }));
+                } else {
+                    print_senate_members_text(&members);
+                }
+                return Ok(());
+            }
+
             validate_admin_call_name(&call)?;
             // Validate netuid in raw args — all known admin calls take netuid as
             // first arg; reject netuid 0 to prevent accidental root network
@@ -570,6 +584,36 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             }
             Ok(())
         }
+    }
+}
+
+fn is_senate_list_alias(call: &str) -> bool {
+    matches!(
+        call.trim().to_ascii_lowercase().as_str(),
+        "senate" | "senate_members" | "senate-members" | "triumvirate"
+    )
+}
+
+fn validate_empty_json_array(args: &str, command: &str) -> Result<()> {
+    let parsed = parse_raw_args(args)?;
+    if !parsed.is_empty() {
+        anyhow::bail!(
+            "{} does not accept positional args.\n  Tip: use --args '[]'.",
+            command
+        );
+    }
+    Ok(())
+}
+
+fn print_senate_members_text(members: &[String]) {
+    if members.is_empty() {
+        println!("No senate members found.");
+        return;
+    }
+
+    println!("Senate members ({}):", members.len());
+    for (idx, member) in members.iter().enumerate() {
+        println!("  {}. {}", idx + 1, member);
     }
 }
 
@@ -692,6 +736,21 @@ mod tests {
     #[test]
     fn parse_raw_args_rejects_nested_arrays() {
         assert!(parse_raw_args("[[1, 2]]").is_err());
+    }
+
+    #[test]
+    fn senate_list_aliases_are_recognized() {
+        assert!(is_senate_list_alias("senate"));
+        assert!(is_senate_list_alias("senate_members"));
+        assert!(is_senate_list_alias("senate-members"));
+        assert!(is_senate_list_alias("triumvirate"));
+        assert!(!is_senate_list_alias("sudo_set_tempo"));
+    }
+
+    #[test]
+    fn validate_empty_json_array_requires_no_args() {
+        assert!(validate_empty_json_array("[]", "cmd").is_ok());
+        assert!(validate_empty_json_array("[1]", "cmd").is_err());
     }
 
     // ========== confirm_action tests ==========

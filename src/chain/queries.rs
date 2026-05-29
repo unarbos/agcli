@@ -1923,6 +1923,43 @@ impl Client {
         Ok(result.and_then(|v| v.as_type::<u64>().ok()))
     }
 
+    /// List senate members from the active governance pallet.
+    pub async fn list_senate_members(&self) -> Result<Vec<String>> {
+        let inner = &self.inner;
+        retry_on_transient("list_senate_members", RPC_RETRIES, || async {
+            for pallet in ["SenateMembers", "Triumvirate", "Senate"] {
+                let addr = subxt::dynamic::storage(pallet, "Members", ());
+                let members_raw = match inner.storage().at_latest().await?.fetch(&addr).await {
+                    Ok(value) => value,
+                    Err(err) => {
+                        let err: anyhow::Error = err.into();
+                        if is_missing_pallet_error(&err, pallet)
+                            || is_missing_storage_error(&err, pallet, "Members")
+                        {
+                            continue;
+                        }
+                        return Err(err)
+                            .with_context(|| format!("Failed to fetch {pallet}.Members"));
+                    }
+                };
+
+                let Some(members_value) = members_raw else {
+                    return Ok(Vec::new());
+                };
+
+                let members_json = members_value
+                    .to_value()
+                    .ok()
+                    .and_then(|value| serde_json::to_value(value).ok())
+                    .with_context(|| format!("Failed to decode {pallet}.Members"))?;
+                return Ok(extract_ss58_accounts(&members_json));
+            }
+
+            Ok(Vec::new())
+        })
+        .await
+    }
+
     /// Get SafeMode status: returns Some(block_number) if safe mode is active until that block.
     pub async fn get_safe_mode_until(&self) -> Result<Option<u64>> {
         let inner = &self.inner;
@@ -2313,6 +2350,52 @@ fn json_to_ss58_account(value: &serde_json::Value) -> Option<String> {
     }
 }
 
+fn extract_ss58_accounts(value: &serde_json::Value) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    collect_ss58_accounts(value, &mut seen, &mut out);
+    out
+}
+
+fn collect_ss58_accounts(
+    value: &serde_json::Value,
+    seen: &mut std::collections::HashSet<String>,
+    out: &mut Vec<String>,
+) {
+    if let Some(ss58) = json_to_ss58_account(value) {
+        if seen.insert(ss58.clone()) {
+            out.push(ss58);
+        }
+        return;
+    }
+
+    match value {
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_ss58_accounts(item, seen, out);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for item in map.values() {
+                collect_ss58_accounts(item, seen, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_missing_pallet_error(err: &anyhow::Error, pallet: &str) -> bool {
+    let msg = format!("{err:#}");
+    msg.contains(&format!("Pallet with name {pallet} not found"))
+}
+
+fn is_missing_storage_error(err: &anyhow::Error, pallet: &str, storage: &str) -> bool {
+    let msg = format!("{err:#}");
+    msg.contains(&format!(
+        "Storage entry {storage} not found in pallet {pallet}"
+    ))
+}
+
 fn decode_identity_data(data: &api::runtime_types::pallet_registry::types::Data) -> String {
     use api::runtime_types::pallet_registry::types::Data;
     macro_rules! raw_to_string {
@@ -2438,5 +2521,63 @@ mod tests {
         let raw: Vec<u8> = vec![0xFF, 0xFE, 0xFD];
         let symbol = String::from_utf8_lossy(&raw).into_owned();
         assert!(symbol.contains('\u{FFFD}')); // replacement character
+    }
+
+    #[cfg(feature = "e2e")]
+    #[tokio::test]
+    async fn senate_members_query_localnet_smoke() {
+        let docker_ok = std::process::Command::new("docker")
+            .arg("version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !docker_ok {
+            eprintln!(
+                "[queries::tests] docker unavailable, skipping senate members localnet smoke"
+            );
+            return;
+        }
+
+        struct CleanupGuard {
+            container: String,
+        }
+        impl Drop for CleanupGuard {
+            fn drop(&mut self) {
+                let _ = crate::localnet::stop(&self.container);
+            }
+        }
+
+        let pid = std::process::id();
+        let container = format!("agcli_parity_senate_{}", pid);
+        let port = 9970u16 + (pid as u16 % 20);
+        let cfg = crate::localnet::LocalnetConfig {
+            image: crate::localnet::DEFAULT_IMAGE.to_string(),
+            container_name: container.clone(),
+            port,
+            wait: true,
+            wait_timeout: 120,
+        };
+        let _cleanup = CleanupGuard {
+            container: container.clone(),
+        };
+
+        let info = crate::localnet::start(&cfg)
+            .await
+            .expect("localnet start should succeed");
+        let client = crate::chain::Client::connect(&info.endpoint)
+            .await
+            .expect("client should connect to localnet");
+
+        let members = client
+            .list_senate_members()
+            .await
+            .expect("senate members query should succeed");
+
+        for member in members {
+            assert!(
+                crate::wallet::keypair::from_ss58(&member).is_ok(),
+                "member should be valid ss58: {member}"
+            );
+        }
     }
 }
