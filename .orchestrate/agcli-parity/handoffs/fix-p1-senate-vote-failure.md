@@ -1,22 +1,22 @@
 <!-- orchestrate failure handoff
 task: fix-p1-senate-vote
 branch: orch/agcli-parity/fix-p1-senate-vote
-agentId: bc-9991f752-c6d3-4711-bff4-4e41b4ff5f09
-runId: run-6863bb6d-675c-4538-bb2a-c8039e9d5320
+agentId: bc-f1141234-958b-46a1-a13f-e2961ff1dddc
+runId: run-d110fcf1-03f0-4fc5-981b-e7a5edf123ba
 failureMode: unknown
-terminatedAt: 2026-05-29T06:39:42.228Z
+terminatedAt: 2026-05-29T06:42:08.871Z
 -->
 
 # fix-p1-senate-vote failure handoff
 
 Status: error (cloud agent terminated without writing a handoff)
 Failure mode: unknown
-Cloud agent: bc-9991f752-c6d3-4711-bff4-4e41b4ff5f09
-Started: 2026-05-29T06:39:16.324Z
-Terminated: 2026-05-29T06:39:42.228Z
-Duration: 25904ms
-Last activity: 2026-05-29T06:39:42.059Z
-Last tool call: run_terminal_cmd
+Cloud agent: bc-f1141234-958b-46a1-a13f-e2961ff1dddc
+Started: 2026-05-29T06:41:27.910Z
+Terminated: 2026-05-29T06:42:08.871Z
+Duration: 40961ms
+Last activity: 2026-05-29T06:42:08.591Z - respawned by local-cli (was error; attempts=1)
+Last tool call: grep_search
 Branch: orch/agcli-parity/fix-p1-senate-vote
 SDK error: (none recorded)
 
