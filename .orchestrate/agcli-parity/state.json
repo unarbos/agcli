@@ -485,17 +485,17 @@
       "agentId": "bc-f1141234-958b-46a1-a13f-e2961ff1dddc",
       "runId": "run-d110fcf1-03f0-4fc5-981b-e7a5edf123ba",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/fix-p1-senate-vote.md",
       "startedAt": "2026-05-29T06:41:27.910Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:41:31.309Z",
+      "finishedAt": "2026-05-29T06:42:08.871Z",
+      "lastUpdate": "2026-05-29T06:42:08.872Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -910,6 +910,18 @@
     {
       "at": "2026-05-29T06:42:01.436Z",
       "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:42:02.737Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:42:02.738Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:42:08.870Z",
+      "message": "fix-p1-senate-vote: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
