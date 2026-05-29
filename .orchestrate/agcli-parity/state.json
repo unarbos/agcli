@@ -779,6 +779,14 @@
     {
       "at": "2026-05-29T06:17:46.414Z",
       "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:17:47.696Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:17:47.697Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
     }
   ]
 }
