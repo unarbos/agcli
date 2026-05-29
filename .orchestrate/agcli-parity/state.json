@@ -377,13 +377,13 @@
       "handoffPath": "handoffs/phase3-rerun-root.md",
       "startedAt": "2026-05-29T07:22:04.924Z",
       "finishedAt": "2026-05-29T09:09:55.188Z",
-      "lastUpdate": "2026-05-29T09:09:55.189Z",
+      "lastUpdate": "2026-05-29T09:09:56.588Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "phase3-rerun-identity-commitment",
@@ -1127,6 +1127,10 @@
     {
       "at": "2026-05-29T08:45:47.734Z",
       "message": "phase5-6-refresh: verification self-reported (type-check-only)"
+    },
+    {
+      "at": "2026-05-29T09:09:56.588Z",
+      "message": "phase3-rerun-root: verification self-reported (unit-test-verified)"
     }
   ]
 }
