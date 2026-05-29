@@ -225,20 +225,20 @@
       "dependsOn": [
         "env-setup-followup"
       ],
-      "agentId": "bc-c163fbe3-f5bf-4635-ae51-d497ab89b648",
-      "runId": "run-e13f91f8-cfec-42c6-a8f9-49d0c8c314bd",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/merge-phase3-tests.md",
-      "startedAt": "2026-05-29T06:18:16.096Z",
-      "finishedAt": "2026-05-29T06:19:08.414Z",
-      "lastUpdate": "2026-05-29T06:19:08.415Z",
-      "note": "respawned by local-cli (was error; attempts=2)",
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T06:41:07.965Z",
+      "note": "respawned by local-cli (was error; attempts=3)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -444,11 +444,11 @@
       "finishedAt": "2026-05-29T06:39:43.685Z",
       "lastUpdate": "2026-05-29T06:39:43.685Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "fix-p1-senate",
@@ -468,11 +468,11 @@
       "finishedAt": "2026-05-29T06:40:46.787Z",
       "lastUpdate": "2026-05-29T06:40:46.788Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "fix-p1-senate-vote",
@@ -492,11 +492,11 @@
       "finishedAt": "2026-05-29T06:39:42.228Z",
       "lastUpdate": "2026-05-29T06:39:42.229Z",
       "note": null,
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "verification": null
     },
     {
       "name": "fix-p1-sdk-power-surface",
@@ -838,6 +838,46 @@
     {
       "at": "2026-05-29T06:40:46.785Z",
       "message": "fix-p1-senate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:40:48.027Z",
+      "message": "fix-p1-senate: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate.md"
+    },
+    {
+      "at": "2026-05-29T06:40:48.028Z",
+      "message": "fix-p1-senate: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:40:49.669Z",
+      "message": "phase3-rerun-stake-advanced: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-stake-advanced` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.671Z",
+      "message": "phase3-rerun-subnet-register: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-register` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.672Z",
+      "message": "phase3-rerun-subnet-hyperparams: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-subnet-hyperparams` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.673Z",
+      "message": "phase3-rerun-weights: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-weights` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.674Z",
+      "message": "phase3-rerun-network-readonly: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-network-readonly` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.675Z",
+      "message": "phase3-rerun-root: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-root` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.675Z",
+      "message": "phase3-rerun-identity-commitment: unreachable — blocked on merge-phase3-tests (error). Fix the upstream and rerun, or `kill phase3-rerun-identity-commitment` to abandon."
+    },
+    {
+      "at": "2026-05-29T06:40:49.676Z",
+      "message": "fix-p1-sdk-power-surface: unreachable — blocked on fix-p1-senate-vote (error). Fix the upstream and rerun, or `kill fix-p1-sdk-power-surface` to abandon."
     }
   ]
 }
