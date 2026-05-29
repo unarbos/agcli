@@ -482,20 +482,20 @@
       "dependsOn": [
         "fix-p0-btcli-sudo-stake-burn"
       ],
-      "agentId": "bc-f1141234-958b-46a1-a13f-e2961ff1dddc",
-      "runId": "run-d110fcf1-03f0-4fc5-981b-e7a5edf123ba",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/fix-p1-senate-vote.md",
-      "startedAt": "2026-05-29T06:41:27.910Z",
-      "finishedAt": "2026-05-29T06:42:08.871Z",
-      "lastUpdate": "2026-05-29T06:42:08.872Z",
-      "note": "respawned by local-cli (was error; attempts=1)",
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T07:09:32.633Z",
+      "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
+      "failureMode": null,
       "verification": null
     },
     {
@@ -970,6 +970,10 @@
     {
       "at": "2026-05-29T07:09:30.816Z",
       "message": "merge-phase3-tests: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T07:09:32.379Z",
+      "message": "fix-p1-senate: respawned by local-cli (was error)"
     }
   ]
 }
