@@ -497,13 +497,13 @@
       "handoffPath": "handoffs/fix-p1-senate-vote.md",
       "startedAt": "2026-05-29T07:09:45.209Z",
       "finishedAt": "2026-05-29T07:52:36.232Z",
-      "lastUpdate": "2026-05-29T07:52:36.232Z",
+      "lastUpdate": "2026-05-29T07:52:37.466Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
       "prNumber": 12,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "fix-p1-sdk-power-surface",
@@ -516,17 +516,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T07:52:43.044Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-29T07:52:43.044Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "phase5-6-refresh",
@@ -1049,6 +1050,10 @@
     {
       "at": "2026-05-29T07:49:49.762Z",
       "message": "phase3-rerun-network-readonly: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T07:52:37.467Z",
+      "message": "fix-p1-senate-vote: verification self-reported (unit-test-verified)"
     }
   ]
 }
