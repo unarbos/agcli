@@ -353,12 +353,12 @@
       "handoffPath": "handoffs/phase3-rerun-network-readonly.md",
       "startedAt": "2026-05-29T07:22:01.401Z",
       "finishedAt": "2026-05-29T07:49:48.211Z",
-      "lastUpdate": "2026-05-29T07:49:48.213Z",
+      "lastUpdate": "2026-05-29T07:49:49.761Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
+      "verification": "unit-test-verified",
       "attempts": 1
     },
     {
@@ -492,16 +492,16 @@
       "agentId": "bc-b1230a6d-d873-4642-b8e9-a6cb0c39a20b",
       "runId": "run-3f840c1e-e797-4cbb-8dbc-cb56a5f0f98a",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p1-senate-vote.md",
       "startedAt": "2026-05-29T07:09:45.209Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:09:48.538Z",
+      "finishedAt": "2026-05-29T07:52:36.232Z",
+      "lastUpdate": "2026-05-29T07:52:36.232Z",
       "note": "respawned by local-cli (was error; attempts=2)",
       "attempts": 3,
       "slackTs": null,
-      "prNumber": null,
+      "prNumber": 12,
       "failureMode": null,
       "verification": null
     },
@@ -1045,6 +1045,10 @@
     {
       "at": "2026-05-29T07:48:01.298Z",
       "message": "phase3-rerun-subnet-register: tool_call idle 314787ms; last=2026-05-29T07:42:46.511Z"
+    },
+    {
+      "at": "2026-05-29T07:49:49.762Z",
+      "message": "phase3-rerun-network-readonly: verification self-reported (unit-test-verified)"
     }
   ]
 }
