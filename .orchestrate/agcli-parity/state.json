@@ -461,17 +461,17 @@
       "agentId": "bc-4d5b1c46-9825-4021-92bc-0ad5641a4308",
       "runId": "run-3ac46119-b2ce-43e7-92ce-0cff5452824e",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/fix-p1-senate.md",
       "startedAt": "2026-05-29T06:41:24.207Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:41:27.905Z",
+      "finishedAt": "2026-05-29T06:41:50.949Z",
+      "lastUpdate": "2026-05-29T06:41:50.950Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -482,15 +482,15 @@
       "dependsOn": [
         "fix-p0-btcli-sudo-stake-burn"
       ],
-      "agentId": null,
-      "runId": null,
+      "agentId": "bc-f1141234-958b-46a1-a13f-e2961ff1dddc",
+      "runId": "run-d110fcf1-03f0-4fc5-981b-e7a5edf123ba",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
       "status": "running",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": "2026-05-29T06:41:27.910Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:41:27.910Z",
+      "lastUpdate": "2026-05-29T06:41:31.309Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
@@ -894,6 +894,10 @@
     {
       "at": "2026-05-29T06:41:13.661Z",
       "message": "fix-p1-senate-vote: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:41:50.944Z",
+      "message": "fix-p1-senate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
