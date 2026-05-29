@@ -305,12 +305,12 @@
       "handoffPath": "handoffs/phase3-rerun-subnet-hyperparams.md",
       "startedAt": "2026-05-29T07:21:54.917Z",
       "finishedAt": "2026-05-29T07:59:06.871Z",
-      "lastUpdate": "2026-05-29T07:59:06.873Z",
+      "lastUpdate": "2026-05-29T07:59:08.457Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null,
+      "verification": "unit-test-verified",
       "attempts": 1
     },
     {
@@ -516,15 +516,15 @@
       "agentId": "bc-570b476d-89a1-4393-b2f2-040ff116a141",
       "runId": "run-26f359c0-81f1-4b25-8150-3756e3f10ad1",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p1-sdk-power-surface.md",
       "startedAt": "2026-05-29T07:52:43.044Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:52:46.886Z",
+      "finishedAt": "2026-05-29T08:17:02.028Z",
+      "lastUpdate": "2026-05-29T08:17:02.030Z",
       "note": null,
       "slackTs": null,
-      "prNumber": null,
+      "prNumber": 13,
       "failureMode": null,
       "verification": null,
       "attempts": 1
@@ -1062,6 +1062,18 @@
     {
       "at": "2026-05-29T07:53:30.383Z",
       "message": "phase3-rerun-identity-commitment: tool_call idle 327303ms; last=2026-05-29T07:48:03.080Z"
+    },
+    {
+      "at": "2026-05-29T07:59:08.459Z",
+      "message": "phase3-rerun-subnet-hyperparams: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T08:06:18.878Z",
+      "message": "phase3-rerun-root: SSE idle 311003ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:06:18.883Z",
+      "message": "phase3-rerun-root: tool_call idle 311008ms; last=2026-05-29T08:01:07.875Z"
     }
   ]
 }
