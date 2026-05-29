@@ -228,17 +228,17 @@
       "agentId": "bc-93542a81-ff86-429a-869b-5687f8fcad27",
       "runId": "run-afde4b62-493d-445d-b123-7a0270dfd589",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/merge-phase3-tests.md",
       "startedAt": "2026-05-29T06:41:17.430Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:41:21.055Z",
+      "finishedAt": "2026-05-29T06:42:01.439Z",
+      "lastUpdate": "2026-05-29T06:42:01.441Z",
       "note": "respawned by local-cli (was error; attempts=3)",
       "attempts": 4,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -898,6 +898,18 @@
     {
       "at": "2026-05-29T06:41:50.944Z",
       "message": "fix-p1-senate: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:41:52.197Z",
+      "message": "fix-p1-senate: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate.md"
+    },
+    {
+      "at": "2026-05-29T06:41:52.199Z",
+      "message": "fix-p1-senate: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/fix-p1-senate-failure.md"
+    },
+    {
+      "at": "2026-05-29T06:42:01.436Z",
+      "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
