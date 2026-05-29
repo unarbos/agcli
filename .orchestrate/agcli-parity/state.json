@@ -281,13 +281,13 @@
       "handoffPath": "handoffs/phase3-rerun-subnet-register.md",
       "startedAt": "2026-05-29T07:21:51.396Z",
       "finishedAt": "2026-05-29T10:29:53.126Z",
-      "lastUpdate": "2026-05-29T10:29:53.128Z",
+      "lastUpdate": "2026-05-29T10:29:54.477Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "phase3-rerun-subnet-hyperparams",
@@ -1147,6 +1147,10 @@
     {
       "at": "2026-05-29T10:12:35.903Z",
       "message": "phase3-rerun-stake-advanced: tool_call idle 809870ms; last=2026-05-29T09:59:06.033Z"
+    },
+    {
+      "at": "2026-05-29T10:29:54.478Z",
+      "message": "phase3-rerun-subnet-register: verification self-reported (unit-test-verified)"
     }
   ]
 }
