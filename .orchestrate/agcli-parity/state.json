@@ -201,21 +201,21 @@
       "dependsOn": [
         "phase6-ci-and-report"
       ],
-      "agentId": "bc-1b6e9353-a0d7-4286-ac5e-625f9058da2f",
-      "runId": "run-49670d7a-de2c-40f1-8a46-ff6826a508cb",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
-      "resultStatus": "error",
-      "handoffPath": "handoffs/env-setup-followup.md",
-      "startedAt": "2026-05-29T05:58:05.692Z",
-      "finishedAt": "2026-05-29T05:58:51.034Z",
-      "lastUpdate": "2026-05-29T05:58:51.035Z",
-      "note": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": "2026-05-29T05:59:06.354Z",
+      "note": "respawned by local-cli (was error; attempts=1)",
+      "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "unknown",
-      "verification": null,
-      "attempts": 1
+      "failureMode": null,
+      "verification": null
     },
     {
       "name": "merge-phase3-tests",
