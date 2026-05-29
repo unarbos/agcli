@@ -1447,8 +1447,8 @@
       "btcli: --no-prompt ↔ agcli: --yes",
       "btcli: --wallet-name ↔ agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/weights.rs::btcli_weights_commit_matches_agcli_commit_chain_delta",
+    "notes": "Localnet variant-B rerun observed divergence: btcli `weights commit` produced zero `WeightCommits` delta and no balance delta while agcli produced a `WeightCommits` delta of +1 on the same scenario; row remains COVERED_CLI_ONLY pending btcli-equivalent write effect."
   },
   {
     "id": "btcli.weights.reveal",
@@ -1591,10 +1591,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.commit_weights(...)",
     "ref_extrinsic": "SubtensorModule.commit_mechanism_weights",
     "agcli_invocation": "agcli weights commit-mechanism --netuid 1 --mechanism-id 0 --hash 0x... --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.commit_mechanism_weights. Related rows sharing dispatchable: sdk.subtensor.commit_weights."
+    "parity_test": "tests/parity/weights.rs::sdk_commit_weights_matches_agcli_commit_mechanism_chain_delta",
+    "notes": "Covered by localnet variant-B parity rerun (sync + async SDK commit_weights compared against agcli weights commit-mechanism chain deltas). Related rows sharing dispatchable: sdk.subtensor.commit_weights."
   },
   {
     "id": "sdk.async_subtensor.compose_call",
@@ -3109,10 +3109,10 @@
     "ref_invocation": "bittensor.core.subtensor.commit_weights(...)",
     "ref_extrinsic": "SubtensorModule.commit_mechanism_weights",
     "agcli_invocation": "agcli weights commit-mechanism --netuid 1 --mechanism-id 0 --hash 0x... --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.commit_mechanism_weights. Related rows sharing dispatchable: sdk.async_subtensor.commit_weights."
+    "parity_test": "tests/parity/weights.rs::sdk_commit_weights_matches_agcli_commit_mechanism_chain_delta",
+    "notes": "Covered by localnet variant-B parity rerun (sync + async SDK commit_weights compared against agcli weights commit-mechanism chain deltas). Related rows sharing dispatchable: sdk.async_subtensor.commit_weights."
   },
   {
     "id": "sdk.subtensor.compose_call",

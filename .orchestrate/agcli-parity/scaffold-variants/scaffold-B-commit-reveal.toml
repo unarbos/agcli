@@ -1,0 +1,24 @@
+[chain]
+image = "ghcr.io/opentensor/subtensor-localnet:devnet-ready"
+container = "agcli_parity_weights_localnet"
+port = 9944
+start = true
+timeout = 180
+
+[[subnet]]
+commit_reveal = true
+
+[[subnet.neuron]]
+name = "validator1"
+fund_tao = 1000.0
+register = true
+
+[[subnet.neuron]]
+name = "miner1"
+fund_tao = 100.0
+register = true
+
+[[subnet.neuron]]
+name = "miner2"
+fund_tao = 100.0
+register = true
