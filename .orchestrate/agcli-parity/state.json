@@ -321,20 +321,20 @@
       "dependsOn": [
         "merge-phase3-tests"
       ],
-      "agentId": "bc-198ebaad-f599-4ad6-a2e7-f87d188880d8",
-      "runId": "run-75fa80ce-013e-44d6-a80b-67f2706e998f",
+      "agentId": null,
+      "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "error",
+      "status": "pending",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": "2026-05-29T07:21:58.221Z",
+      "startedAt": null,
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T09:59:01.632Z",
-      "note": "recover failed: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()",
+      "lastUpdate": "2026-05-29T11:16:15.334Z",
+      "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": "network-drop",
+      "failureMode": null,
       "verification": null
     },
     {
