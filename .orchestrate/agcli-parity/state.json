@@ -482,19 +482,19 @@
       "dependsOn": [
         "fix-p0-btcli-sudo-stake-burn"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-9991f752-c6d3-4711-bff4-4e41b4ff5f09",
+      "runId": "run-6863bb6d-675c-4538-bb2a-c8039e9d5320",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/fix-p1-senate-vote.md",
       "startedAt": "2026-05-29T06:39:16.324Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:39:16.324Z",
+      "finishedAt": "2026-05-29T06:39:42.228Z",
+      "lastUpdate": "2026-05-29T06:39:42.229Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null,
       "attempts": 1
     },
@@ -810,6 +810,10 @@
     {
       "at": "2026-05-29T06:39:09.365Z",
       "message": "fix-p0-btcli-sudo-stake-burn: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T06:39:42.225Z",
+      "message": "fix-p1-senate-vote: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
