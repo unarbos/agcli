@@ -204,14 +204,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T05:59:09.817Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T05:59:06.354Z",
+      "lastUpdate": "2026-05-29T05:59:09.817Z",
       "note": "respawned by local-cli (was error; attempts=1)",
-      "attempts": 1,
+      "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -749,6 +749,10 @@
     {
       "at": "2026-05-29T05:58:52.173Z",
       "message": "env-setup-followup: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/env-setup-followup-failure.md"
+    },
+    {
+      "at": "2026-05-29T05:59:07.503Z",
+      "message": "env-setup-followup: respawned by local-cli (was error)"
     }
   ]
 }
