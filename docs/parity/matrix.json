@@ -1026,8 +1026,8 @@
       "btcli: --no-prompt ↔ agcli: --yes",
       "btcli: subnets <cmd> ↔ agcli: subnet <cmd>"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
+    "parity_test": "tests/parity/subnet-hyperparams.rs::parity_subnet_hyperparams",
+    "notes": "Phase 3 rerun parity test executes btcli then agcli on localnet. Behavior was inconsistent across reruns (btcli set-identity sometimes materialized immediately, and one rerun observed no readable identity delta after the btcli step), so this row remains COVERED_CLI_ONLY pending a deterministic btcli↔agcli chain-effect match. Related rows sharing dispatchable: sdk.async_subtensor.set_subnet_identity, sdk.subtensor.set_subnet_identity."
   },
   {
     "id": "btcli.subnets.set-symbol",
@@ -1138,8 +1138,8 @@
       "btcli: --no-prompt ↔ agcli: --yes",
       "btcli: --wallet-name ↔ agcli: -w/--wallet"
     ],
-    "parity_test": null,
-    "notes": "Mapped by command surface in src/cli/mod.rs + docs/llm.txt."
+    "parity_test": "tests/parity/subnet-hyperparams.rs::parity_subnet_hyperparams",
+    "notes": "Phase 3 rerun parity test covers highest-risk writes (tempo, max_validators, weights_rate_limit) on localnet. `max_validators` remained divergent (btcli success path did not consistently produce the same chain delta as agcli raw), and tempo behavior varied by weights-window timing; both tools could mutate weights rate limit. Kept COVERED_CLI_ONLY pending deterministic alignment for the full high-risk set."
   },
   {
     "id": "btcli.sudo.set-take",
@@ -2768,10 +2768,10 @@
     "ref_invocation": "bittensor.core.async_subtensor.set_subnet_identity(...)",
     "ref_extrinsic": "SubtensorModule.set_subnet_identity",
     "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.subtensor.set_subnet_identity."
+    "parity_test": "tests/parity/subnet-hyperparams.rs::parity_subnet_hyperparams",
+    "notes": "Phase 3 rerun parity test validated async SDK set_subnet_identity against localnet chain deltas with agcli identity set-subnet in the same flow. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.subtensor.set_subnet_identity."
   },
   {
     "id": "sdk.async_subtensor.set_weights",
@@ -4308,10 +4308,10 @@
     "ref_invocation": "bittensor.core.subtensor.set_subnet_identity(...)",
     "ref_extrinsic": "SubtensorModule.set_subnet_identity",
     "agcli_invocation": "agcli identity set-subnet --netuid 1 --name demo --yes",
-    "agcli_status": "COVERED_CLI_ONLY",
+    "agcli_status": "COVERED_E2E",
     "agcli_flag_diffs": [],
-    "parity_test": null,
-    "notes": "Mapped by shared dispatchable SubtensorModule.set_subnet_identity. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.async_subtensor.set_subnet_identity."
+    "parity_test": "tests/parity/subnet-hyperparams.rs::parity_subnet_hyperparams",
+    "notes": "Phase 3 rerun parity test validated sync SDK set_subnet_identity against localnet chain deltas with agcli identity set-subnet in the same flow. Related rows sharing dispatchable: btcli.subnets.set-identity, sdk.async_subtensor.set_subnet_identity."
   },
   {
     "id": "sdk.subtensor.set_weights",
