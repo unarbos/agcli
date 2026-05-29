@@ -209,13 +209,13 @@
       "handoffPath": "handoffs/env-setup-followup.md",
       "startedAt": "2026-05-29T05:59:09.817Z",
       "finishedAt": "2026-05-29T06:15:38.560Z",
-      "lastUpdate": "2026-05-29T06:15:38.563Z",
+      "lastUpdate": "2026-05-29T06:15:40.134Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "type-check-only"
     },
     {
       "name": "merge-phase3-tests",
@@ -228,17 +228,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T06:15:44.484Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-29T06:15:44.484Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     },
     {
       "name": "phase3-rerun-stake-advanced",
@@ -753,6 +754,10 @@
     {
       "at": "2026-05-29T05:59:07.503Z",
       "message": "env-setup-followup: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T06:15:40.135Z",
+      "message": "env-setup-followup: verification self-reported (type-check-only)"
     }
   ]
 }
