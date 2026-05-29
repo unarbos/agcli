@@ -1923,6 +1923,129 @@ impl Client {
         Ok(result.and_then(|v| v.as_type::<u64>().ok()))
     }
 
+    /// List active senate proposals from a governance pallet.
+    ///
+    /// Each result includes:
+    /// - `hash` (proposal hash `0x...`)
+    /// - `voting` (raw `<pallet>.Voting` entry, when present)
+    /// - `call_data` (raw `<pallet>.ProposalOf` entry, when present)
+    /// - optional summary fields (`index`, `threshold`, `end`, `ayes_count`, `nays_count`)
+    pub async fn list_senate_proposals(&self) -> Result<Vec<serde_json::Value>> {
+        let inner = &self.inner;
+        retry_on_transient("list_senate_proposals", RPC_RETRIES, || async {
+            for pallet in ["Triumvirate", "Senate"] {
+                let proposals_addr = subxt::dynamic::storage(pallet, "Proposals", ());
+                let proposals_raw = match inner
+                    .storage()
+                    .at_latest()
+                    .await?
+                    .fetch(&proposals_addr)
+                    .await
+                {
+                    Ok(value) => value,
+                    Err(err) => {
+                        let err: anyhow::Error = err.into();
+                        if is_missing_pallet_error(&err, pallet) {
+                            continue;
+                        }
+                        return Err(err)
+                            .with_context(|| format!("Failed to fetch {pallet}.Proposals"));
+                    }
+                };
+
+                let Some(proposals_value) = proposals_raw else {
+                    return Ok(Vec::new());
+                };
+
+                let proposals_json = proposals_value
+                    .to_value()
+                    .ok()
+                    .and_then(|v| serde_json::to_value(v).ok())
+                    .with_context(|| format!("Failed to decode {pallet}.Proposals"))?;
+
+                let proposal_hashes = extract_proposal_hashes(&proposals_json);
+                let mut proposals = Vec::with_capacity(proposal_hashes.len());
+
+                for hash in proposal_hashes {
+                    let hash_bytes = parse_hash_hex(&hash).with_context(|| {
+                        format!("Invalid proposal hash returned by {pallet}.Proposals: {hash}")
+                    })?;
+
+                    let voting_addr = subxt::dynamic::storage(
+                        pallet,
+                        "Voting",
+                        vec![subxt::dynamic::Value::from_bytes(hash_bytes.to_vec())],
+                    );
+                    let voting_raw =
+                        match inner.storage().at_latest().await?.fetch(&voting_addr).await {
+                            Ok(value) => value,
+                            Err(err) => {
+                                let err: anyhow::Error = err.into();
+                                if is_missing_storage_error(&err, pallet, "Voting") {
+                                    None
+                                } else {
+                                    return Err(err).with_context(|| {
+                                        format!("Failed to fetch {pallet}.Voting for {hash}")
+                                    });
+                                }
+                            }
+                        };
+                    let voting_json = voting_raw
+                        .and_then(|v| v.to_value().ok())
+                        .and_then(|v| serde_json::to_value(v).ok());
+
+                    let proposal_of_addr = subxt::dynamic::storage(
+                        pallet,
+                        "ProposalOf",
+                        vec![subxt::dynamic::Value::from_bytes(hash_bytes.to_vec())],
+                    );
+                    let proposal_of_raw = match inner
+                        .storage()
+                        .at_latest()
+                        .await?
+                        .fetch(&proposal_of_addr)
+                        .await
+                    {
+                        Ok(value) => value,
+                        Err(err) => {
+                            let err: anyhow::Error = err.into();
+                            if is_missing_storage_error(&err, pallet, "ProposalOf") {
+                                None
+                            } else {
+                                return Err(err).with_context(|| {
+                                    format!("Failed to fetch {pallet}.ProposalOf for {hash}")
+                                });
+                            }
+                        }
+                    };
+                    let call_data_json = proposal_of_raw
+                        .and_then(|v| v.to_value().ok())
+                        .and_then(|v| serde_json::to_value(v).ok());
+
+                    let mut row = serde_json::Map::new();
+                    row.insert("hash".to_string(), serde_json::Value::String(hash));
+                    row.insert(
+                        "pallet".to_string(),
+                        serde_json::Value::String(pallet.to_string()),
+                    );
+                    if let Some(voting) = voting_json {
+                        append_vote_summary(&mut row, &voting);
+                        row.insert("voting".to_string(), voting);
+                    }
+                    if let Some(call_data) = call_data_json {
+                        row.insert("call_data".to_string(), call_data);
+                    }
+                    proposals.push(serde_json::Value::Object(row));
+                }
+
+                return Ok(proposals);
+            }
+
+            Ok(Vec::new())
+        })
+        .await
+    }
+
     /// Get SafeMode status: returns Some(block_number) if safe mode is active until that block.
     pub async fn get_safe_mode_until(&self) -> Result<Option<u64>> {
         let inner = &self.inner;
@@ -2313,6 +2436,126 @@ fn json_to_ss58_account(value: &serde_json::Value) -> Option<String> {
     }
 }
 
+fn extract_proposal_hashes(value: &serde_json::Value) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    collect_proposal_hashes(value, &mut seen, &mut out);
+    out
+}
+
+fn collect_proposal_hashes(
+    value: &serde_json::Value,
+    seen: &mut std::collections::HashSet<String>,
+    out: &mut Vec<String>,
+) {
+    match value {
+        serde_json::Value::String(s) => {
+            if let Some(hash) = normalize_hash_hex(s) {
+                if seen.insert(hash.clone()) {
+                    out.push(hash);
+                }
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            if let Some(hash) = hash_from_byte_array(arr) {
+                if seen.insert(hash.clone()) {
+                    out.push(hash);
+                }
+            }
+            for item in arr {
+                collect_proposal_hashes(item, seen, out);
+            }
+        }
+        serde_json::Value::Object(obj) => {
+            for v in obj.values() {
+                collect_proposal_hashes(v, seen, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_hash_hex(s: &str) -> Option<String> {
+    let body = s.strip_prefix("0x").unwrap_or(s);
+    if body.len() != 64 || !body.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    Some(format!("0x{}", body.to_ascii_lowercase()))
+}
+
+fn hash_from_byte_array(arr: &[serde_json::Value]) -> Option<String> {
+    if arr.len() != 32 {
+        return None;
+    }
+    let mut bytes = [0u8; 32];
+    for (idx, value) in arr.iter().enumerate() {
+        let n = value.as_u64()?;
+        let b = u8::try_from(n).ok()?;
+        bytes[idx] = b;
+    }
+    Some(format!("0x{}", hex::encode(bytes)))
+}
+
+fn parse_hash_hex(hash: &str) -> Result<[u8; 32]> {
+    let normalized = normalize_hash_hex(hash)
+        .with_context(|| format!("Invalid proposal hash format: {hash}"))?;
+    let bytes = hex::decode(normalized.trim_start_matches("0x"))
+        .with_context(|| format!("Invalid proposal hash hex: {normalized}"))?;
+    let array: [u8; 32] = bytes
+        .as_slice()
+        .try_into()
+        .with_context(|| format!("Proposal hash has invalid length: {normalized}"))?;
+    Ok(array)
+}
+
+fn append_vote_summary(
+    row: &mut serde_json::Map<String, serde_json::Value>,
+    voting: &serde_json::Value,
+) {
+    if let Some(index) = voting.get("index").and_then(json_to_u64) {
+        row.insert(
+            "index".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(index)),
+        );
+    }
+    if let Some(threshold) = voting.get("threshold").and_then(json_to_u64) {
+        row.insert(
+            "threshold".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(threshold)),
+        );
+    }
+    if let Some(end) = voting.get("end").and_then(json_to_u64) {
+        row.insert(
+            "end".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(end)),
+        );
+    }
+    if let Some(ayes) = voting.get("ayes").and_then(|v| v.as_array()) {
+        row.insert(
+            "ayes_count".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(ayes.len() as u64)),
+        );
+    }
+    if let Some(nays) = voting.get("nays").and_then(|v| v.as_array()) {
+        row.insert(
+            "nays_count".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(nays.len() as u64)),
+        );
+    }
+}
+
+fn is_missing_pallet_error(err: &anyhow::Error, pallet: &str) -> bool {
+    let msg = format!("{err:#}");
+    msg.contains(&format!("Pallet with name {pallet} not found"))
+}
+
+fn is_missing_storage_error(err: &anyhow::Error, pallet: &str, storage: &str) -> bool {
+    let msg = format!("{err:#}");
+    msg.contains(&format!(
+        "Storage entry {storage} not found in pallet {pallet}"
+    ))
+}
+
 fn decode_identity_data(data: &api::runtime_types::pallet_registry::types::Data) -> String {
     use api::runtime_types::pallet_registry::types::Data;
     macro_rules! raw_to_string {
@@ -2438,5 +2681,65 @@ mod tests {
         let raw: Vec<u8> = vec![0xFF, 0xFE, 0xFD];
         let symbol = String::from_utf8_lossy(&raw).into_owned();
         assert!(symbol.contains('\u{FFFD}')); // replacement character
+    }
+
+    #[cfg(feature = "e2e")]
+    #[tokio::test]
+    async fn senate_proposals_query_localnet_smoke() {
+        let docker_ok = std::process::Command::new("docker")
+            .arg("version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !docker_ok {
+            eprintln!(
+                "[queries::tests] docker unavailable, skipping senate proposal localnet smoke"
+            );
+            return;
+        }
+
+        struct CleanupGuard {
+            container: String,
+        }
+        impl Drop for CleanupGuard {
+            fn drop(&mut self) {
+                let _ = crate::localnet::stop(&self.container);
+            }
+        }
+
+        let pid = std::process::id();
+        let container = format!("agcli_parity_props_{}", pid);
+        let port = 9960u16 + (pid as u16 % 20);
+        let cfg = crate::localnet::LocalnetConfig {
+            image: crate::localnet::DEFAULT_IMAGE.to_string(),
+            container_name: container.clone(),
+            port,
+            wait: true,
+            wait_timeout: 120,
+        };
+        let _cleanup = CleanupGuard {
+            container: container.clone(),
+        };
+
+        let info = crate::localnet::start(&cfg)
+            .await
+            .expect("localnet start should succeed");
+        let client = crate::chain::Client::connect(&info.endpoint)
+            .await
+            .expect("client should connect to localnet");
+
+        let proposals = client
+            .list_senate_proposals()
+            .await
+            .expect("senate proposals query should succeed");
+
+        for proposal in proposals {
+            let hash = proposal
+                .get("hash")
+                .and_then(|v| v.as_str())
+                .expect("each proposal should include hash");
+            assert!(hash.starts_with("0x"), "hash should be prefixed");
+            assert_eq!(hash.len(), 66, "proposal hash should be 32 bytes");
+        }
     }
 }

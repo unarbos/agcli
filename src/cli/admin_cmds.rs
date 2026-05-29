@@ -527,6 +527,20 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
             args,
             sudo_key,
         } => {
+            if is_senate_proposals_alias(&call) {
+                validate_empty_json_array(&args, "admin raw --call proposals")?;
+                let proposals = client.list_senate_proposals().await?;
+                if ctx.output.is_json() {
+                    print_json(&serde_json::json!({
+                        "count": proposals.len(),
+                        "proposals": proposals,
+                    }));
+                } else {
+                    print_senate_proposals_text(&proposals);
+                }
+                return Ok(());
+            }
+
             validate_admin_call_name(&call)?;
             // Validate netuid in raw args — all known admin calls take netuid as
             // first arg; reject netuid 0 to prevent accidental root network
@@ -569,6 +583,75 @@ pub(super) async fn handle_admin(cmd: AdminCommands, client: &Client, ctx: &Ctx<
                 println!("Use `agcli admin raw --call <name> --args '[...]' --sudo-key //Alice` for any call.");
             }
             Ok(())
+        }
+    }
+}
+
+fn is_senate_proposals_alias(call: &str) -> bool {
+    matches!(
+        call.trim().to_ascii_lowercase().as_str(),
+        "proposals" | "senate_proposals" | "senate-proposals"
+    )
+}
+
+fn validate_empty_json_array(args: &str, command: &str) -> Result<()> {
+    let parsed = parse_raw_args(args)?;
+    if !parsed.is_empty() {
+        anyhow::bail!(
+            "{} does not accept positional args.\n  Tip: use --args '[]'.",
+            command
+        );
+    }
+    Ok(())
+}
+
+fn print_senate_proposals_text(proposals: &[serde_json::Value]) {
+    if proposals.is_empty() {
+        println!("No active senate proposals.");
+        return;
+    }
+
+    println!("Active senate proposals ({}):", proposals.len());
+    for (idx, proposal) in proposals.iter().enumerate() {
+        let hash = proposal
+            .get("hash")
+            .and_then(|v| v.as_str())
+            .unwrap_or("<unknown>");
+        println!("  {}. {}", idx + 1, hash);
+
+        let ayes = proposal
+            .get("ayes_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let nays = proposal
+            .get("nays_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let threshold = proposal
+            .get("threshold")
+            .and_then(|v| v.as_u64())
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "?".to_string());
+        let end = proposal
+            .get("end")
+            .and_then(|v| v.as_u64())
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "?".to_string());
+
+        println!(
+            "     votes: ayes={}, nays={}, threshold={}, end={}",
+            ayes, nays, threshold, end
+        );
+
+        if let Some(call_data) = proposal.get("call_data") {
+            let rendered =
+                serde_json::to_string(call_data).unwrap_or_else(|_| "<unavailable>".into());
+            let preview = if rendered.len() > 160 {
+                format!("{}...", &rendered[..160])
+            } else {
+                rendered
+            };
+            println!("     call_data: {}", preview);
         }
     }
 }
