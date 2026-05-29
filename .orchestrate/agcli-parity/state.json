@@ -413,12 +413,12 @@
       "agentId": "bc-5d04a096-252a-4f2d-8913-0b5e194bae7c",
       "runId": "run-601efab3-cd3e-4985-9778-07ebc0f55c21",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/fix-p0-btcli-sudo-stake-burn.md",
       "startedAt": "2026-05-29T06:15:48.285Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T06:15:51.426Z",
+      "finishedAt": "2026-05-29T06:39:08.034Z",
+      "lastUpdate": "2026-05-29T06:39:08.036Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
@@ -795,6 +795,14 @@
     {
       "at": "2026-05-29T06:19:08.409Z",
       "message": "merge-phase3-tests: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
+    },
+    {
+      "at": "2026-05-29T06:19:09.724Z",
+      "message": "merge-phase3-tests: run ended with status=error; see /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests.md"
+    },
+    {
+      "at": "2026-05-29T06:19:09.725Z",
+      "message": "merge-phase3-tests: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/merge-phase3-tests-failure.md"
     }
   ]
 }

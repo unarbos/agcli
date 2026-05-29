@@ -1,22 +1,22 @@
 <!-- orchestrate failure handoff
 task: merge-phase3-tests
 branch: orch/agcli-parity/phase3-tests
-agentId: bc-e2746091-5dd3-442c-a10c-5d764991504b
-runId: run-a91452f5-1b7d-4ea9-9b91-27b0698eb627
+agentId: bc-c163fbe3-f5bf-4635-ae51-d497ab89b648
+runId: run-e13f91f8-cfec-42c6-a8f9-49d0c8c314bd
 failureMode: unknown
-terminatedAt: 2026-05-29T06:17:46.421Z
+terminatedAt: 2026-05-29T06:19:08.414Z
 -->
 
 # merge-phase3-tests failure handoff
 
 Status: error (cloud agent terminated without writing a handoff)
 Failure mode: unknown
-Cloud agent: bc-e2746091-5dd3-442c-a10c-5d764991504b
-Started: 2026-05-29T06:16:47.719Z
-Terminated: 2026-05-29T06:17:46.421Z
-Duration: 58702ms
-Last activity: 2026-05-29T06:17:46.241Z - respawned by local-cli (was error; attempts=1)
-Last tool call: run_terminal_cmd
+Cloud agent: bc-c163fbe3-f5bf-4635-ae51-d497ab89b648
+Started: 2026-05-29T06:18:16.096Z
+Terminated: 2026-05-29T06:19:08.414Z
+Duration: 52318ms
+Last activity: 2026-05-29T06:19:08.228Z - respawned by local-cli (was error; attempts=2)
+Last tool call: read_file
 Branch: orch/agcli-parity/phase3-tests
 SDK error: (none recorded)
 
