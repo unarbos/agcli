@@ -228,14 +228,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T07:09:36.889Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:09:29.447Z",
+      "lastUpdate": "2026-05-29T07:09:36.889Z",
       "note": "respawned by local-cli (was error; attempts=4)",
-      "attempts": 4,
+      "attempts": 5,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -974,6 +974,10 @@
     {
       "at": "2026-05-29T07:09:32.379Z",
       "message": "fix-p1-senate: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T07:09:33.931Z",
+      "message": "fix-p1-senate-vote: respawned by local-cli (was error)"
     }
   ]
 }
