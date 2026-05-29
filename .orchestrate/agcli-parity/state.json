@@ -538,15 +538,15 @@
         "phase3-rerun-identity-commitment",
         "fix-p1-sdk-power-surface"
       ],
-      "agentId": null,
-      "runId": null,
-      "parentAgentId": null,
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "agentId": "bc-0aed5030-91cb-41d8-9bea-e5953590b4cd",
+      "runId": "run-72dd841b-40b4-4243-a13b-9d5073c6cc7d",
+      "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase5-6-refresh.md",
       "startedAt": "2026-05-29T08:40:25.568Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T08:40:25.568Z",
+      "finishedAt": "2026-05-29T08:45:46.165Z",
+      "lastUpdate": "2026-05-29T08:45:46.167Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
@@ -1115,6 +1115,14 @@
     {
       "at": "2026-05-29T08:40:21.047Z",
       "message": "phase3-rerun-identity-commitment: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T08:44:08.509Z",
+      "message": "phase3-rerun-weights: SSE idle 309215ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T08:44:08.511Z",
+      "message": "phase3-rerun-weights: tool_call idle 309217ms; last=2026-05-29T08:38:59.294Z"
     }
   ]
 }
