@@ -257,13 +257,13 @@
       "handoffPath": "handoffs/phase3-rerun-stake-advanced.md",
       "startedAt": "2026-05-29T07:21:47.772Z",
       "finishedAt": "2026-05-29T11:16:53.579Z",
-      "lastUpdate": "2026-05-29T11:16:53.579Z",
+      "lastUpdate": "2026-05-29T11:16:54.885Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": "not-verified"
     },
     {
       "name": "phase3-rerun-subnet-register",
@@ -324,17 +324,17 @@
       "agentId": "bc-b4df8f38-36f1-471e-b914-1d4d8ed3bd70",
       "runId": "run-d4cf0670-8e76-485f-a981-587c5d55b471",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "error",
+      "resultStatus": "error",
+      "handoffPath": "handoffs/phase3-rerun-weights.md",
       "startedAt": "2026-05-29T11:16:18.649Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T11:16:22.591Z",
+      "finishedAt": "2026-05-29T11:18:59.537Z",
+      "lastUpdate": "2026-05-29T11:18:59.537Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": null,
-      "failureMode": null,
+      "failureMode": "unknown",
       "verification": null
     },
     {
@@ -1155,6 +1155,14 @@
     {
       "at": "2026-05-29T11:16:17.143Z",
       "message": "phase3-rerun-weights: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-29T11:16:54.885Z",
+      "message": "phase3-rerun-stake-advanced: verification self-reported (not-verified)"
+    },
+    {
+      "at": "2026-05-29T11:18:59.534Z",
+      "message": "phase3-rerun-weights: run.wait returned status=error; recovery probe found terminal status=error, accepting authoritative status"
     }
   ]
 }
