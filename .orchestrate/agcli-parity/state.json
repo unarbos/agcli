@@ -324,14 +324,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-29T11:16:18.649Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-29T11:16:15.334Z",
+      "lastUpdate": "2026-05-29T11:16:18.649Z",
       "note": "respawned by local-cli (was error; attempts=1)",
-      "attempts": 1,
+      "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -1151,6 +1151,10 @@
     {
       "at": "2026-05-29T10:29:54.478Z",
       "message": "phase3-rerun-subnet-register: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T11:16:17.143Z",
+      "message": "phase3-rerun-weights: respawned by local-cli (was error)"
     }
   ]
 }
