@@ -276,12 +276,12 @@
       "agentId": "bc-f9e06d5a-3429-4cff-9cfc-4c3a504f8a7a",
       "runId": "run-5cd40a80-6674-445c-8f11-827e49c585e3",
       "parentAgentId": "bc-37c2ca1b-660c-43b1-9083-c46931e888b1",
-      "status": "running",
-      "resultStatus": null,
-      "handoffPath": null,
+      "status": "handed-off",
+      "resultStatus": "finished",
+      "handoffPath": "handoffs/phase3-rerun-subnet-register.md",
       "startedAt": "2026-05-29T07:21:51.396Z",
-      "finishedAt": null,
-      "lastUpdate": "2026-05-29T07:21:54.912Z",
+      "finishedAt": "2026-05-29T10:29:53.126Z",
+      "lastUpdate": "2026-05-29T10:29:53.128Z",
       "note": null,
       "attempts": 1,
       "slackTs": null,
@@ -1131,6 +1131,22 @@
     {
       "at": "2026-05-29T09:09:56.588Z",
       "message": "phase3-rerun-root: verification self-reported (unit-test-verified)"
+    },
+    {
+      "at": "2026-05-29T09:59:03.013Z",
+      "message": "phase3-rerun-weights: recover failed: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()"
+    },
+    {
+      "at": "2026-05-29T09:59:03.016Z",
+      "message": "phase3-rerun-weights: synthetic failure handoff written to /Users/const/agcli-parity-wt/.orchestrate/agcli-parity/handoffs/phase3-rerun-weights-failure.md (recover failed)"
+    },
+    {
+      "at": "2026-05-29T10:12:35.902Z",
+      "message": "phase3-rerun-stake-advanced: SSE idle 809869ms, polled status=running; watchdog still waiting"
+    },
+    {
+      "at": "2026-05-29T10:12:35.903Z",
+      "message": "phase3-rerun-stake-advanced: tool_call idle 809870ms; last=2026-05-29T09:59:06.033Z"
     }
   ]
 }
