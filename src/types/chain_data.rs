@@ -137,7 +137,7 @@ pub struct SubnetHyperparameters {
     pub weights_version: u64,
     pub weights_rate_limit: u64,
     pub adjustment_interval: u16,
-    pub activity_cutoff: u16,
+    pub activity_cutoff: u64,
     pub registration_allowed: bool,
     pub target_regs_per_interval: u16,
     pub min_burn: Balance,

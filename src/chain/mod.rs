@@ -1307,8 +1307,6 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         || msg.contains("NotEnoughBalanceToPaySwapColdKey")
     {
         "Insufficient free balance to pay the hotkey or coldkey swap fee. Fund the signing account and retry."
-    } else if msg.contains("Registry::NotRegistered") {
-        "No on-chain identity is registered for this account (pallet Registry). Use `agcli network identity set` or pass the correct SS58."
     } else if msg.contains("HotKeyNotRegisteredInNetwork") {
         "This hotkey is not registered on any subnet yet. Pick a target netuid and register with `agcli subnet register-neuron --netuid <N>`."
     } else if msg.contains("HotKeyNotRegisteredInSubNet") || msg.contains("NotRegistered") {
@@ -1490,17 +1488,6 @@ fn format_dispatch_error(e: subxt::Error) -> anyhow::Error {
         "Pool reserves are too low for this swap or liquidity action — reduce size or wait for liquidity."
     } else if msg.contains("UserLiquidityDisabled") {
         "Subnet owner disabled user add/remove liquidity on this subnet."
-    } else if msg.contains("TooManyFieldsInIdentityInfo") {
-        "On-chain identity has too many additional fields — trim optional fields to the runtime maximum."
-    } else if msg.contains("Registry::CannotRegister") {
-        "Registry pallet: identity registration failed requirements (deposit, permissions, or eligibility)."
-    } else if msg.contains("CannotRegister") {
-        "Registry identity registration failed requirements (deposit, permissions, or eligibility)."
-    } else if msg.contains("NotRegistered")
-        && !msg.contains("HotKey")
-        && !msg.contains("ColdkeySwapAnnouncement")
-    {
-        "No on-chain identity registered for this account — register first or use the correct SS58."
     } else if msg.contains("DepositTooLow")
         || msg.contains("CapTooLow")
         || msg.contains("MinimumContributionTooLow")
@@ -1924,13 +1911,13 @@ mod tests {
     }
 
     #[test]
-    fn format_dispatch_error_registry_not_registered_identity_hint() {
-        let err = subxt::Error::Other("Pallet error: Registry::NotRegistered".to_string());
+    fn format_dispatch_error_invalid_identity_hint() {
+        let err = subxt::Error::Other("Pallet error: SubtensorModule::InvalidIdentity".to_string());
         let result = format_dispatch_error(err);
         let msg = format!("{:#}", result);
         assert!(
             msg.contains("Hint:") && msg.to_lowercase().contains("identity"),
-            "expected Registry identity hint, got: {}",
+            "expected identity validation hint, got: {}",
             msg
         );
         assert!(

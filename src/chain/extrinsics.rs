@@ -2692,9 +2692,9 @@ impl Client {
         self.sign_submit(&tx, pair).await
     }
 
-    // ──────── Registry ────────
+    // ──────── Identity ────────
 
-    /// Set on-chain identity (Registry pallet).
+    /// Set on-chain identity (`SubtensorModule::set_identity`, keyed by the signer's coldkey).
     pub async fn set_registry_identity(
         &self,
         pair: &sr25519::Pair,
@@ -2705,52 +2705,28 @@ impl Client {
         image: &str,
     ) -> Result<String> {
         use subxt::dynamic::Value;
-        let data_value = |s: &str| -> Value {
-            if s.is_empty() {
-                Value::unnamed_variant("None", [])
-            } else {
-                let bytes = s.as_bytes();
-                let len = bytes.len().min(128);
-                Value::unnamed_variant(format!("Raw{}", len), [Value::from_bytes(&bytes[..len])])
-            }
-        };
-        let additional_entries: Vec<Value> = [("github", github), ("description", description)]
-            .into_iter()
-            .filter(|(_, value)| !value.trim().is_empty())
-            .map(|(key, value)| Value::unnamed_composite([data_value(key), data_value(value)]))
-            .collect();
-        let info = Value::named_composite([
-            ("additional", Value::unnamed_composite(additional_entries)),
-            ("display", data_value(name)),
-            ("legal", Value::unnamed_variant("None", [])),
-            ("web", data_value(url)),
-            ("riot", Value::unnamed_variant("None", [])),
-            ("email", Value::unnamed_variant("None", [])),
-            ("pgp_fingerprint", Value::unnamed_variant("None", [])),
-            ("image", data_value(image)),
-            ("twitter", Value::unnamed_variant("None", [])),
-        ]);
-        let identified = AccountId::from(pair.public().0);
+        let bytes = |s: &str| Value::from_bytes(s.as_bytes());
+        // Fields are plain byte vectors: name, url, github_repo, image, discord, description, additional.
         self.submit_raw_call(
             pair,
-            "Registry",
+            "SubtensorModule",
             "set_identity",
-            vec![Value::from_bytes(identified.0), info],
+            vec![
+                bytes(name),
+                bytes(url),
+                bytes(github),
+                bytes(image),
+                bytes(""),
+                bytes(description),
+                bytes(""),
+            ],
         )
         .await
     }
 
-    /// Clear on-chain identity (Registry pallet).
+    /// Clear on-chain identity by writing an empty identity
     pub async fn clear_registry_identity(&self, pair: &sr25519::Pair) -> Result<String> {
-        use subxt::dynamic::Value;
-        let identified = AccountId::from(pair.public().0);
-        self.submit_raw_call(
-            pair,
-            "Registry",
-            "clear_identity",
-            vec![Value::from_bytes(identified.0)],
-        )
-        .await
+        self.set_registry_identity(pair, "", "", "", "", "").await
     }
 
     // ──────── Utility: batch variants ────────

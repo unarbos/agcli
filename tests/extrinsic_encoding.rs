@@ -50,36 +50,34 @@ fn proxy_announce_differs_from_raw_account_bytes() {
 }
 
 #[test]
-fn registry_set_identity_includes_two_top_level_fields() {
-    let identified = [9u8; 32];
-    let info = Value::named_composite([
-        (
-            "display",
-            Value::unnamed_variant("Raw4", [Value::from_bytes(b"test")]),
-        ),
-        ("legal", Value::unnamed_variant("None", [])),
-        ("web", Value::unnamed_variant("None", [])),
-        ("riot", Value::unnamed_variant("None", [])),
-        ("email", Value::unnamed_variant("None", [])),
-        ("pgp_fingerprint", Value::unnamed_variant("None", [])),
-        ("image", Value::unnamed_variant("None", [])),
-        ("twitter", Value::unnamed_variant("None", [])),
-        ("additional", Value::unnamed_composite([])),
-    ]);
-    let with_info = encode_dynamic(
-        "Registry",
-        "set_identity",
-        vec![Value::from_bytes(identified), info],
-    );
+fn set_identity_encodes_seven_flat_byte_fields() {
+    // SubtensorModule::set_identity takes seven plain Vec<u8> fields keyed by the
+    // signer's coldkey — name, url, github_repo, image, discord, description, additional.
+    let bytes = |s: &[u8]| Value::from_bytes(s);
+    let full = vec![
+        bytes(b"name"),
+        bytes(b"url"),
+        bytes(b"github"),
+        bytes(b"image"),
+        bytes(b""),
+        bytes(b"desc"),
+        bytes(b""),
+    ];
+    let with_info = encode_dynamic("SubtensorModule", "set_identity", full);
+    assert!(!with_info.is_empty());
     assert!(
         encode_dynamic_panics(
-            "Registry",
+            "SubtensorModule",
             "set_identity",
-            vec![Value::from_bytes(identified)],
+            vec![bytes(b"name"), bytes(b"url")],
         ),
-        "set_identity must include identity info as second arg"
+        "set_identity must encode all seven identity fields"
     );
-    assert!(!with_info.is_empty());
+    // The standalone Registry pallet was removed from the runtime.
+    assert!(
+        encode_dynamic_panics("Registry", "set_identity", Vec::<Value>::new()),
+        "Registry pallet should no longer exist in metadata"
+    );
 }
 
 #[test]

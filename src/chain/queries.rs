@@ -377,13 +377,13 @@ impl Client {
 
     // ──────── Identity Queries ────────
 
-    /// Get on-chain identity for an account (from Registry pallet).
+    /// Get on-chain identity for an account (SubtensorModule `IdentitiesV2`, keyed by coldkey).
     pub async fn get_identity(&self, ss58: &str) -> Result<Option<ChainIdentity>> {
         let account_id = Self::ss58_to_account_id(ss58)?;
         let inner = &self.inner;
         let short = crate::utils::short_ss58(ss58);
         let result = retry_on_transient("get_identity", RPC_RETRIES, || async {
-            let addr = api::storage().registry().identity_of(&account_id);
+            let addr = api::storage().subtensor_module().identities_v2(&account_id);
             let r = inner
                 .storage()
                 .at_latest()
@@ -394,7 +394,7 @@ impl Client {
             Ok(r)
         })
         .await?;
-        Ok(result.map(|reg| chain_identity_from_registration(reg.info)))
+        Ok(result.map(chain_identity_from_v2))
     }
 
     /// Get subnet identity (from SubtensorModule SubnetIdentitiesV3).
@@ -1015,7 +1015,7 @@ impl Client {
         block_hash: subxt::utils::H256,
     ) -> Result<Option<ChainIdentity>> {
         let account_id = Self::ss58_to_account_id(ss58)?;
-        let addr = api::storage().registry().identity_of(&account_id);
+        let addr = api::storage().subtensor_module().identities_v2(&account_id);
         let result = self
             .inner
             .storage()
@@ -1023,7 +1023,7 @@ impl Client {
             .fetch(&addr)
             .await
             .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
-        Ok(result.map(|reg| chain_identity_from_registration(reg.info)))
+        Ok(result.map(chain_identity_from_v2))
     }
 
     /// Get all subnets at a specific block hash (via runtime API at block).
@@ -1737,24 +1737,19 @@ impl Client {
     }
 }
 
-/// Convert a Registry pallet `IdentityInfo` into our `ChainIdentity` struct.
-fn chain_identity_from_registration(
-    info: api::runtime_types::pallet_registry::types::IdentityInfo,
+/// Convert SubtensorModule `ChainIdentityV2` (plain UTF-8 byte fields) into our `ChainIdentity`.
+fn chain_identity_from_v2(
+    info: api::runtime_types::pallet_subtensor::pallet::ChainIdentityV2,
 ) -> ChainIdentity {
+    let s = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
     ChainIdentity {
-        name: decode_identity_data(&info.display),
-        url: decode_identity_data(&info.web),
-        github: String::new(), // Registry pallet doesn't have github field
-        image: decode_identity_data(&info.image),
-        discord: decode_identity_data(&info.riot),
-        description: String::new(),
-        additional: info
-            .additional
-            .0
-            .iter()
-            .map(|(k, v)| format!("{}={}", decode_identity_data(k), decode_identity_data(v)))
-            .collect::<Vec<_>>()
-            .join(", "),
+        name: s(&info.name),
+        url: s(&info.url),
+        github: s(&info.github_repo),
+        image: s(&info.image),
+        discord: s(&info.discord),
+        description: s(&info.description),
+        additional: s(&info.additional),
     }
 }
 
@@ -2360,24 +2355,6 @@ fn json_to_ss58_account(value: &serde_json::Value) -> Option<String> {
         }
         _ => None,
     }
-}
-
-fn decode_identity_data(data: &api::runtime_types::pallet_registry::types::Data) -> String {
-    use api::runtime_types::pallet_registry::types::Data;
-    macro_rules! raw_to_string {
-        ($($variant:ident),+) => {
-            match data {
-                Data::None => String::new(),
-                $(Data::$variant(b) => String::from_utf8_lossy(b).into_owned(),)+
-                _ => format!("<hash:{:?}>", data),
-            }
-        }
-    }
-    raw_to_string!(
-        Raw0, Raw1, Raw2, Raw3, Raw4, Raw5, Raw6, Raw7, Raw8, Raw9, Raw10, Raw11, Raw12, Raw13,
-        Raw14, Raw15, Raw16, Raw17, Raw18, Raw19, Raw20, Raw21, Raw22, Raw23, Raw24, Raw25, Raw26,
-        Raw27, Raw28, Raw29, Raw30, Raw31, Raw32
-    )
 }
 
 /// Crowdloan contributors map name for this runtime (`Contributions` vs legacy `Contributors`).

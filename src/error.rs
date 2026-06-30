@@ -33,7 +33,6 @@ const SURFACED_DISPATCH_PALLETS: &[&str] = &[
     "swap",
     "drand",
     "utility",
-    "registry",
     "shield",
 ];
 
@@ -312,11 +311,8 @@ pub fn classify(err: &anyhow::Error) -> i32 {
         || msg.contains("swap::insufficientbalance")
         || msg.contains("swap::subtokendisabled")
         || msg.contains("swap::insufficientliquidity")
-        // Registry identity pallet
-        || msg.contains("registry::notregistered")
-        || msg.contains("registry::cannotregister")
-        || msg.contains("cannotregister")
-        || msg.contains("toomanyfieldsinidentityinfo")
+        // Identity (SubtensorModule::set_identity)
+        || msg.contains("invalididentity")
         // Crowdloan pallet
         || msg.contains("deposittoolow")
         || msg.contains("captoolow")
@@ -436,8 +432,8 @@ pub fn hint(code: i32, msg: &str) -> Option<&'static str> {
                 Some("Tip: Subtensor liquidity constraint (stake/swap path) — try a smaller amount or looser slippage; not always the same as DEX pool depth")
             } else if lower.contains("swap::subtokendisabled") {
                 Some("Tip: This subnet’s subtoken mode is not enabled for the on-chain AMM — check subnet token/subtoken config before swaps")
-            } else if lower.contains("registry::notregistered") {
-                Some("Tip: Set on-chain identity first (`agcli network identity set`) or use an SS58 that already has one")
+            } else if lower.contains("invalididentity") {
+                Some("Tip: Identity field too long or malformed — shorten name/url/description and retry `agcli network identity set`")
             } else if lower.contains("insufficient") {
                 Some("Tip: Check your balance with `agcli balance`. Transaction fees require a small reserve")
             } else if lower.contains("delegatetxratelimitexceeded") {
@@ -1378,8 +1374,8 @@ mod tests {
     }
 
     #[test]
-    fn hint_chain_registry_not_registered() {
-        let h = hint(exit_code::CHAIN, "Registry::NotRegistered");
+    fn hint_chain_invalid_identity() {
+        let h = hint(exit_code::CHAIN, "SubtensorModule::InvalidIdentity");
         assert!(h.is_some_and(|s| s.contains("identity")));
     }
 
