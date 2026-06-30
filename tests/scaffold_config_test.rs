@@ -75,7 +75,6 @@ fn scaffold_from_toml_all_hyperparams() {
         max_allowed_validators = 32
         max_allowed_uids = 256
         min_allowed_weights = 4
-        max_weight_limit = 65535
         immunity_period = 1000
         weights_rate_limit = 10
         commit_reveal = false
@@ -90,7 +89,6 @@ fn scaffold_from_toml_all_hyperparams() {
     assert_eq!(s.max_allowed_validators, Some(32));
     assert_eq!(s.max_allowed_uids, Some(256));
     assert_eq!(s.min_allowed_weights, Some(4));
-    assert_eq!(s.max_weight_limit, Some(65535));
     assert_eq!(s.immunity_period, Some(1000));
     assert_eq!(s.weights_rate_limit, Some(10));
     assert_eq!(s.commit_reveal, Some(false));

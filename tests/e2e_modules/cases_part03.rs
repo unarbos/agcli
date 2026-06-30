@@ -1044,7 +1044,7 @@ pub async fn test_dissolve_network(client: &mut Client) {
         .await
         .expect("networks before dissolve");
 
-    let hash = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
+    let (hash, _) = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
     println!("  register_network for dissolve tx: {hash}");
     wait_blocks(client, 3).await;
 

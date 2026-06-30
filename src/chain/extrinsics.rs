@@ -8,6 +8,7 @@ use crate::types::balance::{AlphaBalance, Balance, LimitPriceRao};
 use crate::types::chain_data::*;
 use crate::types::network::NetUid;
 use crate::{api, AccountId};
+use subxt::ext::scale_value::{Composite, Primitive, ValueDef};
 
 use super::Client;
 
@@ -615,15 +616,36 @@ impl Client {
 
     // ──────── Registration ────────
 
-    /// Register a new subnet.
+    /// Register a new subnet, returning `(tx_hash, netuid)`.
+    ///
+    /// The netuid is read straight from the `SubtensorModule::NetworkAdded`
+    /// event of the finalized extrinsic — the chain tells us which subnet we
+    /// got, so callers don't need to diff subnet sets (and race the query
+    /// cache). `netuid` is `None` only in dry-run mode (nothing was submitted).
     pub async fn register_network(
         &self,
         pair: &sr25519::Pair,
         hotkey_ss58: &str,
-    ) -> Result<String> {
+    ) -> Result<(String, Option<u16>)> {
         let hk = Self::ss58_to_account_id(hotkey_ss58)?;
-        self.sign_submit(&api::tx().subtensor_module().register_network(hk), pair)
-            .await
+        let tx = api::tx().subtensor_module().register_network(hk);
+        let Some(events) = self.submit_finalized(&tx, pair).await? else {
+            return Ok(("dry-run".to_string(), None));
+        };
+        let hash = format!("{:?}", events.extrinsic_hash());
+        let netuid = events.iter().flatten().find_map(|ev| {
+            if ev.pallet_name() == "SubtensorModule" && ev.variant_name() == "NetworkAdded" {
+                if let Ok(Composite::Unnamed(fields)) = ev.field_values() {
+                    if let Some(ValueDef::Primitive(Primitive::U128(n))) =
+                        fields.first().map(|v| &v.value)
+                    {
+                        return Some(*n as u16);
+                    }
+                }
+            }
+            None
+        });
+        Ok((hash, netuid))
     }
 
     /// POW register on a subnet.

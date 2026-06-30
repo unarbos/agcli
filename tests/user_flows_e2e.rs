@@ -213,13 +213,11 @@ async fn wait_blocks(client: &mut Client, n: u64) {
 
 macro_rules! retry_extrinsic {
     ($client:expr, $call:expr) => {{
-        let mut __re_result: String = String::new();
-        let mut __re_done = false;
+        let mut __re_result = None;
         for __re_attempt in 1u32..=20 {
             match $call.await {
-                Ok(hash) => {
-                    __re_result = hash;
-                    __re_done = true;
+                Ok(val) => {
+                    __re_result = Some(val);
                     break;
                 }
                 Err(e) => {
@@ -240,14 +238,13 @@ macro_rules! retry_extrinsic {
                 }
             }
         }
-        assert!(__re_done, "retry_extrinsic: unreachable");
-        __re_result
+        __re_result.expect("retry_extrinsic: unreachable")
     }};
 }
 
 macro_rules! try_extrinsic {
     ($client:expr, $call:expr) => {{
-        let mut __te_result: Result<String, String> = Err("max retries".to_string());
+        let mut __te_result: Result<_, String> = Err("max retries".to_string());
         for __te_attempt in 1u32..=20 {
             match $call.await {
                 Ok(hash) => {
@@ -1273,7 +1270,7 @@ async fn flow_subnet_owner_lifecycle(client: &mut Client) {
 
     // Step 1: Create a brand new subnet
     let networks_before = client.get_total_networks().await.unwrap_or(1);
-    let hash = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
+    let (hash, _) = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
     wait_blocks(client, 5).await;
     let networks_after = client.get_total_networks().await.unwrap_or(networks_before);
     let new_sn = NetUid(networks_after - 1);
@@ -3819,7 +3816,7 @@ async fn flow_multi_subnet_empire(client: &mut Client) {
     let count_after = client.get_total_networks().await.unwrap_or(initial_count);
     let new_sn = NetUid(count_after as u16 - 1);
     match &reg_result {
-        Ok(hash) => println!(
+        Ok((hash, _)) => println!(
             "  2. Created SN{} (total {} → {}): {}",
             new_sn.0, initial_count, count_after, hash
         ),

@@ -115,7 +115,7 @@ pub async fn test_register_network(client: &mut Client) {
     let networks_before = client.get_total_networks().await.expect("networks before");
 
     // Register a new subnet with Alice as owner, using Alice hotkey
-    let hash = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
+    let (hash, _) = retry_extrinsic!(client, client.register_network(&alice, ALICE_SS58));
     println!("  register_network tx: {hash}");
 
     wait_blocks(client, 3).await;

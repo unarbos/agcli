@@ -363,13 +363,11 @@ pub async fn wait_blocks(client: &mut Client, n: u64) {
 /// Usage: retry_extrinsic!(client, client.transfer(...))
 macro_rules! retry_extrinsic {
     ($client:expr, $call:expr) => {{
-        let mut __re_result: String = String::new();
-        let mut __re_done = false;
+        let mut __re_result = None;
         for __re_attempt in 1u32..=20 {
             match $call.await {
-                Ok(hash) => {
-                    __re_result = hash;
-                    __re_done = true;
+                Ok(val) => {
+                    __re_result = Some(val);
                     break;
                 }
                 Err(e) => {
@@ -391,8 +389,7 @@ macro_rules! retry_extrinsic {
                 }
             }
         }
-        assert!(__re_done, "retry_extrinsic: unreachable");
-        __re_result
+        __re_result.expect("retry_extrinsic: unreachable")
     }};
 }
 
@@ -400,7 +397,7 @@ macro_rules! retry_extrinsic {
 /// Usage: try_extrinsic!(client, client.transfer(...))
 macro_rules! try_extrinsic {
     ($client:expr, $call:expr) => {{
-        let mut __te_result: Result<String, String> = Err("max retries".to_string());
+        let mut __te_result: Result<_, String> = Err("max retries".to_string());
         for __te_attempt in 1u32..=20 {
             match $call.await {
                 Ok(hash) => {

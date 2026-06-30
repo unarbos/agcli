@@ -89,8 +89,6 @@ pub struct SubnetConfig {
     pub max_allowed_uids: Option<u16>,
     /// Minimum weights a validator must set.
     pub min_allowed_weights: Option<u16>,
-    /// Maximum weight value.
-    pub max_weight_limit: Option<u16>,
     /// Blocks of immunity after registration.
     pub immunity_period: Option<u16>,
     /// Blocks between weight submissions (0 = unlimited).
@@ -110,7 +108,6 @@ impl Default for SubnetConfig {
             max_allowed_validators: Some(8),
             max_allowed_uids: None,
             min_allowed_weights: Some(1),
-            max_weight_limit: None,
             immunity_period: None,
             weights_rate_limit: Some(0),
             commit_reveal: Some(false),
@@ -278,38 +275,24 @@ where
         bail!("No subnets defined in scaffold config");
     }
 
+    // Disable the chain-wide admin freeze window (root/sudo). Subtensor rejects
+    // subnet-owner admin extrinsics during the last AdminFreezeWindow blocks of
+    // each tempo; on a localnet that intermittently kills scaffold's hyperparameter
+    // calls with AdminActionProhibitedDuringWeightsWindow. Zeroing it once up front
+    // makes the set_* calls below deterministic.
+    on_progress("Disabling admin freeze window...");
+    admin::set_admin_freeze_window(&client, &alice, 0).await?;
+
     let mut subnet_results = Vec::new();
 
     for (i, subnet_cfg) in config.subnet.iter().enumerate() {
         on_progress(&format!("Creating subnet {}...", i + 1));
 
-        // 4. Register subnet — collect netuids before and after to find the new one
-        //    (avoids race condition: `total_networks - 1` assumes sequential assignment
-        //     which breaks under concurrent registrations)
-        let netuids_before: std::collections::HashSet<u16> = client
-            .get_all_subnets()
-            .await?
-            .iter()
-            .map(|s| s.netuid.0)
-            .collect();
-        retry_idempotent_extrinsic(|| client.register_network(&alice, &alice_ss58)).await?;
-        wait_blocks(&client, 2).await;
-        // Pin a fresh block to bypass query cache and see the newly created subnet
-        let pin_hash = client.pin_latest_block().await?;
-        let subnets_after = client.get_all_subnets_at_block(pin_hash).await?;
-        let netuids_after: std::collections::HashSet<u16> =
-            subnets_after.iter().map(|s| s.netuid.0).collect();
-        let new_netuids: Vec<u16> = netuids_after.difference(&netuids_before).copied().collect();
-        if new_netuids.is_empty() {
-            bail!(
-                "Subnet registration failed: no new netuid appeared (before: {:?}, after: {:?})",
-                netuids_before,
-                netuids_after
-            );
-        }
-        // Use min() for determinism when multiple subnets appear concurrently
-        // (HashSet iteration order is non-deterministic; Substrate assigns netuids incrementally)
-        let netuid = *new_netuids.iter().min().unwrap();
+        // 4. Register subnet — the assigned netuid comes straight from the
+        //    NetworkAdded event of the finalized extrinsic (no subnet-set diffing).
+        let (_tx, netuid) =
+            retry_idempotent_extrinsic(|| client.register_network(&alice, &alice_ss58)).await?;
+        let netuid = netuid.context("register_network emitted no NetworkAdded event")?;
         on_progress(&format!("Subnet created: netuid {}", netuid));
 
         // 5. Set hyperparameters via sudo
@@ -378,16 +361,6 @@ where
                 admin::set_min_allowed_weights(&client, &alice, netuid, min_w),
                 "min_allowed_weights",
                 min_w,
-                hyperparams,
-                on_progress
-            );
-        }
-        if let Some(max_wl) = subnet_cfg.max_weight_limit {
-            try_admin!(
-                "set_max_weight_limit",
-                admin::set_max_weight_limit(&client, &alice, netuid, max_wl),
-                "max_weight_limit",
-                max_wl,
                 hyperparams,
                 on_progress
             );
@@ -518,14 +491,14 @@ where
 /// burned_register). Do NOT use for transfers or other operations where
 /// a retry could double-spend. For non-idempotent ops, call directly
 /// without retry.
-async fn retry_idempotent_extrinsic<F, Fut>(f: F) -> Result<String>
+async fn retry_idempotent_extrinsic<F, Fut, T>(f: F) -> Result<T>
 where
     F: Fn() -> Fut,
-    Fut: std::future::Future<Output = Result<String>>,
+    Fut: std::future::Future<Output = Result<T>>,
 {
     for attempt in 1..=10 {
         match f().await {
-            Ok(hash) => return Ok(hash),
+            Ok(val) => return Ok(val),
             Err(e) => {
                 let msg = format!("{}", e);
                 let is_transient = msg.contains("outdated")
@@ -813,19 +786,6 @@ mod tests {
         let short = "WeightsWindow error";
         let result = crate::utils::truncate(short, 80);
         assert_eq!(result, short);
-    }
-
-    // ──── Issue 114: deterministic netuid selection from HashSet ────
-
-    #[test]
-    fn min_netuid_is_deterministic() {
-        // Simulate the fix: when multiple netuids appear, min() gives deterministic result
-        use std::collections::HashSet;
-        let before: HashSet<u16> = [1, 2, 5, 10].into_iter().collect();
-        let after: HashSet<u16> = [1, 2, 5, 7, 10, 12].into_iter().collect();
-        let new_netuids: Vec<u16> = after.difference(&before).copied().collect();
-        let netuid = *new_netuids.iter().min().unwrap();
-        assert_eq!(netuid, 7, "Should deterministically pick lowest new netuid");
     }
 
     // ──── TOML round-trip: deserialize → serialize → deserialize must be symmetric ────

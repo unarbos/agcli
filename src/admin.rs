@@ -21,6 +21,25 @@ use anyhow::Result;
 use sp_core::sr25519;
 use subxt::dynamic::Value;
 
+/// Set the chain-wide AdminFreezeWindow (in blocks) via sudo. Requires the root
+/// key (Alice on localnet). Subtensor blocks subnet-owner admin extrinsics during
+/// the last `window` blocks of each tempo; scaffold zeroes it so hyperparameter
+/// calls aren't rejected with `AdminActionProhibitedDuringWeightsWindow`.
+pub async fn set_admin_freeze_window(
+    client: &Client,
+    sudo_key: &sr25519::Pair,
+    window: u16,
+) -> Result<String> {
+    client
+        .submit_sudo_raw_call_checked(
+            sudo_key,
+            "AdminUtils",
+            "sudo_set_admin_freeze_window",
+            vec![Value::u128(window as u128)],
+        )
+        .await
+}
+
 /// Set the tempo (blocks per epoch) for a subnet.
 pub async fn set_tempo(
     client: &Client,

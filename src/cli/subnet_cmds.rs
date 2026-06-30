@@ -511,11 +511,11 @@ pub(super) async fn handle_subnet(
             let (pair, hk) =
                 unlock_and_resolve(wallet_dir, wallet_name, hotkey_name, None, password)?;
             println!("Registering new subnet...");
-            let hash = client.register_network(&pair, &hk).await?;
-            println!(
-                "Subnet registered. Check `agcli subnet list` for your new subnet ID.\n  Tx: {}",
-                hash
-            );
+            let (hash, netuid) = client.register_network(&pair, &hk).await?;
+            match netuid {
+                Some(n) => println!("Subnet registered as netuid {}.\n  Tx: {}", n, hash),
+                None => println!("Subnet registered (dry-run).\n  Tx: {}", hash),
+            }
             Ok(())
         }
         SubnetCommands::CreateCost => {

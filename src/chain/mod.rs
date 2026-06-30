@@ -12,6 +12,7 @@ use sp_core::sr25519;
 use std::borrow::Cow;
 use subxt::backend::legacy::rpc_methods::LegacyRpcMethods;
 use subxt::backend::rpc::RpcClient;
+use subxt::blocks::ExtrinsicEvents;
 use subxt::tx::PairSigner;
 use subxt::OnlineClient;
 
@@ -496,6 +497,22 @@ impl Client {
         tx: &T,
         pair: &sr25519::Pair,
     ) -> Result<String> {
+        Ok(match self.submit_finalized(tx, pair).await? {
+            Some(events) => format!("{:?}", events.extrinsic_hash()),
+            None => "dry-run".to_string(),
+        })
+    }
+
+    /// Sign, submit, and wait for finalized success, returning the finalized
+    /// events. Returns `None` in dry-run mode (nothing is submitted). Shared by
+    /// `sign_submit` (which only needs the tx hash) and callers that must read
+    /// emitted events — e.g. the assigned netuid from `register_network`'s
+    /// `NetworkAdded` event.
+    async fn submit_finalized<T: subxt::tx::Payload>(
+        &self,
+        tx: &T,
+        pair: &sr25519::Pair,
+    ) -> Result<Option<ExtrinsicEvents<SubtensorConfig>>> {
         // Dry-run: encode the call and show what would be submitted
         if self.dry_run {
             let call_data = self
@@ -517,7 +534,7 @@ impl Client {
                 call_data.len()
             );
             print_dry_run_json(&info);
-            return Ok("dry-run".to_string());
+            return Ok(None);
         }
 
         let signer = Self::signer(pair);
@@ -582,10 +599,9 @@ impl Client {
             spinner.finish_and_clear();
             format_dispatch_error(e)
         })?;
-        let hash = format!("{:?}", result.extrinsic_hash());
         spinner.finish_and_clear();
-        tracing::info!(tx_hash = %hash, elapsed_ms = start.elapsed().as_millis() as u64, "Extrinsic finalized");
-        Ok(hash)
+        tracing::info!(tx_hash = %format!("{:?}", result.extrinsic_hash()), elapsed_ms = start.elapsed().as_millis() as u64, "Extrinsic finalized");
+        Ok(Some(result))
     }
 
     /// Sign and submit via MEV shield: SCALE-encode the call, encrypt with ML-KEM-768,

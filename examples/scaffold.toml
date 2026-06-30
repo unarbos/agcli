@@ -25,7 +25,6 @@ weights_rate_limit = 0       # 0 = no rate limit
 commit_reveal = false        # Disable commit-reveal for simpler testing
 # immunity_period = 100      # Uncomment to set immunity period
 # max_allowed_uids = 256     # Uncomment to set max UIDs
-# max_weight_limit = 65535   # Uncomment to set max weight value
 # activity_cutoff = 5000     # Uncomment to set activity cutoff
 
 [[subnet.neuron]]

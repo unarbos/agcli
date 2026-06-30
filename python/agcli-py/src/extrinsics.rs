@@ -941,7 +941,7 @@ impl PyClient {
                 apply_call_overrides(&mut client, dry_run, finalization_timeout, mortality_blocks);
             let result = client.register_network(&pair, &hotkey_ss58).await;
             restore_call_overrides(&mut client, previous);
-            result.map_err(map_error)
+            result.map(|(hash, _netuid)| hash).map_err(map_error)
         })
     }
 

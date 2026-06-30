@@ -525,7 +525,6 @@ async fn t30_scaffold_default_config() {
             commit_reveal: Some(false),
             // Leave the rest as None to minimize timing-sensitive calls
             max_allowed_uids: None,
-            max_weight_limit: None,
             immunity_period: None,
             activity_cutoff: None,
             neuron: vec![
