@@ -25,17 +25,25 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                 let stakes = client
                     .get_stake_for_coldkey_at_block(&addr, block_hash)
                     .await?;
+                let prices = client
+                    .current_alpha_price_all_at_block(block_hash)
+                    .await
+                    .unwrap_or_default();
                 if output.is_json() {
                     print_json(&serde_json::json!({
                         "address": addr,
                         "block": block_num,
                         "block_hash": format!("{:?}", block_hash),
-                        "stakes": stakes.iter().map(|s| serde_json::json!({
-                            "netuid": s.netuid.0,
-                            "hotkey": s.hotkey,
-                            "stake_rao": s.stake.rao(),
-                            "alpha_raw": s.alpha_stake.raw(),
-                        })).collect::<Vec<_>>(),
+                        "stakes": stakes.iter().map(|s| {
+                            let price = prices.get(&s.netuid.0).copied();
+                            serde_json::json!({
+                                "netuid": s.netuid.0,
+                                "hotkey": s.hotkey,
+                                "alpha_raw": s.stake.raw(),
+                                "tao_equiv_rao": price.map(|p| s.stake.to_tao(p).rao()),
+                                "price": price,
+                            })
+                        }).collect::<Vec<_>>(),
                     }));
                 } else if stakes.is_empty() {
                     println!(
@@ -49,13 +57,19 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
                         &stakes,
                         "",
                         |_| String::new(),
-                        &["Subnet", "Hotkey", "Stake (τ)", "Alpha"],
+                        &["Subnet", "Hotkey", "Alpha (α)", "TAO≈ (τ)", "Price (τ/α)"],
                         |s| {
+                            let price = prices.get(&s.netuid.0).copied();
                             vec![
                                 format!("SN{}", s.netuid),
                                 crate::utils::short_ss58(&s.hotkey),
-                                s.stake.display_tao(),
-                                format!("{}", s.alpha_stake),
+                                s.stake.display_units(),
+                                price
+                                    .map(|p| s.stake.to_tao(p).display_tao())
+                                    .unwrap_or_else(|| "—".to_string()),
+                                price
+                                    .map(|p| format!("{p:.6}"))
+                                    .unwrap_or_else(|| "—".to_string()),
                             ]
                         },
                         Some(&format!(
@@ -69,29 +83,40 @@ pub async fn handle_stake(cmd: StakeCommands, client: &Client, ctx: &Ctx<'_>) ->
             }
 
             let stakes = client.get_stake_for_coldkey(&addr).await?;
+            let prices = client.current_alpha_price_all().await.unwrap_or_default();
             if stakes.is_empty() && !output.is_json() && !output.is_csv() {
                 println!("No stakes found for {}", crate::utils::short_ss58(&addr));
             } else {
                 render_rows(
                     output,
                     &stakes,
-                    "netuid,hotkey,stake_rao,alpha_raw",
+                    "netuid,hotkey,alpha_raw,tao_equiv_rao,price",
                     |s| {
+                        let price = prices.get(&s.netuid.0).copied();
                         format!(
-                            "{},{},{},{}",
+                            "{},{},{},{},{}",
                             s.netuid,
                             s.hotkey,
-                            s.stake.rao(),
-                            s.alpha_stake.raw()
+                            s.stake.raw(),
+                            price
+                                .map(|p| s.stake.to_tao(p).rao().to_string())
+                                .unwrap_or_default(),
+                            price.map(|p| format!("{p:.6}")).unwrap_or_default()
                         )
                     },
-                    &["Subnet", "Hotkey", "Stake (τ)", "Alpha"],
+                    &["Subnet", "Hotkey", "Alpha (α)", "TAO≈ (τ)", "Price (τ/α)"],
                     |s| {
+                        let price = prices.get(&s.netuid.0).copied();
                         vec![
                             format!("SN{}", s.netuid),
                             crate::utils::short_ss58(&s.hotkey),
-                            s.stake.display_tao(),
-                            format!("{}", s.alpha_stake),
+                            s.stake.display_units(),
+                            price
+                                .map(|p| s.stake.to_tao(p).display_tao())
+                                .unwrap_or_else(|| "—".to_string()),
+                            price
+                                .map(|p| format!("{p:.6}"))
+                                .unwrap_or_else(|| "—".to_string()),
                         ]
                     },
                     Some(&format!("Stakes for {}:", crate::utils::short_ss58(&addr))),
@@ -1331,12 +1356,12 @@ async fn preflight_alpha_stake(
         .iter()
         .find(|s| s.netuid.0 == netuid && s.hotkey == hotkey_ss58)
     {
-        Some(pos) if alpha.raw() > pos.alpha_stake.raw() => {
+        Some(pos) if alpha.raw() > pos.stake.raw() => {
             anyhow::bail!(
                 "Cannot {action} {:.9} α — you have {:.9} α on SN{} for hotkey {}.\n  \
                  `--amount` is alpha (α), not TAO. Check: agcli stake list",
                 alpha.units(),
-                pos.alpha_stake.units(),
+                pos.stake.units(),
                 netuid,
                 crate::utils::short_ss58(hotkey_ss58)
             );

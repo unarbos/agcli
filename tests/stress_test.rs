@@ -782,7 +782,7 @@ fn wallet_create_race_protection() {
 #[test]
 fn cache_save_concurrent_atomic_symlink() {
     use agcli::queries::cache;
-    use agcli::types::balance::Balance;
+    use agcli::types::balance::AlphaBalance;
     use agcli::types::chain_data::{Metagraph, NeuronInfoLite};
     use agcli::types::network::NetUid;
 
@@ -794,7 +794,7 @@ fn cache_save_concurrent_atomic_symlink() {
         uid,
         netuid: NetUid(netuid),
         active: true,
-        stake: Balance::from_rao(100_000_000_000),
+        stake: AlphaBalance::from_raw(100_000_000_000),
         rank: 0.0,
         emission: 0.0,
         incentive: 0.5,

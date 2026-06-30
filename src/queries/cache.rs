@@ -199,16 +199,16 @@ pub fn diff(old: &Metagraph, new: &Metagraph) -> Vec<MetagraphDelta> {
                         },
                     });
                 }
-                let stake_diff = nn.stake.rao() as i128 - on.stake.rao() as i128;
+                let stake_diff = nn.stake.raw() as i128 - on.stake.raw() as i128;
                 if stake_diff.unsigned_abs() > 1_000_000_000 {
-                    // > 1 TAO change
+                    // > 1 alpha change
                     deltas.push(MetagraphDelta {
                         uid: nn.uid,
                         hotkey: hotkey.to_string(),
                         kind: DeltaKind::Changed {
                             field: "stake".to_string(),
-                            old_val: format!("{:.4}τ", on.stake.tao()),
-                            new_val: format!("{:.4}τ", nn.stake.tao()),
+                            old_val: format!("{:.4} α", on.stake.units()),
+                            new_val: format!("{:.4} α", nn.stake.units()),
                         },
                     });
                 }
@@ -270,7 +270,7 @@ impl std::fmt::Display for MetagraphDelta {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::balance::Balance;
+    use crate::types::balance::AlphaBalance;
     use crate::types::chain_data::NeuronInfoLite;
     use crate::types::network::NetUid;
 
@@ -278,7 +278,7 @@ mod tests {
         uid: u16,
         hotkey: &str,
         netuid: u16,
-        stake_tao: f64,
+        stake_alpha: f64,
         incentive: f64,
     ) -> NeuronInfoLite {
         NeuronInfoLite {
@@ -287,7 +287,7 @@ mod tests {
             uid,
             netuid: NetUid(netuid),
             active: true,
-            stake: Balance::from_tao(stake_tao),
+            stake: AlphaBalance::from_units(stake_alpha),
             rank: 0.0,
             emission: 0.0,
             incentive,

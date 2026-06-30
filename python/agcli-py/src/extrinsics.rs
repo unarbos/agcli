@@ -66,7 +66,6 @@ fn parse_balance(value: &Bound<'_, PyAny>, field: &str) -> PyResult<agcli::Balan
     Ok(agcli::Balance::from_rao(raw as u64))
 }
 
-
 fn parse_alpha_balance(value: &Bound<'_, PyAny>, field: &str) -> PyResult<agcli::AlphaBalance> {
     if let Ok(balance) = value.extract::<PyRef<'_, PyAlphaBalance>>() {
         return Ok(balance.inner());

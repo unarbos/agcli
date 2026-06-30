@@ -25,15 +25,15 @@ pub struct SubnetPosition {
     pub price: f64,
 }
 
-/// Fetch the full portfolio for a coldkey (resolves subnet names and prices from DynamicInfo).
-/// Uses a single pinned block hash for all queries — saves 2 redundant at_latest() RPC
-/// round-trips and ensures balance, stakes, and dynamic info are all from the same block.
+/// Fetch the full portfolio for a coldkey (subnet names from DynamicInfo, spot prices from
+/// the swap runtime API). Uses a single pinned block hash for all queries — saves redundant
+/// at_latest() RPC round-trips and ensures every value is from the same block.
 pub async fn fetch_portfolio(client: &Client, coldkey_ss58: &str) -> Result<Portfolio> {
-    // Pin a single block for consistency across all three queries
+    // Pin a single block for consistency across all queries
     let block_hash = client.pin_latest_block().await?;
 
-    // Parallel fetch at the pinned block: balance, stakes, and dynamic info
-    let (balance, stakes, dynamic) = tokio::try_join!(
+    // Parallel fetch at the pinned block: balance, stakes, dynamic info (names), spot prices
+    let (balance, stakes, dynamic, prices) = tokio::try_join!(
         client.get_balance_at_hash(coldkey_ss58, block_hash),
         client.get_stake_for_coldkey_at_block(coldkey_ss58, block_hash),
         async {
@@ -45,6 +45,14 @@ pub async fn fetch_portfolio(client: &Client, coldkey_ss58: &str) -> Result<Port
                 }
             }
         },
+        async {
+            Ok::<_, anyhow::Error>(
+                client
+                    .current_alpha_price_all_at_block(block_hash)
+                    .await
+                    .unwrap_or_default(),
+            )
+        },
     )?;
     let dynamic_map: std::collections::HashMap<u16, &crate::types::chain_data::DynamicInfo> =
         dynamic.iter().map(|d| (d.netuid.0, d)).collect();
@@ -53,13 +61,14 @@ pub async fn fetch_portfolio(client: &Client, coldkey_ss58: &str) -> Result<Port
         .iter()
         .map(|s| {
             let di = dynamic_map.get(&s.netuid.0);
+            let price = prices.get(&s.netuid.0).copied().unwrap_or(0.0);
             SubnetPosition {
                 netuid: s.netuid.0,
                 subnet_name: di.map(|d| d.name.clone()).unwrap_or_default(),
                 hotkey_ss58: s.hotkey.clone(),
-                alpha_stake: s.alpha_stake.raw(),
-                tao_equivalent: s.stake,
-                price: di.map(|d| d.price).unwrap_or(0.0),
+                alpha_stake: s.stake.raw(),
+                tao_equivalent: s.stake.to_tao(price),
+                price,
             }
         })
         .collect();

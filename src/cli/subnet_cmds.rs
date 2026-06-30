@@ -302,13 +302,22 @@ pub(super) async fn handle_subnet(
             client.require_subnet_exists(nuid, at_block).await?;
             // Single-UID lookup (always fetches full info)
             if let Some(target_uid) = uid {
-                let neuron = if let Some(bn) = at_block {
+                let (neuron, bh) = if let Some(bn) = at_block {
                     let bh = client.get_block_hash(bn).await?;
-                    client
+                    let nn = client
                         .get_neuron_at_block(NetUid(netuid), target_uid, bh)
-                        .await?
+                        .await?;
+                    (nn, Some(bh))
                 } else {
-                    client.get_neuron(NetUid(netuid), target_uid).await?
+                    let nn = client.get_neuron(NetUid(netuid), target_uid).await?;
+                    (nn, None)
+                };
+                let price = match client.alpha_price_f64(nuid, bh).await {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        tracing::warn!("alpha price fetch failed (non-fatal): {e:#}");
+                        None
+                    }
                 };
                 match neuron {
                     Some(n) => {
@@ -319,13 +328,25 @@ pub(super) async fn handle_subnet(
                             println!("  Hotkey:      {}", n.hotkey);
                             println!("  Coldkey:     {}", n.coldkey);
                             println!("  Active:      {}", n.active);
-                            println!("  Stake:       {}", n.stake.display_tao());
+                            println!(
+                                "  Stake:       {} ≈ {}",
+                                n.stake.display_units(),
+                                price
+                                    .map(|p| n.stake.to_tao(p).display_tao())
+                                    .unwrap_or_else(|| "—".to_string())
+                            );
                             println!("  Rank:        {:.6}", n.rank);
                             println!("  Trust:       {:.6}", n.trust);
                             println!("  Consensus:   {:.6}", n.consensus);
                             println!("  Incentive:   {:.6}", n.incentive);
                             println!("  Dividends:   {:.6}", n.dividends);
-                            println!("  Emission:    {:.4} τ", n.emission / 1e9);
+                            println!(
+                                "  Emission:    {:.4} α/tempo ≈ {}",
+                                n.emission / 1e9,
+                                price
+                                    .map(|p| format!("{:.4} τ", n.emission / 1e9 * p))
+                                    .unwrap_or_else(|| "—".to_string())
+                            );
                             println!("  Val. Trust:  {:.6}", n.validator_trust);
                             println!("  Val. Permit: {}", n.validator_permit);
                             println!("  Last Update: block {}", n.last_update);
@@ -395,7 +416,7 @@ pub(super) async fn handle_subnet(
                 render_rows(
                     output,
                     &full_neurons,
-                    "uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit,last_update,axon_ip,axon_port,axon_version,prometheus_ip,prometheus_port",
+                    "uid,hotkey,coldkey,stake_alpha_raw,rank,trust,consensus,incentive,dividends,emission_alpha,validator_permit,last_update,axon_ip,axon_port,axon_version,prometheus_ip,prometheus_port",
                     |n| {
                         let (aip, aport, aver) = n.axon_info.as_ref()
                             .map(|a| (a.ip.as_str(), a.port.to_string(), a.version.to_string()))
@@ -405,12 +426,12 @@ pub(super) async fn handle_subnet(
                             .unwrap_or(("", String::new()));
                         format!(
                             "{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{},{},{},{},{},{},{}",
-                            n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust,
+                            n.uid, n.hotkey, n.coldkey, n.stake.raw(), n.rank, n.trust,
                             n.consensus, n.incentive, n.dividends, n.emission,
                             n.validator_permit, n.last_update, aip, aport, aver, pip, pport
                         )
                     },
-                    &["UID", "Hotkey", "Stake", "Rank", "Trust", "Incentive", "Emission", "Axon", "VP"],
+                    &["UID", "Hotkey", "Stake (α)", "Rank", "Trust", "Incentive", "Emission (α)", "Axon", "VP"],
                     |n| {
                         let axon_str = n.axon_info.as_ref()
                             .filter(|a| a.port > 0)
@@ -419,11 +440,11 @@ pub(super) async fn handle_subnet(
                         vec![
                             format!("{}", n.uid),
                             crate::utils::short_ss58(&n.hotkey),
-                            format!("{:.4}τ", n.stake.tao()),
+                            format!("{:.4} α", n.stake.units()),
                             format!("{:.4}", n.rank),
                             format!("{:.4}", n.trust),
                             format!("{:.4}", n.incentive),
-                            format!("{:.4} τ", n.emission / 1e9),
+                            format!("{:.4} α", n.emission / 1e9),
                             axon_str,
                             if n.validator_permit { "Y" } else { "" }.to_string(),
                         ]
@@ -480,25 +501,25 @@ pub(super) async fn handle_subnet(
             render_rows(
                 output,
                 &neurons,
-                "uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit,last_update",
+                "uid,hotkey,coldkey,stake_alpha_raw,rank,trust,consensus,incentive,dividends,emission_alpha,validator_permit,last_update",
                 |n| {
                     format!(
                         "{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{},{}",
-                        n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust,
+                        n.uid, n.hotkey, n.coldkey, n.stake.raw(), n.rank, n.trust,
                         n.consensus, n.incentive, n.dividends, n.emission,
                         n.validator_permit, n.last_update
                     )
                 },
-                &["UID", "Hotkey", "Stake", "Rank", "Trust", "Incentive", "Emission", "Updated", "VP"],
+                &["UID", "Hotkey", "Stake (α)", "Rank", "Trust", "Incentive", "Emission (α)", "Updated", "VP"],
                 |n| {
                     vec![
                         format!("{}", n.uid),
                         crate::utils::short_ss58(&n.hotkey),
-                        format!("{:.4}τ", n.stake.tao()),
+                        format!("{:.4} α", n.stake.units()),
                         format!("{:.4}", n.rank),
                         format!("{:.4}", n.trust),
                         format!("{:.4}", n.incentive),
-                        format!("{:.4} τ", n.emission / 1e9),
+                        format!("{:.4} α", n.emission / 1e9),
                         format!("{}", n.last_update),
                         if n.validator_permit { "Y" } else { "" }.to_string(),
                     ]
@@ -844,25 +865,25 @@ pub(super) async fn handle_subnet(
                         render_rows(
                             output,
                             &mg.neurons,
-                            "uid,hotkey,coldkey,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_permit,last_update",
+                            "uid,hotkey,coldkey,stake_alpha_raw,rank,trust,consensus,incentive,dividends,emission_alpha,validator_permit,last_update",
                             |n| {
                                 format!(
                                     "{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{},{}",
-                                    n.uid, n.hotkey, n.coldkey, n.stake.rao(), n.rank, n.trust,
+                                    n.uid, n.hotkey, n.coldkey, n.stake.raw(), n.rank, n.trust,
                                     n.consensus, n.incentive, n.dividends, n.emission,
                                     n.validator_permit, n.last_update
                                 )
                             },
-                            &["UID", "Hotkey", "Stake", "Rank", "Trust", "Incentive", "Emission", "Updated", "VP"],
+                            &["UID", "Hotkey", "Stake (α)", "Rank", "Trust", "Incentive", "Emission (α)", "Updated", "VP"],
                             |n| {
                                 vec![
                                     format!("{}", n.uid),
                                     crate::utils::short_ss58(&n.hotkey),
-                                    format!("{:.4}τ", n.stake.tao()),
+                                    format!("{:.4} α", n.stake.units()),
                                     format!("{:.4}", n.rank),
                                     format!("{:.4}", n.trust),
                                     format!("{:.4}", n.incentive),
-                                    format!("{:.4} τ", n.emission / 1e9),
+                                    format!("{:.4} α", n.emission / 1e9),
                                     format!("{}", n.last_update),
                                     if n.validator_permit { "Y" } else { "" }.to_string(),
                                 ]
@@ -2294,7 +2315,7 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
             .map(|n| {
                 serde_json::json!({
                     "uid": n.uid, "hotkey": n.hotkey, "coldkey": n.coldkey,
-                    "active": n.active, "stake_rao": n.stake.rao(),
+                    "active": n.active, "stake_alpha_raw": n.stake.raw(),
                     "rank": n.rank, "trust": n.trust, "consensus": n.consensus,
                     "incentive": n.incentive, "dividends": n.dividends,
                     "emission": n.emission, "validator_permit": n.validator_permit,
@@ -2357,9 +2378,9 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
             "UID",
             "Hotkey",
             "Active",
-            "Stake",
+            "Stake (α)",
             "Incentive",
-            "Emission",
+            "Emission (α)",
             "Trust",
             "Updated",
             "VP",
@@ -2371,9 +2392,9 @@ async fn handle_subnet_health(client: &Client, netuid: u16, output: OutputFormat
                 format!("{}", n.uid),
                 crate::utils::short_ss58(&n.hotkey),
                 if n.active { "Y" } else { "N" }.to_string(),
-                format!("{:.4}τ", n.stake.tao()),
+                format!("{:.4} α", n.stake.units()),
                 format!("{:.4}", n.incentive),
-                format!("{:.4} τ", n.emission / 1e9),
+                format!("{:.4} α", n.emission / 1e9),
                 format!("{:.4}", n.trust),
                 format!("{}{}", staleness, stale_mark),
                 if n.validator_permit { "V" } else { "M" }.to_string(),
@@ -2433,8 +2454,8 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFor
                 };
                 serde_json::json!({
                     "uid": n.uid, "hotkey": n.hotkey,
-                    "emission_raw": n.emission,
-                    "emission_tao": n.emission / 1e9,
+                    "emission_alpha_raw": n.emission,
+                    "emission_alpha": n.emission / 1e9,
                     "share_pct": share,
                     "is_validator": n.validator_permit,
                 })
@@ -2466,7 +2487,7 @@ async fn handle_subnet_emissions(client: &Client, netuid: u16, output: OutputFor
             "UID",
             "Hotkey",
             "Role",
-            "Emission (τ)",
+            "Emission (α)",
             "Share %",
             "Daily Est.",
         ],

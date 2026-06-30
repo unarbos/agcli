@@ -3,7 +3,8 @@
 use crate::chain::Client;
 use crate::cli::helpers::*;
 use crate::cli::{OutputFormat, ViewCommands};
-use crate::types::{Balance, NetUid};
+use crate::types::chain_data::DelegateInfo;
+use crate::types::{AlphaBalance, Balance, NetUid};
 use anyhow::Result;
 
 pub async fn handle_view(cmd: ViewCommands, client: &Client, ctx: &Ctx<'_>) -> Result<()> {
@@ -154,7 +155,10 @@ async fn handle_portfolio(client: &Client, addr: &str, output: OutputFormat) -> 
         if !output.is_csv() {
             println!("Portfolio for {}", crate::utils::short_ss58(addr));
             println!("  Free:   {}", portfolio.free_balance.display_tao());
-            println!("  Staked: {}", portfolio.total_staked.display_tao());
+            println!(
+                "  Staked: {} (τ-equiv)",
+                portfolio.total_staked.display_tao()
+            );
             println!(
                 "  Total:  {}",
                 (portfolio.free_balance + portfolio.total_staked).display_tao()
@@ -176,15 +180,22 @@ async fn handle_portfolio(client: &Client, addr: &str, output: OutputFormat) -> 
                         p.price
                     )
                 },
-                &["Subnet", "Name", "Hotkey", "Alpha", "TAO Equiv", "Price"],
+                &[
+                    "Subnet",
+                    "Name",
+                    "Hotkey",
+                    "Alpha (α)",
+                    "TAO≈ (τ)",
+                    "Price (τ/α)",
+                ],
                 |p| {
                     vec![
                         format!("SN{}", p.netuid),
                         p.subnet_name.clone(),
                         crate::utils::short_ss58(&p.hotkey_ss58),
-                        format!("{}", p.alpha_stake),
-                        format!("{}", p.tao_equivalent),
-                        format!("{:.4}", p.price),
+                        format!("{:.9} α", p.alpha_stake as f64 / 1e9),
+                        p.tao_equivalent.display_tao(),
+                        format!("{:.6}", p.price),
                     ]
                 },
                 None,
@@ -322,27 +333,46 @@ async fn handle_portfolio_at_block(
     block_num: u32,
 ) -> Result<()> {
     let block_hash = client.get_block_hash(block_num).await?;
-    let (balance, stakes) = tokio::try_join!(
+    let (balance, stakes, prices) = tokio::try_join!(
         client.get_balance_at_block(addr, block_hash),
         client.get_stake_for_coldkey_at_block(addr, block_hash),
+        async {
+            Ok::<_, anyhow::Error>(
+                client
+                    .current_alpha_price_all_at_block(block_hash)
+                    .await
+                    .ok(),
+            )
+        },
     )?;
-    let total_staked: u64 = stakes
-        .iter()
-        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+    let priced = prices.is_some();
+    let prices = prices.unwrap_or_default();
+    // Cross-subnet total: sum the τ-equivalent of each position we have a price for.
+    let total_staked = stakes.iter().fold(Balance::ZERO, |acc, s| {
+        acc + prices
+            .get(&s.netuid.0)
+            .copied()
+            .map(|p| s.stake.to_tao(p))
+            .unwrap_or(Balance::ZERO)
+    });
     if output.is_json() {
         print_json(&serde_json::json!({
             "address": addr,
             "block": block_num,
             "free_balance_rao": balance.rao(),
             "free_balance_tao": balance.tao(),
-            "total_staked_rao": total_staked,
-            "total_staked_tao": total_staked as f64 / 1e9,
-            "stakes": stakes.iter().map(|s| serde_json::json!({
-                "hotkey": s.hotkey,
-                "netuid": s.netuid.0,
-                "stake_rao": s.stake.rao(),
-                "stake_tao": s.stake.tao(),
-            })).collect::<Vec<_>>(),
+            "total_staked_tao_rao": priced.then(|| total_staked.rao()),
+            "total_staked_tao": priced.then(|| total_staked.tao()),
+            "stakes": stakes.iter().map(|s| {
+                let price = prices.get(&s.netuid.0).copied();
+                serde_json::json!({
+                    "hotkey": s.hotkey,
+                    "netuid": s.netuid.0,
+                    "alpha_raw": s.stake.raw(),
+                    "tao_equiv_rao": price.map(|p| s.stake.to_tao(p).rao()),
+                    "price": price,
+                })
+            }).collect::<Vec<_>>(),
         }));
     } else {
         println!(
@@ -352,25 +382,52 @@ async fn handle_portfolio_at_block(
         );
         println!("  Free:   {}", balance.display_tao());
         println!(
-            "  Staked: {}",
-            Balance::from_rao(total_staked).display_tao()
+            "  Staked: {} (τ-equiv)",
+            if priced {
+                total_staked.display_tao()
+            } else {
+                "—".to_string()
+            }
         );
         println!(
             "  Total:  {}",
-            (balance + Balance::from_rao(total_staked)).display_tao()
+            if priced {
+                (balance + total_staked).display_tao()
+            } else {
+                "—".to_string()
+            }
         );
         if !stakes.is_empty() {
             render_rows(
                 output,
                 &stakes,
-                "netuid,hotkey,stake_rao",
-                |s| format!("{},{},{}", s.netuid, s.hotkey, s.stake.rao()),
-                &["NetUID", "Hotkey", "Stake"],
+                "netuid,hotkey,alpha_raw,tao_equiv_rao,price",
                 |s| {
+                    let price = prices.get(&s.netuid.0).copied();
+                    format!(
+                        "{},{},{},{},{}",
+                        s.netuid,
+                        s.hotkey,
+                        s.stake.raw(),
+                        price
+                            .map(|p| s.stake.to_tao(p).rao().to_string())
+                            .unwrap_or_default(),
+                        price.map(|p| format!("{p:.6}")).unwrap_or_default()
+                    )
+                },
+                &["NetUID", "Hotkey", "Alpha (α)", "TAO≈ (τ)", "Price (τ/α)"],
+                |s| {
+                    let price = prices.get(&s.netuid.0).copied();
                     vec![
                         format!("{}", s.netuid),
                         crate::utils::short_ss58(&s.hotkey),
-                        s.stake.display_tao(),
+                        s.stake.display_units(),
+                        price
+                            .map(|p| s.stake.to_tao(p).display_tao())
+                            .unwrap_or_else(|| "—".to_string()),
+                        price
+                            .map(|p| format!("{p:.6}"))
+                            .unwrap_or_else(|| "—".to_string()),
                     ]
                 },
                 None,
@@ -446,11 +503,21 @@ async fn handle_neuron(
     uid: u16,
     at_block: Option<u32>,
 ) -> Result<()> {
-    let neuron = if let Some(bn) = at_block {
+    let (neuron, bh) = if let Some(bn) = at_block {
         let bh = client.get_block_hash(bn).await?;
-        client.get_neuron_at_block(NetUid(netuid), uid, bh).await?
+        (
+            client.get_neuron_at_block(NetUid(netuid), uid, bh).await?,
+            Some(bh),
+        )
     } else {
-        client.get_neuron(NetUid(netuid), uid).await?
+        (client.get_neuron(NetUid(netuid), uid).await?, None)
+    };
+    let price = match client.alpha_price_f64(NetUid(netuid), bh).await {
+        Ok(p) => Some(p),
+        Err(e) => {
+            tracing::warn!("alpha price fetch failed (non-fatal): {e:#}");
+            None
+        }
     };
     match neuron {
         Some(n) => {
@@ -468,16 +535,18 @@ async fn handle_neuron(
                     .map(|p| format!("{}:{}", p.ip, p.port))
                     .unwrap_or_default();
                 println!(
-                    "uid,netuid,hotkey,coldkey,active,stake_rao,rank,trust,consensus,incentive,dividends,emission,validator_trust,validator_permit,pruning_score,last_update,axon,prometheus"
+                    "uid,netuid,hotkey,coldkey,active,stake_alpha_raw,stake_tao_equiv_rao,price,rank,trust,consensus,incentive,dividends,emission_alpha,validator_trust,validator_permit,pruning_score,last_update,axon,prometheus"
                 );
                 println!(
-                    "{},{},{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{:.6},{},{:.6},{},{},{}",
+                    "{},{},{},{},{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.0},{:.6},{},{:.6},{},{},{}",
                     n.uid,
                     netuid,
                     csv_escape(&n.hotkey),
                     csv_escape(&n.coldkey),
                     n.active,
-                    n.stake.rao(),
+                    n.stake.raw(),
+                    price.map(|p| n.stake.to_tao(p).rao().to_string()).unwrap_or_default(),
+                    price.map(|p| format!("{p:.6}")).unwrap_or_default(),
                     n.rank,
                     n.trust,
                     n.consensus,
@@ -496,13 +565,25 @@ async fn handle_neuron(
                 println!("  Hotkey:          {}", n.hotkey);
                 println!("  Coldkey:         {}", n.coldkey);
                 println!("  Active:          {}", n.active);
-                println!("  Stake:           {}", n.stake.display_tao());
+                println!(
+                    "  Stake:           {} ≈ {}",
+                    n.stake.display_units(),
+                    price
+                        .map(|p| n.stake.to_tao(p).display_tao())
+                        .unwrap_or_else(|| "—".to_string())
+                );
                 println!("  Rank:            {:.6}", n.rank);
                 println!("  Trust:           {:.6}", n.trust);
                 println!("  Consensus:       {:.6}", n.consensus);
                 println!("  Incentive:       {:.6}", n.incentive);
                 println!("  Dividends:       {:.6}", n.dividends);
-                println!("  Emission:        {:.4} τ", n.emission / 1e9);
+                println!(
+                    "  Emission:        {:.4} α/tempo ≈ {}",
+                    n.emission / 1e9,
+                    price
+                        .map(|p| format!("{:.4} τ", n.emission / 1e9 * p))
+                        .unwrap_or_else(|| "—".to_string())
+                );
                 println!("  Val. Trust:      {:.6}", n.validator_trust);
                 println!("  Val. Permit:     {}", n.validator_permit);
                 println!("  Pruning Score:   {:.6}", n.pruning_score);
@@ -541,43 +622,58 @@ async fn handle_validators(
     at_block: Option<u32>,
 ) -> Result<()> {
     if let Some(nuid) = netuid {
-        let neurons = if let Some(bn) = at_block {
+        let (neurons, bh) = if let Some(bn) = at_block {
             let bh = client.get_block_hash(bn).await?;
-            client.get_neurons_lite_at_block(NetUid(nuid), bh).await?
+            let ns = client.get_neurons_lite_at_block(NetUid(nuid), bh).await?;
+            (ns, Some(bh))
         } else {
             let arc = client.get_neurons_lite(NetUid(nuid)).await?;
-            std::sync::Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone())
+            let ns = std::sync::Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone());
+            (ns, None)
+        };
+        let price = match client.alpha_price_f64(NetUid(nuid), bh).await {
+            Ok(p) => Some(p),
+            Err(e) => {
+                tracing::warn!("alpha price fetch failed (non-fatal): {e:#}");
+                None
+            }
         };
         let mut validators: Vec<_> = neurons.into_iter().filter(|n| n.validator_permit).collect();
-        validators.sort_by_key(|item| std::cmp::Reverse(item.stake.rao()));
+        // Single subnet → one price; sorting by alpha is identical to sorting by τ.
+        validators.sort_by_key(|item| std::cmp::Reverse(item.stake.raw()));
         validators.truncate(limit);
 
         render_rows(
             output,
             &validators,
-            "uid,hotkey,coldkey,stake_rao,trust,vtrust,dividends,emission",
+            "uid,hotkey,coldkey,alpha_raw,stake_tao_equiv_rao,price,trust,vtrust,dividends,emission_alpha",
             |v| {
                 format!(
-                    "{},{},{},{},{:.6},{:.6},{:.6},{:.0}",
+                    "{},{},{},{},{},{},{:.6},{:.6},{:.6},{:.0}",
                     v.uid,
                     v.hotkey,
                     v.coldkey,
-                    v.stake.rao(),
+                    v.stake.raw(),
+                    price.map(|p| v.stake.to_tao(p).rao().to_string()).unwrap_or_default(),
+                    price.map(|p| format!("{p:.6}")).unwrap_or_default(),
                     v.trust,
                     v.validator_trust,
                     v.dividends,
                     v.emission
                 )
             },
-            &["UID", "Hotkey", "Stake", "VTrust", "Dividends", "Emission"],
+            &["UID", "Hotkey", "Stake (α)", "≈ τ", "VTrust", "Dividends", "Emission (α)"],
             |v| {
                 vec![
                     format!("{}", v.uid),
                     crate::utils::short_ss58(&v.hotkey),
-                    format!("{:.4}τ", v.stake.tao()),
+                    format!("{:.4} α", v.stake.units()),
+                    price
+                        .map(|p| v.stake.to_tao(p).display_tao())
+                        .unwrap_or_else(|| "—".to_string()),
                     format!("{:.4}", v.validator_trust),
                     format!("{:.4}", v.dividends),
-                    format!("{:.4} τ", v.emission / 1e9),
+                    format!("{:.4} α", v.emission / 1e9),
                 ]
             },
             Some(&format!(
@@ -587,31 +683,38 @@ async fn handle_validators(
             )),
         );
     } else {
-        let delegates = if let Some(bn) = at_block {
+        // The ranking IS the priced totals, so a missing price RPC is fatal (like the delegate fetch).
+        let (delegates, prices) = if let Some(bn) = at_block {
             let bh = client.get_block_hash(bn).await?;
-            client.get_delegates_at_block(bh).await?
+            let d = client.get_delegates_at_block(bh).await?;
+            let p = client.current_alpha_price_all_at_block(bh).await?;
+            (d, p)
         } else {
-            client.get_delegates().await?
+            let d = client.get_delegates().await?;
+            let p = client.current_alpha_price_all().await?;
+            (d, p)
         };
+        // Cross-subnet totals must convert per-subnet alpha to τ before summing.
+        let price_fn = |n: NetUid| prices.get(&n.0).copied().unwrap_or(0.0);
         let mut sorted = delegates;
-        sorted.sort_by_key(|item| std::cmp::Reverse(item.total_stake.rao()));
+        sorted.sort_by_key(|item| std::cmp::Reverse(item.total_tao(price_fn).rao()));
         sorted.truncate(limit);
 
         // Add rank index for table display
         let ranked: Vec<(usize, _)> = sorted.into_iter().enumerate().collect();
         let title = if let Some(bn) = at_block {
             format!(
-                "Top {} validators by total stake (block {})",
+                "Top {} validators by total stake τ-equiv (block {})",
                 ranked.len(),
                 bn
             )
         } else {
-            format!("Top {} validators by total stake", ranked.len())
+            format!("Top {} validators by total stake (τ-equiv)", ranked.len())
         };
         render_rows(
             output,
             &ranked,
-            "rank,hotkey,owner,take_pct,total_stake_rao,nominators,registrations",
+            "rank,hotkey,owner,take_pct,total_stake_tao_rao,nominators,registrations",
             |(i, d)| {
                 format!(
                     "{},{},{},{:.2},{},{},{}",
@@ -619,7 +722,7 @@ async fn handle_validators(
                     d.hotkey,
                     d.owner,
                     d.take * 100.0,
-                    d.total_stake.rao(),
+                    d.total_tao(price_fn).rao(),
                     d.nominators.len(),
                     csv_escape(&format!("{:?}", d.registrations))
                 )
@@ -629,7 +732,7 @@ async fn handle_validators(
                 "Hotkey",
                 "Owner",
                 "Take",
-                "Total Stake",
+                "Total Stake τ",
                 "Nominators",
                 "Subnets",
             ],
@@ -639,7 +742,7 @@ async fn handle_validators(
                     crate::utils::short_ss58(&d.hotkey),
                     crate::utils::short_ss58(&d.owner),
                     format!("{:.2}%", d.take * 100.0),
-                    d.total_stake.display_tao(),
+                    d.total_tao(price_fn).display_tao(),
                     format!("{}", d.nominators.len()),
                     format!("{}", d.registrations.len()),
                 ]
@@ -748,26 +851,42 @@ async fn handle_account_explorer(
     // Historical wayback mode
     if let Some(block_num) = at_block {
         let block_hash = client.get_block_hash(block_num).await?;
-        let (balance, stakes, identity) = tokio::try_join!(
+        let (balance, stakes, identity, prices) = tokio::try_join!(
             client.get_balance_at_block(address, block_hash),
             client.get_stake_for_coldkey_at_block(address, block_hash),
             client.get_identity_at_block(address, block_hash),
+            async {
+                Ok::<_, anyhow::Error>(
+                    client
+                        .current_alpha_price_all_at_block(block_hash)
+                        .await
+                        .ok(),
+                )
+            },
         )?;
-        let total_staked_rao: u64 = stakes
-            .iter()
-            .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-        let total_staked: f64 = total_staked_rao as f64 / 1e9;
-        let total_value = balance.tao() + total_staked;
+        // `prices` is None only when the price RPC errored — distinct from a valid empty map.
+        let priced = prices.is_some();
+        let prices = prices.unwrap_or_default();
+        let total_staked = stakes.iter().fold(Balance::ZERO, |acc, s| {
+            acc + prices
+                .get(&s.netuid.0)
+                .copied()
+                .map(|p| s.stake.to_tao(p))
+                .unwrap_or(Balance::ZERO)
+        });
+        let total_value = balance + total_staked;
 
         if output.is_json() {
             let positions: Vec<serde_json::Value> = stakes
                 .iter()
                 .map(|s| {
+                    let price = prices.get(&s.netuid.0).copied();
                     serde_json::json!({
                         "netuid": s.netuid.0,
                         "hotkey": s.hotkey,
-                        "stake_rao": s.stake.rao(),
-                        "alpha_raw": s.alpha_stake.raw(),
+                        "alpha_raw": s.stake.raw(),
+                        "tao_equiv_rao": price.map(|p| s.stake.to_tao(p).rao()),
+                        "price": price,
                     })
                 })
                 .collect();
@@ -777,8 +896,8 @@ async fn handle_account_explorer(
                 "block_hash": format!("{:?}", block_hash),
                 "balance_rao": balance.rao(),
                 "balance_tao": balance.tao(),
-                "total_staked_tao": total_staked,
-                "total_value_tao": total_value,
+                "total_staked_tao": priced.then(|| total_staked.tao()),
+                "total_value_tao": priced.then(|| total_value.tao()),
                 "stakes": positions,
                 "identity": identity.as_ref().map(|id| serde_json::json!({
                     "name": id.name, "url": id.url, "discord": id.discord,
@@ -790,8 +909,22 @@ async fn handle_account_explorer(
         println!("Account: {} (at block {})\n", address, block_num);
         println!("  Block hash:    {:?}", block_hash);
         println!("  Free balance:  {}", balance.display_tao());
-        println!("  Total staked:  {:.4} τ", total_staked);
-        println!("  Total value:   {:.4} τ", total_value);
+        println!(
+            "  Total staked:  {} (τ-equiv)",
+            if priced {
+                total_staked.display_tao()
+            } else {
+                "—".to_string()
+            }
+        );
+        println!(
+            "  Total value:   {}",
+            if priced {
+                total_value.display_tao()
+            } else {
+                "—".to_string()
+            }
+        );
 
         if let Some(id) = &identity {
             if !id.name.is_empty() {
@@ -806,13 +939,19 @@ async fn handle_account_explorer(
                 &stakes,
                 "",
                 |_| String::new(),
-                &["Subnet", "Hotkey", "Stake (τ)", "Alpha"],
+                &["Subnet", "Hotkey", "Alpha (α)", "TAO≈ (τ)", "Price (τ/α)"],
                 |s| {
+                    let price = prices.get(&s.netuid.0).copied();
                     vec![
                         format!("SN{}", s.netuid),
                         crate::utils::short_ss58(&s.hotkey),
-                        s.stake.display_tao(),
-                        format!("{}", s.alpha_stake),
+                        s.stake.display_units(),
+                        price
+                            .map(|p| s.stake.to_tao(p).display_tao())
+                            .unwrap_or_else(|| "—".to_string()),
+                        price
+                            .map(|p| format!("{p:.6}"))
+                            .unwrap_or_else(|| "—".to_string()),
                     ]
                 },
                 Some(&format!("\n  Stake Positions ({}):", stakes.len())),
@@ -823,7 +962,7 @@ async fn handle_account_explorer(
 
     // Pin a single block for consistency and to save 4 redundant at_latest() RPC round-trips.
     let pin = client.pin_latest_block().await?;
-    let (balance, stakes, identity, dynamic, delegate) = tokio::try_join!(
+    let (balance, stakes, identity, dynamic, prices, delegate) = tokio::try_join!(
         client.get_balance_at_hash(address, pin),
         client.get_stake_for_coldkey_at_block(address, pin),
         client.get_identity_at_block(address, pin),
@@ -836,6 +975,7 @@ async fn handle_account_explorer(
                 }
             }
         },
+        async { Ok::<_, anyhow::Error>(client.current_alpha_price_all_at_block(pin).await.ok()) },
         async {
             Ok::<_, anyhow::Error>(match client.get_delegate_at_block(address, pin).await {
                 Ok(v) => v,
@@ -846,12 +986,22 @@ async fn handle_account_explorer(
             })
         },
     )?;
+    // `prices` is None only when the price RPC errored — distinct from a valid empty map.
+    let priced = prices.is_some();
+    let prices = prices.unwrap_or_default();
     let dynamic_map = build_dynamic_map(&dynamic);
 
+    // τ-equivalent of one position at its subnet's spot price (None when the price is unknown).
+    let pos_tao = |s: &crate::types::chain_data::StakeInfo| {
+        prices
+            .get(&s.netuid.0)
+            .copied()
+            .map(|p| s.stake.to_tao(p))
+    };
     if output.is_json() {
-        let total_staked: u64 = stakes
-            .iter()
-            .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
+        let total_staked = stakes.iter().fold(Balance::ZERO, |acc, s| {
+            acc + pos_tao(s).unwrap_or(Balance::ZERO)
+        });
         let positions: Vec<serde_json::Value> = stakes
             .iter()
             .map(|s| {
@@ -859,10 +1009,10 @@ async fn handle_account_explorer(
                 serde_json::json!({
                     "netuid": s.netuid.0,
                     "hotkey": s.hotkey,
-                    "stake_rao": s.stake.rao(),
-                    "alpha_raw": s.alpha_stake.raw(),
+                    "alpha_raw": s.stake.raw(),
+                    "tao_equiv_rao": pos_tao(s).map(|b| b.rao()),
                     "subnet_name": di.map(|d| d.name.clone()).unwrap_or_default(),
-                    "price": di.map(|d| d.price).unwrap_or(0.0),
+                    "price": prices.get(&s.netuid.0).copied(),
                 })
             })
             .collect();
@@ -870,7 +1020,8 @@ async fn handle_account_explorer(
             "address": address,
             "balance_rao": balance.rao(),
             "balance_tao": balance.tao(),
-            "total_staked_rao": total_staked,
+            "total_staked_tao_rao": priced.then(|| total_staked.rao()),
+            "total_staked_tao": priced.then(|| total_staked.tao()),
             "stakes": positions,
             "identity": identity.as_ref().map(|id| serde_json::json!({
                 "name": id.name, "url": id.url, "discord": id.discord,
@@ -881,11 +1032,27 @@ async fn handle_account_explorer(
     }
 
     println!("Account: {}\n", address);
-    let total_staked = stakes.iter().fold(Balance::ZERO, |acc, s| acc + s.stake);
+    let total_staked = stakes.iter().fold(Balance::ZERO, |acc, s| {
+        acc + pos_tao(s).unwrap_or(Balance::ZERO)
+    });
     let total_value = balance + total_staked;
     println!("  Free balance:  {}", balance.display_tao());
-    println!("  Total staked:  {}", total_staked.display_tao());
-    println!("  Total value:   {}", total_value.display_tao());
+    println!(
+        "  Total staked:  {}",
+        if priced {
+            total_staked.display_tao()
+        } else {
+            "—".to_string()
+        }
+    );
+    println!(
+        "  Total value:   {}",
+        if priced {
+            total_value.display_tao()
+        } else {
+            "—".to_string()
+        }
+    );
 
     if let Some(id) = &identity {
         println!("\n  Identity:");
@@ -921,7 +1088,11 @@ async fn handle_account_explorer(
                     s,
                     di.map(|d| d.name.clone())
                         .unwrap_or_else(|| "?".to_string()),
-                    di.map(|d| format!("{:.6}", d.price)).unwrap_or_default(),
+                    prices
+                        .get(&s.netuid.0)
+                        .copied()
+                        .map(|p| format!("{p:.6}"))
+                        .unwrap_or_else(|| "—".to_string()),
                 )
             })
             .collect();
@@ -930,14 +1101,23 @@ async fn handle_account_explorer(
             &rows,
             "",
             |_| String::new(),
-            &["Subnet", "Name", "Hotkey", "Stake (τ)", "Alpha", "Price"],
+            &[
+                "Subnet",
+                "Name",
+                "Hotkey",
+                "Alpha (α)",
+                "TAO≈ (τ)",
+                "Price (τ/α)",
+            ],
             |(s, name, price)| {
                 vec![
                     format!("SN{}", s.netuid.0),
                     name.clone(),
                     crate::utils::short_ss58(&s.hotkey),
-                    s.stake.display_tao(),
-                    format!("{}", s.alpha_stake),
+                    s.stake.display_units(),
+                    pos_tao(s)
+                        .map(|b| b.display_tao())
+                        .unwrap_or_else(|| "—".to_string()),
                     price.clone(),
                 ]
             },
@@ -999,11 +1179,23 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
     let validators: Vec<_> = neurons.iter().filter(|n| n.validator_permit).collect();
     let miners: Vec<_> = neurons.iter().filter(|n| !n.validator_permit).collect();
 
-    let total_stake_rao: u64 = neurons
-        .iter()
-        .fold(0u64, |acc, n| acc.saturating_add(n.stake.rao()));
-    let total_stake: f64 = total_stake_rao as f64 / 1e9;
-    let total_emission: f64 = neurons.iter().map(|n| n.emission).sum();
+    // Single subnet → one spot price (at the pinned block) converts the whole alpha column to τ.
+    let price = match client.alpha_price_f64(nuid, Some(pin)).await {
+        Ok(p) => Some(p),
+        Err(e) => {
+            tracing::warn!("alpha price fetch failed (non-fatal): {e:#}");
+            None
+        }
+    };
+    let total_stake_alpha: AlphaBalance = AlphaBalance::from_raw(
+        neurons
+            .iter()
+            .fold(0u64, |acc, n| acc.saturating_add(n.stake.raw())),
+    );
+    // None (unknown price) propagates through to render as "—"/null, distinct from a real 0 τ.
+    let total_stake_tao = price.map(|p| total_stake_alpha.to_tao(p));
+    // Per-tempo emission in alpha (raw units summed across neurons).
+    let total_emission_alpha: f64 = neurons.iter().map(|n| n.emission).sum();
     let avg_trust: f64 = if n > 0 {
         neurons.iter().map(|n| n.trust).sum::<f64>() / n as f64
     } else {
@@ -1047,12 +1239,13 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
             "validators": validators.len(),
             "miners": miners.len(),
             "unique_owners": unique_coldkeys.len(),
-            "total_stake_tao": total_stake,
-            "total_emission": total_emission,
+            "total_stake_alpha": total_stake_alpha.units(),
+            "total_stake_tao": total_stake_tao.map(|b| b.tao()),
+            "total_emission_alpha": total_emission_alpha / 1e9,
             "avg_trust": avg_trust,
             "avg_miner_incentive": avg_incentive,
             "avg_validator_dividends": avg_dividends,
-            "price": dynamic.as_ref().map(|d| d.price).unwrap_or(0.0),
+            "price": price,
             "tao_in": dynamic.as_ref().map(|d| d.tao_in.tao()).unwrap_or(0.0),
         }));
         return Ok(());
@@ -1106,14 +1299,28 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
     }
 
     println!("\n  Economics:");
-    println!("    Total stake:         {:.4} τ", total_stake);
-    println!("    Total emission/blk:  {:.4} τ", total_emission / 1e9);
+    println!(
+        "    Total stake:         {:.4} α ≈ {}",
+        total_stake_alpha.units(),
+        total_stake_tao
+            .map(|b| b.display_tao())
+            .unwrap_or_else(|| "—".to_string())
+    );
+    println!(
+        "    Total emission/tempo:{:.4} α",
+        total_emission_alpha / 1e9
+    );
     println!("    Avg trust:           {:.4}", avg_trust);
     println!("    Avg miner incentive: {:.4}", avg_incentive);
     println!("    Avg val dividends:   {:.4}", avg_dividends);
 
     if let Some(ref d) = dynamic {
-        println!("    Price:               {:.6} τ/α", d.price);
+        println!(
+            "    Price:               {}",
+            price
+                .map(|p| format!("{p:.6} τ/α"))
+                .unwrap_or_else(|| "—".to_string())
+        );
         println!("    TAO in pool:         {}", d.tao_in.display_tao());
         println!(
             "    Subnet volume:       {:.4} τ",
@@ -1140,14 +1347,14 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
             &miners_top,
             "",
             |_| String::new(),
-            &["UID", "Hotkey", "Incentive", "Trust", "Emission"],
+            &["UID", "Hotkey", "Incentive", "Trust", "Emission (α)"],
             |m| {
                 vec![
                     format!("{}", m.uid),
                     crate::utils::short_ss58(&m.hotkey),
                     format!("{:.4}", m.incentive),
                     format!("{:.4}", m.trust),
-                    format!("{:.4} τ", m.emission / 1e9),
+                    format!("{:.4} α", m.emission / 1e9),
                 ]
             },
             Some("\n  Top Miners (by incentive):"),
@@ -1161,15 +1368,26 @@ async fn handle_subnet_analytics(client: &Client, netuid: u16, output: OutputFor
             &vals_top,
             "",
             |_| String::new(),
-            &["UID", "Hotkey", "Stake", "VTrust", "Dividends", "Emission"],
+            &[
+                "UID",
+                "Hotkey",
+                "Stake (α)",
+                "≈ τ",
+                "VTrust",
+                "Dividends",
+                "Emission (α)",
+            ],
             |v| {
                 vec![
                     format!("{}", v.uid),
                     crate::utils::short_ss58(&v.hotkey),
-                    format!("{:.4} τ", v.stake.tao()),
+                    format!("{:.4} α", v.stake.units()),
+                    price
+                        .map(|p| v.stake.to_tao(p).display_tao())
+                        .unwrap_or_else(|| "—".to_string()),
                     format!("{:.4}", v.validator_trust),
                     format!("{:.4}", v.dividends),
-                    format!("{:.4} τ", v.emission / 1e9),
+                    format!("{:.4} α", v.emission / 1e9),
                 ]
             },
             Some("\n  Top Validators (by dividends):"),
@@ -1184,7 +1402,7 @@ async fn handle_staking_analytics(
     address: &str,
     output: OutputFormat,
 ) -> Result<()> {
-    let (stakes, dynamic, block_emission) = tokio::try_join!(
+    let (stakes, dynamic, prices, block_emission) = tokio::try_join!(
         client.get_stake_for_coldkey(address),
         async {
             match client.get_all_dynamic_info().await {
@@ -1195,6 +1413,8 @@ async fn handle_staking_analytics(
                 }
             }
         },
+        // Price drives the whole APY/emission view, so a missing price RPC is fatal (like the stake fetch).
+        client.current_alpha_price_all(),
         client.get_block_emission(),
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
@@ -1213,8 +1433,8 @@ async fn handle_staking_analytics(
 
     for s in &stakes {
         let di = dynamic_map.get(&s.netuid.0);
-        let staked_tao = s.stake.tao();
-        let price = di.map(|d| d.price).unwrap_or(0.0);
+        let price = prices.get(&s.netuid.0).copied().unwrap_or(0.0);
+        let staked_tao = s.stake.to_tao(price).tao();
         let subnet_emission = di.map(|d| d.total_emission()).unwrap_or(0);
         let tao_in = di.map(|d| d.tao_in.tao()).unwrap_or(0.0);
         let name = di.map(|d| d.name.clone()).unwrap_or_default();
@@ -1239,10 +1459,15 @@ async fn handle_staking_analytics(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let total_staked_rao: u64 = stakes
+    // τ-equiv total = Σ per-subnet (alpha × price); never a raw alpha sum.
+    let total_staked: f64 = stakes
         .iter()
-        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-    let total_staked: f64 = total_staked_rao as f64 / 1e9;
+        .map(|s| {
+            s.stake
+                .to_tao(prices.get(&s.netuid.0).copied().unwrap_or(0.0))
+                .tao()
+        })
+        .sum();
     let total_daily: f64 = positions
         .iter()
         .map(|p| p.estimated_daily_emission_tao)
@@ -1414,6 +1639,10 @@ async fn handle_swap_sim(
 
 async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat) -> Result<()> {
     let delegates = client.get_delegated(hotkey).await?;
+    // Per-subnet spot prices (τ/α) to convert each nominator's per-subnet alpha to TAO.
+    // The delegate totals are the whole view, so a missing price RPC is fatal (like the delegate fetch).
+    let prices = client.current_alpha_price_all().await?;
+    let price_fn = |n: NetUid| prices.get(&n.0).copied().unwrap_or(0.0);
     if output.is_json() {
         print_json(&serde_json::json!({
             "hotkey": hotkey,
@@ -1422,7 +1651,7 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
         return Ok(());
     }
     if output.is_csv() {
-        println!("delegate_hotkey,owner,take_pct,total_stake_rao,nominator,stake_rao");
+        println!("delegate_hotkey,owner,take_pct,total_stake_tao_rao,nominator,stake_tao_rao");
         for d in &delegates {
             if d.nominators.is_empty() {
                 println!(
@@ -1430,18 +1659,18 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
                     csv_escape(&d.hotkey),
                     csv_escape(&d.owner),
                     d.take * 100.0,
-                    d.total_stake.rao(),
+                    d.total_tao(price_fn).rao(),
                 );
             } else {
-                for (nominator, stake) in &d.nominators {
+                for (nominator, stakes) in &d.nominators {
                     println!(
                         "{},{},{:.6},{},{},{}",
                         csv_escape(&d.hotkey),
                         csv_escape(&d.owner),
                         d.take * 100.0,
-                        d.total_stake.rao(),
+                        d.total_tao(price_fn).rao(),
                         csv_escape(nominator),
-                        stake.rao(),
+                        DelegateInfo::nominator_tao(stakes, price_fn).rao(),
                     );
                 }
             }
@@ -1465,20 +1694,24 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
         println!("\n  Delegate: {}", crate::utils::short_ss58(&d.hotkey));
         println!("    Owner:       {}", crate::utils::short_ss58(&d.owner));
         println!("    Take:        {:.2}%", d.take * 100.0);
-        println!("    Total Stake: {}", d.total_stake.display_tao());
+        println!(
+            "    Total Stake: {} (τ-equiv)",
+            d.total_tao(price_fn).display_tao()
+        );
         println!("    Nominators:  {}", d.nominators.len());
         if !d.nominators.is_empty() {
-            // Sort by index to avoid cloning the entire nominators vector
+            // Sort by τ-equivalent (per-subnet alpha × price) to avoid cloning the vector.
+            let nom_tao =
+                |i: usize| DelegateInfo::nominator_tao(&d.nominators[i].1, price_fn).rao();
             let mut indices: Vec<usize> = (0..d.nominators.len()).collect();
-            indices
-                .sort_unstable_by(|&a, &b| d.nominators[b].1.rao().cmp(&d.nominators[a].1.rao()));
-            println!("    Top nominators:");
+            indices.sort_unstable_by_key(|&i| std::cmp::Reverse(nom_tao(i)));
+            println!("    Top nominators (τ-equiv):");
             for &i in indices.iter().take(10) {
-                let (ref addr, ref stake) = d.nominators[i];
+                let (ref addr, ref stakes) = d.nominators[i];
                 println!(
                     "      {} — {}",
                     crate::utils::short_ss58(addr),
-                    stake.display_tao()
+                    DelegateInfo::nominator_tao(stakes, price_fn).display_tao()
                 );
             }
         }
@@ -1490,7 +1723,7 @@ async fn handle_nominations(client: &Client, hotkey: &str, output: OutputFormat)
 pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) -> Result<()> {
     // Pin a single block for consistency and to save 6 redundant at_latest() RPC round-trips.
     let pin = client.pin_latest_block().await?;
-    let (balance, stakes, identity, proxies, delegate, dynamic, coldkey_swap) = tokio::try_join!(
+    let (balance, stakes, identity, proxies, delegate, dynamic, prices, coldkey_swap) = tokio::try_join!(
         client.get_balance_at_hash(address, pin),
         client.get_stake_for_coldkey_at_block(address, pin),
         client.get_identity_at_block(address, pin),
@@ -1513,6 +1746,7 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
                 }
             }
         },
+        async { Ok::<_, anyhow::Error>(client.current_alpha_price_all_at_block(pin).await.ok()) },
         async {
             Ok::<_, anyhow::Error>(
                 match client
@@ -1529,6 +1763,17 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         },
     )?;
     let dynamic_map = build_dynamic_map(&dynamic);
+    // Price is a secondary input: the security findings (coldkey swap, proxies, childkeys) are
+    // price-free. When the price RPC is unavailable, value rows render as "—"/null and the
+    // price-derived checks are skipped with a note — never silently shown as "no risk".
+    let priced = prices.is_some();
+    let prices = prices.unwrap_or_default();
+    let pos_tao = |s: &crate::types::chain_data::StakeInfo| {
+        prices
+            .get(&s.netuid.0)
+            .copied()
+            .map(|p| s.stake.to_tao(p))
+    };
 
     // Query childkey delegations + pending childkey changes at same pinned block (parallel)
     let child_key_futures: Vec<_> = stakes
@@ -1598,14 +1843,15 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         }));
     }
 
-    // Check stake concentration
-    let total_staked_rao: u64 = stakes
-        .iter()
-        .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-    let total_staked: f64 = total_staked_rao as f64 / 1e9;
+    // Check stake concentration (τ-equivalent: convert each position at its subnet price).
+    let total_staked: f64 = stakes.iter().filter_map(&pos_tao).map(|b| b.tao()).sum();
     let total_value = balance.tao() + total_staked;
-    if !stakes.is_empty() {
-        let top_stake = stakes.iter().map(|s| s.stake.tao()).fold(0.0_f64, f64::max);
+    if priced && !stakes.is_empty() {
+        let top_stake = stakes
+            .iter()
+            .filter_map(&pos_tao)
+            .map(|b| b.tao())
+            .fold(0.0_f64, f64::max);
         let concentration = if total_staked > 0.0 {
             top_stake / total_staked * 100.0
         } else {
@@ -1620,19 +1866,29 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         }
     }
 
-    // Check low-liquidity exposure
-    for s in &stakes {
-        if let Some(di) = dynamic_map.get(&s.netuid.0) {
-            let tao_in = di.tao_in.tao();
-            if tao_in > 0.0 && s.stake.tao() > tao_in * 0.1 {
-                findings.push(serde_json::json!({
-                    "category": "liquidity",
-                    "severity": "medium",
-                    "message": format!("SN{} ({}): stake is >{:.0}% of pool depth ({:.2}τ in pool). Large unstake will have high slippage.",
-                        s.netuid.0, di.name, s.stake.tao() / tao_in * 100.0, tao_in),
-                }));
+    // Check low-liquidity exposure (skipped when price is unavailable; flagged below instead).
+    if priced {
+        for s in &stakes {
+            if let Some(di) = dynamic_map.get(&s.netuid.0) {
+                let tao_in = di.tao_in.tao();
+                let stake_tao = pos_tao(s).unwrap_or(Balance::ZERO).tao();
+                if tao_in > 0.0 && stake_tao > tao_in * 0.1 {
+                    findings.push(serde_json::json!({
+                        "category": "liquidity",
+                        "severity": "medium",
+                        "message": format!("SN{} ({}): stake is >{:.0}% of pool depth ({:.2}τ in pool). Large unstake will have high slippage.",
+                            s.netuid.0, di.name, stake_tao / tao_in * 100.0, tao_in),
+                    }));
+                }
             }
         }
+    } else if !stakes.is_empty() {
+        // Don't let a missing price masquerade as "no risk" for the price-derived checks.
+        findings.push(serde_json::json!({
+            "category": "price",
+            "severity": "info",
+            "message": "Alpha price unavailable — stake value, concentration, and liquidity checks were skipped.",
+        }));
     }
 
     // Check childkey delegations
@@ -1683,8 +1939,8 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         }));
     }
 
-    // Check if balance is very low but has stakes
-    if total_staked > 0.0 && balance.tao() < 0.1 {
+    // Check if balance is very low but has stakes (price-free: depends only on stake presence)
+    if !stakes.is_empty() && balance.tao() < 0.1 {
         findings.push(serde_json::json!({
             "category": "balance",
             "severity": "low",
@@ -1700,9 +1956,10 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
                 serde_json::json!({
                     "netuid": s.netuid.0,
                     "hotkey": s.hotkey,
-                    "stake_tao": s.stake.tao(),
+                    "alpha_raw": s.stake.raw(),
+                    "tao_equiv_rao": pos_tao(s).map(|b| b.rao()),
                     "subnet_name": di.map(|d| d.name.clone()).unwrap_or_default(),
-                    "price": di.map(|d| d.price).unwrap_or(0.0),
+                    "price": prices.get(&s.netuid.0).copied(),
                     "tao_in_pool": di.map(|d| d.tao_in.tao()).unwrap_or(0.0),
                 })
             })
@@ -1740,8 +1997,8 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
         print_json(&serde_json::json!({
             "address": address,
             "balance_tao": balance.tao(),
-            "total_staked_tao": total_staked,
-            "total_value_tao": total_value,
+            "total_staked_tao": priced.then_some(total_staked),
+            "total_value_tao": priced.then_some(total_value),
             "num_stakes": stakes.len(),
             "num_proxies": proxies.len(),
             "is_delegate": delegate.is_some(),
@@ -1761,8 +2018,22 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
     // Table output
     println!("=== Security Audit: {} ===\n", address);
     println!("  Free balance:  {}", balance.display_tao());
-    println!("  Total staked:  {:.4} τ", total_staked);
-    println!("  Total value:   {:.4} τ", total_value);
+    println!(
+        "  Total staked:  {}",
+        if priced {
+            format!("{:.4} τ (τ-equiv)", total_staked)
+        } else {
+            "—  (alpha price unavailable)".to_string()
+        }
+    );
+    println!(
+        "  Total value:   {}",
+        if priced {
+            format!("{:.4} τ", total_value)
+        } else {
+            "—".to_string()
+        }
+    );
     println!("  Stake positions: {}", stakes.len());
     println!("  Proxies:       {}", proxies.len());
     println!(
@@ -1805,11 +2076,13 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
             .iter()
             .map(|s| {
                 let di = dynamic_map.get(&s.netuid.0);
-                let pct = if total_staked > 0.0 {
-                    s.stake.tao() / total_staked * 100.0
-                } else {
-                    0.0
-                };
+                let pct = pos_tao(s).map(|b| {
+                    if total_staked > 0.0 {
+                        b.tao() / total_staked * 100.0
+                    } else {
+                        0.0
+                    }
+                });
                 (
                     s,
                     di.map(|d| d.name.clone())
@@ -1829,7 +2102,7 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
                 "Subnet",
                 "Name",
                 "Hotkey",
-                "Stake (τ)",
+                "Stake τ",
                 "% of Total",
                 "Pool Depth (τ)",
             ],
@@ -1838,8 +2111,11 @@ pub async fn handle_audit(client: &Client, address: &str, output: OutputFormat) 
                     format!("SN{}", s.netuid.0),
                     name.clone(),
                     crate::utils::short_ss58(&s.hotkey),
-                    format!("{:.4}", s.stake.tao()),
-                    format!("{:.1}%", pct),
+                    pos_tao(s)
+                        .map(|b| format!("{:.4}", b.tao()))
+                        .unwrap_or_else(|| "—".to_string()),
+                    pct.map(|p| format!("{:.1}%", p))
+                        .unwrap_or_else(|| "—".to_string()),
                     depth.clone(),
                 ]
             },
@@ -1964,13 +2240,15 @@ async fn handle_metagraph_view(
         let old_map: std::collections::HashMap<u16, &crate::types::chain_data::NeuronInfoLite> =
             old_neurons.iter().map(|n| (n.uid, n)).collect();
 
+        // Deltas are reported in **alpha** (Δα): a τ-delta across two blocks would conflate
+        // a real stake change with a price move. Quantity change is what this view answers.
         #[derive(serde::Serialize)]
         struct NeuronDiff {
             uid: u16,
             hotkey: String,
             change: String,
-            stake_diff: f64,
-            emission_diff: f64,
+            stake_diff_alpha: f64,
+            emission_diff_alpha: f64,
             incentive_diff: f64,
             trust_diff: f64,
         }
@@ -1978,8 +2256,8 @@ async fn handle_metagraph_view(
         let mut diffs = Vec::new();
         for n in neurons.iter() {
             if let Some(old) = old_map.get(&n.uid) {
-                let stake_diff = n.stake.tao() - old.stake.tao();
-                let emission_diff = n.emission - old.emission;
+                let stake_diff = n.stake.units() - old.stake.units();
+                let emission_diff = (n.emission - old.emission) / 1e9;
                 let incentive_diff = n.incentive - old.incentive;
                 let trust_diff = n.trust - old.trust;
                 if stake_diff.abs() > 0.001
@@ -1996,8 +2274,8 @@ async fn handle_metagraph_view(
                         } else {
                             "changed".into()
                         },
-                        stake_diff,
-                        emission_diff,
+                        stake_diff_alpha: stake_diff,
+                        emission_diff_alpha: emission_diff,
                         incentive_diff,
                         trust_diff,
                     });
@@ -2007,8 +2285,8 @@ async fn handle_metagraph_view(
                     uid: n.uid,
                     hotkey: n.hotkey.clone(),
                     change: "new".into(),
-                    stake_diff: n.stake.tao(),
-                    emission_diff: n.emission,
+                    stake_diff_alpha: n.stake.units(),
+                    emission_diff_alpha: n.emission / 1e9,
                     incentive_diff: n.incentive,
                     trust_diff: n.trust,
                 });
@@ -2036,15 +2314,23 @@ async fn handle_metagraph_view(
                 neurons.len()
             );
             for d in diffs.iter().take(show) {
-                println!("  UID {:>4} [{}] ({}) stake:{:>+.4}τ emission:{:>+.4} incentive:{:>+.4} trust:{:>+.4}",
+                println!("  UID {:>4} [{}] ({}) stake:{:>+.4}α emission:{:>+.4}α incentive:{:>+.4} trust:{:>+.4}",
                     d.uid, d.change, crate::utils::short_ss58(&d.hotkey),
-                    d.stake_diff, d.emission_diff, d.incentive_diff, d.trust_diff);
+                    d.stake_diff_alpha, d.emission_diff_alpha, d.incentive_diff, d.trust_diff);
             }
         }
     } else {
-        // Full metagraph dump
+        // Full metagraph dump. Single subnet → one price marks the alpha column in τ.
         let show = limit.unwrap_or(neurons.len());
-        let block = client.get_block_number().await?;
+        let (block, price) = tokio::try_join!(client.get_block_number(), async {
+            Ok::<_, anyhow::Error>(match client.alpha_price_f64(netuid, None).await {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    tracing::warn!("alpha price fetch failed (non-fatal): {e:#}");
+                    None
+                }
+            })
+        })?;
 
         if output.is_json() {
             let entries: Vec<serde_json::Value> = neurons
@@ -2053,7 +2339,9 @@ async fn handle_metagraph_view(
                 .map(|n| {
                     serde_json::json!({
                         "uid": n.uid, "hotkey": n.hotkey, "coldkey": n.coldkey,
-                        "stake_tao": n.stake.tao(), "emission": n.emission,
+                        "stake_alpha": n.stake.units(),
+                        "stake_tao_equiv": price.map(|p| n.stake.to_tao(p).tao()),
+                        "emission_alpha": n.emission / 1e9,
                         "incentive": n.incentive, "consensus": n.consensus,
                         "trust": n.trust, "dividends": n.dividends,
                         "validator_trust": n.validator_trust,
@@ -2063,20 +2351,31 @@ async fn handle_metagraph_view(
                 })
                 .collect();
             print_json(&serde_json::json!({
-                "netuid": netuid.0, "block": block, "n": neurons.len(), "neurons": entries,
+                "netuid": netuid.0, "block": block, "price": price, "n": neurons.len(), "neurons": entries,
             }));
         } else {
             println!(
-                "Metagraph SN{} at block {} ({} neurons)\n",
+                "Metagraph SN{} at block {} ({} neurons, price {})\n",
                 netuid.0,
                 block,
-                neurons.len()
+                neurons.len(),
+                price
+                    .map(|p| format!("{p:.6} τ/α"))
+                    .unwrap_or_else(|| "—".to_string())
             );
             println!(
-                "{:>5} {:>12} {:>10} {:>10} {:>10} {:>10} {:>10} {:>3}",
-                "UID", "Stake(τ)", "Emission", "Incentive", "Trust", "Consensus", "Dividends", "VP"
+                "{:>5} {:>12} {:>12} {:>10} {:>10} {:>10} {:>10} {:>10} {:>3}",
+                "UID",
+                "Stake(α)",
+                "≈τ",
+                "Emis(α)",
+                "Incentive",
+                "Trust",
+                "Consensus",
+                "Dividends",
+                "VP"
             );
-            println!("{}", "-".repeat(82));
+            println!("{}", "-".repeat(96));
             // Sort by emission descending
             let mut indices: Vec<usize> = (0..neurons.len()).collect();
             indices.sort_unstable_by(|&a, &b| {
@@ -2088,10 +2387,13 @@ async fn handle_metagraph_view(
             for &i in indices.iter().take(show) {
                 let n = &neurons[i];
                 println!(
-                    "{:>5} {:>12.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>3}",
+                    "{:>5} {:>12.4} {:>12} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>3}",
                     n.uid,
-                    n.stake.tao(),
-                    n.emission,
+                    n.stake.units(),
+                    price
+                        .map(|p| format!("{:.4}", n.stake.to_tao(p).tao()))
+                        .unwrap_or_else(|| "—".to_string()),
+                    n.emission / 1e9,
                     n.incentive,
                     n.trust,
                     n.consensus,

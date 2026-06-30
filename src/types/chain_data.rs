@@ -12,7 +12,7 @@ pub struct NeuronInfo {
     pub uid: u16,
     pub netuid: NetUid,
     pub active: bool,
-    pub stake: Balance,
+    pub stake: AlphaBalance,
     pub rank: f64,
     pub emission: f64,
     pub incentive: f64,
@@ -35,7 +35,7 @@ pub struct NeuronInfoLite {
     pub uid: u16,
     pub netuid: NetUid,
     pub active: bool,
-    pub stake: Balance,
+    pub stake: AlphaBalance,
     pub rank: f64,
     pub emission: f64,
     pub incentive: f64,
@@ -159,11 +159,29 @@ pub struct DelegateInfo {
     pub hotkey: String,
     pub owner: String,
     pub take: f64,
-    pub total_stake: Balance,
-    pub nominators: Vec<(String, Balance)>,
+    pub nominators: Vec<(String, Vec<(NetUid, AlphaBalance)>)>,
     pub registrations: Vec<NetUid>,
     pub validator_permits: Vec<NetUid>,
     pub return_per_1000: Balance,
+}
+
+impl DelegateInfo {
+    pub fn nominator_tao(
+        stakes: &[(NetUid, AlphaBalance)],
+        price_of: impl Fn(NetUid) -> f64,
+    ) -> Balance {
+        stakes.iter().fold(Balance::ZERO, |acc, (netuid, alpha)| {
+            acc + alpha.to_tao(price_of(*netuid))
+        })
+    }
+
+    pub fn total_tao(&self, price_of: impl Fn(NetUid) -> f64 + Copy) -> Balance {
+        self.nominators
+            .iter()
+            .fold(Balance::ZERO, |acc, (_, stakes)| {
+                acc + Self::nominator_tao(stakes, price_of)
+            })
+    }
 }
 
 /// Stake information for a coldkey-hotkey-subnet triple.
@@ -172,8 +190,7 @@ pub struct StakeInfo {
     pub hotkey: String,
     pub coldkey: String,
     pub netuid: NetUid,
-    pub stake: Balance,
-    pub alpha_stake: AlphaBalance,
+    pub stake: AlphaBalance,
 }
 
 /// On-chain identity.
@@ -207,7 +224,7 @@ pub struct Metagraph {
     pub n: u16,
     pub block: u64,
     pub neurons: Vec<NeuronInfoLite>,
-    pub stake: Vec<Balance>,
+    pub stake: Vec<AlphaBalance>,
     pub ranks: Vec<f64>,
     pub trust: Vec<f64>,
     pub consensus: Vec<f64>,
@@ -255,7 +272,7 @@ mod tests {
             uid: 0,
             netuid: NetUid(1),
             active: true,
-            stake: Balance::from_tao(100.0),
+            stake: AlphaBalance::from_units(100.0),
             rank: 0.5,
             emission: 0.01,
             incentive: 0.3,
@@ -278,7 +295,7 @@ mod tests {
             uid: 0,
             netuid: NetUid(1),
             active: true,
-            stake: Balance::from_tao(100.0),
+            stake: AlphaBalance::from_units(100.0),
             rank: 0.5,
             emission: 0.01,
             incentive: 0.3,
@@ -341,7 +358,7 @@ mod tests {
             n: 1,
             block: 5000,
             neurons: vec![neuron],
-            stake: vec![Balance::from_tao(100.0)],
+            stake: vec![AlphaBalance::from_units(100.0)],
             ranks: vec![0.5],
             trust: vec![0.8],
             consensus: vec![0.4],
@@ -647,7 +664,7 @@ mod tests {
         let neuron = &mg.neurons[0];
         assert_eq!(neuron.hotkey, "5Hot");
         assert_eq!(neuron.netuid, NetUid(1));
-        assert_eq!(mg.stake[0], Balance::from_tao(100.0));
+        assert_eq!(mg.stake[0], AlphaBalance::from_units(100.0));
         assert!((mg.ranks[0] - 0.5).abs() < 1e-12);
     }
 
@@ -659,10 +676,19 @@ mod tests {
             hotkey: "5Del".to_string(),
             owner: "5Own".to_string(),
             take: 0.18,
-            total_stake: Balance::from_tao(50_000.0),
+            // 5Nom1 holds alpha on two subnets at different prices; 5Nom2 on one.
             nominators: vec![
-                ("5Nom1".to_string(), Balance::from_tao(10_000.0)),
-                ("5Nom2".to_string(), Balance::from_tao(5_000.0)),
+                (
+                    "5Nom1".to_string(),
+                    vec![
+                        (NetUid(1), AlphaBalance::from_units(10_000.0)),
+                        (NetUid(3), AlphaBalance::from_units(4_000.0)),
+                    ],
+                ),
+                (
+                    "5Nom2".to_string(),
+                    vec![(NetUid(1), AlphaBalance::from_units(5_000.0))],
+                ),
             ],
             registrations: vec![NetUid(1), NetUid(3)],
             validator_permits: vec![NetUid(1)],
@@ -673,6 +699,19 @@ mod tests {
         assert_eq!(d.hotkey, "5Del");
         assert_eq!(d.nominators.len(), 2);
         assert_eq!(d.registrations.len(), 2);
+
+        // sum alpha across subnets. SN1 @ 0.5 τ/α, SN3 @ 2.0 τ/α:
+        // (10000·0.5 + 4000·2.0) + (5000·0.5) = 5000 + 8000 + 2500 = 15500 τ.
+        let price_of = |n: NetUid| match n.0 {
+            1 => 0.5,
+            3 => 2.0,
+            _ => 0.0,
+        };
+        assert_eq!(d.total_tao(price_of), Balance::from_tao(15_500.0));
+        assert_eq!(
+            DelegateInfo::nominator_tao(&d.nominators[0].1, price_of),
+            Balance::from_tao(13_000.0)
+        );
     }
 
     #[test]
@@ -681,14 +720,13 @@ mod tests {
             hotkey: "5Hot".to_string(),
             coldkey: "5Cold".to_string(),
             netuid: NetUid(7),
-            stake: Balance::from_tao(200.0),
-            alpha_stake: AlphaBalance::from_raw(100_000_000_000),
+            stake: AlphaBalance::from_raw(100_000_000_000),
         };
         let json = serde_json::to_string(&info).unwrap();
         let d: StakeInfo = serde_json::from_str(&json).unwrap();
         assert_eq!(d.netuid, NetUid(7));
-        assert_eq!(d.stake, Balance::from_tao(200.0));
-        assert_eq!(d.alpha_stake, AlphaBalance::from_raw(100_000_000_000));
+        assert_eq!(d.stake, AlphaBalance::from_raw(100_000_000_000));
+        assert_eq!(d.stake.to_tao(0.25), Balance::from_tao(25.0));
     }
 
     #[test]

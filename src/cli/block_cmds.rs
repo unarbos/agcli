@@ -191,21 +191,26 @@ pub(super) async fn handle_diff(
             let (hash1, hash2) =
                 tokio::try_join!(client.get_block_hash(block1), client.get_block_hash(block2),)?;
 
-            let (bal1, stakes1, bal2, stakes2) = tokio::try_join!(
+            let (bal1, stakes1, prices1, bal2, stakes2, prices2) = tokio::try_join!(
                 client.get_balance_at_block(&addr, hash1),
                 client.get_stake_for_coldkey_at_block(&addr, hash1),
+                client.current_alpha_price_all_at_block(hash1),
                 client.get_balance_at_block(&addr, hash2),
                 client.get_stake_for_coldkey_at_block(&addr, hash2),
+                client.current_alpha_price_all_at_block(hash2),
             )?;
-
-            let total_stake1: u64 = stakes1
-                .iter()
-                .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-            let total_stake2: u64 = stakes2
-                .iter()
-                .fold(0u64, |acc, s| acc.saturating_add(s.stake.rao()));
-            let total1 = bal1.rao().saturating_add(total_stake1);
-            let total2 = bal2.rao().saturating_add(total_stake2);
+            let total_stake1 = stakes1.iter().fold(Balance::ZERO, |a, s| {
+                a + s
+                    .stake
+                    .to_tao(prices1.get(&s.netuid.0).copied().unwrap_or(0.0))
+            });
+            let total_stake2 = stakes2.iter().fold(Balance::ZERO, |a, s| {
+                a + s
+                    .stake
+                    .to_tao(prices2.get(&s.netuid.0).copied().unwrap_or(0.0))
+            });
+            let total1 = bal1 + total_stake1;
+            let total2 = bal2 + total_stake2;
 
             if output.is_json() {
                 print_json(&serde_json::json!({
@@ -214,10 +219,10 @@ pub(super) async fn handle_diff(
                     "block2": block2,
                     "balance_tao": [bal1.tao(), bal2.tao()],
                     "balance_diff_tao": bal2.tao() - bal1.tao(),
-                    "total_stake_tao": [Balance::from_rao(total_stake1).tao(), Balance::from_rao(total_stake2).tao()],
-                    "stake_diff_tao": Balance::from_rao(total_stake2).tao() - Balance::from_rao(total_stake1).tao(),
-                    "total_tao": [Balance::from_rao(total1).tao(), Balance::from_rao(total2).tao()],
-                    "total_diff_tao": Balance::from_rao(total2).tao() - Balance::from_rao(total1).tao(),
+                    "total_stake_tao_equiv": [total_stake1.tao(), total_stake2.tao()],
+                    "stake_diff_tao_equiv": total_stake2.tao() - total_stake1.tao(),
+                    "total_tao": [total1.tao(), total2.tao()],
+                    "total_diff_tao": total2.tao() - total1.tao(),
                     "stakes_block1": stakes1.len(),
                     "stakes_block2": stakes2.len(),
                 }));
@@ -249,23 +254,17 @@ pub(super) async fn handle_diff(
                 );
                 println!(
                     "  {:>20}  {:>14.4}  {:>14.4}  {:>14}",
-                    "Total stake (τ)",
-                    Balance::from_rao(total_stake1).tao(),
-                    Balance::from_rao(total_stake2).tao(),
-                    diff_sym(
-                        Balance::from_rao(total_stake1).tao(),
-                        Balance::from_rao(total_stake2).tao()
-                    )
+                    "Total stake τ",
+                    total_stake1.tao(),
+                    total_stake2.tao(),
+                    diff_sym(total_stake1.tao(), total_stake2.tao())
                 );
                 println!(
                     "  {:>20}  {:>14.4}  {:>14.4}  {:>14}",
                     "Total (τ)",
-                    Balance::from_rao(total1).tao(),
-                    Balance::from_rao(total2).tao(),
-                    diff_sym(
-                        Balance::from_rao(total1).tao(),
-                        Balance::from_rao(total2).tao()
-                    )
+                    total1.tao(),
+                    total2.tao(),
+                    diff_sym(total1.tao(), total2.tao())
                 );
                 println!(
                     "  {:>20}  {:>14}  {:>14}",
@@ -481,8 +480,8 @@ pub(super) async fn handle_diff(
             let mut changes = Vec::new();
             for n2 in neurons2.iter() {
                 if let Some(n1) = map1.get(&n2.uid) {
-                    let stake_diff = n2.stake.tao() - n1.stake.tao();
-                    let emission_diff = n2.emission - n1.emission;
+                    let stake_diff = n2.stake.units() - n1.stake.units();
+                    let emission_diff = (n2.emission - n1.emission) / 1e9;
                     let incentive_diff = n2.incentive - n1.incentive;
                     if stake_diff.abs() > 0.001
                         || emission_diff.abs() > 0.0001
@@ -492,14 +491,14 @@ pub(super) async fn handle_diff(
                         changes.push(serde_json::json!({
                             "uid": n2.uid, "hotkey": n2.hotkey,
                             "change": if n2.hotkey != n1.hotkey { "replaced" } else { "changed" },
-                            "stake_diff": stake_diff, "emission_diff": emission_diff,
+                            "stake_diff_alpha": stake_diff, "emission_diff_alpha": emission_diff,
                             "incentive_diff": incentive_diff,
                         }));
                     }
                 } else {
                     changes.push(serde_json::json!({
                         "uid": n2.uid, "hotkey": n2.hotkey, "change": "new",
-                        "stake_diff": n2.stake.tao(), "emission_diff": n2.emission,
+                        "stake_diff_alpha": n2.stake.units(), "emission_diff_alpha": n2.emission / 1e9,
                         "incentive_diff": n2.incentive,
                     }));
                 }
@@ -521,12 +520,12 @@ pub(super) async fn handle_diff(
                 );
                 for d in &changes {
                     println!(
-                        "  UID {:>4} [{}] ({}) stake:{:>+.4}τ emission:{:>+.4} incentive:{:>+.4}",
+                        "  UID {:>4} [{}] ({}) stake:{:>+.4}α emission:{:>+.4}α incentive:{:>+.4}",
                         d["uid"],
                         d["change"].as_str().unwrap_or(""),
                         crate::utils::short_ss58(d["hotkey"].as_str().unwrap_or("")),
-                        d["stake_diff"].as_f64().unwrap_or(0.0),
-                        d["emission_diff"].as_f64().unwrap_or(0.0),
+                        d["stake_diff_alpha"].as_f64().unwrap_or(0.0),
+                        d["emission_diff_alpha"].as_f64().unwrap_or(0.0),
                         d["incentive_diff"].as_f64().unwrap_or(0.0)
                     );
                 }

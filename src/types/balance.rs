@@ -122,6 +122,16 @@ impl AlphaBalance {
     pub fn units(&self) -> f64 {
         self.raw as f64 / RAO_PER_TAO as f64
     }
+
+    /// TAO-equivalent of this alpha at a subnet `price` (**TAO per alpha**)
+    pub fn to_tao(&self, price: f64) -> Balance {
+        Balance::from_tao(self.units() * price)
+    }
+
+    /// Human-readable string like "1.234567890 α" (9 decimals, mirrors [`Balance::display_tao`]).
+    pub fn display_units(&self) -> String {
+        format!("{:.9} α", self.units())
+    }
 }
 
 impl fmt::Display for AlphaBalance {
@@ -228,6 +238,20 @@ mod tests {
         let a = AlphaBalance::from_units(1.5);
         assert_eq!(a.raw(), 1_500_000_000);
         assert!((a.units() - 1.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn alpha_to_tao_applies_price() {
+        // 2753.93 α at 0.009219 τ/α ≈ 25.39 τ — the per-subnet conversion the CLI must do,
+        // not the raw alpha reinterpreted as τ (which would read ~2753 τ, ~108× too high).
+        let alpha = AlphaBalance::from_units(2753.9299566);
+        let tao = alpha.to_tao(0.009219);
+        assert!((tao.tao() - 25.3905).abs() < 0.01, "got {} τ", tao.tao());
+    }
+
+    #[test]
+    fn alpha_to_tao_zero_price_is_zero() {
+        assert_eq!(AlphaBalance::from_units(1000.0).to_tao(0.0), Balance::ZERO);
     }
 
     #[test]

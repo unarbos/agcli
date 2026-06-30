@@ -4,11 +4,21 @@ use anyhow::{Context, Result};
 use subxt::OnlineClient;
 
 use crate::api;
-use crate::types::balance::Balance;
+use crate::types::balance::{Balance, RAO_PER_TAO};
 use crate::types::chain_data::*;
 use crate::types::network::NetUid;
 
 use super::{retry_on_transient, Client, RPC_RETRIES};
+
+type GenSubnetPrice = crate::api::runtime_types::pallet_subtensor_swap_runtime_api::SubnetPrice;
+
+/// Scale raw swap-pallet prices (τ per α, RAO-fixed) into a netuid → f64 map.
+fn scale_prices(prices: Vec<GenSubnetPrice>) -> std::collections::HashMap<u16, f64> {
+    prices
+        .into_iter()
+        .map(|p| (p.netuid, p.price as f64 / RAO_PER_TAO as f64))
+        .collect()
+}
 
 impl Client {
     // ──────── Stake Queries ────────
@@ -1240,7 +1250,7 @@ impl Client {
 
     // ──────── Swap Simulation (Runtime APIs) ────────
 
-    /// Get current alpha price for a subnet.
+    /// Get current spot alpha price for a subnet.
     pub async fn current_alpha_price(&self, netuid: NetUid) -> Result<u64> {
         let inner = &self.inner;
         let nid = netuid.0;
@@ -1257,6 +1267,69 @@ impl Client {
             Ok(r)
         })
         .await
+    }
+
+    /// Spot alpha price (τ per α) for a subnet at a pinned block.
+    pub async fn current_alpha_price_at_block(
+        &self,
+        netuid: NetUid,
+        block_hash: subxt::utils::H256,
+    ) -> Result<u64> {
+        let payload = api::apis().swap_runtime_api().current_alpha_price(netuid.0);
+        self.inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))
+    }
+
+    /// Spot alpha price (τ per α) for every subnet in one swap-pallet runtime call,
+    /// keyed by netuid
+    pub async fn current_alpha_price_all(&self) -> Result<std::collections::HashMap<u16, f64>> {
+        let inner = &self.inner;
+        retry_on_transient("current_alpha_price_all", RPC_RETRIES, || async {
+            let payload = api::apis().swap_runtime_api().current_alpha_price_all();
+            let r = inner
+                .runtime_api()
+                .at_latest()
+                .await
+                .context("Failed to get latest block for alpha price query")?
+                .call(payload)
+                .await
+                .context("Failed to query all alpha prices")?;
+            Ok(scale_prices(r))
+        })
+        .await
+    }
+
+    /// Block-pinned [`Self::current_alpha_price_all`].
+    pub async fn current_alpha_price_all_at_block(
+        &self,
+        block_hash: subxt::utils::H256,
+    ) -> Result<std::collections::HashMap<u16, f64>> {
+        let payload = api::apis().swap_runtime_api().current_alpha_price_all();
+        let r = self
+            .inner
+            .runtime_api()
+            .at(block_hash)
+            .call(payload)
+            .await
+            .map_err(|e| Self::annotate_at_block_error(e.into(), None))?;
+        Ok(scale_prices(r))
+    }
+
+    /// Spot α price (τ per α) for one subnet as f64, at `block` (or latest if `None`).
+    pub async fn alpha_price_f64(
+        &self,
+        netuid: NetUid,
+        block: Option<subxt::utils::H256>,
+    ) -> Result<f64> {
+        let raw = match block {
+            Some(h) => self.current_alpha_price_at_block(netuid, h).await?,
+            None => self.current_alpha_price(netuid).await?,
+        };
+        Ok(raw as f64 / RAO_PER_TAO as f64)
     }
 
     /// Simulate swapping TAO for alpha on a subnet.

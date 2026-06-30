@@ -3,6 +3,7 @@
 use crate::chain::Client;
 use crate::cli::helpers::*;
 use crate::cli::*;
+use crate::types::chain_data::DelegateInfo;
 use crate::types::{Balance, NetUid};
 use anyhow::Result;
 
@@ -59,27 +60,29 @@ pub(super) async fn handle_delegate(
         DelegateCommands::List => {
             let delegates = client.get_delegates().await?;
             let top: Vec<_> = delegates.into_iter().take(50).collect();
+            let prices = client.current_alpha_price_all().await?;
+            let price_fn = |n: NetUid| prices.get(&n.0).copied().unwrap_or(0.0);
             render_rows(
                 ctx.output,
                 &top,
-                "hotkey,owner,take_pct,total_stake_rao,nominators",
+                "hotkey,owner,take_pct,total_stake_tao_rao,nominators",
                 |d| {
                     format!(
                         "{},{},{:.4},{},{}",
                         d.hotkey,
                         d.owner,
                         d.take * 100.0,
-                        d.total_stake.rao(),
+                        d.total_tao(price_fn).rao(),
                         d.nominators.len()
                     )
                 },
-                &["Hotkey", "Owner", "Take", "Total Stake", "Nominators"],
+                &["Hotkey", "Owner", "Take", "Total Stake τ", "Nominators"],
                 |d| {
                     vec![
                         crate::utils::short_ss58(&d.hotkey),
                         crate::utils::short_ss58(&d.owner),
                         format!("{:.2}%", d.take * 100.0),
-                        d.total_stake.display_tao(),
+                        d.total_tao(price_fn).display_tao(),
                         format!("{}", d.nominators.len()),
                     ]
                 },
@@ -99,28 +102,30 @@ pub(super) async fn handle_delegate(
                 }
             };
             let delegate = client.get_delegate(&hotkey_ss58).await?;
+            let prices = client.current_alpha_price_all().await?;
+            let price_fn = |n: NetUid| prices.get(&n.0).copied().unwrap_or(0.0);
             match delegate {
                 Some(d) => {
                     println!("Delegate: {}", d.hotkey);
                     println!("  Owner:       {}", d.owner);
                     println!("  Take:        {:.2}%", d.take * 100.0);
-                    println!("  Total stake: {}", d.total_stake.display_tao());
+                    println!("  Total stake: {}", d.total_tao(price_fn).display_tao());
                     println!("  Nominators:  {}", d.nominators.len());
                     println!("  Registrations: {:?}", d.registrations);
                     println!("  VP subnets:    {:?}", d.validator_permits);
                     if !d.nominators.is_empty() {
-                        println!("  Top nominators:");
-                        // Sort indices to avoid cloning the full nominators list
+                        println!("  Top nominators (τ-equiv):");
+                        let nom_tao = |i: usize| {
+                            DelegateInfo::nominator_tao(&d.nominators[i].1, price_fn).rao()
+                        };
                         let mut indices: Vec<usize> = (0..d.nominators.len()).collect();
-                        indices.sort_unstable_by(|&a, &b| {
-                            d.nominators[b].1.rao().cmp(&d.nominators[a].1.rao())
-                        });
+                        indices.sort_unstable_by_key(|&i| std::cmp::Reverse(nom_tao(i)));
                         for &i in indices.iter().take(10) {
-                            let (addr, stake) = &d.nominators[i];
+                            let (addr, stakes) = &d.nominators[i];
                             println!(
                                 "    {} — {}",
                                 crate::utils::short_ss58(addr),
-                                stake.display_tao()
+                                DelegateInfo::nominator_tao(stakes, price_fn).display_tao()
                             );
                         }
                     }

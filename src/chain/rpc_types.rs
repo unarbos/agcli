@@ -59,7 +59,7 @@ impl From<GenNeuronInfoLite> for NeuronInfoLite {
             uid: n.uid,
             netuid: NetUid(n.netuid),
             active: n.active,
-            stake: Balance::from_rao(total_stake),
+            stake: AlphaBalance::from_raw(total_stake),
             rank: n.rank as f64 / 65535.0,
             emission: n.emission as f64,
             incentive: n.incentive as f64 / 65535.0,
@@ -89,7 +89,7 @@ impl From<GenNeuronInfo> for NeuronInfo {
             uid: n.uid,
             netuid: NetUid(n.netuid),
             active: n.active,
-            stake: Balance::from_rao(total_stake),
+            stake: AlphaBalance::from_raw(total_stake),
             rank: n.rank as f64 / 65535.0,
             emission: n.emission as f64,
             incentive: n.incentive as f64 / 65535.0,
@@ -181,25 +181,19 @@ impl SubnetHyperparameters {
 
 impl From<GenDelegateInfo> for DelegateInfo {
     fn from(d: GenDelegateInfo) -> Self {
-        let total_stake: u64 = d
-            .nominators
-            .iter()
-            .flat_map(|(_, stakes)| stakes.iter().map(|(_, s)| s.0))
-            .fold(0u64, u64::saturating_add);
         DelegateInfo {
             hotkey: account_to_ss58(&d.delegate_ss58),
             owner: account_to_ss58(&d.owner_ss58),
             take: d.take as f64 / 65535.0,
-            total_stake: Balance::from_rao(total_stake),
             nominators: d
                 .nominators
                 .into_iter()
                 .map(|(a, stakes)| {
-                    let total: u64 = stakes
-                        .iter()
-                        .map(|(_, s)| s.0)
-                        .fold(0u64, u64::saturating_add);
-                    (account_to_ss58(&a), Balance::from_rao(total))
+                    let per_subnet = stakes
+                        .into_iter()
+                        .map(|(netuid, s)| (NetUid(netuid.0), AlphaBalance::from_raw(s.0)))
+                        .collect();
+                    (account_to_ss58(&a), per_subnet)
                 })
                 .collect(),
             registrations: d.registrations.into_iter().map(|r| NetUid(r.0)).collect(),
@@ -222,8 +216,7 @@ impl From<GenStakeInfo> for StakeInfo {
             hotkey: account_to_ss58(&s.hotkey),
             coldkey: account_to_ss58(&s.coldkey),
             netuid,
-            stake: Balance::from_rao(s.stake),
-            alpha_stake: AlphaBalance::from_raw(s.stake),
+            stake: AlphaBalance::from_raw(s.stake),
         }
     }
 }

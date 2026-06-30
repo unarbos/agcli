@@ -265,20 +265,20 @@ pub async fn live_metagraph(client: &Client, netuid: NetUid, interval_secs: u64)
 
         for c in curr_neurons.iter() {
             if let Some(p) = prev_map.get(&c.uid) {
-                let stake_diff = c.stake.rao() as i128 - p.stake.rao() as i128;
+                let stake_diff = c.stake.raw() as i128 - p.stake.raw() as i128;
                 let incentive_diff = c.incentive - p.incentive;
                 let emission_diff = c.emission - p.emission;
 
-                if stake_diff.unsigned_abs() > 100_000_000 // > 0.1 TAO
+                if stake_diff.unsigned_abs() > 100_000_000 // > 0.1 alpha
                     || incentive_diff.abs() > 0.001
                     || emission_diff.abs() > 0.001
                 {
                     changes.push(format!(
-                        "  UID {:<4} stake:{:>+.4}τ  incentive:{:>+.4}  emission:{:>+.1}",
+                        "  UID {:<4} stake:{:>+.4}α  incentive:{:>+.4}  emission:{:>+.4}α",
                         c.uid,
                         stake_diff as f64 / 1e9,
                         incentive_diff,
-                        emission_diff,
+                        emission_diff / 1e9,
                     ));
                 }
             } else {
